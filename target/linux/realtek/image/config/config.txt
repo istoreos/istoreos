@@ -1,0 +1,24 @@
+# Package Information
+company=""
+description=""
+modelname=""
+version=""
+releaseDate=""
+signature=""
+# Package Configuration
+start_customer=y
+verify=y
+install_dtb=y
+update_etc=y
+install_avfile_count=0
+reboot_delay=5
+efuse_key=0
+efuse_fw=0
+rpmb_fw=0
+secure_boot=0
+
+fw = kernelDT rtd-129x.dtb 0x02100000 
+fw = linuxKernel Image 0x03000000 
+
+### part = (name mount_point filesystem file size)
+part = rootfs / squashfs rootfs.bin 134217728
