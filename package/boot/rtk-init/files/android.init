@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+# 2020 jjm2473 porting openwrt 19.07+ to zidoo z9s
+
+START=01
+
+boot() {
+	if [ -n "$ANDROID" ]; then
+		# notify android continue
+		touch /android/.coldplug_done
+		touch /rom/android/.coldplug_done
+		# let others know we are running with android
+		touch /tmp/.android
+		chmod 444 /tmp/.android
+		if [ -f /rom/android/.ottwifi ]; then
+			# dns will be configured by android through rpcd-mod-file
+			rm /etc/resolv.conf
+			touch /etc/resolv.conf
+			chmod 644 /etc/resolv.conf
+			return 0
+		fi
+	fi
+}

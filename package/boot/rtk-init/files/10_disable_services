@@ -1,0 +1,12 @@
+#!/bin/sh
+
+if [ -f /rom/android/.ottwifi ]; then
+	for service in dnsmasq firewall; do
+	[ -f /etc/init.d/$service ] && (
+		/etc/init.d/$service disable
+		/etc/init.d/$service stop
+	)
+	done
+fi
+
+exit 0

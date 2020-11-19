@@ -9,7 +9,7 @@ include $(INCLUDE_DIR)/image.mk
 
 define Build/mbr
 	dd if=/dev/zero of=$@.mbr bs=512 count=1 >/dev/null
-	ptgen -v -o $@.mbr -h 16 -s 63 -l 1024 -t 83 -p 131072@131072 -t 83 -p 7340032
+	ptgen -v -o $@.mbr -h 16 -s 63 -l 1024 -t 83 -p 131072@131072 -t 83 -p 6291456
 endef
 
 define Build/install.img
@@ -20,8 +20,10 @@ define Build/install.img
 	$(CP) $(IMAGE_KERNEL) $@.install/Image
 	$(CP) $(KDIR)/image-$(firstword $(DEVICE_DTS)).dtb $@.install/rtd-129x.dtb
 	$(CP) $(IMAGE_ROOTFS) $@.install/rootfs.bin
+	make_ext4fs -J -l 1M -L RTKNAS $@.install/etc.bin
 
-	$(TAR) -cf $@.install.img -C $@.install .
+	rm -f $@.install.img
+	cd $@.install; $(TAR) -cf $@.install.img `ls`
 endef
 
 define Build/install.img.zip
@@ -32,6 +34,7 @@ define Build/install.img.zip
 	$(CP) ./blob/rescue.root.emmc.cpio.gz_pad.img $@.release/
 	$(CP) $@.install.img $@.release/install.img
 
+	rm -f $@
 	zip -j -X -r $@ $@.release
 endef
 
