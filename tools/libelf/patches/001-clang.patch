@@ -1,0 +1,84 @@
+--- a/configure
++++ b/configure
+@@ -1115,6 +1115,7 @@ else
+ #line 1116 "configure"
+ #include "confdefs.h"
+ #include <ctype.h>
++#include <stdlib.h>
+ #define ISLOWER(c) ('a' <= (c) && (c) <= 'z')
+ #define TOUPPER(c) (ISLOWER(c) ? 'A' + ((c) - 'a') : (c))
+ #define XOR(e, f) (((e) && !(f)) || (!(e) && (f)))
+@@ -1483,6 +1484,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 1485 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ main()
+ {
+@@ -1522,6 +1524,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 1524 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ main()
+ {
+@@ -1561,6 +1564,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 1563 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ main()
+ {
+@@ -1600,6 +1604,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 1602 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ main()
+ {
+@@ -1640,6 +1645,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 1642 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ main()
+ {
+@@ -2262,6 +2268,8 @@ else
+ #include <fcntl.h>
+ #include <sys/mman.h>
+ 
++#include <stdlib.h>
++
+ /* This mess was copied from the GNU getpagesize.h.  */
+ #ifndef HAVE_GETPAGESIZE
+ # ifdef HAVE_UNISTD_H
+@@ -2526,7 +2534,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 2528 "configure"
+ #include "confdefs.h"
+-#include "confdefs.h"
++#include <stdlib.h>
+ #if HAVE_MEMMOVE
+ extern void *memmove();
+ #else
+@@ -3296,6 +3304,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 3298 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ int
+ main(int argc, char **argv) {
+@@ -3378,6 +3387,7 @@ else
+   cat > conftest.$ac_ext <<EOF
+ #line 3380 "configure"
+ #include "confdefs.h"
++#include <stdlib.h>
+ #include <stdio.h>
+ int
+ main(int argc, char **argv) {
