@@ -1,0 +1,12 @@
+#!/bin/sh
+
+do_console_switch() {
+	[ -e /rom/note ] && return 0
+	if grep -Fq 'console.switch=android' /proc/cmdline; then
+		sed -i "/ttyS0/d" /etc/inittab
+	else
+		grep -Fq 'ttyS0::' /etc/inittab || echo 'ttyS0::askfirst:/usr/libexec/login.sh' >> /etc/inittab
+	fi
+}
+
+[ "$INITRAMFS" = "1" ] || boot_hook_add preinit_main do_console_switch

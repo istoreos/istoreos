@@ -1,0 +1,100 @@
+#!/bin/sh
+# Copyright (C) 2010 OpenWrt.org
+
+DEFAULT_OVERLAY_FS="ext4"
+
+get_overlay_partition_from_kernel_cmdline()
+{
+	OVERLAY_FS=${DEFAULT_OVERLAY_FS}
+
+	for item in `cat /proc/cmdline`; do
+		case $item in
+			overlay=*)		OVERLAY_DEV=${item:8};;
+			overlayfs=*)	OVERLAY_FS=${item:10};;
+		esac
+	done
+
+	[ -z "$OVERLAY_DEV" ] && return -1
+
+	echo "- mount overlayfs -"
+
+	# Check device existence
+	[ ! -e $OVERLAY_DEV ] && \
+	echo "overlay: $OVERLAY_DEV not found" && return -1
+
+	# Check filesystem
+	FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	[ -z "$FSTYPE" ] && \
+	echo "overlay: no valid filesystem" || \
+	echo "overlay: filesystem $FSTYPE found"
+}
+
+format_overlay_partition()
+{
+	[ "$FSTYPE" = "$OVERLAY_FS" ] && return 0
+
+	echo "overlay: try to format $OVERLAY_DEV as $OVERLAY_FS partition"
+
+	case "$OVERLAY_FS" in
+		ext4)
+			mkfs.ext4 -q -L RTKNAS $OVERLAY_DEV
+			RET=$?
+			;;
+	esac
+
+	[ $RET -ne 0 ] && \
+	echo "overlay: format command failed ret: $RET"
+
+	return $RET
+}
+
+check_overlay_partition()
+{
+	case "$FSTYPE" in
+		ext4)
+			fsck.ext4 -y $OVERLAY_DEV
+			resize2fs $OVERLAY_DEV
+			sync
+			;;
+	esac
+}
+
+mount_overlay_partition()
+{
+	mount -t $OVERLAY_FS $OVERLAY_DEV /overlay
+	RET=$?
+
+	[ $RET -ne 0 ] && \
+	echo "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
+
+	echo 'overlay: successfully mounted'
+
+	mkdir -p /overlay/upper /overlay/work
+	mount -o noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work -t overlay "overlayfs:/overlay" /mnt \
+		|| return -1
+
+	# pivot
+	mount --move /proc /mnt/proc
+
+	pivot_root /mnt /mnt/rom || return -1
+
+	mount --move /rom/dev /dev
+	mount --move /rom/tmp /tmp
+	mount --move /rom/sys /sys
+	mount --move /rom/overlay /overlay
+}
+
+do_mount_overlayfs()
+{
+	[ ! -e /rom/note ] && return
+
+	get_overlay_partition_from_kernel_cmdline || return -1
+
+	format_overlay_partition || return -1
+
+	check_overlay_partition
+
+	mount_overlay_partition || return -1
+}
+
+[ -n "$1" ] || ( do_mount_overlayfs && exit 0 )

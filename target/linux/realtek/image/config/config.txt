@@ -22,3 +22,4 @@ fw = linuxKernel Image 0x03000000
 
 ### part = (name mount_point filesystem file size)
 part = rootfs / squashfs rootfs.bin 134217728
+part = etc etc ext4 etc.bin 6442450944
