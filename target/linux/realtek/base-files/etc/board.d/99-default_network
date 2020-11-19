@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+json_is_a network object && exit 0
+
+board=$(board_name)
+
+ipaddr="192.168.0.9"
+lan_if="eth0"
+
+case "$board" in
+Realtek,rtd-129*)
+	if [ -d "/sys/class/net/eth1" ]; then
+		lan_if="eth1"
+		ucidef_set_interface_wan "eth0" "dhcp"
+	fi
+	;;
+*)
+	;;
+esac
+
+ucidef_set_interface_lan "$lan_if" "static" "$ipaddr"
+
+board_config_flush
+
+exit 0
