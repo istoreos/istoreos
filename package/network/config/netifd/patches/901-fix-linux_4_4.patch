@@ -1,0 +1,15 @@
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -30,6 +30,12 @@
+ #include <netinet/ether.h>
+ #include <netinet/in.h>
+ 
++#if !defined(__GLIBC__)
++/* avoid IPPROTO_TCP redefine */
++#define _LIBC_COMPAT_H
++#define _LINUX_IF_ETHER_H
++#endif
++
+ #include <linux/rtnetlink.h>
+ #include <linux/neighbour.h>
+ #include <linux/sockios.h>
