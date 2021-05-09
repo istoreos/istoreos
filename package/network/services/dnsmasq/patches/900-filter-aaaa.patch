@@ -27,7 +27,7 @@ diff --git a/src/option.c b/src/option.c
  #define LOPT_PXE_VENDOR    361
  #define LOPT_DYNHOST       362
  #define LOPT_LOG_DEBUG     363
-+#define LOPT_FILTER_AAAA   363
++#define LOPT_FILTER_AAAA   364
   
  #ifdef HAVE_GETOPT_LONG
  static const struct option opts[] =  
