@@ -27,7 +27,7 @@
 #define RTK_GPIO_DIRIN 0
 #define RTK_GPIO_DIROUT 1
 
-#define POWER_KEY_GPIO &rtk_iso_gpio 5 RTK_GPIO_DIRIN
+#define POWER_KEY_GPIO &rtk_iso_gpio 5 RTK_GPIO_DIRIN GPIO_ACTIVE_LOW
 
 / {
 	chosen {
@@ -189,6 +189,22 @@
 		gpios = <&rtk_iso_gpio 31 RTK_GPIO_DIROUT 1>;
 	};
 
+	power-management@0 {
+		/* system-power-controller; //disabled, using g2227 poweroff */
+
+		wakeup-flags = <0x04>; /* only enable gpio wakeup, ref enum _wakeup_flags in rtd129x_suspend.h */
+		/* GPIO Wakeup */
+		wakeup-gpio-enable = /* (0) disable (1) enable */
+			<1>,/* Wakeup from GPIO : enable */
+			<0>; /* Wakeup from WiFi : disable */
+		wakeup-gpio-list = /* <&rtk_iso_gpio {num} {force input (0) } {default N/A (0)] }> */
+			<POWER_KEY_GPIO>, /* GPIO wakeup host pin */
+			<&rtk_iso_gpio 33 RTK_GPIO_DIRIN GPIO_ACTIVE_LOW>; /* WiFi wakeup host pin */
+		wakeup-gpio-activity = /* (0) active low (1) active high*/
+			<0>,/* GPIO : low activity */
+			<0>; /* Wifi : low activity */
+	};
+
 	keys {
 		compatible = "gpio-keys-polled";
 		poll-interval = <20>;
@@ -200,9 +216,14 @@
 		};
 		power {
 			label = "power";
-			gpios = <POWER_KEY_GPIO GPIO_ACTIVE_LOW>;
+			gpios = <POWER_KEY_GPIO>;
 			linux,code = <KEY_POWER>;
 		};
 	};
 };
 
+&g2227 {
+	poweroff {
+		status = "okay";
+	};
+};
