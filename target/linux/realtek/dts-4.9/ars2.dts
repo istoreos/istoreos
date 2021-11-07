@@ -18,9 +18,11 @@
 	sata@9803F000 {
 		sata0: sata-port@0 {
 			led-io = <&rtk_misc_gpio 11 RTK_GPIO_DIROUT 0>;
+			/delete-property/ gpios; // ars2 SATA power is not assignd to gpio, (original gpio56)
 		};
 		sata1: sata-port@1 {
 			led-io = <&rtk_misc_gpio 12 RTK_GPIO_DIROUT 0>;
+			/delete-property/ gpios; // ars2 SATA power is not assignd to gpio, (original igpio15)
 		};
 	};
 
