@@ -28,7 +28,7 @@ define Device/ars2
 	DEVICE_TITLE := ARS2 4GB
 	DEVICE_DTS := ars2
 	HWSETTING := RTD1296_hwsetting_BOOT_4DDR4_8Gb_s1866
-	DEVICE_PACKAGES += kmod-input-gpio-keys kmod-input-gpio-keys-polled kmod-gpio-button-hotplug kmod-ipt-offload ipset kmod-ifb kmod-macvlan ntfs-3g-utils luci-lib-ipkg
+	DEVICE_PACKAGES += kmod-input-gpio-keys kmod-input-gpio-keys-polled kmod-gpio-button-hotplug ipset kmod-ifb kmod-macvlan ntfs-3g-utils luci-lib-ipkg kmod-tun kmod-veth kmod-pppoe kmod-usb-storage-uas kmod-ata-ahci
 	DEVICE_PACKAGES += luci-theme-material luci-app-arpbind luci-app-cifs-mount luci-app-cpufreq luci-app-diskman luci-app-dockerman docker luci-app-filetransfer luci-app-hd-idle luci-app-qos luci-app-samba4 luci-app-sqm luci-app-ttyd
 	DEVICE_PACKAGES += luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-i18n-ramfree-zh-cn luci-i18n-wol-zh-cn luci-i18n-upnp-zh-cn luci-i18n-ddns-zh-cn luci-i18n-vlmcsd-zh-cn luci-i18n-timecontrol-zh-cn
 	DEVICE_PACKAGES += luci-i18n-arpbind-zh-cn luci-i18n-cifs-mount-zh-cn luci-i18n-cpufreq-zh-cn luci-i18n-dockerman-zh-cn luci-i18n-filetransfer-zh-cn luci-i18n-hd-idle-zh-cn luci-i18n-qos-zh-cn luci-i18n-samba4-zh-cn luci-i18n-ttyd-zh-cn
