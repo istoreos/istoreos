@@ -296,9 +296,17 @@ define KernelPackage/rtd1295hwnat/config
 	config KERNEL_RTL_TSO
 		bool "Enable HW TSO support"
 		depends on !KERNEL_RTL_IPTABLES_FAST_PATH
+		select KERNEL_RTL_GSO
 		default y
 		help
 		  Enable HW TSO for HW NAT.
+
+	config KERNEL_RTL_GSO
+		bool "Enable software GSO support"
+		depends on !KERNEL_RTL_IPTABLES_FAST_PATH
+		default y
+		help
+		  Enable software GSO support.
 
 	config KERNEL_RTL_IPTABLES_FAST_PATH
 		bool "Enable fastpath support"
