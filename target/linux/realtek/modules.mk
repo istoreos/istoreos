@@ -84,8 +84,6 @@ define KernelPackage/rtk-emmc
 	CONFIG_MMC_PARANOID_SD_INIT=n \
 	CONFIG_MMC_RTK_EMMC=y \
 	CONFIG_MMC_RTKEMMC_JIFFY_NOT_WORK_ON_1_LAYER_FPGA=n \
-	CONFIG_MMC_RTK_SDMMC=y \
-	CONFIG_MMC_RTK_SDMMC_DEBUG=n \
 	CONFIG_MMC_SDHCI=n \
 	CONFIG_MMC_SIMULATE_MAX_SPEED=n \
 	CONFIG_MMC_TIFM_SD=n
@@ -101,6 +99,32 @@ define KernelPackage/rtk-emmc/description
 endef
 
 $(eval $(call KernelPackage,rtk-emmc))
+
+define KernelPackage/rtk-sdmmc
+  SUBMENU:=$(RTK_MENU)
+  TITLE:=Realtek SD MMC driver
+  KCONFIG:= \
+	CONFIG_MMC=y \
+	CONFIG_MMC_BLOCK=y \
+	CONFIG_MMC_EMBEDDED_SDIO=n \
+	CONFIG_MMC_PARANOID_SD_INIT=n \
+	CONFIG_MMC_RTK_SDMMC=y \
+	CONFIG_MMC_RTK_SDMMC_DEBUG=n \
+	CONFIG_MMC_SDHCI=n \
+	CONFIG_MMC_SIMULATE_MAX_SPEED=n \
+	CONFIG_MMC_TIFM_SD=n
+
+  FILES:=
+  AUTOLOAD:=
+  DEPENDS:=@TARGET_realtek
+  CONFLICTS:=kmod-rtk-nand
+endef
+
+define KernelPackage/rtk-sdmmc/description
+  This package enables the Realtek SD MMC driver.
+endef
+
+$(eval $(call KernelPackage,rtk-sdmmc))
 
 define KernelPackage/rtl8169soc
   SUBMENU:=$(RTK_MENU)
@@ -175,7 +199,6 @@ define KernelPackage/rtd1295hwnat
 	CONFIG_NET_SCHED=y \
 	CONFIG_RTD_1295_HWNAT=y \
 	CONFIG_BRIDGE_IGMP_SNOOPING=y \
-	CONFIG_RTD_1295_MAC0_SGMII_LINK_MON=y \
 	CONFIG_RTL_HARDWARE_NAT=n \
 	CONFIG_RTL_819X=y \
 	CONFIG_RTL_HW_NAPT=n \
@@ -189,7 +212,6 @@ define KernelPackage/rtd1295hwnat
 	CONFIG_RTL_LINKCHG_PROCESS=y \
 	CONFIG_RTL_NETIF_MAPPING=y \
 	CONFIG_RTL_PROC_DEBUG=y \
-	CONFIG_RTL_FASTPATH_HWNAT_SUPPORT_KERNEL_3_X=y \
 	CONFIG_RTL_LOG_DEBUG=n \
 	CONFIG_RTL865X_ROMEPERF=n \
 	CONFIG_RTK_VLAN_SUPPORT=n \
@@ -204,7 +226,6 @@ define KernelPackage/rtd1295hwnat
 	CONFIG_RTL_HW_L2_ONLY=y \
 	CONFIG_RTL_MULTIPLE_WAN=n \
 	CONFIG_RTL865X_LANPORT_RESTRICTION=n \
-	CONFIG_RTL_IVL_SUPPORT=y \
 	CONFIG_RTL_LOCAL_PUBLIC=n \
 	CONFIG_RTL_HW_DSLITE_SUPPORT=n \
 	CONFIG_RTL_HW_6RD_SUPPORT=n \

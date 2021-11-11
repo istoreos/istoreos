@@ -15,6 +15,10 @@
 		led-upgrade = &led_red;
 	};
 
+	hwnat: gmac@0x98060000 {
+		mac0_enable = <0>; /* 0:disable, 1:enable */
+	};
+
 	sata@9803F000 {
 		sata0: sata-port@0 {
 			led-io = <&rtk_misc_gpio 11 RTK_GPIO_DIROUT 0>;
