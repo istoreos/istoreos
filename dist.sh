@@ -39,7 +39,8 @@ mkdir -p $TARGET_DIR_DEST
 VERSION=`cat $TARGET_DIR_SRC/version.buildinfo`
 
 cp -a $TARGET_DIR_SRC/version.buildinfo \
-    $TARGET_DIR_SRC/openwrt-*-$VERSION-realtek-*-ars2* \
+    $TARGET_DIR_SRC/openwrt-*-$VERSION-realtek-rtd129x.manifest \
+    $TARGET_DIR_SRC/openwrt-*-$VERSION-realtek-rtd129x-ars2* \
     $TARGET_DIR_SRC/openwrt-imagebuilder-* \
     $TARGET_DIR_SRC/openwrt-sdk-* \
     $TARGET_DIR_DEST/
