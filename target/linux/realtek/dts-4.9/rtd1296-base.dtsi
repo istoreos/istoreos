@@ -31,7 +31,7 @@
 
 / {
 	chosen {
-		bootargs = "loglevel=7 root=/dev/mmcblk0p1 rootfstype=squashfs ro rootwait";
+		bootargs = "cma=256M@0x20000000 loglevel=7 root=/dev/mmcblk0p1 rootfstype=squashfs ro rootwait";
 		default-firewall = "nas";
 	};
 
@@ -126,10 +126,10 @@
 				ION_AUDIO_HEAP_PHYS
 				ION_AUDIO_HEAP_SIZE
 				ION_AUDIO_HEAP_FLAG>;
-	};
+		};
 
-	rtk,ion-heap@7 { /* TYPE_MEDIA */
-		compatible = "Realtek,rtk-ion-reserve";
+		rtk,ion-heap@7 { /* TYPE_MEDIA */
+			compatible = "Realtek,rtk-ion-reserve";
 			reg = <7>;
 			rtk,memory-reserve = <
 				ION_MEDIA_HEAP_PHYS1
