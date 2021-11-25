@@ -134,6 +134,8 @@ do_mount_overlayfs()
 	fi
 
 	pivot_root_to_overlayfs || return 1
+
+	mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
 }
 
 [ -n "$1" ] || ( do_mount_overlayfs && exit 0 )
