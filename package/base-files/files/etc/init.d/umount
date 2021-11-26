@@ -8,23 +8,28 @@ restart() {
 }
 
 stop() {
-	# pivot
-	mount --move /dev /rom/dev
-	mount --move /tmp /rom/tmp
-	mount --move /sys /rom/sys
-	mount --move /overlay /rom/overlay
-	mount --move /proc /rom/proc
-	if pivot_root /rom /rom/mnt; then
-		sync
-		/usr/bin/umount -R -d /mnt
-		sync /mnt
-		umount /mnt
+	if [ -f /.recovery_mode ]; then
 		sync /overlay
 		umount /overlay
 	else
-		mount --move /rom/proc /proc
-		mount --move /rom/dev /dev
-		sync
+		# pivot
+		mount --move /dev /rom/dev
+		mount --move /tmp /rom/tmp
+		mount --move /sys /rom/sys
+		mount --move /overlay /rom/overlay
+		mount --move /proc /rom/proc
+		if pivot_root /rom /rom/mnt; then
+			sync
+			/usr/bin/umount -R -d /mnt
+			sync /mnt
+			umount /mnt
+			sync /overlay
+			umount /overlay
+		else
+			mount --move /rom/proc /proc
+			mount --move /rom/dev /dev
+			sync
+		fi
 	fi
 	sync
 	echo 2 > /proc/sys/vm/drop_caches

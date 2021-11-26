@@ -17,7 +17,15 @@ get_overlay_partition_from_kernel_cmdline()
 
 	if [ -z "$OVERLAY_DEV" ]; then
 		OVERLAY_DEV=`blkid -L $OVERLAY_LABEL | grep /mmcblk0p`
-		echo "overlay dev not define by cmdline, fine $OVERLAY_LABEL got $OVERLAY_DEV"
+		[ -z "$OVERLAY_DEV" ] || echo "overlay dev not define by cmdline, fine $OVERLAY_LABEL got $OVERLAY_DEV"
+	fi
+
+	if [ -z "$OVERLAY_DEV" ]; then
+		if dd if=/dev/mmcblk0p2 bs=5 count=1 | grep -qF RESET; then
+			OVERLAY_DEV=/dev/mmcblk0p2
+			FSTYPE=RESET
+			echo "overlay not found by cmdline or label, we got resetting $OVERLAY_DEV"
+		fi
 	fi
 
 	[ -z "$OVERLAY_DEV" ] && return 1
@@ -29,10 +37,12 @@ get_overlay_partition_from_kernel_cmdline()
 		echo "overlay: $OVERLAY_DEV not found" && return 1
 
 	# Check filesystem
-	if dd if=$OVERLAY_DEV bs=5 count=1 | grep -qF RESET; then
-		FSTYPE=RESET
-	else
-		FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	if [ -z "$FSTYPE" ]; then
+		if dd if=$OVERLAY_DEV bs=5 count=1 | grep -qF RESET; then
+			FSTYPE=RESET
+		else
+			FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+		fi
 	fi
 
 	[ -z "$FSTYPE" ] && \
