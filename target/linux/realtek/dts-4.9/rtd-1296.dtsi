@@ -379,6 +379,7 @@
 		mac0_phy_id = <2>; /* PHY ID 2 for RGMII, 3 for SGMII */
 		mac4_phy_id = <4>;
 		mac5_phy_id = <1>;
+		// phy_8211f_led_mode = <0x6C11>; /* 0x6C11: LED2 both link and active, 0xAE11: LED2 link, LED1 active */
 		led_mode = <1>; /* 0~3: SCAN_0~3, 4~6: DIRECT 0~2 */
 		gpio_link_led_enable = <0>; /* 0:disable, 1:enable */
 		gpios = <&rtk_iso_gpio 27 1 0>; /* Link LED, output, default low */

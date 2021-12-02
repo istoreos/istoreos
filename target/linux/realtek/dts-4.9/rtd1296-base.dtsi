@@ -179,6 +179,7 @@
 		offload_enable = <1>;
 		mac0_enable = <0>;
 		led_mode = <4>;
+		phy_8211f_led_mode = <0x6C11>; /* 0x6C11: LED2 both link and active, 0xAE11: LED2 link, LED1 active */
 		gpio_link_led_enable = <1>;
 		led-gpios = <&rtk_iso_gpio 29 RTK_GPIO_DIROUT GPIO_ACTIVE_LOW>;
 		status = "okay";
