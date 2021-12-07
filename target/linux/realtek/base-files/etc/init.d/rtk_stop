@@ -3,11 +3,7 @@
 
 STOP=89
 
-restart() {
-	:
-}
-
-stop() {
+shutdown() {
 
 	/etc/init.d/dockerman stop 2>/dev/null
 	/etc/init.d/dockerd stop 2>/dev/null
