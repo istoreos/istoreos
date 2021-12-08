@@ -37,7 +37,8 @@ define Build/install.img
 	$(CP) $(IMAGE_KERNEL) "$@.install/Image"
 	$(CP) $(KDIR)/image-$(firstword $(DEVICE_DTS)).dtb "$@.install/rtd-129x.dtb"
 	$(CP) $(IMAGE_ROOTFS) "$@.install/rootfs.bin"
-	make_ext4fs -J -i 32768 -l 16M -L etc "$@.install/etc.bin"
+
+	echo "RESET000" | dd bs=512 count=1 conv=sync > "$@.install/etc.bin"
 
 	rtd129x_img_gen ./config/emmc_8gb.json "$@.install"
 

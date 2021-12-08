@@ -114,6 +114,9 @@ killall -9 ash
 
 kill_remaining TERM
 sleep 3
+sync
+/usr/bin/umount -R -d /mnt
+/usr/bin/umount -R -d /overlay
 kill_remaining KILL 1
 
 sleep 1
