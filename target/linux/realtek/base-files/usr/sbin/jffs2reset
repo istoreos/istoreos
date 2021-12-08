@@ -29,7 +29,7 @@ do_reset_nofs()
     return 0
   fi
 
-  echo "RESET" | dd of=$OVERLAY_DEV bs=512 count=1 conv=notrunc
+  echo "RESET000" | dd of=$OVERLAY_DEV bs=512 count=1 conv=notrunc
   echo 3 > /proc/sys/vm/drop_caches
   return 0
 }
