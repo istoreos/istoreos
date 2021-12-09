@@ -19,7 +19,7 @@ define Device/rtd129x
 	IMAGE/install.img := append-uboot | pad-to 8 | append-uboot-dtb | bootloader.tar | install.img
 	IMAGE/install.img.zip := append-uboot | pad-to 8 | append-uboot-dtb | bootloader.tar | install.img | install.img.zip
 
-	DEVICE_PACKAGES := rtk-init rtd129x_env e2fsprogs resize2fs mkf2fs blkid busybox openssl-util
+	DEVICE_PACKAGES := rtk-init rtd129x_env blkid mount-utils e2fsprogs tune2fs resize2fs mkf2fs busybox openssl-util
 	UBOOT_DTS := ars2
 endef
 
