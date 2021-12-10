@@ -8,7 +8,7 @@ restart() {
 }
 
 stop() {
-	if [ -f /.recovery_mode ]; then
+	if [ ! -f /rom/rom/note ]; then
 		sync /overlay
 		umount /overlay
 	else

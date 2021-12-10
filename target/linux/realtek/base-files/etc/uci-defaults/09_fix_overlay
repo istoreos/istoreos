@@ -1,0 +1,10 @@
+#!/bin/sh
+
+OVERLAY_DEV=`blkid -L etc | grep /mmcblk0p`
+
+if [ -n "$OVERLAY_DEV" ]; then
+    tune2fs -l $OVERLAY_DEV | grep -F 'Filesystem features:' | grep -qF has_journal || tune2fs -j $OVERLAY_DEV
+    tune2fs -l $OVERLAY_DEV | grep -F 'Default mount options:' | grep -qF 'acl' && tune2fs -o '^user_xattr,^acl' $OVERLAY_DEV
+fi
+
+exit 0
