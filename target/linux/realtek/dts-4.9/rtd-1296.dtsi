@@ -382,7 +382,10 @@
 		// phy_8211f_led_mode = <0x6C11>; /* 0x6C11: LED2 both link and active, 0xAE11: LED2 link, LED1 active */
 		led_mode = <1>; /* 0~3: SCAN_0~3, 4~6: DIRECT 0~2 */
 		gpio_link_led_enable = <0>; /* 0:disable, 1:enable */
-		gpios = <&rtk_iso_gpio 27 1 0>; /* Link LED, output, default low */
+		gpios = <&rtk_iso_gpio 27 1 0>; /* Link LED, output, default low, unused */
+
+		led-gpios = <&rtk_iso_gpio 27 1 0>; /* LED array */
+		gpio_link_led_pattern = <0 1 1 1>; /* Pattern for LED array: off, 10M, 100M, 1000M */
 
 		local-mac-address = [00 01 73 00 00 01];
 
