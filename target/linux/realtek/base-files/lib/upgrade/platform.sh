@@ -14,6 +14,12 @@ platform_check_image() {
 	return 0
 }
 
+platform_pre_upgrade() {
+	[ -n "$UPGRADE_BACKUP" ] && {
+		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
+	}
+}
+
 platform_do_upgrade() {
 	# $1: image path/url
 	echo "platform_do_upgrade start"
