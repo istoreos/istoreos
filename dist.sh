@@ -11,14 +11,26 @@ function thead(){
 	echo '| :--- | :---: | :---: |'
 }
 function item(){
-	echo '| ['"$1"']('"$1"') | ' `sha256 $1` '|' `md5 $1` '|'
+	echo '| ['"$1"']('"$1"') | ' `sha256 "$1"` '|' `md5 "$1"` '|'
 }
 function list(){
-	for i in *
-	do
-		item $i
+	local line
+	ls | while read line; do
+		item "$line"
 	done
 }
+
+function merge_log(){
+	local line
+	while read line; do
+		if [ -n "$line" ]; then
+			echo "## `echo $line | sed 's/-/ /'`"
+			cat template/log/$line.log
+			echo
+		fi
+	done
+}
+
 function md_tail(){
 	echo '## Image Files'
 	thead
@@ -48,10 +60,27 @@ cp -a $TARGET_DIR_SRC/version.buildinfo \
 mkdir tmp
 cp template/README.md tmp/
 
-rm $TARGET_DIR_DEST/README.md
+rm -f $TARGET_DIR_DEST/README.md
+rm -f $TARGET_DIR_DEST/version.index
+rm -f $TARGET_DIR_DEST/version.latest
+rm -rf $TARGET_DIR_DEST/log
 
 (cd $TARGET_DIR_DEST && list) > tmp/.distlist
 
+grep '.install.img\]' tmp/.distlist | sort -r | head -1 | sed 's/|/ /g' | \
+    xargs sh -c 'echo $0;echo SHA256: $1;echo MD5: $2' > tmp/.newest
+
+cat tmp/.newest >> tmp/README.md
+
+(cd template/log && ls) | sort -r | grep -F '.log' | sed 's/.log$//' > tmp/.loglist
+
+cat template/README.log.head.md >> tmp/README.md
+cat tmp/.loglist | merge_log >> tmp/README.md
+
+cat template/README.files.head.md >> tmp/README.md
 md_tail >> tmp/README.md
 
 cp tmp/README.md $TARGET_DIR_DEST/
+cp -a template/log $TARGET_DIR_DEST/
+cp tmp/.newest $TARGET_DIR_DEST/version.latest
+cp tmp/.loglist $TARGET_DIR_DEST/version.index
