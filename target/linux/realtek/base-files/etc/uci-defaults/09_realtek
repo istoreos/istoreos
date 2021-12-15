@@ -53,4 +53,6 @@ fi
 
 uci	commit dockerman
 
+rm -f /usr/lib/opkg/.upgrading
+
 exit 0

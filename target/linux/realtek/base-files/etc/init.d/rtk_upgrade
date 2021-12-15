@@ -1,0 +1,60 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2016 OpenWrt.org
+
+START=14
+
+split_opkg_status() {
+	local line
+	local of=/dev/null
+	rm -rf $2
+	mkdir -p $2
+	cat $1 | while read; do
+		line="$REPLY"
+		if [ -z "$line" ]; then
+			echo >>$of
+			of=/dev/null
+		else
+			if [ "x/dev/null" = "x$of" ] && echo "$line" | grep -q "^Package: "; then
+				of=$2/`echo "$line"|cut -d' ' -f2`
+			fi
+			echo "$line" >>$of
+		fi
+	done
+}
+
+split_both_status() {
+	split_opkg_status /usr/lib/opkg/status /tmp/newopkgstatus &
+	split_opkg_status /rom/usr/lib/opkg/status /tmp/romopkgstatus &
+	wait
+}
+
+ls_all_pkgs() {
+	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' )
+}
+
+rebuild_opkg_status() {
+	local line
+	ls_all_pkgs | while read line; do
+		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control ]; then
+			cat /tmp/newopkgstatus/$line
+		else
+			cat /tmp/romopkgstatus/$line
+		fi
+	done
+}
+
+clean_tmp_files() {
+	rm -rf /tmp/newopkgstatus
+	rm -rf /tmp/romopkgstatus
+}
+
+boot() {
+	[ -f /.recovery_mode ] && return 0
+
+	if [ -f /usr/lib/opkg/.upgrading ]; then
+		rm -f /usr/lib/opkg/.upgrading
+		split_both_status
+		rebuild_opkg_status > /usr/lib/opkg/status
+		clean_tmp_files
+	fi
+}
