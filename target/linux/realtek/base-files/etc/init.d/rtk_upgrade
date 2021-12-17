@@ -5,21 +5,27 @@ START=14
 
 split_opkg_status() {
 	local line
-	local of=/dev/null
+	local gap=1
+	exec 3>/dev/null
 	rm -rf $2
 	mkdir -p $2
 	cat $1 | while read; do
 		line="$REPLY"
 		if [ -z "$line" ]; then
-			echo >>$of
-			of=/dev/null
+			echo >&3
+			exec 3>&-
+			exec 3>/dev/null
+			gap=1
 		else
-			if [ "x/dev/null" = "x$of" ] && echo "$line" | grep -q "^Package: "; then
-				of=$2/`echo "$line"|cut -d' ' -f2`
+			if [ "x1" = "x$gap" ] && echo "$line" | grep -q "^Package: "; then
+				exec 3>&-
+				exec 3>$2/`echo "$line"|cut -d' ' -f2`
+				gap=0
 			fi
-			echo "$line" >>$of
+			echo "$line" >&3
 		fi
 	done
+	exec 3>&-
 }
 
 split_both_status() {

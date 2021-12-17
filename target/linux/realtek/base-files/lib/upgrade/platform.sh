@@ -1,7 +1,7 @@
 
 # bins for install_a
 RAMFS_COPY_BIN="/usr/bin/cat /usr/bin/chmod /usr/bin/cp /usr/bin/dd \
-/usr/bin/echo /usr/bin/mkdir /usr/bin/rm"
+/usr/bin/echo /usr/bin/mkdir /usr/bin/rm /usr/bin/umount"
 
 platform_check_image() {
 	echo "platform_check_image"

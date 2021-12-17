@@ -115,8 +115,8 @@ killall -9 ash
 kill_remaining TERM
 sleep 3
 sync
-/usr/bin/umount -R -d /mnt
-/usr/bin/umount -R -d /overlay
+/usr/bin/umount -R -d /mnt &
+sleep 5
 kill_remaining KILL 1
 
 sleep 1
@@ -135,7 +135,7 @@ fi
 
 grep /overlay /proc/mounts > /dev/null && {
 	/bin/mount -o noatime,remount,ro /overlay
-	/bin/umount -l /overlay
+	/usr/bin/umount -R -d -l /overlay || /bin/umount -l /overlay
 }
 
 # Exec new shell from ramfs
