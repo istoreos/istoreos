@@ -41,9 +41,9 @@ define Device/ars2
 	DEVICE_PACKAGES += kmod-hwmon-gpiofan
 # led
 	DEVICE_PACKAGES += kmod-leds-gpio
-	DEVICE_PACKAGES += luci-theme-material luci-app-arpbind luci-app-cifs-mount luci-app-cpufreq luci-app-diskman luci-app-dockerman docker luci-app-filetransfer luci-app-hd-idle luci-app-qos luci-app-samba4 luci-app-sqm luci-app-ttyd
+	DEVICE_PACKAGES += luci-theme-material luci-app-arpbind luci-app-cifs-mount luci-app-cpufreq luci-app-diskman luci-app-dockerman docker luci-app-filetransfer luci-app-hd-idle luci-app-samba4 luci-app-sqm luci-app-ttyd
 	DEVICE_PACKAGES += luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-i18n-ramfree-zh-cn luci-i18n-wol-zh-cn luci-i18n-upnp-zh-cn luci-i18n-ddns-zh-cn luci-i18n-vlmcsd-zh-cn luci-i18n-timecontrol-zh-cn
-	DEVICE_PACKAGES += luci-i18n-arpbind-zh-cn luci-i18n-cifs-mount-zh-cn luci-i18n-cpufreq-zh-cn luci-i18n-dockerman-zh-cn luci-i18n-filetransfer-zh-cn luci-i18n-hd-idle-zh-cn luci-i18n-qos-zh-cn luci-i18n-samba4-zh-cn luci-i18n-ttyd-zh-cn
+	DEVICE_PACKAGES += luci-i18n-arpbind-zh-cn luci-i18n-cifs-mount-zh-cn luci-i18n-cpufreq-zh-cn luci-i18n-dockerman-zh-cn luci-i18n-filetransfer-zh-cn luci-i18n-hd-idle-zh-cn luci-i18n-samba4-zh-cn luci-i18n-ttyd-zh-cn
 endef
 TARGET_DEVICES += ars2
 
