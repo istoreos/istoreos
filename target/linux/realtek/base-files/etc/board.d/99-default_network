@@ -8,7 +8,7 @@ json_is_a network object && exit 0
 
 board=$(board_name)
 
-ipaddr="192.168.100.1"
+ipaddr="192.168.1.1"
 lan_if="eth0"
 
 case "$board" in
