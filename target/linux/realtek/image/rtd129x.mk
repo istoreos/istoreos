@@ -52,7 +52,7 @@ define Device/bpi-w2
 	DEVICE_TITLE := Bananapi W2
 	UBOOT_DTS := w2
 	DEVICE_DTS := rtd-1296-bananapi-w2-2GB-HDMI
-	HWSETTING := RTD1295_hwsetting_BOOT_2DDR4_8Gb_s2133
+	HWSETTING := RTD1296_hwsetting_BOOT_4DDR4_4Gb_s1866
 # button
 	DEVICE_PACKAGES += kmod-input-gpio-keys kmod-input-gpio-keys-polled kmod-gpio-button-hotplug
 # fan
