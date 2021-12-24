@@ -5,11 +5,13 @@ START=99
 STOP=00
 
 start() {
+	uname -r | grep -q '^4\.4\.' || return 0
 	start-stop-daemon -m -p /var/run/rtk-supplicant.pid -b -S -x /usr/bin/rtk-supplicant
 }
 
 
 stop() {
+	uname -r | grep -q '^4\.4\.' || return 0
 	start-stop-daemon -p /var/run/rtk-supplicant.pid -K -s SIGQUIT
 	sleep 2
 }

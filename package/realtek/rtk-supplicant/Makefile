@@ -14,7 +14,7 @@ PKG_VERSION:=1.3.1
 else
 PKG_VERSION:=1
 endif
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=nonshared
 PKG_BUILD_DEPENDS:=openmax
 
@@ -59,7 +59,6 @@ define Package/rtk-supplicant/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(INSTALL_BIN) ./files/rtk-supplicant.init $(1)/etc/init.d/rtk-supplicant
-#	$(INSTALL_BIN) ./files/openmax.init $(1)/etc/init.d/openmax
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/root/usr/bin/ALSADaemon $(1)/usr/bin/rtk-supplicant
 endef
 
