@@ -260,7 +260,7 @@ define KernelPackage/rtd1295hwnat/config
 
 	config KERNEL_VLAN_8021Q
 		bool
-		default n
+		default y
 
 	config KERNEL_RTL_IVL_SUPPORT
 		bool
