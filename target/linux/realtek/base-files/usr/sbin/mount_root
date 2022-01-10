@@ -106,6 +106,8 @@ mount_overlay_partition()
 		rm -rf /overlay/upper /overlay/work
 		rm -f /overlay/.reset
 		sync /overlay
+	elif [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
+		rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d /overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* /overlay/upper/usr/lib/opkg/info/kernel.*
 	fi
 
 	mkdir -p /overlay/upper /overlay/work
