@@ -1,6 +1,7 @@
 
 define Package/base-files/install-target
 	chmod 0400 $(1)/etc/public.key
+	$(LN) /tmp/run $(1)/run
 endef
 
 define Package/base-files/postinst
