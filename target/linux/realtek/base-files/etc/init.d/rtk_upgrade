@@ -35,11 +35,19 @@ split_both_status() {
 }
 
 ls_all_pkgs() {
-	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' )
+	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' | grep -v '^kmod-' | grep -v '^kernel$' )
+}
+
+ls_all_kmods() {
+	[ -f /tmp/romopkgstatus/kernel ] && echo kernel
+	( cd /rom/usr/lib/opkg/info ; find . -maxdepth 1 -name 'kmod-*.control' | sed -E 's#./(.*).control#\1#g' )
 }
 
 rebuild_opkg_status() {
 	local line
+	ls_all_kmods | while read line; do
+		cat /tmp/romopkgstatus/$line
+	done
 	ls_all_pkgs | while read line; do
 		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control ]; then
 			cat /tmp/newopkgstatus/$line
