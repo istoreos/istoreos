@@ -1,0 +1,11 @@
+{
+	"luci-app-aria2": {
+		"description": "Grant UCI access for luci-app-aria2",
+		"read": {
+			"uci": [ "aria2" ]
+		},
+		"write": {
+			"uci": [ "aria2" ]
+		}
+	}
+}
