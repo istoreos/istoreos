@@ -153,18 +153,29 @@ endif
 
 
 # Disable noisy checks by default as in upstream
-DTC_FLAGS += \
-  -Wno-unit_address_vs_reg \
-  -Wno-simple_bus_reg \
-  -Wno-unit_address_format \
-  -Wno-pci_bridge \
-  -Wno-pci_device_bus_num \
-  -Wno-pci_device_reg \
-  -Wno-avoid_unnecessary_addr_size \
-  -Wno-alias_paths \
-  -Wno-graph_child_address \
-  -Wno-graph_port \
-  -Wno-unique_unit_address
+ifeq ($(strip $(call kernel_patchver_ge,4.7.0)),1)
+  DTC_FLAGS += -Wno-unit_address_vs_reg
+endif
+ifeq ($(strip $(call kernel_patchver_ge,4.12.0)),1)
+  DTC_FLAGS += \
+	-Wno-unit_address_vs_reg \
+	-Wno-simple_bus_reg \
+	-Wno-unit_address_format \
+	-Wno-pci_bridge \
+	-Wno-pci_device_bus_num \
+	-Wno-pci_device_reg
+endif
+ifeq ($(strip $(call kernel_patchver_ge,4.17.0)),1)
+  DTC_FLAGS += \
+	-Wno-avoid_unnecessary_addr_size \
+	-Wno-alias_paths
+endif
+ifeq ($(strip $(call kernel_patchver_ge,4.18.0)),1)
+  DTC_FLAGS += \
+	-Wno-graph_child_address \
+	-Wno-graph_port \
+	-Wno-unique_unit_address
+endif
 
 define Image/pad-to
 	dd if=$(1) of=$(1).new bs=$(2) conv=sync
