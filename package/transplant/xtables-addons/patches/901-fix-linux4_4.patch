@@ -1,0 +1,13 @@
+--- a/extensions/LUA/libxt_LUA.c
++++ b/extensions/LUA/libxt_LUA.c
+@@ -21,6 +21,10 @@
+ #include <stdbool.h>
+ #include <stdlib.h>
+ #include <string.h>
++#if !defined(__GLIBC__)
++/* avoid IPPROTO_TCP redefine */
++#define _LIBC_COMPAT_H
++#endif
+ #include <xtables.h>
+ #include <linux/netfilter.h>
+ #include <linux/netfilter/x_tables.h>
