@@ -23,7 +23,7 @@ define Device/rtd129x
 # network device
 	DEVICE_PACKAGES += kmod-ifb kmod-macvlan kmod-tun kmod-veth kmod-pppoe
 # storage
-	DEVICE_PACKAGES += kmod-usb-storage-uas kmod-ata-ahci ntfs-3g-utils
+	DEVICE_PACKAGES += kmod-usb-storage-uas kmod-ata-ahci ntfs3-mount
 # ssl
 	DEVICE_PACKAGES += libustream-openssl ca-bundle ca-certificates
 	DEVICE_PACKAGES += luci-lib-ipkg ipset
