@@ -1,0 +1,20 @@
+--- a/xt_FULLCONENAT.c
++++ b/xt_FULLCONENAT.c
+@@ -1347,15 +1347,9 @@ static int __init fullconenat_tg_init(vo
+   if (unlikely(ret))
+     return ret;
+ #elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
+-  ret = nf_nat_masquerade_ipv4_register_notifier();
+-  if (unlikely(ret))
+-    return ret;
++  nf_nat_masquerade_ipv4_register_notifier();
+ #if IS_ENABLED(CONFIG_NF_NAT_MASQUERADE_IPV6)
+-  ret = nf_nat_masquerade_ipv6_register_notifier();
+-  if (unlikely(ret)) {
+-    nf_nat_masquerade_ipv4_unregister_notifier();
+-    return ret;
+-  }
++  nf_nat_masquerade_ipv6_register_notifier();
+ #endif
+ #else
+ #if IS_MODULE(CONFIG_IP_NF_TARGET_MASQUERADE)
