@@ -20,6 +20,8 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 
 	$${HOST_SED} 's/s\.anonymous = true/s\.anonymous = true\ns\.addremove = true/' $${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/hd_idle.lua
 
+	$${HOST_SED} 's#"/opt"#"/overlay/upper/opt/docker"#' $${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/admin_system/fstab/mount.lua
+
 	$${HOST_LN} /usr/sbin/jffs2reset "$${IPKG_INSTROOT}/sbin/jffs2reset"
 
 	true
