@@ -101,13 +101,18 @@ mount_overlay_partition()
 		echo "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
 
 	echo 'overlay: successfully mounted'
+}
 
+prepare_primary_overlay()
+{
 	if [ -f /overlay/.reset ]; then
 		rm -rf /overlay/upper /overlay/work
 		rm -f /overlay/.reset
 		sync /overlay
 	elif [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
-		rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d /overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* /overlay/upper/usr/lib/opkg/info/kernel.*
+		rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d \
+			/overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* \
+			/overlay/upper/usr/lib/opkg/info/kernel.*
 	fi
 
 	mkdir -p /overlay/upper /overlay/work
@@ -115,9 +120,6 @@ mount_overlay_partition()
 
 pivot_root_to_overlayfs()
 {
-	mount -o noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work -t overlay "overlayfs:/overlay" /mnt \
-		|| return 1
-
 	# pivot
 	mount --move /proc /mnt/proc
 
@@ -127,6 +129,62 @@ pivot_root_to_overlayfs()
 	mount --move /rom/tmp /tmp
 	mount --move /rom/sys /sys
 	mount --move /rom/overlay /overlay
+}
+
+mount_extroot()
+{
+	[ -f /overlay/upper/etc/config/fstab ] || return 1
+	# let `block extroot` read /overlay/upper/etc/config/fstab
+	mount --bind /overlay/upper/etc/config /etc/config || return 1
+	block extroot
+	local ret=$?
+	umount /etc/config
+	return $ret
+}
+
+prepare_mnt()
+{
+	local dir
+	if mount_extroot && mountpoint -q /tmp/extroot/mnt; then
+		for dir in proc dev tmp sys overlay rom root; do
+			mkdir -m 0755 /tmp/extroot/mnt/$dir
+		done
+		if mount --move /tmp/extroot/mnt /mnt; then
+			# writeable extroot existed, we don't need overlay
+			umount /tmp/extroot/overlay
+			return 0
+		fi
+		umount /tmp/extroot/mnt
+	fi
+
+	local lowerdir=/
+	local overlaydir=/overlay
+
+	if mountpoint -q /tmp/extroot/overlay; then
+		# use ext overlay as upper layer
+		if [ `mountpoint -x $OVERLAY_DEV` != `mountpoint -d /tmp/extroot/overlay` ] && \
+		  mkdir -m 0755 -p /tmp/extroot/overlay/upper/ext_overlay && \
+		  mkdir -m 0755 -p /tmp/extroot/overlay/work; then
+			lowerdir=$overlaydir/upper:$lowerdir
+			overlaydir=/tmp/extroot/overlay
+		else
+			umount /tmp/extroot/overlay
+		fi
+	fi
+
+	mount -o noatime,lowerdir=$lowerdir,upperdir=$overlaydir/upper,workdir=$overlaydir/work \
+		-t overlay "overlayfs:/overlay" /mnt \
+		|| return 1
+}
+
+clean_extroot()
+{
+	mountpoint -q /tmp/extroot/overlay && mount --move /tmp/extroot/overlay /ext_overlay
+	rmdir /tmp/extroot/overlay
+	mountpoint -q /tmp/extroot/mnt && umount /tmp/extroot/mnt
+	rmdir /tmp/extroot/mnt
+	rmdir /tmp/extroot
+	mountpoint -q /rom/dev && umount /rom/dev
 }
 
 do_mount_overlayfs()
@@ -147,9 +205,17 @@ do_mount_overlayfs()
 		return 0
 	fi
 
+	prepare_primary_overlay
+
+	prepare_mnt || return 1
+
 	pivot_root_to_overlayfs || return 1
 
+	clean_extroot >/dev/null 2>&1
+
 	mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
+
+	return 0
 }
 
 [ -n "$1" ] || ( do_mount_overlayfs && exit 0 )
