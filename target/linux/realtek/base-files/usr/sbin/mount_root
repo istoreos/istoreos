@@ -142,6 +142,36 @@ mount_extroot()
 	return $ret
 }
 
+prepare_ext_overlay()
+{
+	local newoverlaydir=$1
+	local overlaydir=$2
+
+	if [ -f $newoverlaydir/.reset ]; then
+		rm -rf $newoverlaydir/upper
+		rm -f $newoverlaydir/.commit $newoverlaydir/.reset
+	else
+		if [ -f $overlaydir/upper/usr/lib/opkg/.upgrading ]; then
+			rm -rf $newoverlaydir/upper/lib/modules $newoverlaydir/upper/etc/modules-boot.d \
+				$newoverlaydir/upper/etc/modules.d $newoverlaydir/upper/usr/lib/opkg/info/kmod-* \
+				$newoverlaydir/upper/usr/lib/opkg/info/kernel.*
+		fi
+		if [ -f $newoverlaydir/.commit ]; then
+			cp -a $newoverlaydir/upper/. $overlaydir/upper && {
+				rmdir $overlaydir/upper/ext_overlay
+				rm -rf $newoverlaydir/upper
+				mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
+			}
+			rm -f $newoverlaydir/.commit
+		fi
+	fi
+
+	( mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay && \
+		  mkdir -m 0755 -p $newoverlaydir/work ) || return 1
+
+	return 0
+}
+
 prepare_mnt()
 {
 	local dir
@@ -162,11 +192,12 @@ prepare_mnt()
 
 	if mountpoint -q /tmp/extroot/overlay; then
 		# use ext overlay as upper layer
-		if [ `mountpoint -x $OVERLAY_DEV` != `mountpoint -d /tmp/extroot/overlay` ] && \
-		  mkdir -m 0755 -p /tmp/extroot/overlay/upper/ext_overlay && \
-		  mkdir -m 0755 -p /tmp/extroot/overlay/work; then
+		local newoverlaydir=/tmp/extroot/overlay
+		if [ `mountpoint -x $OVERLAY_DEV` != `mountpoint -d $newoverlaydir` ] && \
+		  prepare_ext_overlay $newoverlaydir $overlaydir && \
+		  mount --move /tmp/extroot/overlay /ext_overlay; then
 			lowerdir=$overlaydir/upper:$lowerdir
-			overlaydir=/tmp/extroot/overlay
+			overlaydir=/ext_overlay
 		else
 			umount /tmp/extroot/overlay
 		fi
@@ -179,7 +210,8 @@ prepare_mnt()
 
 clean_extroot()
 {
-	mountpoint -q /tmp/extroot/overlay && mount --move /tmp/extroot/overlay /ext_overlay
+	mountpoint -q /rom/ext_overlay && mount --move /rom/ext_overlay /ext_overlay
+	mountpoint -q /tmp/extroot/overlay && umount /tmp/extroot/overlay
 	rmdir /tmp/extroot/overlay
 	mountpoint -q /tmp/extroot/mnt && umount /tmp/extroot/mnt
 	rmdir /tmp/extroot/mnt
