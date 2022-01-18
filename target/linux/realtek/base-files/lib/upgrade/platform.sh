@@ -15,12 +15,22 @@ platform_check_image() {
 }
 
 platform_pre_upgrade() {
-	[ -n "$UPGRADE_BACKUP" ] && {
+	if [ -n "$UPGRADE_BACKUP" ]; then
+		if [ -e /ext_overlay/etc ]; then
+			rm -f /ext_overlay/etc/.extroot-uuid
+			rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
+			sync /ext_overlay
+		fi
 		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
-	}
+	fi
 }
 
 platform_do_upgrade() {
+	grep /ext_overlay /proc/mounts > /dev/null && {
+		/bin/mount -o noatime,remount,ro /ext_overlay
+		/usr/bin/umount -R -d -l /ext_overlay || /bin/umount -l /ext_overlay
+	}
+
 	# $1: image path/url
 	echo "platform_do_upgrade start"
 	echo "image path/url: $1"
