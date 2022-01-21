@@ -21,6 +21,7 @@ platform_pre_upgrade() {
 			rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
 			sync /ext_overlay
 		fi
+		rm -f /overlay/upper/usr/lib/opkg/.upgrading
 		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
 	fi
 }
