@@ -417,3 +417,22 @@ define KernelPackage/openmax/description
 endef
 
 $(eval $(call KernelPackage,openmax))
+
+define KernelPackage/crypto-hw-rtk
+  TITLE:= Realtek's Crypto Engine module
+  DEPENDS:=@TARGET_realtek
+  KCONFIG:= \
+	CONFIG_CRYPTO_HW=y \
+	CONFIG_CRYPTO_AES=y \
+	CONFIG_CRYPTO_SHA256=y \
+	CONFIG_CRYPTO_DEV_RTK
+  FILES:=$(LINUX_DIR)/drivers/crypto/rtk/rtk_crypto.ko
+  AUTOLOAD:=$(call AutoLoad,90,rtk_crypto)
+  $(call AddDepends/crypto)
+endef
+
+define KernelPackage/crypto-hw-rtk/description
+  Realtek's Cryptographic Engine driver.
+endef
+
+$(eval $(call KernelPackage,crypto-hw-rtk))
