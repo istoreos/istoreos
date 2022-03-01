@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bpftools
 PKG_VERSION:=5.10.10
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=linux-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/kernel/v5.x
@@ -141,6 +141,10 @@ define Build/InstallDev/libbpf
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib$(LIB_SUFFIX)/pkgconfig/libbpf.pc \
 		$(1)/usr/lib/pkgconfig/
+	$(SED) 's,/usr/lib64,/usr/lib,g' \
+		$(1)/usr/lib/pkgconfig/libbpf.pc
+	$(SED) '/prefix=\/usr/ a exec_prefix=\/usr' \
+		$(1)/usr/lib/pkgconfig/libbpf.pc
 	$(SED) 's,/usr/include,$$$${prefix}/include,g' \
 		$(1)/usr/lib/pkgconfig/libbpf.pc
 	$(SED) 's,/usr/lib,$$$${exec_prefix}/lib,g' \
