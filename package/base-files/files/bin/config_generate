@@ -105,9 +105,9 @@ generate_network() {
 
 	# Force bridge for "lan" as it may have other devices (e.g. wireless)
 	# bridged
-	[ "$1" = "lan" -a -z "$ports" ] && {
-		ports="$device"
-	}
+	# [ "$1" = "lan" -a -z "$ports" ] && {
+	# 	ports="$device"
+	# }
 
 	[ -n "$ports" -a -z "$bridge" ] && {
 		uci -q batch <<-EOF
