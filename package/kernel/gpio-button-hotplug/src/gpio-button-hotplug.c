@@ -526,7 +526,9 @@ static int gpio_keys_button_probe(struct platform_device *pdev,
 
 				bdata->gpiod = gpio_to_desc(button->gpio);
 			}
-		} else {
+		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
+		 else {
 			/* Device-tree */
 			struct device_node *child =
 				of_get_next_child(dev->of_node, prev);
@@ -536,6 +538,7 @@ static int gpio_keys_button_probe(struct platform_device *pdev,
 
 			prev = child;
 		}
+#endif
 
 		if (IS_ERR_OR_NULL(bdata->gpiod)) {
 			error = IS_ERR(bdata->gpiod) ? PTR_ERR(bdata->gpiod) :
