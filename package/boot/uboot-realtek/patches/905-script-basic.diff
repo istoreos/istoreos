@@ -1,0 +1,37 @@
+diff --git a/configs/rtd1296_qa_NAS_defconfig b/configs/rtd1296_qa_NAS_defconfig
+index dea96ee239..e1a3efffde 100644
+--- a/configs/rtd1296_qa_NAS_defconfig
++++ b/configs/rtd1296_qa_NAS_defconfig
+@@ -47,15 +47,15 @@ CONFIG_GMT_G2227=y
+ # CONFIG_CMD_FPGA is not set
+ # CONFIG_CMD_BOOTD is not set
+ # CONFIG_CMD_CRC32 is not set
+-# CONFIG_CMD_ECHO is not set
++CONFIG_CMD_ECHO=y
+ # CONFIG_CMD_ITEST is not set
+ # CONFIG_CMD_XIMG is not set
+-# CONFIG_CMD_MISC is not set
++CONFIG_CMD_MISC=y
+ # CONFIG_CMD_SETGETDCR is not set
+ # CONFIG_CMD_IMI is not set
+-# CONFIG_CMD_IMPORTENV is not set
+-# CONFIG_CMD_EXPORTENV is not set
+-# CONFIG_CMD_RUN is not set
++CONFIG_CMD_IMPORTENV=y
++CONFIG_CMD_EXPORTENV=y
++CONFIG_CMD_RUN=y
+ # CONFIG_CMD_BASE is not set
+ # CONFIG_CMD_LOOP is not set
+ # CONFIG_CMD_TEST is not set
+diff --git a/include/configs/rtd1295_qa_emmc_64.h b/include/configs/rtd1295_qa_emmc_64.h
+index cdd0edd13d..e7ead65a5f 100644
+--- a/include/configs/rtd1295_qa_emmc_64.h
++++ b/include/configs/rtd1295_qa_emmc_64.h
+@@ -208,5 +208,7 @@
+ #undef CONFIG_SYS_TEXT_BASE
+ #define CONFIG_SYS_TEXT_BASE		0x00020000
+ 
++#define CONFIG_CMD_SHOWVAR
++
+ #endif /* __CONFIG_RTK_RTD1295_QA_EMMC_64_H */
+ 
