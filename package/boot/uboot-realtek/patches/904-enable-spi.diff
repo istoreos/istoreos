@@ -1,0 +1,17 @@
+diff --git a/include/configs/rtd1295_qa_emmc_64.h b/include/configs/rtd1295_qa_emmc_64.h
+index 91e357f093..cdd0edd13d 100644
+--- a/include/configs/rtd1295_qa_emmc_64.h
++++ b/include/configs/rtd1295_qa_emmc_64.h
+@@ -84,6 +84,12 @@
+ 		#define CONFIG_RESCUE_FROM_USB_ROOTFS			"rescue.root.emmc.cpio.gz_pad.img"
+ 	#endif /* CONFIG_RESCUE_FROM_USB */
+ 
++	/* SPI */
++	#define CONFIG_RTKSPI
++	#define CONFIG_CMD_RTKSPI
++	#define CONFIG_LZMA
++	#define CONFIG_CMD_LZMADEC
++
+ #elif defined(CONFIG_SYS_RTK_NAND_FLASH)
+ 	/* Flash writer setting:
+ 	*   The corresponding setting will be located at
