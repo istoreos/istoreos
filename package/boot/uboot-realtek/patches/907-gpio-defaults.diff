@@ -1,0 +1,50 @@
+From 61dc85ba06e71fe26aa69f073861d62a885eabe5 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Mon, 7 Mar 2022 17:43:30 +0800
+Subject: [PATCH] gpio defaults
+
+---
+ common/main.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/common/main.c b/common/main.c
+index 765ff7205a..9d5ff9b916 100644
+--- a/common/main.c
++++ b/common/main.c
+@@ -756,6 +756,24 @@ int abortboot(int bootdelay)
+ # endif	/* CONFIG_AUTOBOOT_KEYED */
+ #endif	/* CONFIG_BOOTDELAY >= 0  */
+ 
++static void gpio_defaults (void)
++{
++	const void *fdt = _end;
++	int fdt_offset;
++	int32_t *fdt_value;
++	int value_len;
++	if (!fdt_check_header(fdt) && fdt_totalsize(fdt) <= (__bss_start - _end)) {
++		if ((fdt_offset = fdt_path_offset(fdt, "/gpio")) >= 0) {
++			fdt_value = (int32_t *)fdt_getprop_w(fdt, fdt_offset, "gpios", &value_len);
++			if (value_len > 0 && fdt_value >= 0) {
++				for (int i = 0; i + 1 < (value_len >> 2); i += 2) {
++					gpio_set_value(fdt32_to_cpu(fdt_value[i]), fdt32_to_cpu(fdt_value[i + 1]));
++				}
++			}
++		}
++	}
++}
++
+ /****************************************************************************/
+ 
+ void main_loop (void)
+@@ -887,6 +905,8 @@ void main_loop (void)
+ 		printf("[WARN] you need to execute \"env default -f\" to reset env.\n");
+ 	}
+ 
++	gpio_defaults();
++
+ 	if (bootdelay >= 0 && s && !abortboot (bootdelay)) {
+ #ifdef CONFIG_CUSTOMIZE_BOOTFLOW_1
+ 		normal_boot = customize_check_normal_boot();
+-- 
+2.31.0
+
