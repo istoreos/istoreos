@@ -186,6 +186,10 @@
 		status = "okay";
 	};
 
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios = <&rtk_misc_gpio 8 RTK_GPIO_DIRIN 0>;
+	};
+
 	rtk_iso_gpio: rtk_iso_gpio@98007100 {
 		/* WAN led */
 		gpios = <&rtk_iso_gpio 31 RTK_GPIO_DIROUT 1>;
