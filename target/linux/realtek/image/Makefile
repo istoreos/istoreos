@@ -34,7 +34,7 @@ define Build/install.img
 	$(CP) ./blob/rescue.emmc.dtb "$@.install/"
 	$(CP) ./blob/rescue.root.emmc.cpio.gz_pad.img "$@.install/"
 	$(CP) $(STAGING_DIR_IMAGE)/rescue.* "$@.install/"
-	$(CP) $(IMAGE_KERNEL) "$@.install/Image"
+	$(CP) $(IMAGE_KERNEL) "$@.install/emmc.Image"
 	$(CP) $(KDIR)/image-$(firstword $(DEVICE_DTS)).dtb "$@.install/rtd-129x.dtb"
 	$(CP) $(IMAGE_ROOTFS) "$@.install/rootfs.bin"
 
