@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_VERSION:=2015.07
-PKG_RELEASE:=10
+PKG_RELEASE:=11
 
 PKG_HASH:=0b48c9bd717f2c322ef791f8282e14c88be942dc7d1226df7e31a812a3af94d9
 
