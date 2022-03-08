@@ -1,0 +1,43 @@
+From 6497690beb0853af612801ffb093a2f19216ef9b Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Tue, 8 Mar 2022 14:45:43 +0800
+Subject: [PATCH] export memory size to shell var
+
+---
+ common/cli_hush.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/common/cli_hush.c b/common/cli_hush.c
+index cacc23fcc9..5189498196 100644
+--- a/common/cli_hush.c
++++ b/common/cli_hush.c
+@@ -3319,6 +3319,7 @@ static void u_boot_hush_reloc(void)
+ 
+ int u_boot_hush_start(void)
+ {
++	int memsize = 0;
+ 	if (top_vars == NULL) {
+ 		top_vars = malloc(sizeof(struct variables));
+ 		top_vars->name = "HUSH_VERSION";
+@@ -3326,6 +3327,18 @@ int u_boot_hush_start(void)
+ 		top_vars->next = NULL;
+ 		top_vars->flg_export = 0;
+ 		top_vars->flg_read_only = 1;
++
++		memsize = get_accessible_ddr_size(UNIT_BYTE) >> 20;
++		if (memsize > 0) {
++			top_vars->next = malloc(sizeof(struct variables));
++			top_vars->next->name = "BOARD_MEMORY_SIZE_MB";
++			top_vars->next->value = (char *)malloc(11);
++			top_vars->next->value[0] = '\0';
++			sprintf(top_vars->next->value, "0x%08X", memsize);
++			top_vars->next->next = NULL;
++			top_vars->next->flg_export = 0;
++			top_vars->next->flg_read_only = 1;
++		}
+ #ifdef CONFIG_NEEDS_MANUAL_RELOC
+ 		u_boot_hush_reloc();
+ #endif
+-- 
+2.31.0
+
