@@ -31,7 +31,7 @@ define KernelPackage/fs-exfat
   DEPENDS:= +kmod-nls-base
 endef
 
-define KernelPackage/exfat/description
+define KernelPackage/fs-exfat/description
   This package provides the kernel module for exfat.
 endef
 
