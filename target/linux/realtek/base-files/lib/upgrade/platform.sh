@@ -47,6 +47,8 @@ platform_do_upgrade() {
 		&& /tmp/install_a $OPT $1
 
 	echo "platform_do_upgrade end"
+
+	[ -f /tmp/install.log ] && echo "========= log =========" && cat /tmp/install.log && echo "========= end ========="
 }
 
 platform_copy_config() {
