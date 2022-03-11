@@ -14,6 +14,8 @@ uci set dockerman.local.daemon_data_root=/overlay/upper/opt/docker
 
 uci add_list dockerman.local.ac_allowed_interface=eth1
 
+uci set dockerd.globals.data_root=/overlay/upper/opt/docker
+
 if grep -q nas /proc/device-tree/chosen/default-firewall; then
 	uci -q batch <<-EOF >/dev/null
         delete ucitrack.@wan_drop[-1]
@@ -28,6 +30,7 @@ EOF
     uci -q batch <<-EOF >/dev/null
         add_list dockerman.local.ac_allowed_interface=eth0
 		add_list dockerman.local.ac_allowed_interface=eth1
+        del_list dockerd.firewall.blocked_interfaces=wan
         set ${WAN_ZONE}.input=ACCEPT
         commit firewall
 EOF
@@ -53,7 +56,10 @@ EOF
     done
 fi
 
-uci	commit dockerman
+uci -q batch <<-EOF >/dev/null
+    commit dockerd
+    commit dockerman
+EOF
 
 rm -f /usr/lib/opkg/.upgrading
 
