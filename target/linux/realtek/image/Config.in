@@ -1,0 +1,6 @@
+config REALTEK_CUSTOMIZE_SETTINGS
+	bool "Default settings"
+	depends on TARGET_realtek
+	default TARGET_realtek
+	select LUCI_LANG_zh_Hans
+	select LUCI_LANG_zh-cn
