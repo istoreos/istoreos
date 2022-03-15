@@ -275,8 +275,9 @@ default_postinst() {
 		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
 			if grep -m1 -q -s "^/usr/lib/lua/luci/i18n/" "$filelist"; then
 				/etc/init.d/fix_luci_lang boot
+				touch /tmp/luci-i18n-mtime
 			fi
-			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache
+			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-indexcache.*
 		fi
 	fi
 
