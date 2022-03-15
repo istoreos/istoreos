@@ -1,0 +1,45 @@
+#!/bin/sh
+# author: jjm2473
+
+toname() {
+    local lang_ar="العربية (Arabic)"
+    local lang_bg="български (Bulgarian)"
+    local lang_bn="বাংলা (Bengali)"
+    local lang_ca="Català (Catalan)"
+    local lang_cs="Čeština (Czech)"
+    local lang_da="Dansk (Danish)"
+    local lang_de="Deutsch (German)"
+    local lang_el="Ελληνικά (Greek)"
+    local lang_en="English"
+    local lang_es="Español (Spanish)"
+    local lang_fi="Suomi (Finnish)"
+    local lang_fr="Français (French)"
+    local lang_he="עִבְרִית (Hebrew)"
+    local lang_hi="हिंदी (Hindi)"
+    local lang_hu="Magyar (Hungarian)"
+    local lang_it="Italiano (Italian)"
+    local lang_ja="日本語 (Japanese)"
+    local lang_ko="한국어 (Korean)"
+    local lang_mr="Marāṭhī (Marathi)"
+    local lang_ms="Bahasa Melayu (Malay)"
+    local lang_no="Norsk (Norwegian)"
+    local lang_nl="Nederlands (Dutch)"
+    local lang_pl="Polski (Polish)"
+    local lang_pt_br="Português do Brasil (Brazilian Portuguese)"
+    local lang_pt="Português (Portuguese)"
+    local lang_ro="Română (Romanian)"
+    local lang_ru="Русский (Russian)"
+    local lang_sk="Slovenčina (Slovak)"
+    local lang_sv="Svenska (Swedish)"
+    local lang_tr="Türkçe (Turkish)"
+    local lang_uk="Українська (Ukrainian)"
+    local lang_vi="Tiếng Việt (Vietnamese)"
+    local lang_zh_cn="简体中文 (Chinese Simplified)"
+    local lang_zh_tw="繁體中文 (Chinese Traditional)"
+
+    eval "[ -n \"\${lang_$1}\" ] && echo \${lang_$1}"
+}
+
+if [ -n "$1" ]; then
+    toname ${1//-/_}
+fi
