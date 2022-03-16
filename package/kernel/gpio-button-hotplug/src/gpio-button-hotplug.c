@@ -526,19 +526,49 @@ static int gpio_keys_button_probe(struct platform_device *pdev,
 
 				bdata->gpiod = gpio_to_desc(button->gpio);
 			}
-		}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
-		 else {
+		} else {
 			/* Device-tree */
 			struct device_node *child =
 				of_get_next_child(dev->of_node, prev);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 16, 0)
 			bdata->gpiod = devm_gpiod_get_from_of_node(dev,
 				child, "gpios", 0, GPIOD_IN, desc);
-
+#else
+			enum of_gpio_flags flags;
+			button->gpio = of_get_gpio_flags(child, 0, &flags);
+			if (button->gpio < 0) {
+				error = button->gpio;
+				if (error != -ENOENT) {
+					if (error != -EPROBE_DEFER)
+						dev_err(dev,
+							"Failed to get gpio flags, error: %d\n",
+							error);
+					bdata->gpiod = ERR_PTR(error);
+				}
+			} else {
+				button->active_low = !!(flags & OF_GPIO_ACTIVE_LOW);
+				error = devm_gpio_request(dev, button->gpio, desc);
+				if (error) {
+					dev_err(dev, "unable to claim gpio %u, err=%d\n",
+						button->gpio, error);
+					bdata->gpiod = ERR_PTR(error);
+				} else {
+					bdata->gpiod = gpio_to_desc(button->gpio);
+					if (bdata->gpiod) {
+						error = gpio_direction_input(button->gpio);
+						if (error) {
+							dev_err(dev,
+								"unable to set direction on gpio %u, err=%d\n",
+								button->gpio, error);
+							bdata->gpiod = ERR_PTR(error);
+						}
+					}
+				}
+			}
+#endif
 			prev = child;
 		}
-#endif
 
 		if (IS_ERR_OR_NULL(bdata->gpiod)) {
 			error = IS_ERR(bdata->gpiod) ? PTR_ERR(bdata->gpiod) :
