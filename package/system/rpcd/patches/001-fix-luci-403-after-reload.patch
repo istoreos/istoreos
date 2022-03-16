@@ -1,0 +1,39 @@
+From 1fa35765ddf64976aa48950cac53d501fb71dda0 Mon Sep 17 00:00:00 2001
+From: Jo-Philipp Wich <jo@mein.io>
+Date: Tue, 13 Jul 2021 20:31:16 +0200
+Subject: [PATCH] session: unload rpcd configuration before checking login
+
+Currently, rpcd cached /etc/config/rpcd once on the first login and then
+keeps checking login attempts and ACL settings against the in-memory
+copy until the process is restarted.
+
+This is not desirable as we would like added, modified or removed accounts
+to be effective immediately. In order to achive this behaviour, ensure to
+unload the currently loaded rpcd configuration before looking up the login
+account section.
+
+Ref: https://github.com/openwrt/luci/issues/5179
+Signed-off-by: Jo-Philipp Wich <jo@mein.io>
+---
+ session.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/session.c b/session.c
+index 908e298..347cf4e 100644
+--- a/session.c
++++ b/session.c
+@@ -834,6 +834,12 @@ rpc_login_test_login(struct uci_context *uci,
+ 	struct uci_element *e;
+ 	struct uci_ptr ptr = { .package = "rpcd" };
+ 
++	if (!uci_lookup_ptr(uci, &ptr, NULL, false) && ptr.p) {
++		uci_unload(uci, ptr.p);
++		ptr.flags = 0;
++		ptr.p = NULL;
++	}
++
+ 	uci_load(uci, ptr.package, &p);
+ 
+ 	if (!p)
+-- 
+2.30.2
