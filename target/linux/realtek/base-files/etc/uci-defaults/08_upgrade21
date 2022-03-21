@@ -18,6 +18,14 @@ fi
 
 rm -f /overlay/upper/usr/lib/lua/luci/dispatcher.lua
 
+uci get luci.apply >/dev/null 2>&1 || uci -q batch <<-EOF >/dev/null
+    add luci internal
+    rename luci.@internal[-1]=apply
+    set luci.apply.timeout=5
+    set luci.apply.display=1.5
+    commit luci
+EOF
+
 uci -q batch <<-EOF >/dev/null
     set luci.apply.rollback=30
     set luci.apply.holdoff=2
