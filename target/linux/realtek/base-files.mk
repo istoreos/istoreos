@@ -20,18 +20,18 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 
 	$${HOST_SED} "s/'192\\.168\\.1\\.1'/'192.168.100.1'/; s/'openwrt\\.lan'/window.location.host/" "$${IPKG_INSTROOT}/www/luci-static/resources/view/system/flash.js"
 
-	$${HOST_SED} 's/s\.anonymous = true/s\.anonymous = true\ns\.addremove = true/' $${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/hd_idle.lua
+	$${HOST_SED} 's/s\.anonymous = true/s\.anonymous = true\ns\.addremove = true/' "$${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/hd_idle.lua"
 
-	$${HOST_SED} 's#"/opt"#"/overlay/upper/opt/docker"#' $${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/admin_system/fstab/mount.lua
+	$${HOST_SED} 's#"/opt"#"/overlay/upper/opt/docker"#' "$${IPKG_INSTROOT}/usr/lib/lua/luci/model/cbi/admin_system/fstab/mount.lua"
 
 	$${HOST_LN} /usr/sbin/jffs2reset "$${IPKG_INSTROOT}/sbin/jffs2reset"
 
 	$${HOST_SED} '/<link rel="shortcut icon" href="<%=media%>\/favicon.ico">/a         <link rel="stylesheet" href="<%=resource%>/easepi/easeicon.css?t=1647520814207">' \
-		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon/header.htm \
-		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark/header.htm \
-		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light/header.htm \
-		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark_purple/header.htm \
-		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light_green/header.htm
+		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon/header.htm" \
+		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark/header.htm" \
+		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light/header.htm" \
+		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark_purple/header.htm" \
+		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light_green/header.htm"
 
 	rm -f "$${IPKG_INSTROOT}/etc/uci-defaults/luci-argon-config"
 
