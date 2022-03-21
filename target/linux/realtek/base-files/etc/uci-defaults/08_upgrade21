@@ -1,0 +1,30 @@
+#!/bin/sh
+
+if ! [ -f /etc/uci-defaults/09_realtek ]; then
+    if [ -f /etc/config/dockerd -a -f /etc/config/dockerman ]; then
+        local docker_root=`uci get dockerman.local.daemon_data_root`
+        if [ -n "$docker_root" ]; then
+            uci set "dockerd.globals.data_root=$docker_root"
+        fi
+        uci del_list dockerd.firewall.blocked_interfaces=wan
+        uci commit dockerd
+        local docker_ea=`uci get dockerman.local.daemon_ea`
+        if [ -n "$docker_ea" ] && [ "$docker_ea" = "true" -o  "$docker_ea" = "1" ]; then
+            /etc/init.d/dockerd enable
+        fi
+    fi
+    rm -f /overlay/upper/usr/lib/lua/luci/view/cbi/dynlist.htm
+fi
+
+rm -f /overlay/upper/usr/lib/lua/luci/dispatcher.lua
+
+uci -q batch <<-EOF >/dev/null
+    set luci.apply.rollback=30
+    set luci.apply.holdoff=2
+    commit luci
+EOF
+
+uci -q batch <<-EOF >/dev/null
+    set argon.@global[0].mode=light
+    commit argon
+EOF

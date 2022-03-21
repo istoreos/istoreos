@@ -33,6 +33,8 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark_purple/header.htm \
 		$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light_green/header.htm
 
+	rm -f "$${IPKG_INSTROOT}/etc/uci-defaults/luci-argon-config"
+
 	true
 }
 endef
