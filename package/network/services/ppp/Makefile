@@ -13,14 +13,14 @@ PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL:=https://github.com/paulusmack/ppp
-PKG_SOURCE_DATE:=2020-10-03
-PKG_SOURCE_VERSION:=ad3937a0a38a696eb1a37dbf8f92e8e6072cdccb
-PKG_MIRROR_HASH:=c5b39615eb62728431b19f3ae5428eb1e2fc705b4b7b960228fe5b5d7b5a4bca
+PKG_SOURCE_DATE:=2021-01-04
+PKG_SOURCE_VERSION:=4fb319056f168bb8379865b91b4fd3e1ada73f1e
+PKG_MIRROR_HASH:=429cb5fcff36e1d8698766130711d4764347f08b83233dfb4831bea21616efef
 PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=BSD-4-Clause
 PKG_CPE_ID:=cpe:/a:samba:ppp
 
-PKG_RELEASE_VERSION:=2.4.8
+PKG_RELEASE_VERSION:=2.4.9
 PKG_VERSION:=$(PKG_RELEASE_VERSION).git-$(PKG_SOURCE_DATE)
 
 PKG_BUILD_DEPENDS:=libpcap
@@ -39,7 +39,7 @@ endef
 
 define Package/ppp
 $(call Package/ppp/Default)
-  DEPENDS:=+kmod-ppp
+  DEPENDS:=+kmod-ppp +kmod-mppe +libpthread +shellsync
   TITLE:=PPP daemon
   VARIANT:=default
 endef
@@ -113,7 +113,7 @@ endef
 
 define Package/ppp-mod-pptp
 $(call Package/ppp/Default)
-  DEPENDS:=@(PACKAGE_ppp||PACKAGE_ppp-multilink) +kmod-pptp +kmod-mppe +resolveip
+  DEPENDS:=@(PACKAGE_ppp||PACKAGE_ppp-multilink) +kmod-pptp +kmod-mppe +resolveip +kmod-nf-nathelper-extra +kmod-gre +kmod-ipt-conntrack-extra +kmod-ipt-nat-extra +iptables-mod-conntrack-extra
   TITLE:=PPtP plugin
 endef
 
@@ -242,8 +242,9 @@ endef
 
 define Package/ppp-mod-pppoe/install
 	$(INSTALL_DIR) $(1)/usr/lib/pppd/$(PKG_RELEASE_VERSION)
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/lib/pppd/$(PKG_RELEASE_VERSION)/rp-pppoe.so \
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/lib/pppd/$(PKG_RELEASE_VERSION)/pppoe.so \
 		$(1)/usr/lib/pppd/$(PKG_RELEASE_VERSION)/
+	$(LN) pppoe.so $(1)/usr/lib/pppd/$(PKG_RELEASE_VERSION)/rp-pppoe.so
 endef
 
 define Package/ppp-mod-radius/install
