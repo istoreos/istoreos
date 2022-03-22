@@ -12,6 +12,7 @@ if ! [ -f /etc/uci-defaults/09_realtek ]; then
         if [ -n "$docker_ea" ] && [ "$docker_ea" = "true" -o  "$docker_ea" = "1" ]; then
             /etc/init.d/dockerd enable
         fi
+        rm -f /overlay/upper/etc/init.d/dockerman
     fi
     rm -f /overlay/upper/usr/lib/lua/luci/view/cbi/dynlist.htm
 fi
