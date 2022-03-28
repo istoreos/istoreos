@@ -14,6 +14,10 @@ if ! [ -f /etc/uci-defaults/09_realtek ]; then
         fi
         rm -f /overlay/upper/etc/init.d/dockerman
     fi
+    uci -q batch <<-EOF >/dev/null
+        del_list ucitrack.@network[0].affects=wan_drop
+        commit ucitrack
+EOF
     rm -f /overlay/upper/usr/lib/lua/luci/view/cbi/dynlist.htm
 fi
 
