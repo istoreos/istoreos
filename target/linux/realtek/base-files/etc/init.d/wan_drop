@@ -2,8 +2,9 @@
 # Copyright (C) 2016 OpenWrt.org
 
 START=20
+USE_PROCD=1
 
-start() {
+start_service() {
 	local PROTO=`uci get network.wan.proto`
 	logger -t 'wan_drop' "current proto $PROTO"
 	if [ "$PROTO" = "pppoe" ]; then
@@ -14,7 +15,11 @@ start() {
 				set ${WAN_ZONE}.input=DROP
 				commit firewall
 EOF
-			/etc/init.d/firewall reload
+			/etc/init.d/firewall reload >/dev/null
 		fi
 	fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger "network"
 }
