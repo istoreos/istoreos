@@ -17,19 +17,17 @@ uci add_list dockerman.local.ac_allowed_interface=eth1
 uci set dockerd.globals.data_root=/overlay/upper/opt/docker
 
 if grep -q nas /proc/device-tree/chosen/default-firewall; then
-	uci -q batch <<-EOF >/dev/null
+    uci -q batch <<-EOF >/dev/null
         delete ucitrack.@wan_drop[-1]
         add ucitrack wan_drop
         set ucitrack.@wan_drop[-1].init=wan_drop
-		del_list ucitrack.@network[0].affects=wan_drop
-        add_list ucitrack.@network[0].affects=wan_drop
         commit ucitrack
 EOF
 
     WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
     uci -q batch <<-EOF >/dev/null
         add_list dockerman.local.ac_allowed_interface=eth0
-		add_list dockerman.local.ac_allowed_interface=eth1
+        add_list dockerman.local.ac_allowed_interface=eth1
         del_list dockerd.firewall.blocked_interfaces=wan
         set ${WAN_ZONE}.input=ACCEPT
         commit firewall
