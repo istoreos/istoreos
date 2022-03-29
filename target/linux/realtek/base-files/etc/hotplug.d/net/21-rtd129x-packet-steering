@@ -16,11 +16,11 @@ flock 512 || exit 1
 PROTO=`uci get network.wan.proto`
 logger -t 'rtd129x-packet-steering' "current proto $PROTO"
 if echo " none static dhcp dhcpv6 " | grep -Fq " $PROTO "; then
-	[ "`cat eth0/queues/rx-0/rps_cpus`" = "0" ] && exit
-	echo 0 > eth1/queues/rx-0/rps_cpus
-	echo 0 > eth1/queues/tx-0/xps_cpus
-	echo 0 > eth0/queues/rx-0/rps_cpus
-	echo 0 > eth0/queues/tx-0/xps_cpus
+	[ "`cat eth0/queues/rx-0/rps_cpus`" = "e" ] && exit
+	echo e > eth1/queues/rx-0/rps_cpus
+	echo e > eth1/queues/tx-0/xps_cpus
+	echo e > eth0/queues/rx-0/rps_cpus
+	echo e > eth0/queues/tx-0/xps_cpus
 else
 	[ "`cat eth0/queues/rx-0/rps_cpus`" = "a" ] && exit
 	echo a > eth1/queues/rx-0/rps_cpus
