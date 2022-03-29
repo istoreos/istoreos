@@ -7,9 +7,7 @@ platform_check_image() {
 	echo "platform_check_image"
 	echo "image path/url: $1"
 
-	if [ "$KEEP_ALIVE" -ne 0 ]; then
-		get_image "$@" | tar -Ox config.txt | grep rootfs || return 1
-	fi
+	get_image "$@" | tar -Ox config.txt | grep -Fq rootfs || return 1
 
 	return 0
 }
