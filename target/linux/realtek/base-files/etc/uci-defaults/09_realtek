@@ -59,6 +59,11 @@ uci -q batch <<-EOF >/dev/null
     commit dockerman
 EOF
 
+uci -q batch <<-EOF >/dev/null
+    set upnpd.config.ipv6_disable=1
+    commit upnpd
+EOF
+
 rm -f /usr/lib/opkg/.upgrading
 
 exit 0
