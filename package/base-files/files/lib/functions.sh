@@ -245,6 +245,8 @@ default_postinst() {
 
 	add_group_and_user "${pkgname}"
 
+	[ -z "$root" ] && local ucitrack_before=`md5sum /etc/config/ucitrack | cut -d ' ' -f 1`
+
 	if [ -f "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" ]; then
 		( . "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" )
 		ret=$?
@@ -270,6 +272,10 @@ default_postinst() {
 				( [ -f "$i" ] && cd "$(dirname $i)" && . "$i" ) && rm -f "$i"
 			done
 			uci commit
+			local after=`md5sum /etc/config/ucitrack | cut -d ' ' -f 1`
+			if [ "x$after" != "x$ucitrack_before" ]; then
+				/etc/init.d/ucitrack reload
+			fi
 		fi
 
 		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
