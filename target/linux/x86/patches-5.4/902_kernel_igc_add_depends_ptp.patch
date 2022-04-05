@@ -1,0 +1,12 @@
+--- a/drivers/net/ethernet/intel/Kconfig	2021-10-17 16:42:35.000000000 +0800
++++ b/drivers/net/ethernet/intel/Kconfig	2022-04-05 21:55:18.276950502 +0800
+@@ -329,7 +329,8 @@
+ 	tristate "Intel(R) Ethernet Controller I225-LM/I225-V support"
+ 	default n
+ 	depends on PCI
+-	---help---
++	depends on PTP_1588_CLOCK
++    ---help---
+ 	  This driver supports Intel(R) Ethernet Controller I225-LM/I225-V
+ 	  family of adapters.
+ 
