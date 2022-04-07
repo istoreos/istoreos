@@ -27,7 +27,7 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 
 	$${HOST_LN} /usr/sbin/jffs2reset "$${IPKG_INSTROOT}/sbin/jffs2reset"
 
-	$${HOST_SED} '/<link rel="shortcut icon" href="<%=media%>\/favicon.ico">/a         <link rel="stylesheet" href="<%=resource%>/easepi/easeicon.css?t=1647520814207">' \
+	$${HOST_SED} '/<link rel="shortcut icon" href="<%=media%>\/favicon.ico">/a         <link rel="stylesheet" href="<%=resource%>/easepi/easeicon.css?t=1649313193968">' \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon/header.htm" \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_dark/header.htm" \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/view/themes/argon_light/header.htm" \
