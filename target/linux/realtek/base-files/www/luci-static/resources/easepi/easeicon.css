@@ -31,27 +31,27 @@
 
 .main>.main-left>.nav>li.slide>.menu[data-title=Docker]:before {
     font-family: 'easeicon' !important;
-    content: "\e659";
-    color: #0c93f3 !important;
+    content: "\e659" !important;
+    color: #0c93f3;
 }
 
 .main>.main-left>.nav>li.slide>.menu[data-title=iStore]:before,
 .main>.main-left>.nav>li>a[data-title=iStore]:before {
     font-family: 'easeicon' !important;
-    content: "\e60f";
-    color: #8965e0 !important;
+    content: "\e60f" !important;
+    color: #8965e0;
 }
 
 .main>.main-left>.nav>li.slide>.menu[data-title=QuickStart]:before,
 .main>.main-left>.nav>li>a[data-title=QuickStart]:before {
     font-family: 'easeicon' !important;
-    content: "\e664";
-    color: #11cdef !important;
+    content: "\e664" !important;
+    color: #11cdef;
 }
 
 .main>.main-left>.nav>li.slide>.menu[data-title=NetworkGuide]:before,
 .main>.main-left>.nav>li>a[data-title=NetworkGuide]:before {
     font-family: 'easeicon' !important;
-    content: "\ecc7";
-    color: #fb6340 !important;
+    content: "\ecc7" !important;
+    color: #fb6340;
 }
