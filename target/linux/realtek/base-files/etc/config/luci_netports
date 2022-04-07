@@ -1,0 +1,10 @@
+config global 'global'
+	option default_additional_info 'false'
+	option default_h_mode          'false'
+	option hv_mode_switch_button   'false'
+
+config port 'eth0'
+	option ifname 'eth0'
+
+config port 'eth1'
+	option ifname 'eth1'
