@@ -62,6 +62,19 @@ clean_tmp_files() {
 	rm -rf /tmp/romopkgstatus
 }
 
+clean_themes() {
+	local line
+	local name
+	local path
+	uci show luci.themes | tail -n +2 | sed "s/^luci.themes.//g; s/'//g" | while read; do
+		line="$REPLY"
+		name=`echo "$line" | cut -d= -f 1`
+		path=`echo "$line" | cut -d= -f 2`
+		[ "x$path" != "x" -a -d /www$path ] || uci delete "luci.themes.$name"
+	done
+	uci commit luci
+}
+
 boot() {
 	[ -f /.recovery_mode ] && return 0
 
@@ -70,5 +83,7 @@ boot() {
 		split_both_status
 		rebuild_opkg_status > /usr/lib/opkg/status
 		clean_tmp_files
+
+		clean_themes
 	fi
 }
