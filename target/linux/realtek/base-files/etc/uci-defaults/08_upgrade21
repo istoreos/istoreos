@@ -61,7 +61,7 @@ EOF
 
     for pkg in luci-app-ttyd luci-i18n-ttyd-zh-cn luci-app-argon-config luci-i18n-argon-config-zh-cn \
             luci-theme-argon luci-theme-argon-18.06 luci-base uhttpd iptables firewall ip-full dnsmasq-full \
-            netifd odhcp6c ppp wireguard-tools luci-proto-ppp luci-proto-ipv6 luci-proto-wireguard ; do
+            netifd odhcp6c ppp wireguard-tools luci-proto-ppp luci-proto-ipv6 luci-proto-wireguard aria2 ; do
         reset_pkg "$pkg"
     done
     uci -q batch <<-EOF >/dev/null
