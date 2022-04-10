@@ -16,6 +16,6 @@ endef
 
 include $(INCLUDE_DIR)/target.mk
 DEFAULT_PACKAGES += e2fsprogs 
-
+DEFAULT_PACKAGES:= $(filter-out libustream-wolfssl,$(DEFAULT_PACKAGES)) libustream-openssl
 
 $(eval $(call BuildTarget))
