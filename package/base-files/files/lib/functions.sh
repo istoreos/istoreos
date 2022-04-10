@@ -285,6 +285,10 @@ default_postinst() {
 			fi
 			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-indexcache.*
 		fi
+
+		if grep -m1 -q -s "^/usr/share/rpcd/acl\\.d/" "$filelist"; then
+			/etc/init.d/rpcd reload
+		fi
 	fi
 
 	local shell="$(command -v bash)"
