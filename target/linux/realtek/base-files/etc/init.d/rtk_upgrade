@@ -85,5 +85,7 @@ boot() {
 		clean_tmp_files
 
 		clean_themes
+
+		rm -f /overlay/upper/etc/opkg/distfeeds.conf
 	fi
 }
