@@ -1,0 +1,44 @@
+#!/bin/sh
+
+
+[ "$(uci get dhcp.@dnsmasq[0].resolvfile)" = "/tmp/resolv.conf.auto" ] && {
+    uci set dhcp.@dnsmasq[0].resolvfile="/tmp/resolv.conf.d/resolv.conf.auto"
+    uci commit dhcp
+}
+
+if [ -f /overlay/upper/usr/bin/aria2c ]; then
+    cp -a /rom/usr/bin/aria2c /usr/bin/aria2c
+    /usr/bin/aria2c -v | head -n1
+    rm -f /overlay/upper/usr/bin/aria2c
+fi
+
+if [ "x`uci get network.lan.ifname`" = "xeth1" ]; then
+    uci show network | grep -qE "@device\\[\\d+\\].name='br-lan'" || uci -q batch <<-EOF
+        add network device
+        set network.@device[-1].type=bridge
+        set network.@device[-1].name=br-lan
+        set network.@device[-1].ports=eth1
+EOF
+    uci -q batch <<-EOF
+        set network.lan.ifname=
+        set network.lan.type=
+        set network.lan.device=br-lan
+EOF
+fi
+
+[ "x`uci get network.wan.ifname`" = "xeth0" ] && uci -q batch <<-EOF
+    set network.wan.ifname=
+    set network.wan.device=eth0
+EOF
+
+[ "x`uci get network.wan6.ifname`" = "xeth0" ] && uci -q batch <<-EOF
+    set network.wan6.ifname=
+    set network.wan6.device=eth0
+EOF
+
+[ "x`uci get network.loopback.ifname`" = "xlo" ] && uci -q batch <<-EOF
+    set network.loopback.ifname=
+    set network.loopback.device=lo
+EOF
+
+uci commit network
