@@ -242,10 +242,12 @@ default_postinst() {
 	local pkgname="$(basename ${1%.*})"
 	local filelist="/usr/lib/opkg/info/${pkgname}.list"
 	local ret=0
+	local ucitrack_before
 
 	add_group_and_user "${pkgname}"
 
-	[ -z "$root" ] && local ucitrack_before=`md5sum /etc/config/ucitrack | cut -d ' ' -f 1`
+	[ -z "$root" ] && grep -m1 -q -s "^/etc/uci-defaults/" "$filelist" && \
+		ucitrack_before=`md5sum /etc/config/ucitrack 2>/dev/null || echo "empty" | cut -d ' ' -f 1`
 
 	if [ -f "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" ]; then
 		( . "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" )
@@ -266,16 +268,12 @@ default_postinst() {
 			/etc/init.d/sysctl restart
 		fi
 
-		if grep -m1 -q -s "^/etc/uci-defaults/" "$filelist"; then
+		if [ -n "$ucitrack_before" ]; then
 			[ -d /tmp/.uci ] || mkdir -p /tmp/.uci
 			for i in $(grep -s "^/etc/uci-defaults/" "$filelist"); do
 				( [ -f "$i" ] && cd "$(dirname $i)" && . "$i" ) && rm -f "$i"
 			done
 			uci commit
-			local after=`md5sum /etc/config/ucitrack | cut -d ' ' -f 1`
-			if [ "x$after" != "x$ucitrack_before" ]; then
-				/etc/init.d/ucitrack reload
-			fi
 		fi
 
 		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
@@ -302,6 +300,13 @@ default_postinst() {
 			"$i" start
 		fi
 	done
+
+	if [ -n "$ucitrack_before" ]; then
+		local after=`md5sum /etc/config/ucitrack 2>/dev/null || echo "empty" | cut -d ' ' -f 1`
+		if [ "x$after" != "x$ucitrack_before" ]; then
+			/etc/init.d/ucitrack reload
+		fi
+	fi
 
 	return $ret
 }
