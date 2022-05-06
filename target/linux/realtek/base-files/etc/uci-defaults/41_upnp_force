@@ -1,0 +1,10 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+    set upnpd.config.use_stun='1'
+    set upnpd.config.stun_host='stun.sipgate.net'
+    set upnpd.config.force_forwarding='1'
+    commit upnpd
+EOF
+
+exit 0
