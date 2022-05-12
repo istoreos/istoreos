@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# Copyright (C) 2013-2015 OpenWrt.org
+#
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+json_is_a network object && exit 0
+
+ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
+if [ $ETHNUM == 1 ]; then
+    ucidef_set_interface_lan 'eth0'
+else
+    [ -d /sys/class/net/eth0 ] && ucidef_set_interface_wan 'eth0'
+    interface=""
+    for eth_interface in /sys/class/net/eth*
+    do
+        [ "$eth_interface" != "/sys/class/net/eth0" ] && interface=$interface" "${eth_interface##*/}
+    done
+    [ -n "$interface" ] && ucidef_set_interface_lan "$interface"
+fi
+
+board_config_flush
+
+exit 0
