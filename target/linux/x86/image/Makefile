@@ -48,7 +48,8 @@ define Build/combined
 		$(INSTALL_DIR) $@.boot/efi/boot
 		$(CP) $(STAGING_DIR_IMAGE)/grub2/boot$(if $(CONFIG_x86_64),x64,ia32).efi $@.boot/efi/boot/
 	)
-	PADDING="1" SIGNATURE="$(IMG_PART_SIGNATURE)" \
+	SIGNATURE="$(IMG_PART_SIGNATURE)" \
+		$(if $(filter $(1),pad),PADDING="1") \
 		$(if $(filter $(1),efi),GUID="$(IMG_PART_DISKGUID)") $(SCRIPT_DIR)/gen_image_generic.sh \
 		$@ \
 		$(CONFIG_TARGET_KERNEL_PARTSIZE) $@.boot \
@@ -107,15 +108,15 @@ define Device/Default
   ARTIFACT/image.iso := grub-config iso | iso
   IMAGE/combined.img := grub-config pc | combined | grub-install | append-metadata
   IMAGE/combined.img.gz := grub-config pc | combined | grub-install | gzip | append-metadata
-  IMAGE/combined.vdi := grub-config pc | combined | grub-install | qemu-image vdi
-  IMAGE/combined.vmdk := grub-config pc | combined | grub-install | qemu-image vmdk
+  IMAGE/combined.vdi := grub-config pc | combined pad | grub-install | qemu-image vdi
+  IMAGE/combined.vmdk := grub-config pc | combined pad | grub-install | qemu-image vmdk
   IMAGE/rootfs.img := append-rootfs | pad-to $(ROOTFS_PARTSIZE)
   IMAGE/rootfs.img.gz := append-rootfs | pad-to $(ROOTFS_PARTSIZE) | gzip
   ARTIFACT/image-efi.iso := grub-config iso | iso efi
   IMAGE/combined-efi.img := grub-config efi | combined efi | grub-install efi | append-metadata
   IMAGE/combined-efi.img.gz := grub-config efi | combined efi | grub-install efi | gzip | append-metadata
-  IMAGE/combined-efi.vdi := grub-config efi | combined efi | grub-install efi | qemu-image vdi
-  IMAGE/combined-efi.vmdk := grub-config efi | combined efi | grub-install efi | qemu-image vmdk
+  IMAGE/combined-efi.vdi := grub-config efi | combined efi pad | grub-install efi | qemu-image vdi
+  IMAGE/combined-efi.vmdk := grub-config efi | combined efi pad | grub-install efi | qemu-image vmdk
   ifeq ($(CONFIG_TARGET_IMAGES_GZIP),y)
     IMAGES-y := rootfs.img.gz
     IMAGES-$$(CONFIG_GRUB_IMAGES) += combined.img.gz
