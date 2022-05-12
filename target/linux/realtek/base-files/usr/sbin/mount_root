@@ -1,5 +1,6 @@
 #!/bin/sh
 # Copyright (C) 2010 OpenWrt.org
+# Copyright (C) 2020-2022 jjm2473@gmail.com
 
 DEFAULT_OVERLAY_FS="ext4"
 OVERLAY_LABEL="etc"
@@ -61,7 +62,7 @@ format_overlay_partition()
 		ext4)
 			mkfs.ext4 -q -j -FF -L $OVERLAY_LABEL $OVERLAY_DEV
 			RET=$?
-			[ $RET -ne 0 ] || tune2fs -o '^user_xattr,^acl' $OVERLAY_DEV
+			[ $RET -ne 0 ] || tune2fs -o '^user_xattr,^acl' -r 1024 $OVERLAY_DEV
 			;;
 		*)
 			echo "overlay: unhandled fs type : $OVERLAY_FS"
