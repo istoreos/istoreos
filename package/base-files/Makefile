@@ -12,7 +12,7 @@ include $(INCLUDE_DIR)/version.mk
 include $(INCLUDE_DIR)/feeds.mk
 
 PKG_NAME:=base-files
-PKG_FLAGS:=nonshared
+PKG_FLAGS:=hold essential nonshared
 PKG_RELEASE:=$(COMMITCOUNT)
 
 PKG_FILE_DEPENDS:=$(PLATFORM_DIR)/ $(GENERIC_PLATFORM_DIR)/base-files/
@@ -37,7 +37,8 @@ endif
 define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
-  DEPENDS:=+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool
+  DEPENDS:=+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool \
+	blkid mount-utils e2fsprogs tune2fs resize2fs
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
   VERSION:=$(PKG_RELEASE)-$(REVISION)
@@ -180,6 +181,9 @@ define Package/base-files/install
 
 	chmod 0600 $(1)/etc/shadow
 	chmod 1777 $(1)/tmp
+
+	$(LN) /tmp/run $(1)/run
+	mkdir -p $(1)/ext_overlay
 
 	$(call ImageConfigOptions,$(1))
 	$(call Package/base-files/install-target,$(1))

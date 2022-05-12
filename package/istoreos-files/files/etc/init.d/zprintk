@@ -1,0 +1,9 @@
+#!/bin/sh /etc/rc.common
+# 2022 jjm2473
+
+START=99
+
+boot() {
+	# tune printk level after success boot, avoid noise in console
+	echo '4 5 1 7' > /proc/sys/kernel/printk
+}

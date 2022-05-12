@@ -5,50 +5,47 @@
 DEFAULT_OVERLAY_FS="ext4"
 OVERLAY_LABEL="etc"
 
-get_overlay_partition_from_kernel_cmdline()
+OVERLAY_FS=${DEFAULT_OVERLAY_FS}
+OVERLAY_DEV=
+
+log() {
+	echo "<1>mount_root: $1" >/dev/kmsg
+}
+
+inlog() {
+	$@ >/dev/kmsg 2>&1
+}
+
+. /lib/functions/istoreos-boot.sh
+
+validate_overlay_partition()
 {
-	OVERLAY_FS=${DEFAULT_OVERLAY_FS}
-
-	for item in `cat /proc/cmdline`; do
-		case $item in
-			overlay=*)		OVERLAY_DEV=${item:8};;
-			overlayfs=*)	OVERLAY_FS=${item:10};;
-		esac
-	done
-
-	if [ -z "$OVERLAY_DEV" ]; then
-		OVERLAY_DEV=`blkid -L $OVERLAY_LABEL | grep /mmcblk0p`
-		[ -z "$OVERLAY_DEV" ] || echo "overlay dev not define by cmdline, fine $OVERLAY_LABEL got $OVERLAY_DEV"
-	fi
-
-	if [ -z "$OVERLAY_DEV" ]; then
-		if dd if=/dev/mmcblk0p2 bs=5 count=1 | grep -qF RESET; then
-			OVERLAY_DEV=/dev/mmcblk0p2
-			FSTYPE=RESET
-			echo "overlay not found by cmdline or label, we got resetting $OVERLAY_DEV"
-		fi
-	fi
-
-	[ -z "$OVERLAY_DEV" ] && return 1
-
-	echo "- mount overlayfs -"
+	log "- mount overlayfs -"
 
 	# Check device existence
-	[ ! -e $OVERLAY_DEV ] && \
-		echo "overlay: $OVERLAY_DEV not found" && return 1
+	[ ! -e "$OVERLAY_DEV" ] && \
+		log "overlay: $OVERLAY_DEV not found" && return 1
 
-	# Check filesystem
-	if [ -z "$FSTYPE" ]; then
-		if dd if=$OVERLAY_DEV bs=5 count=1 | grep -qF RESET; then
-			FSTYPE=RESET
-		else
-			FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
-		fi
+	[ -n "$FSTYPE" ] && return 0
+
+	# get filesystem
+	if dd if="$OVERLAY_DEV" bs=5 count=1 2>/dev/null | grep -qF RESET; then
+		FSTYPE=RESET
+		log "overlay: $OVERLAY_DEV marked as RESET, format later"
+		return 0
+	elif blkid -o device -t LABEL=$OVERLAY_LABEL "$OVERLAY_DEV" >/dev/null; then
+		FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	else
+		FSTYPE=RESET
+		log "overlay: $OVERLAY_DEV not labeled, format later"
+		return 0
 	fi
 
-	[ -z "$FSTYPE" ] && \
-		echo "overlay: no valid filesystem" || \
-		echo "overlay: filesystem $FSTYPE found"
+	if [ -z "$FSTYPE" ]; then
+		log "overlay: no valid filesystem"
+	else
+		log "overlay: filesystem $FSTYPE found"
+	fi
 }
 
 format_overlay_partition()
@@ -56,22 +53,22 @@ format_overlay_partition()
 	local RET
 	[ "$FSTYPE" = "$OVERLAY_FS" ] && return 0
 
-	echo "overlay: try to format $OVERLAY_DEV as $OVERLAY_FS partition"
+	log "overlay: try to format $OVERLAY_DEV as $OVERLAY_FS partition"
 
 	case "$OVERLAY_FS" in
 		ext4)
-			mkfs.ext4 -q -j -FF -L $OVERLAY_LABEL $OVERLAY_DEV
+			mkfs.ext4 -q -j -FF -L $OVERLAY_LABEL "$OVERLAY_DEV"
 			RET=$?
-			[ $RET -ne 0 ] || tune2fs -o '^user_xattr,^acl' -r 1024 $OVERLAY_DEV
+			[ $RET -ne 0 ] || tune2fs -o '^user_xattr,^acl' -r 1024 "$OVERLAY_DEV"
 			;;
 		*)
-			echo "overlay: unhandled fs type : $OVERLAY_FS"
+			log "overlay: unhandled fs type : $OVERLAY_FS"
 			RET=1
 			;;
 	esac
 
 	if [ $RET -ne 0 ]; then
-		echo "overlay: format command failed ret: $RET"
+		log "overlay: format command failed ret: $RET"
 	else
 		echo 3 > /proc/sys/vm/drop_caches
 		FSTYPE=$OVERLAY_FS
@@ -84,9 +81,9 @@ check_overlay_partition()
 {
 	case "$FSTYPE" in
 		ext4)
-			fsck.ext4 -y $OVERLAY_DEV
+			fsck.ext4 -y "$OVERLAY_DEV"
 			sync
-			resize2fs $OVERLAY_DEV
+			resize2fs "$OVERLAY_DEV"
 			sync
 			;;
 	esac
@@ -95,13 +92,13 @@ check_overlay_partition()
 mount_overlay_partition()
 {
 	local RET
-	mount -t $OVERLAY_FS $OVERLAY_DEV /overlay
+	mount -t $OVERLAY_FS "$OVERLAY_DEV" /overlay
 	RET=$?
 
 	[ $RET -ne 0 ] && \
-		echo "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
+		log "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
 
-	echo 'overlay: successfully mounted'
+	log 'overlay: successfully mounted'
 }
 
 prepare_primary_overlay()
@@ -194,7 +191,7 @@ prepare_mnt()
 	if mountpoint -q /tmp/extroot/overlay; then
 		# use ext overlay as upper layer
 		local newoverlaydir=/tmp/extroot/overlay
-		if [ `mountpoint -x $OVERLAY_DEV` != `mountpoint -d $newoverlaydir` ] && \
+		if [ `mountpoint -x "$OVERLAY_DEV"` != `mountpoint -d $newoverlaydir` ] && \
 		  prepare_ext_overlay $newoverlaydir $overlaydir && \
 		  mount --move /tmp/extroot/overlay /ext_overlay; then
 			lowerdir=$overlaydir/upper:$lowerdir
@@ -224,29 +221,31 @@ do_mount_overlayfs()
 {
 	[ ! -e /rom/note ] && return 0
 
-	get_overlay_partition_from_kernel_cmdline || return 1
+	inlog get_overlay_partition || return 1
 
-	format_overlay_partition || return 1
+	inlog validate_overlay_partition || return 1
 
-	check_overlay_partition
+	inlog format_overlay_partition || return 1
 
-	mount_overlay_partition || return 1
+	inlog check_overlay_partition
+
+	inlog mount_overlay_partition || return 1
 
 	# if we are in recovery mode, just skip pivot_root
 	if [ -f /.recovery_mode ]; then
-		rm -f /rom/note
+		rm -f /rom/note >/dev/null 2>&1
 		return 0
 	fi
 
-	prepare_primary_overlay
+	inlog prepare_primary_overlay
 
-	prepare_mnt || return 1
+	inlog prepare_mnt || return 1
 
-	pivot_root_to_overlayfs || return 1
+	inlog pivot_root_to_overlayfs || return 1
 
 	clean_extroot >/dev/null 2>&1
 
-	mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
+	inlog mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
 
 	return 0
 }

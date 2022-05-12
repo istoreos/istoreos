@@ -1,12 +1,9 @@
 #!/bin/sh
+# Copyright (C) 2022 jjm2473
 
 uci -q batch <<-EOF >/dev/null
     set system.@system[-1].zonename='Asia/Shanghai'
     set system.@system[-1].timezone='CST-8'
-    add_list system.ntp.server='0.cn.pool.ntp.org'
-    add_list system.ntp.server='1.cn.pool.ntp.org'
-    add_list system.ntp.server='2.cn.pool.ntp.org'
-    add_list system.ntp.server='3.cn.pool.ntp.org'
     commit system
 EOF
 

@@ -1,3 +1,86 @@
 #!/bin/sh
+# Copyright (C) 2022 jjm2473@gmail.com
 
-/sbin/jffs2reset $@
+DEFAULT_OVERLAY_FS="ext4"
+OVERLAY_LABEL="etc"
+
+OVERLAY_FS=${DEFAULT_OVERLAY_FS}
+OVERLAY_DEV=
+
+log() {
+	echo "$1" >&2
+}
+
+inlog() {
+	$@ >&2
+}
+
+. /lib/functions/istoreos-boot.sh
+
+CONFIRM=n
+REBOOT=n
+
+confirm()
+{
+  [ "$1" = "y" ] && return 0
+  echo "This will erase all settings and remove any installed packages. Are you sure? [N/y]"
+  read CONFIRM
+  [ "$CONFIRM" = "y" -o "$CONFIRM" = "Y" ] && return 0
+  return 1
+}
+
+do_reset_nofs()
+{
+  get_overlay_partition || return 1
+
+  if [ -z "$OVERLAY_DEV" ]; then
+    echo "Unable to determine overlay partition" >&2
+    return 1
+  fi
+  if [ "RESET" = "$FSTYPE" ]; then
+    echo "Already resetted" >&2
+    return 1
+  fi
+  if ! blkid -o device -t LABEL=$OVERLAY_LABEL "$OVERLAY_DEV" >/dev/null; then
+    echo "Overlay partition $OVERLAY_DEV not labeled $OVERLAY_LABEL" >&2
+    return 1
+  fi
+
+  echo "RESET000" | dd of="$OVERLAY_DEV" bs=512 count=1 conv=notrunc,sync,fsync 2>/dev/null
+  echo 3 > /proc/sys/vm/drop_caches
+  return 0
+}
+
+do_reset_ext_overlay()
+{
+  rm -f /ext_overlay/etc/.extroot-uuid
+  touch /ext_overlay/.reset
+  sync /ext_overlay
+}
+
+do_reset()
+{
+  if [ -f /.recovery_mode ]; then
+    mount_root || ( echo "/overlay mount failed!" ; exit 1 )
+    rm -rf /overlay/upper
+    mkdir /overlay/upper
+    sync /overlay
+  else
+    do_reset_nofs
+    do_reset_ext_overlay
+  fi
+  [ "$REBOOT" = "y" ] && reboot
+  exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    -y) CONFIRM=y ;;
+    -r) REBOOT=y ;;
+  esac
+  shift
+done
+
+confirm $CONFIRM && do_reset
+exit 0
