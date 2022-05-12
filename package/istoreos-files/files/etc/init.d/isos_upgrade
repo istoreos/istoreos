@@ -1,5 +1,6 @@
 #!/bin/sh /etc/rc.common
-# Copyright (C) 2016 OpenWrt.org
+# istoreos upgrade post process
+# Copyright (C) 2022 jjm2473
 
 START=14
 

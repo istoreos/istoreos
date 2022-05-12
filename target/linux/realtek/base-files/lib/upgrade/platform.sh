@@ -12,18 +12,6 @@ platform_check_image() {
 	return 0
 }
 
-platform_pre_upgrade() {
-	if [ -n "$UPGRADE_BACKUP" ]; then
-		if [ -e /ext_overlay/etc ]; then
-			rm -f /ext_overlay/etc/.extroot-uuid
-			rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
-			sync /ext_overlay
-		fi
-		rm -f /overlay/upper/usr/lib/opkg/.upgrading
-		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
-	fi
-}
-
 platform_do_upgrade() {
 	grep /ext_overlay /proc/mounts > /dev/null && {
 		/bin/mount -o noatime,remount,ro /ext_overlay

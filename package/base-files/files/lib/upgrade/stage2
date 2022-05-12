@@ -106,6 +106,19 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 	_v
 }
 
+istoreos_pre_upgrade() {
+	if [ -n "$UPGRADE_BACKUP" ]; then
+		# reset rom uuid in ext_overlay
+		if [ -e /ext_overlay/etc ]; then
+			rm -f /ext_overlay/etc/.extroot-uuid
+			rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
+			sync /ext_overlay
+		fi
+		rm -f /overlay/upper/usr/lib/opkg/.upgrading
+		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
+	fi
+}
+
 indicate_upgrade
 
 killall -9 telnetd
@@ -122,6 +135,8 @@ kill_remaining KILL 1
 sleep 1
 
 echo 3 > /proc/sys/vm/drop_caches
+
+[ -n "$IMAGE" ] && istoreos_pre_upgrade
 
 if [ -n "$IMAGE" ] && type 'platform_pre_upgrade' >/dev/null 2>/dev/null; then
 	platform_pre_upgrade "$IMAGE"
