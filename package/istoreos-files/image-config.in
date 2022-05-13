@@ -1,7 +1,6 @@
-config REALTEK_CUSTOMIZE_SETTINGS
-	bool "Default settings"
-	depends on TARGET_realtek
-	default TARGET_realtek
+config ISTOREOS_CUSTOMIZE_SETTINGS
+	bool
+	default PACKAGE_istoreos-files
 	select LUCI_LANG_zh_Hans
 	select LUCI_LANG_zh-cn
 	select KERNEL_PROC_PAGE_MONITOR
