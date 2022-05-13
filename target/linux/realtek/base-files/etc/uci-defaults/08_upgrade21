@@ -81,15 +81,4 @@ uci get luci.apply >/dev/null 2>&1 || uci -q batch <<-EOF >/dev/null
     commit luci
 EOF
 
-uci -q batch <<-EOF >/dev/null
-    set luci.apply.rollback=30
-    set luci.apply.holdoff=2
-    commit luci
-EOF
-
-uci -q batch <<-EOF >/dev/null
-    set argon.@global[0].mode=light
-    commit argon
-EOF
-
 exit 0

@@ -7,10 +7,6 @@ uci -q batch <<-EOF >/dev/null
     commit system
 EOF
 
-uci set dockerman.local.daemon_data_root=/overlay/upper/opt/docker
-
-uci add_list dockerman.local.ac_allowed_interface=eth1
-
 uci set dockerd.globals.data_root=/overlay/upper/opt/docker
 
 if grep -q nas /proc/device-tree/chosen/default-firewall; then
@@ -23,15 +19,13 @@ EOF
 
     WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
     uci -q batch <<-EOF >/dev/null
-        add_list dockerman.local.ac_allowed_interface=eth0
-        add_list dockerman.local.ac_allowed_interface=eth1
         del_list dockerd.firewall.blocked_interfaces=wan
         set ${WAN_ZONE}.input=ACCEPT
         commit firewall
 EOF
     if [ -e /etc/config/minidlna ]; then
         uci -q batch <<-EOF >/dev/null
-            set minidlna.@minidlna[0].interface='br-lan,eth0,eth1'
+            set minidlna.@minidlna[0].interface='br-lan,eth0'
             commit minidlna
 EOF
     fi
@@ -53,7 +47,6 @@ fi
 
 uci -q batch <<-EOF >/dev/null
     commit dockerd
-    commit dockerman
 EOF
 
 uci -q batch <<-EOF >/dev/null
@@ -61,6 +54,17 @@ uci -q batch <<-EOF >/dev/null
     commit upnpd
 EOF
 
-rm -f /usr/lib/opkg/.upgrading
+uci -q batch <<-EOF >/dev/null
+    set luci.apply.rollback=30
+    set luci.apply.holdoff=2
+    commit luci
+EOF
+
+if [ -f /etc/config/argon ]; then
+    uci -q batch <<-EOF >/dev/null
+        set argon.@global[0].mode=light
+        commit argon
+EOF
+fi
 
 exit 0
