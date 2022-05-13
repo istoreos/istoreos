@@ -1,0 +1,19 @@
+#!/bin/sh
+# Copyright (C) 2022 jjm2473
+
+uci set dockerman.local.daemon_data_root=/overlay/upper/opt/docker
+
+uci add_list dockerman.local.ac_allowed_interface=eth1
+
+if grep -q nas /proc/device-tree/chosen/default-firewall; then
+    uci -q batch <<-EOF >/dev/null
+        add_list dockerman.local.ac_allowed_interface=eth0
+        add_list dockerman.local.ac_allowed_interface=eth1
+EOF
+fi
+
+uci -q batch <<-EOF >/dev/null
+    commit dockerman
+EOF
+
+exit 0
