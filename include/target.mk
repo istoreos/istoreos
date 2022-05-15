@@ -33,6 +33,8 @@ else
 DEFAULT_PACKAGES+=busybox procd
 endif
 
+DEFAULT_PACKAGES+=istoreos-files
+
 # For the basic set
 DEFAULT_PACKAGES.basic:=
 # For nas targets
