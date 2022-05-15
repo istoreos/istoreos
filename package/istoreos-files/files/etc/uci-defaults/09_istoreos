@@ -9,7 +9,7 @@ EOF
 
 uci set dockerd.globals.data_root=/overlay/upper/opt/docker
 
-if grep -q nas /proc/device-tree/chosen/default-firewall; then
+if [ ! -f /proc/device-tree/chosen/default-firewall ] || grep -qFw nas /proc/device-tree/chosen/default-firewall; then
     uci -q batch <<-EOF >/dev/null
         delete ucitrack.@wan_drop[-1]
         add ucitrack wan_drop
