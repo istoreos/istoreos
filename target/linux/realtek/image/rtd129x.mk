@@ -44,7 +44,6 @@ define Device/ars2
 	DEVICE_PACKAGES += luci-theme-material luci-app-cifs-mount luci-app-cpufreq luci-app-diskman luci-app-dockerman docker dockerd cgroupfs-mount luci-app-filetransfer luci-app-hd-idle luci-app-samba4 luci-app-sqm luci-app-ttyd
 	DEVICE_PACKAGES += luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-i18n-wol-zh-cn luci-i18n-upnp-zh-cn luci-i18n-ddns-zh-cn luci-i18n-vlmcsd-zh-cn luci-i18n-timecontrol-zh-cn
 	DEVICE_PACKAGES += luci-i18n-cifs-mount-zh-cn luci-i18n-cpufreq-zh-cn luci-i18n-dockerman-zh-cn luci-i18n-filetransfer-zh-cn luci-i18n-hd-idle-zh-cn luci-i18n-samba4-zh-cn luci-i18n-ttyd-zh-cn
-	DEVICE_PACKAGES += luci-i18n-alias
 endef
 TARGET_DEVICES += ars2
 

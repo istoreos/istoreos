@@ -1,7 +1,30 @@
-config ISTOREOS_CUSTOMIZE_SETTINGS
-	bool
-	default PACKAGE_istoreos-files
-	select LUCI_LANG_zh_Hans
-	select LUCI_LANG_zh-cn
-	select KERNEL_PROC_PAGE_MONITOR
-	select BUSYBOX_CONFIG_FEATURE_TOPMEM
+
+if PACKAGE_istoreos-files
+	config PACKAGE_istoreos-files_CUSTOMIZE_SETTINGS
+		bool
+		default y
+		select LUCI_LANG_zh_Hans
+		select KERNEL_PROC_PAGE_MONITOR
+		select BUSYBOX_CUSTOM
+		select BUSYBOX_CONFIG_TOP
+		select BUSYBOX_CONFIG_FEATURE_TOPMEM # top -m
+		select BUSYBOX_CONFIG_DD
+		select BUSYBOX_CONFIG_FEATURE_DD_SIGNAL_HANDLING
+		select BUSYBOX_CONFIG_FEATURE_DD_THIRD_STATUS_LINE # dd show speed
+
+	config LUCI_LANG_zh-cn
+		tristate
+		default LUCI_LANG_zh_Hans
+	config LUCI_LANG_zh-tw
+		tristate
+		default LUCI_LANG_zh_Hant
+	config LUCI_LANG_pt-br
+		tristate
+		default LUCI_LANG_pt_BR
+	config LUCI_LANG_no
+		tristate
+		default LUCI_LANG_nb_NO
+	config LUCI_LANG_bn
+		tristate
+		default LUCI_LANG_bn_BD
+endif

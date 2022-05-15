@@ -10,7 +10,7 @@ PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/istoreos-files
+define Package/$(PKG_NAME)
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=iStoreOS files
@@ -19,7 +19,7 @@ define Package/istoreos-files
   HIDDEN:=y
 endef
 
-define Package/istoreos-files/description
+define Package/$(PKG_NAME)/description
  The iStoreOS.
 endef
 
@@ -32,12 +32,12 @@ define Build/Compile/Default
 endef
 Build/Compile = $(Build/Compile/Default)
 
-define Package/istoreos-files/install
+define Package/$(PKG_NAME)/install
 	$(CP) ./files/* $(1)/
 endef
 
 
-define Package/istoreos-files/postinst
+define Package/$(PKG_NAME)/postinst
 #!/bin/sh
 
 HOST_SED="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(SED))"
