@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/target.mk
 
 export TARGET_BUILD=1
 
-prereq clean download prepare compile install oldconfig menuconfig nconfig xconfig update refresh: darwin FORCE
+prereq clean download prepare compile install oldconfig menuconfig nconfig xconfig update refresh image: darwin FORCE
 	@+$(NO_TRACE_MAKE) -C $(BOARD) $@
 
 .PHONY: darwin
