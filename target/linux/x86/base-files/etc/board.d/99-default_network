@@ -22,6 +22,8 @@ else
     [ -n "$interface" ] && ucidef_set_interface_lan "$interface"
 fi
 
+ucidef_set_interface "lan" ipaddr "192.168.1.1"
+
 board_config_flush
 
 exit 0
