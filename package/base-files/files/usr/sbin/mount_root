@@ -155,11 +155,12 @@ prepare_ext_overlay()
 				$newoverlaydir/upper/usr/lib/opkg/info/kernel.*
 		fi
 		if [ -f $newoverlaydir/.commit ]; then
-			cp -a $newoverlaydir/upper/. $overlaydir/upper && {
-				rmdir $overlaydir/upper/ext_overlay
-				rm -rf $newoverlaydir/upper
-				mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
-			}
+			tar -cC $newoverlaydir/upper . 2>/dev/null | tar -xC $overlaydir/upper 2>/dev/null
+
+			rmdir $overlaydir/upper/ext_overlay
+			rm -rf $newoverlaydir/upper
+			mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
+
 			rm -f $newoverlaydir/.commit
 		fi
 	fi

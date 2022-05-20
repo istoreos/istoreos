@@ -108,14 +108,21 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 
 istoreos_pre_upgrade() {
 	if [ -n "$UPGRADE_BACKUP" ]; then
+		touch /usr/lib/opkg/.upgrading 2>/dev/null && sync /
 		# reset rom uuid in ext_overlay
 		if [ -e /ext_overlay/etc ]; then
 			rm -f /ext_overlay/etc/.extroot-uuid
-			rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
+			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] || {
+				rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
+				touch /ext_overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+			}
 			sync /ext_overlay
 		fi
-		rm -f /overlay/upper/usr/lib/opkg/.upgrading
-		touch /overlay/upper/usr/lib/opkg/.upgrading && sync /overlay
+		[ -f /overlay/upper/usr/lib/opkg/.upgrading ] || {
+			rm -f /overlay/upper/usr/lib/opkg/.upgrading
+			touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+			sync /overlay
+		}
 	fi
 }
 

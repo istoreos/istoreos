@@ -50,7 +50,7 @@ rebuild_opkg_status() {
 		cat /tmp/romopkgstatus/$line
 	done
 	ls_all_pkgs | while read line; do
-		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control ]; then
+		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control -o -f /ext_overlay/upper/usr/lib/opkg/info/$line.control ]; then
 			cat /tmp/newopkgstatus/$line
 		else
 			cat /tmp/romopkgstatus/$line
@@ -76,17 +76,25 @@ clean_themes() {
 	uci commit luci
 }
 
+is_overlayed() {
+	[ -e "/overlay/upper$1" -o -e "/ext_overlay/upper$1" ]
+}
+
 boot() {
 	[ -f /.recovery_mode ] && return 0
 
 	if [ -f /usr/lib/opkg/.upgrading ]; then
 		rm -f /usr/lib/opkg/.upgrading
-		split_both_status
-		rebuild_opkg_status > /usr/lib/opkg/status
-		clean_tmp_files
-
-		clean_themes
+		is_overlayed /lib/opkg/status && {
+			split_both_status
+			rebuild_opkg_status > /usr/lib/opkg/status
+			clean_tmp_files
+		}
+		is_overlayed /etc/config/luci && {
+			clean_themes
+		}
 
 		rm -f /overlay/upper/etc/opkg/distfeeds.conf
+		rm -f /ext_overlay/upper/etc/opkg/distfeeds.conf
 	fi
 }
