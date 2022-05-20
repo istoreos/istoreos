@@ -11,11 +11,14 @@ stop() {
 	if [ ! -f /rom/rom/note ]; then
 		sync /overlay
 		umount /overlay
+		sync /ext_overlay
+		umount /ext_overlay
 	else
 		# pivot
 		mount --move /dev /rom/dev
 		mount --move /tmp /rom/tmp
 		mount --move /sys /rom/sys
+		mount --move /ext_overlay /rom/ext_overlay
 		mount --move /overlay /rom/overlay
 		mount --move /proc /rom/proc
 		if pivot_root /rom /rom/mnt; then
@@ -25,6 +28,8 @@ stop() {
 			umount /mnt
 			sync /overlay
 			umount /overlay
+			sync /ext_overlay
+			umount /ext_overlay
 		else
 			mount --move /rom/proc /proc
 			mount --move /rom/dev /dev

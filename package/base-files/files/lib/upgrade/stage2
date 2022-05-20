@@ -18,7 +18,7 @@ include /lib/upgrade
 
 supivot() { # <new_root> <old_root>
 	/bin/mount | grep "on $1 type" 2>&- 1>&- || /bin/mount -o bind $1 $1
-	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay && \
+	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay $1/ext_overlay && \
 	/bin/mount -o noatime,move /proc $1/proc && \
 	pivot_root $1 $1$2 || {
 		/bin/umount -l $1 $1
@@ -29,6 +29,7 @@ supivot() { # <new_root> <old_root>
 	/bin/mount -o noatime,move $2/dev /dev
 	/bin/mount -o noatime,move $2/tmp /tmp
 	/bin/mount -o noatime,move $2/overlay /overlay 2>&-
+	/bin/mount -o noatime,move $2/ext_overlay /ext_overlay 2>&-
 	return 0
 }
 
@@ -155,9 +156,14 @@ if [ -n "$ROOTFS_TYPE" -a "$ROOTFS_TYPE" != "tmpfs" -a "$ROOTFS_TYPE" != "rootfs
 	switch_to_ramfs
 fi
 
+grep /ext_overlay /proc/mounts > /dev/null && {
+	/bin/mount -o noatime,remount,ro /ext_overlay
+	/usr/bin/umount -R -d -l /ext_overlay 2>/dev/null || /bin/umount -l /ext_overlay
+}
+
 grep /overlay /proc/mounts > /dev/null && {
 	/bin/mount -o noatime,remount,ro /overlay
-	/usr/bin/umount -R -d -l /overlay || /bin/umount -l /overlay
+	/usr/bin/umount -R -d -l /overlay 2>/dev/null || /bin/umount -l /overlay
 }
 
 # Exec new shell from ramfs
