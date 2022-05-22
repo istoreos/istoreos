@@ -140,6 +140,18 @@ mount_extroot()
 	return $ret
 }
 
+clean_overlayfs_origin() {
+	local line
+	# only linux 4.13 or above
+	[ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] || return 0
+	cd "$1"
+	getfattr -R -P -h --match='trusted.overlay.origin' . 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+		line="$REPLY"
+		setfattr -x "trusted.overlay.origin" -h "$line" 2>/dev/null
+	done
+	cd -
+}
+
 prepare_ext_overlay()
 {
 	local newoverlaydir=$1
@@ -155,12 +167,12 @@ prepare_ext_overlay()
 				$newoverlaydir/upper/usr/lib/opkg/info/kernel.*
 		fi
 		if [ -f $newoverlaydir/.commit ]; then
-			tar -cC $newoverlaydir/upper . 2>/dev/null | tar -xC $overlaydir/upper 2>/dev/null
-
-			rmdir $overlaydir/upper/ext_overlay
-			rm -rf $newoverlaydir/upper
-			mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
-
+			clean_overlayfs_origin "$newoverlaydir/upper"
+			cp -a $newoverlaydir/upper/. $overlaydir/upper && {
+				rmdir $overlaydir/upper/ext_overlay
+				rm -rf $newoverlaydir/upper
+				mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
+			}
 			rm -f $newoverlaydir/.commit
 		fi
 	fi
