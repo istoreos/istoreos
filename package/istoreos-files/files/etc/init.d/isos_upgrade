@@ -97,4 +97,5 @@ boot() {
 		rm -f /overlay/upper/etc/opkg/distfeeds.conf
 		rm -f /ext_overlay/upper/etc/opkg/distfeeds.conf
 	fi
+	rm -f /overlay/upper/.upgrading
 }

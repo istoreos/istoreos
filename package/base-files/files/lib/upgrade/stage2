@@ -124,6 +124,7 @@ istoreos_pre_upgrade() {
 			touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
 			sync /overlay
 		}
+		touch /overlay/upper/.upgrading 2>/dev/null && sync /overlay
 	fi
 }
 

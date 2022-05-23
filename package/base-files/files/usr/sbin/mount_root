@@ -101,16 +101,60 @@ mount_overlay_partition()
 	log 'overlay: successfully mounted'
 }
 
+OVERLAYFS_XATTR=""
+is_overlayfs_use_xattr() {
+	# only linux 4.13 or above
+	[ -z "$OVERLAYFS_XATTR" ] && OVERLAYFS_XATTR=`[ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] && echo 1 || echo 0`
+	[ "$OVERLAYFS_XATTR" = "1" ]
+}
+
+ROOTFS_UUID=""
+rootfs_uuid() {
+	if [ -z "$ROOTFS_UUID" ]; then
+		ROOTFS_UUID=`block info | grep -Fw 'MOUNT="/"' | sed -E 's/.* UUID="([^"]+)" .*/\1/'`
+		[ -z "$ROOTFS_UUID" ] && ROOTFS_UUID="UNKNOWN"
+	fi
+	echo "$ROOTFS_UUID"
+}
+
+update_overlay_lower_uuid() {
+	local realuuid=`rootfs_uuid`
+	local lastuuid="NULL"
+	if [ -f "$1/.rootfs-uuid" ]; then
+		lastuuid=`cat "$1/.rootfs-uuid"`
+	fi
+	if [ "$realuuid" != "$lastuuid" ]; then
+		echo "$realuuid" >"$1/.rootfs-uuid"
+		return 0
+	fi
+	return 1
+}
+
+clean_overlayfs_origin() {
+	local line
+	cd "$1"
+	getfattr -R -P -h --match='trusted.overlay.origin' . 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+		line="$REPLY"
+		setfattr -x "trusted.overlay.origin" -h "$line" 2>/dev/null
+	done
+	cd -
+}
+
 prepare_primary_overlay()
 {
 	if [ -f /overlay/.reset ]; then
 		rm -rf /overlay/upper /overlay/work
 		rm -f /overlay/.reset
 		sync /overlay
-	elif [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
-		rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d \
-			/overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* \
-			/overlay/upper/usr/lib/opkg/info/kernel.*
+	else
+		if is_overlayfs_use_xattr && [ -d /overlay/upper ] && update_overlay_lower_uuid; then
+			clean_overlayfs_origin /overlay/upper
+		fi
+		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
+			rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d \
+				/overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* \
+				/overlay/upper/usr/lib/opkg/info/kernel.*
+		fi
 	fi
 
 	mkdir -p /overlay/upper /overlay/work
@@ -140,14 +184,19 @@ mount_extroot()
 	return $ret
 }
 
-clean_overlayfs_origin() {
+apply_overlayfs_opaque() {
 	local line
-	# only linux 4.13 or above
-	[ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] || return 0
+	local dest="$2"
 	cd "$1"
-	getfattr -R -P -h --match='trusted.overlay.origin' . 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+	if is_overlayfs_use_xattr; then
+		getfattr -R -P -h --match='trusted.overlay.opaque' upper 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+			line="$REPLY"
+			rm -rf "$dest/$line"
+		done
+	fi
+	find upper -xdev -type c | while read; do
 		line="$REPLY"
-		setfattr -x "trusted.overlay.origin" -h "$line" 2>/dev/null
+		rm -rf "$dest/$line"
 	done
 	cd -
 }
@@ -166,8 +215,13 @@ prepare_ext_overlay()
 				$newoverlaydir/upper/etc/modules.d $newoverlaydir/upper/usr/lib/opkg/info/kmod-* \
 				$newoverlaydir/upper/usr/lib/opkg/info/kernel.*
 		fi
-		if [ -f $newoverlaydir/.commit ]; then
+		if is_overlayfs_use_xattr && [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
 			clean_overlayfs_origin "$newoverlaydir/upper"
+		fi
+		if [ -f $newoverlaydir/.commit ]; then
+			if [ -d "$newoverlaydir/upper" ]; then
+				apply_overlayfs_opaque "$newoverlaydir" "$overlaydir"
+			fi
 			cp -a $newoverlaydir/upper/. $overlaydir/upper && {
 				rmdir $overlaydir/upper/ext_overlay
 				rm -rf $newoverlaydir/upper
@@ -219,7 +273,7 @@ prepare_mnt()
 		|| return 1
 }
 
-clean_extroot()
+post_extroot()
 {
 	mountpoint -q /rom/ext_overlay && mount --move /rom/ext_overlay /ext_overlay
 	mountpoint -q /tmp/extroot/overlay && umount /tmp/extroot/overlay
@@ -256,7 +310,7 @@ do_mount_overlayfs()
 
 	inlog pivot_root_to_overlayfs || return 1
 
-	clean_extroot >/dev/null 2>&1
+	post_extroot >/dev/null 2>&1
 
 	inlog mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
 
