@@ -147,7 +147,7 @@ prepare_primary_overlay()
 		rm -f /overlay/.reset
 		sync /overlay
 	else
-		if is_overlayfs_use_xattr && [ -d /overlay/upper ] && update_overlay_lower_uuid; then
+		if is_overlayfs_use_xattr && [ -d /overlay/upper ] && update_overlay_lower_uuid /overlay; then
 			clean_overlayfs_origin /overlay/upper
 		fi
 		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
