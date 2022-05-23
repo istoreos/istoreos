@@ -104,7 +104,7 @@ mount_overlay_partition()
 OVERLAYFS_XATTR=""
 is_overlayfs_use_xattr() {
 	# only linux 4.13 or above
-	[ -z "$OVERLAYFS_XATTR" ] && OVERLAYFS_XATTR=`[ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] && echo 1 || echo 0`
+	[ -z "$OVERLAYFS_XATTR" ] && OVERLAYFS_XATTR=$([ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] && echo 1 || echo 0)
 	[ "$OVERLAYFS_XATTR" = "1" ]
 }
 
