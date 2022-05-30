@@ -81,7 +81,7 @@ check_overlay_partition()
 {
 	case "$FSTYPE" in
 		ext4)
-			fsck.ext4 -y "$OVERLAY_DEV"
+			fsck.ext4 -y "$OVERLAY_DEV" >/dev/null
 			sync
 			resize2fs "$OVERLAY_DEV"
 			sync
