@@ -999,6 +999,12 @@
 		status = "okay";
 	};
 
+	rng@9801AA00 {
+		compatible = "Realtek,rtk-rng";
+		reg = <0x9801AA00 0x48>;
+		status = "okay";
+	};
+
 	rtk_boot {
 		compatible = "Realtek,rtk_boot";
 		resume-entry-addr = <0x00021000>;
