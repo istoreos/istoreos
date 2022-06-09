@@ -548,22 +548,16 @@ static int gpio_keys_button_probe(struct platform_device *pdev,
 				}
 			} else {
 				button->active_low = !!(flags & OF_GPIO_ACTIVE_LOW);
-				error = devm_gpio_request(dev, button->gpio, desc);
+				unsigned rflags = GPIOF_IN;
+				if (button->active_low)
+					rflags |= GPIOF_ACTIVE_LOW;
+				error = devm_gpio_request_one(dev, button->gpio, rflags, desc);
 				if (error) {
 					dev_err(dev, "unable to claim gpio %u, err=%d\n",
 						button->gpio, error);
 					bdata->gpiod = ERR_PTR(error);
 				} else {
 					bdata->gpiod = gpio_to_desc(button->gpio);
-					if (bdata->gpiod) {
-						error = gpio_direction_input(button->gpio);
-						if (error) {
-							dev_err(dev,
-								"unable to set direction on gpio %u, err=%d\n",
-								button->gpio, error);
-							bdata->gpiod = ERR_PTR(error);
-						}
-					}
 				}
 			}
 #endif
