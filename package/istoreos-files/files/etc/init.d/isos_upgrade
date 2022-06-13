@@ -85,7 +85,7 @@ boot() {
 
 	if [ -f /usr/lib/opkg/.upgrading ]; then
 		rm -f /usr/lib/opkg/.upgrading
-		is_overlayed /lib/opkg/status && {
+		is_overlayed /usr/lib/opkg/status && {
 			split_both_status
 			rebuild_opkg_status > /usr/lib/opkg/status
 			clean_tmp_files
