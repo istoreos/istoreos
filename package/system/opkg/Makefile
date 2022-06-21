@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=opkg
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=essential
 
 PKG_SOURCE_PROTO:=git
@@ -42,7 +42,7 @@ define Package/opkg
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=opkg package manager
-  DEPENDS:=+uclient-fetch +libpthread +libubox
+  DEPENDS:=+uclient-fetch +libpthread +libubox +curl
   URL:=$(PKG_SOURCE_URL)
   MENU:=1
 endef
