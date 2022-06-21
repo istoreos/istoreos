@@ -1,0 +1,62 @@
+--- a/libopkg/opkg_conf.c	2021-06-14 05:27:37.000000000 +0800
++++ b/libopkg/opkg_conf.c	2022-06-20 20:31:26.564320326 +0800
+@@ -59,6 +59,7 @@
+ 	{"http_proxy", OPKG_OPT_TYPE_STRING, &_conf.http_proxy},
+ 	{"http_timeout", OPKG_OPT_TYPE_STRING, &_conf.http_timeout},
+ 	{"no_proxy", OPKG_OPT_TYPE_STRING, &_conf.no_proxy},
++	{"use_curl", OPKG_OPT_TYPE_BOOL, &_conf.use_curl},
+ 	{"test", OPKG_OPT_TYPE_BOOL, &_conf.noaction},
+ 	{"noaction", OPKG_OPT_TYPE_BOOL, &_conf.noaction},
+ 	{"download_only", OPKG_OPT_TYPE_BOOL, &_conf.download_only},
+--- a/libopkg/opkg_conf.h	2021-06-14 05:27:37.000000000 +0800
++++ b/libopkg/opkg_conf.h	2022-06-20 20:31:45.964434623 +0800
+@@ -100,6 +100,7 @@
+ 	char *no_proxy;
+ 	char *proxy_user;
+ 	char *proxy_passwd;
++	int  use_curl;
+ 
+ 	char *signature_ca_file;
+ 	char *signature_ca_path;
+--- a/libopkg/opkg_download.c	2021-06-14 05:27:37.000000000 +0800
++++ b/libopkg/opkg_download.c	2022-06-20 20:33:40.769112117 +0800
+@@ -145,8 +145,34 @@
+ 			 conf->no_proxy);
+ 		setenv("no_proxy", conf->no_proxy, 1);
+ 	}
++    if (conf->use_curl) {
++		int res;
++		const char *argv[11];
++		int i = 0;
++
++		argv[i++] = "curl";
++		argv[i++] = "-s";
++		if (conf->no_check_certificate) {
++			argv[i++] = "-k";
++		}
++		if (conf->http_timeout) {
++			argv[i++] = "--connect-timeout";
++			argv[i++] = conf->http_timeout;
++		}
++		argv[i++] = src;
++		argv[i++] = "-o";
++		argv[i++] = tmp_file_location;
++		argv[i++] = NULL;
++		res = xsystem(argv);
++		if (res) {
++				opkg_msg(ERROR,
++						"Failed to download %s, curl returned %d.\n",
++						src, res);
++                       if (28 == res || 6 == res) {
++                               opkg_msg(ERROR,
++                                        "Check your network settings and connectivity.\n\n");
++                       }
++				free(tmp_file_location);
++				return -1;
++		}
+ 
+-	{
++    } else {
+ 		int res;
+ 		const char *argv[11];
+ 		int i = 0;
