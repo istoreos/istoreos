@@ -1,0 +1,10 @@
+#!/bin/sh /etc/rc.common
+# work around mdadm create /dev/md* fail
+# Copyright (C) 2022 jjm2473
+
+START=12
+
+boot() {
+	[ -f /proc/mdstat ] || modprobe md_mod
+	mount --bind /dev/full /sys/module/md_mod/parameters/new_array
+}
