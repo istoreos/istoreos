@@ -54,7 +54,7 @@ get_overlay_partition_default()
 
 get_overlay_partition()
 {
-	get_overlay_partition_default || get_overlay_partition_fallback || {
+	get_overlay_partition_default || {
 		log "Unable to determine overlay partition"
 		return 1
 	}
