@@ -11,7 +11,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=grub
 PKG_CPE_ID:=cpe:/a:gnu:grub2
 PKG_VERSION:=2.04
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@GNU/grub
@@ -104,7 +104,7 @@ define Package/grub2/install
 		-O i386-pc \
 		-c $(PKG_BUILD_DIR)/grub-early.cfg \
 		-o $(STAGING_DIR_IMAGE)/grub2/gpt-core.img \
-		at_keyboard biosdisk boot chain configfile fat linux ls part_gpt reboot serial vga
+		at_keyboard biosdisk boot chain configfile fat linux ls part_gpt reboot search serial test vga
 	$(STAGING_DIR_HOST)/bin/grub-mkimage \
 		-d $(PKG_BUILD_DIR)/grub-core \
 		-p /boot/grub \
@@ -136,7 +136,7 @@ define Package/grub2-efi/install
 		-O $(CONFIG_ARCH)-efi \
 		-c $(PKG_BUILD_DIR)/grub-early.cfg \
 		-o $(STAGING_DIR_IMAGE)/grub2/boot$(if $(CONFIG_x86_64),x64,ia32).efi \
-		at_keyboard boot chain configfile fat linux ls part_gpt reboot serial efi_gop efi_uga
+		at_keyboard boot chain configfile fat linux ls part_gpt reboot search serial test efi_gop efi_uga
 	$(STAGING_DIR_HOST)/bin/grub-mkimage \
 		-d $(PKG_BUILD_DIR)/grub-core \
 		-p /boot/grub \
