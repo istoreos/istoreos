@@ -1,0 +1,56 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+    add_list system.ntp.server='0.cn.pool.ntp.org'
+    add_list system.ntp.server='1.cn.pool.ntp.org'
+    add_list system.ntp.server='2.cn.pool.ntp.org'
+    add_list system.ntp.server='3.cn.pool.ntp.org'
+    commit system
+EOF
+
+uci set dockerman.local.daemon_data_root=/overlay/upper/opt/docker
+
+uci add_list dockerman.local.ac_allowed_interface=eth1
+
+if grep -q nas /proc/device-tree/chosen/default-firewall; then
+	uci -q batch <<-EOF >/dev/null
+        delete ucitrack.@wan_drop[-1]
+        add ucitrack wan_drop
+        set ucitrack.@wan_drop[-1].init=wan_drop
+		del_list ucitrack.@network[0].affects=wan_drop
+        add_list ucitrack.@network[0].affects=wan_drop
+        commit ucitrack
+EOF
+
+    WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
+    uci -q batch <<-EOF >/dev/null
+        add_list dockerman.local.ac_allowed_interface=eth0
+		add_list dockerman.local.ac_allowed_interface=eth1
+        set ${WAN_ZONE}.input=ACCEPT
+        commit firewall
+EOF
+    if [ -e /etc/config/minidlna ]; then
+        uci -q batch <<-EOF >/dev/null
+            set minidlna.@minidlna[0].interface='br-lan,eth0,eth1'
+            commit minidlna
+EOF
+    fi
+    if [ -e /etc/config/ttyd ]; then
+        uci -q batch <<-EOF >/dev/null
+            delete ttyd.@ttyd[0].interface
+            commit ttyd
+EOF
+    fi
+    for samba in samba4 samba ; do
+        if [ -e /etc/config/$samba ]; then
+            uci -q batch <<-EOF >/dev/null
+                set $samba.@samba[0].interface='lan wan'
+                commit $samba
+EOF
+        fi
+    done
+fi
+
+uci	commit dockerman
+
+exit 0

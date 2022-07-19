@@ -1,0 +1,25 @@
+From 57609f766ca5dda440f0bab86a0fcdf69c377c16 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Fri, 4 Jun 2021 17:23:49 +0800
+Subject: [PATCH] disable logo accelerate
+
+---
+ configs/rtd1296_qa_NAS_defconfig | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/configs/rtd1296_qa_NAS_defconfig b/configs/rtd1296_qa_NAS_defconfig
+index f9367a7385..dea96ee239 100644
+--- a/configs/rtd1296_qa_NAS_defconfig
++++ b/configs/rtd1296_qa_NAS_defconfig
+@@ -70,3 +70,8 @@ CONFIG_CMD_LOADB=y
+ # CONFIG_CMD_NM is not set
+ # CONFIG_CMD_CMP is not set
+ # CONFIG_CMD_CP is not set
++
++#
++# Others
++#
++# CONFIG_CUSTOMIZE_ACCELERATE_BOOT_BLUE_LOGO is not set
+-- 
+2.23.0
+

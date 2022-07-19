@@ -1,0 +1,452 @@
+#include "rtd-1296.dtsi"
+
+/ {
+	model= "Sinovoip_Bananapi";
+	compatible = "Realtek,rtd-1296";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	pinctrl@9801A000 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdcard_pins_low>,
+			<&sdcard_pins_high>,
+			<&sdio_pins>,
+			<&uart0_pins>,
+			<&uart1_pins>,
+			<&uart2_pins_0>,
+			<&i2s_out_4pins>,
+			<&gspi_pins>,
+			<&pcie1_clk_pins>,
+			<&pcie2_clk_pins>,
+			<&rgmii0_pins>,
+			<&rgmii1_pins>,
+			<&ir_rx_pins>,
+			<&ir_tx_pins>,
+			<&spdif_pins>,
+			<&pwm0_0_pins>,
+			<&pwm0_1_pins>,
+			<&pwm1_0_pins>,
+			<&pwm1_1_pins>,
+			<&pwm2_0_pins>,
+			<&pwm2_1_pins>,
+			<&pwm3_0_pins>,
+			<&pwm3_1_pins>,
+			<&etn_led_pins>,
+			<&nat_led_pins>,
+			<&dc_fan_sensor_pins>,
+			<&smart_card_pins>;
+		status = "disabled";
+        };
+
+	rtk_misc_gpio@9801b100 {
+		compatible = "realtek,rtk-misc-gpio-irq-mux";
+		status = "disabled";
+	};
+
+	arch_timer {
+		clock-frequency = <27000000>;
+	};
+
+	timer0@9801B000 {
+		clock-frequency = <27000000>;
+	};
+
+	timer1@9801B000 {
+		clock-frequency = <27000000>;
+	};
+
+	serial0@98007800 {
+		compatible = "snps,dw-apb-uart";
+		clock-frequency = <27000000>;
+		status = "disabled";
+	};
+
+	serial1@9801B200 {
+		compatible = "snps,dw-apb-uart";
+		clock-frequency = <432000000>;
+		status = "disabled";
+	};
+
+	serial2@9801B400 {
+		compatible = "snps,dw-apb-uart";
+		clock-frequency = <432000000>;
+		status = "disabled";
+	};
+
+	chosen {
+		swiotlb-memory-reservation-size = <512>;
+		swiotlb-force = <0>;
+	};
+
+	rtk,ion {
+		compatible = "Realtek,rtk-ion";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rtk,ion-heap@0 { /* SYSTEM_HEAP */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <0>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@1 { /* System contig */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <1>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@4 { /* DMA_HEAP */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <4>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@8 { /* Audio */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <8>;
+		};
+
+		rtk,ion-heap@7 { /* TYPE_MEDIA */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <7>;
+		};
+	};
+
+	fb {
+		compatible = "Realtek,rtk-fb";
+		buffer-cnt = <3>;
+		resolution = <1920 1080>;
+		fps = <60>;
+	};
+
+	test_vo@98005000 {
+		compatible = "Realtek,rtk1295-test_vo";
+		reg = <0x98005000 0x1000>,
+			<0x9800D000 0x1000>,
+			<0x98000000 0x1000>;
+		interrupts = <0 34 4>;
+	};
+
+	hdmitx@9800D000 {
+		compatible = "realtek,rtd129x-hdmitx";
+		status = "disabled";
+
+		gpio-hpd-detect = <&rtk_iso_gpio 6 0 0>; /* Hotplug detect pin */
+	};
+
+	hdcptx@9800D000 {
+		compatible = "realtek,rtk129x-hdcptx";
+		status = "disabled";
+        };
+
+	hdmirx@98034000 {
+		compatible = "Realtek,rtk-mipi-top";
+		status = "disabled";
+
+		gpio-rx-hpd-ctrl = <&rtk_iso_gpio 22 1 0>;
+		/*gpio-5v-detect = <&rtk_iso_gpio 22 0 0>;*/
+	};
+
+	dptx@9803D000 {
+		compatible = "Realtek,rtk-dptx";
+		status = "disabled";
+
+		dp_hpd {
+			gpios = <&rtk_iso_gpio 7 0 0>; /*HPD, input, default N/A */
+			interrupt-parent = <&rtk_iso_gpio>;
+			interrupts = <7>; /*HPD*/
+		};
+	};
+
+	nic: gmac@98016000 {
+		compatible = "Realtek,r8168";
+		status = "disabled";
+	};
+
+	hwnat: gmac@98060000 {
+		compatible = "Realtek,rtd1295-hwnat";
+		status = "disabled";
+
+		gpio_link_led_enable = <0>;
+		gpios = <&rtk_iso_gpio 27 1 0>;
+	};
+
+	pcie@9804E000 {
+		compatible = "realtek,rtk-pcie-slot1";
+		status = "disabled";
+
+		gpios = <&rtk_misc_gpio 16 1 0 >;  /* pcie1 rst */
+	};
+
+	pcie2@9803B000 {
+		compatible = "realtek,rtk-pcie-slot2";
+		status = "disabled";
+
+		gpios = <&rtk_misc_gpio 19 1 0>;  /* pcie2 rst */
+		speed-mode = <1>;
+	};
+
+	sdio@98010A00 {
+		compatible = "Realtek,rtk1295-sdio";
+		status = "disabled";
+
+		gpios = <&rtk_iso_gpio 23 1 1>;  /* sdio rst */ 
+	};
+
+	sdmmc@98010400 {
+		compatible = "Realtek,rtk1295-sdmmc";
+		status = "disabled";
+
+		/*sd power , output, default high  (poweroff) */
+		gpios = <&rtk_misc_gpio 99 1 0>;
+	};
+
+	/*
+	 * pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for sdr50
+	 * pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for hs200
+	 */
+	emmc@98012000 {
+		compatible = "Realtek,rtk1295-emmc";
+		pddrive_nf_s0 = <0x77 0x77 0x77 0x77 0x77>;
+		pddrive_nf_s2 = <0xbb 0xbb 0xbb 0xbb 0xbb>;
+		phase_tuning = <1 1>; /* BPI arg0: tx tuning switch, arg1: rx tuning switch*/
+	};
+
+	irda@98007400 {
+		compatible = "Realtek,rtk-irda";
+		status = "disabled";
+	};
+
+	i2c_0: i2c@0x98007D00 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+
+		g2227@12 {
+			powerkey {
+				status = "okay";
+			};
+			poweroff {
+				status = "okay";
+				
+				/* enable pmic poweroff */
+				system-power-controller;
+			};
+		};
+        };
+
+	i2c_1: i2c@0x98007C00 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+	i2c_2: i2c@0x9801B700 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+	i2c_3: i2c@0x9801B900 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+        i2c_4: i2c@0x9801BA00 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+        i2c_5: i2c@0x9801BB00 {
+		compatible = "realtek,rtk-i2c";
+		status = "disabled";
+	};
+
+	spi@9801BD00 {
+		compatible = "Realtek,rtk129x-spi";
+		status = "disabled";
+
+		spi-cs-gpio = <&rtk_misc_gpio 6 1 1>;
+	};
+
+	pwm@980070D0 {
+		compatible = "Realtek,rtd1295-pwm";
+		status = "disabled";
+
+		pwm_0 {
+			enable = <0>;
+		};
+		pwm_1 {
+			enable = <0>;
+		};
+		pwm_2 {
+			enable = <0>;
+		};
+		pwm_3 {
+			enable = <0>;
+		};
+        };
+
+	rtk-lsadc@0x98012800 {
+		compatible = "Realtek,rtk-lsadc";
+		status = "disabled";
+
+		rtk-lsadc0-pad0 {
+			activate = <1>;
+		};
+
+		rtk-lsadc0-pad1 {
+			activate = <1>;
+		};
+
+		rtk-lsadc1-pad0 {
+			activate = <0>;
+		};
+
+		rtk-lsadc1-pad1 {
+			activate = <0>;
+		};
+	};
+
+	rfkilligpio{
+		compatible = "realtek,rfkill";
+		status = "disabled";
+
+		gpios = <&rtk_iso_gpio 24 1 0>; /* bt power */
+	};
+
+        power-management@0  {
+		compatible = "Realtek,power-management";
+		wakeup-gpio-list = <&rtk_iso_gpio 30 0 0>; /* power key */
+		wakeup-gpio-enable = <1>;
+		wakeup-gpio-activity =<1>;
+		pwms;
+		status = "disabled";
+	};
+
+	rtk-gpio-regulator {
+		compatible = "rtkgpio-regulator";
+		status = "disabled";
+	};
+
+	audio-in-device {
+		compatible = "realtek,audio-in", "adc";
+		status = "disabled";
+
+		ai,type = "i2s"; 
+		ai,i2s-pin-shared;
+		ai,i2s-master;
+	};
+
+	audio-out-devices {
+		compatible = "realtek,audio-out";
+		status = "disabled";
+
+		dac {
+			compatible = "dac";
+			status = "disabled";
+		};
+		spdif {
+			compatible = "spdif";
+			status = "disabled";
+		};
+		i2s {
+			compatible = "i2s";
+			status = "disabled";
+		};
+		hdmi {
+			compatible = "hdmi";
+			status = "disabled";
+		};
+		global {
+			compatible = "global";
+			status = "disabled";
+		};
+	};
+
+	rtk_usb_power_manager@0 {
+		compatible = "Realtek,usb-manager";
+		status = "disabled";
+
+		/* port0 type-c */
+		gpio0 {
+			realtek,power-gpio = <&rtk_iso_gpio 1 1 0>;
+		};
+		/* port1 */
+		gpio1 {
+			realtek,power-gpio;
+		};
+		/* port2 */
+		gpio2 {
+			realtek,power-gpio = <&rtk_misc_gpio 18 1 0>;
+		};
+		/* port3 */
+		gpio3 {
+			realtek,power-gpio = <&rtk_misc_gpio 20 1 0>;
+		};
+
+		port0 {
+			gpio=<&gpio0>;
+		};
+		port1 {
+			gpio=<&gpio1>;
+		};
+		port2 {
+			gpio=<&gpio2>;
+		};
+		port3 {
+			gpio=<&gpio3>;
+		};
+	};
+
+	sata_phy: sata_phy@9803FF60 {
+		compatible = "Realtek,rtk-sata-phy";
+		status = "disabled";
+        };
+
+	ahci_sata: sata@9803F000 {
+		compatible = "Realtek,ahci-sata";
+		status = "disabled";
+        };
+
+	rtk-leds {
+		compatible = "Realtek,rtk-leds";
+		led-num = <3>;
+
+		/* red */
+		led1 = <&rtk_iso_gpio 27 1 0>;
+		led1-trigger = "default-on";
+		led1-active-low = <1>;
+
+		/* green */
+		led2 = <&rtk_misc_gpio 97 1 0>;
+                led2-trigger = "heartbeat";
+                led2-active-low = <1>;
+
+		/* blue */
+		led3 = <&rtk_misc_gpio 98 1 0>;
+                led3-trigger = "default-on";
+                led3-active-low = <1>;
+
+		status = "disabled";
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		status = "disabled";
+
+		power-button {
+			label = "Power Button";
+			gpios = <&rtk_iso_gpio 30 0 1>;
+			linux,code = <116>;
+		};
+	};
+
+	fan0: gpio-fan@0 {
+		compatible = "gpio-fan";
+		gpios = <&rtk_misc_gpio 15 1 1>;
+		gpio-fan,speed-map = <0 0 3000 1>;
+		#cooling-cells = <2>;
+		status = "disabled";
+	};
+};
+

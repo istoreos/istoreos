@@ -1,0 +1,14 @@
+#ifndef __RTK_FW_INFO_H__
+#define __RTK_FW_INFO_H__
+
+typedef enum {
+	RTK_PLAT_ERR_OK = 0,
+	RTK_PLAT_ERR_PARSE_FW_DESC,
+	RTK_PLAT_ERR_READ_FW_IMG,
+	RTK_PLAT_ERR_READ_KERNEL_IMG,
+	RTK_PLAT_ERR_READ_RESCUE_IMG,
+	RTK_PLAT_ERR_BOOT,
+} rtk_plat_err_t;
+
+
+#endif // __RTK_FW_INFO_H__

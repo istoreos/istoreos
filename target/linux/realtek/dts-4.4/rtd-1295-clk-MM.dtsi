@@ -1,0 +1,502 @@
+/{
+    rst1: soft_reset1@98000000 {
+        reg = <0x98000000 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;
+    };
+
+    rst2: soft_reset2@98000004 {
+        reg = <0x98000004 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;        
+    };
+
+    rst3: soft_reset3@98000008 {
+        reg = <0x98000008 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;
+    };
+
+    rst4: soft_reset4@98000050 {
+        reg = <0x98000050 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;        
+    };
+
+    irst:
+    iso_rst: soft_reset@98007088 {
+        reg = <0x98007088 0x4>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;
+    };
+
+    rst1_init {
+        compatible = "realtek,129x-rstc-init";
+        resets = 
+            <&rst1 31>, <&rst1 30>, <&rst1 29>, <&rst1 28>,
+            <&rst1 27>, <&rst1 26>, <&rst1 25>, <&rst1 24>,
+            <&rst1 23>, <&rst1 22>, <&rst1 21>, <&rst1 20>,
+            <&rst1 19>, <&rst1 18>, <&rst1 17>, <&rst1 16>,
+            <&rst1 15>, <&rst1 14>, <&rst1 13>, <&rst1 12>,
+            <&rst1 11>, <&rst1 10>, <&rst1  9>, <&rst1  8>,
+            <&rst1  7>, <&rst1  6>, <&rst1  5>, <&rst1  4>,
+            <&rst1  3>, <&rst1  2>, <&rst1  1>, <&rst1  0>;
+        reset-names =
+            "rstn_rsa", "rstn_mipi", "rstn_nf", "rstn_ae",
+            "rstn_tp", "rstn_md", "rstn_cp", "rstn_dc_phy",
+            "rstn_dcu", "rstn_se", "rstn_lvds", "rstn_vo",
+            "rstn_tve", "rstn_gpu", "rstn_aio", "rstn_etn",
+            "rstn_ve3", "rstn_ve2", "rstn_ve1", "rstn_hdmi",
+            "sata_func_exist_0", "rstn_sata_phy_pow_0", "*rstn_usb_phy1", "*rstn_usb_phy0",
+            "rstn_sata_phy_0", "rstn_usb", "rstn_sata_0", "rstn_usb3_p0_mdio",
+            "rstn_gspi", "*rstn_usb3_phy0_pow", "rstn_nat", "rstn_misc"; 
+    };
+
+    rst2_init {
+        compatible = "realtek,129x-rstc-init";
+        resets =
+            <&rst2 31>, <&rst2 30>, <&rst2 29>, <&rst2 28>,
+            <&rst2 27>, <&rst2 26>, <&rst2 25>, <&rst2 24>,
+            <&rst2 23>, <&rst2 22>, <&rst2 21>, <&rst2 20>,
+            <&rst2 19>, <&rst2 18>, <&rst2 17>, <&rst2 16>,
+            <&rst2 15>, <&rst2 14>, <&rst2 13>, <&rst2 12>,
+            <&rst2 11>, <&rst2 10>, <&rst2  9>, <&rst2  8>,
+            <&rst2  7>, <&rst2  6>, <&rst2  5>, <&rst2  4>,
+            <&rst2  3>, <&rst2  2>, <&rst2  1>, <&rst2  0>;
+        reset-names =
+            "rstn_sds_phy", "rstn_cbus_tx", "rstn_misc_sc", "rstn_ur1",
+            "rstn_ur2", "rstn_i2c_1", "rstn_i2c_2", "rstn_i2c_3",
+            "rstn_i2c_4", "rstn_pcie1_nonstich", "rstn_pcie1_power", "rstn_pcie1_core",
+            "rstn_pcie1_stitch", "rstn_i2c_5", "rstn_pcie1", "rstn_pcie1_phy",
+            "rstn_pcie0_nonstich", "rstn_pcie0_power", "rstn_pcie0_core", "rstn_sdio",
+            "rstn_emmc", "rstn_cr", "rstn_pcr_cnt", "rstn_pcie0",
+            "rstn_pcie0_phy", "rstn_pcie0_stitch", "rstn_usb3_p1_mdio", "*rstn_usb3_phy1_pow",
+            "*rstn_usb_phy2", "*rstn_usb_phy3", "rstn_jpeg", "rstn_acpu";
+    };
+
+    /* rst3_init: only used by powerctrl */
+
+    rst4_init {
+        compatible = "realtek,129x-rstc-init";
+        resets =
+            <&rst4 15>, <&rst4 14>, <&rst4 13>, <&rst4 12>,
+            <&rst4 11>, <&rst4 10>, <&rst4  9>, <&rst4  8>,
+            <&rst4  7>, <&rst4  6>, <&rst4  5>, <&rst4  4>,
+            <&rst4  3>, <&rst4  2>, <&rst4  1>, <&rst4  0>;
+        reset-names =
+            "rstn_disp", "rstn_pcie1_phy_mdio", "rstn_pcie0_phy_mdio", "rstn_hdmirx_wrap",
+            "rstn_fan", "rstn_sata_1", "rstn_sata_phy_1", "sata_func_exist_1",
+            "rstn_sata_phy_pow_1", "rstn_cbusrx", "rstn_hdmirx", "rstn_dcphy_ssc_dig",
+            "rstn_dcphy_ldo", "rstn_dcphy_ptr", "rstn_dcphy_alert_rx", "rstn_dcphy_crt";
+    };
+
+    iso_rst_init {
+        compatible = "realtek,129x-rstc-init";
+        resets =
+            <&iso_rst 13>, <&iso_rst 12>, <&iso_rst 11>, <&iso_rst 10>,
+            <&iso_rst  9>, <&iso_rst  8>, <&iso_rst  7>, <&iso_rst  6>,
+            <&iso_rst  5>, <&iso_rst  4>, <&iso_rst  3>, <&iso_rst  2>,
+            <&iso_rst  1>;
+        reset-names =
+            "iso_rstn_cbus", "iso_rstn_i2c_1", "iso_rstn_i2c_0", "iso_rstn_gphy",
+            "iso_rstn_gmac", "iso_rstn_ur0", "iso_rstn_efuse", "iso_rstn_cbusrx",
+            "iso_rstn_cbustx", "iso_rstn_dp", "iso_rstn_cec1", "iso_rstn_cec0",
+            "iso_rstn_ir";
+    };
+
+    grst1: grouped_soft_reset1@98000000 {
+        reg = <0x98000000 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;
+        is-grouped;
+        ignore-in-pm;
+    };
+
+    grst2: grouped_soft_reset2@98000004 {
+        reg = <0x98000004 0x04>;
+        compatible = "realtek,129x-soft-reset";
+        #reset-cells = <1>;
+        is-grouped;
+        ignore-in-pm;
+    };
+    
+    group_rst_init {
+        compatible = "realtek,129x-rstc-init";
+        reset-names =
+            "rstn_pcie0_all",
+            "rstn_pcie1_all";
+        resets =
+            <&grst2 0x0000E1C0>,
+            <&grst2 0x007B0000>;
+    };
+
+    usb_rst: usb_rst {
+        reg = <0x98000000 0x08>;
+        #reset-cells = <1>;
+        compatible = "realtek,129x-soft-reset";      
+        is-usb;
+        ignore-in-pm;
+    };
+
+    usb_rst_init {
+       compatible = "realtek,129x-rstc-init";
+       resets =
+            <&usb_rst  8>,
+            <&usb_rst  9>,
+            <&usb_rst 35>,
+            <&usb_rst 34>,
+            <&usb_rst  2>,
+            <&usb_rst 36>,
+            <&usb_rst  4>,
+            <&usb_rst 37>,
+            <&usb_rst 0x100>; // special case
+       reset-names =
+            "rstn_usb_phy0",
+            "rstn_usb_phy1",
+            "rstn_usb_phy2",
+            "rstn_usb_phy3",
+            "rstn_usb3_phy0_pow",
+            "rstn_usb3_phy1_pow",
+            "*rstn_usb3_p0_mdio",
+            "*rstn_usb3_p1_mdio",
+            "rstn_usb_apply";
+    };   
+    
+    clocks {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+
+        /* This is a dummy clock, to be used as placeholder on
+         * other mux clocks when a specific parent clock is not
+         * yet implemented. It should be dropped when the driver
+         * is complete.
+         */
+        dummy: dummy {
+            compatible = "fixed-clock";
+            #clock-cells = <0>;
+            clock-frequency = <0>;
+        };
+
+        osc27M: osc27M {
+            compatible = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            has-clk-rate = "fixed-rate";
+            fixed-rate,rate = <27000000>;
+        };
+
+        pll_scpu: spll {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000504 0x4>,
+                           <0x98000504 0x4>,
+                           <0x98000030 0x4>,
+                           <0x98000500 0x4>, // PLL_SSC_DIG_SCPU0
+                           <0x9800051c 0x4>; // PLL_SSC_DIG_SCPU_DBG2
+            factor,type = "scpu";
+            factor,num   = <3>;
+            factor,shift = <11  0  7  0 20>;
+            factor,width = < 8 11  2  1  1>;
+            factor,max-rate = <3000000000>;
+            factor,min-rate = < 200000000>;            
+
+            scpu,pll,workaround = <
+                0x34055501 0x04038500
+            >;
+        };
+
+        pll_bus: pll_bus {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000524 0x4>,
+                           <0x98000524 0x4>;
+            factor,type  = "nf";
+            factor,num   = <2>;
+            factor,shift = <11  0>;
+            factor,width = < 8 11>;
+            factor,max-rate = <600000000>; // 600MHz
+            factor,min-rate = <200000000>; // 200MHz
+        };
+
+        pll_bus_div2: pll_bus_div2 {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            clocks       = <&pll_bus>;
+
+            has-clk-rate = "fixed-factor";
+            fixed-factor,div  = <2>;
+            fixed-factor,mult = <1>;
+        };
+
+        clk_sys: clk_sys {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x98000030 0x04>;
+            clocks       = <&pll_bus>, <&pll_bus_div2>;
+            clock-names  = "pll_bus", "pll_bus_div2";
+
+            has-clk-mux;
+            mux,reg-index = <0>;
+            mux,shift     = <0>;
+            mux,width     = <1>;
+        };
+
+        pll_bus_h: pll_bus_h {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000544 0x4>,
+                           <0x98000544 0x4>;
+            factor,type  = "nf";
+            factor,num   = <2>;
+            factor,shift = <11  0>;
+            factor,width = < 8 11>;
+            factor,max-rate = <600000000>; // 600MHz
+            factor,min-rate = <200000000>; // 200MHz
+        };
+
+        clk_sysh: clk_sysh {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            clocks       = <&pll_bus_h>;
+
+            has-clk-rate = "fixed-factor";
+            fixed-factor,div  = <1>;
+            fixed-factor,mult = <1>;
+        };
+
+        pll_ddsa: pll_ddsa {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000564 0x4>,
+                           <0x98000564 0x4>;
+            factor,type  = "nf";
+            factor,num   = <2>;
+            factor,shift = <11  0>;
+            factor,width = < 8 11>;
+            factor,max-rate = <600000000>; // 600MHz
+            factor,min-rate = <200000000>; // 200MHz
+        };
+
+        pll_ddsb: pll_ddsb {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000584 0x4>,
+                           <0x98000584 0x4>;
+            factor,type  = "nf";
+            factor,num   = <2>;
+            factor,shift = <11  0>;
+            factor,width = < 8 11>;
+            factor,max-rate = <600000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        pll_vodma: pll_vodma {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000260 0x4>,
+                           <0x98000260 0x4>,
+                           <0x98000260 0x4>;
+            factor,type  = "mno";
+            factor,num   = <3>;
+            factor,shift = < 4 12 17>;
+            factor,width = < 8  2  2>;
+            factor,max-rate = <700000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        clk_vodma: clk_vodma {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x9800000c 0x4>; /* gate */
+            clocks       = <&pll_vodma>;
+
+            has-clk-gate;
+            gate,reg-index = <0>;
+            gate,shift     = <15>;
+        };
+
+        pll_ve1: pll_ve1 {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x98000114 0x4>,
+                           <0x98000114 0x4>,
+                           <0x98000114 0x4>;
+            factor,type  = "mno";
+            factor,num   = <3>;
+            factor,shift = < 4 12 17>;
+            factor,width = < 8  2  2>;
+            factor,max-rate = <700000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        pll_ve2: pll_ve2 {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x980001d0 0x4>,
+                           <0x980001d0 0x4>,
+                           <0x980001d0 0x4>;
+            factor,type  = "mno";
+            factor,num   = <3>;
+            factor,shift = < 4 12 17>;
+            factor,width = < 8  2  2>;
+            factor,max-rate = <750000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        clk_ve1: clk_ve1 {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x9800004c 0x4>, /* mux */
+                           <0x9800000c 0x4>; /* gate */
+            clocks       = <&clk_sysh>, <&pll_ve1>, <&pll_ve2>, <&pll_ve2>;
+            clock-names  = "clk_sysh", "pll_ve1", "pll_ve2", "pll_ve2";
+
+            has-clk-mux;
+            mux,reg-index = <0>;
+            mux,shift     = <0>;
+            mux,width     = <2>;
+
+            has-clk-gate;
+            gate,reg-index = <1>;
+            gate,shift     = <12>;
+        };
+
+        clk_ve2: clk_ve2 {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x9800004c 0x4>, /* mux */
+                           <0x9800000c 0x4>; /* gate */
+            clocks       = <&clk_sysh>, <&pll_ve1>, <&pll_ve2>, <&pll_ve2>;
+            clock-names  = "clk_sysh", "pll_ve1", "pll_ve2", "pll_ve2";
+
+            has-clk-mux;
+            mux,reg-index = <0>;
+            mux,shift     = <2>;
+            mux,width     = <2>;
+
+            has-clk-gate;
+            gate,reg-index = <1>;
+            gate,shift     = <13>;
+        };
+
+        clk_ve3: clk_ve3 {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x9800004c 0x4>, /* mux */
+                           <0x9800000c 0x4>; /* gate */
+            clocks       = <&clk_sysh>, <&pll_ve1>, <&pll_ve2>, <&pll_ve2>;
+            clock-names  = "clk_sysh", "pll_ve1", "pll_ve2", "pll_ve2";
+
+            has-clk-mux;
+            mux,reg-index = <0>;
+            mux,shift     = <4>;
+            mux,width     = <2>;
+
+            has-clk-gate;
+            gate,reg-index = <1>;
+            gate,shift     = <29>;
+        };
+
+        pll_gpu: pll_gpu {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x980005a4 0x4>,
+                           <0x980005a4 0x4>,
+                           <0x980005a0 0x4>; // OC_EN
+            factor,type = "nf-ssc";
+            factor,num   = <2>;
+            factor,shift = <11  0  0>;
+            factor,width = < 8 11  4>;
+            factor,max-rate = <800000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        clk_gpu: clk_gpu {
+            compatible   = "realtek,129x-clk-composite";
+            #clock-cells = <0>;
+            reg          = <0x9800000c 0x4>; /* gate */
+            clocks       = <&pll_gpu>;
+
+            has-clk-gate;
+            gate,reg-index = <0>;
+            gate,shift     = <11>;
+        };
+
+        pll_acpu: pll_acpu {
+            compatible   = "realtek,129x-pll-generic";
+            #clock-cells = <0>;
+            clocks       = <&osc27M>;
+            reg          = <0x980005c4 0x4>,
+                           <0x980005c4 0x4>;
+            factor,type  = "nf-ssc";
+            factor,num   = <2>;
+            factor,shift = <11  0>;
+            factor,width = < 8 11>;
+            factor,max-rate = <600000000>;
+            factor,min-rate = <200000000>;
+        };
+
+        jpeg_gates: jpeg_gates {
+            compatible   = "realtek,129x-clk-gates";
+            #clock-cells = <1>;
+            reg          = <0x98000010 0x4>;
+            clocks       = <&clk_sys>;
+            mask         = <0x00000008>;
+            clock-output-names = "jpeg";
+        };
+
+	clk_en_1:
+        clk_enable_1: clk_enable@9800000c {
+            compatible   = "realtek,129x-clk-gates";
+            #clock-cells = <1>;
+            reg          = <0x9800000c 0x4>;           
+            clock-output-names =
+                "clk_en_misc", "clk_en_pcie0", "clk_en_sata_0", "clk_en_gspi",
+                "clk_en_usb", "clk_en_pcr", "clk_en_iso_misc", "clk_en_sata_alive_0",
+                "clk_en_hdmi", "clk_en_etn", "clk_en_aio", "clk_en_tve",
+                "clk_en_lvds", "clk_en_se", "clk_en_dcu", "clk_en_cp",
+                "clk_en_md", "clk_en_tp", "clk_en_rsa", "clk_en_nf",
+                "clk_en_emmc", "clk_en_cr", "clk_en_sdio_ip", "clk_en_mipi",
+                "clk_en_emmc_ip", "clk_en_sdio", "clk_en_sd_ip";
+            mask = <0xdfff47ff>;
+        };
+
+        clk_enable_2: clk_enable@98000010 {
+            compatible   = "realtek,129x-clk-gates";
+            #clock-cells = <1>;
+            reg          = <0x98000010 0x4>;
+
+            clock-output-names =
+                "clk_en_nat", "clk_en_misc_i2c_5", "clk_en_pcie1", "clk_en_misc_sc",
+                "clk_en_cbus_tx", "clk_en_misc_rtc", "clk_en_misc_i2c_4", "clk_en_misc_i2c_3",
+                "clk_en_misc_i2c_2", "clk_en_misc_i2c_1", "clk_en_aio_au_codec", "clk_en_aio_mod",
+                "clk_en_aio_da", "clk_en_aio_hdmi", "clk_en_aio_spdif", "clk_en_aio_i2s",
+                "clk_en_aio_mclk", "clk_en_hdmirx", "clk_en_sata_1", "clk_en_sata_alive_1",
+                "clk_en_ur2", "clk_en_ur1", "clk_en_fan", "clk_en_dcphy_0",
+                "clk_en_dcphy_1";
+            mask = <0xffffe4e3>;
+        };
+
+        iso_clk_enable: clk_enable@9800708c {
+            compatible   = "realtek,129x-clk-gates";
+            #clock-cells = <1>;
+            reg          = <0x9800708c 0x4>;
+            mask         = <0x00001ffc>;
+            clock-output-names = 
+                "clk_en_misc_cec0", "clk_en_cbusrx_sys", "clk_en_cbustx_sys",
+                "clk_en_cbus_sys", "clk_en_cbus_osc", "clk_en_misc_ir", 
+                "clk_en_misc_ur0", "clk_en_i2c0", "clk_en_i2c1", "clk_en_etn_250m",
+                "clk_en_etn_sys";
+        };
+    };
+};
+

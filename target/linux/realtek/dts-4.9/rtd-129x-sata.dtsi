@@ -1,0 +1,18 @@
+/* PLEASE include this file inside a node */
+	sata_phy: sata_phy@9803FF60 {
+		compatible = "Realtek,rtk-sata-phy";
+		reg = <0x9803FF00 0x100>, <0x9801a980 0x10>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		#phy-cells = <1>;
+		status = "okay";
+	};
+
+	ahci_sata: sata@9803F000 {
+		compatible = "Realtek,ahci-sata";
+		reg = <0x9803F000 0x1000>;
+		interrupts = <0 28 4>;
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};

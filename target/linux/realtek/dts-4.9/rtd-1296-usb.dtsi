@@ -1,0 +1,78 @@
+
+/ {
+	/include/ "rtd-129x-usb.dtsi"
+
+	rtk_usb_power_manager@0 {
+		compatible = "Realtek,usb-manager";
+
+		status = "okay";
+		/* For port0 */
+		gpio0: gpio0 {
+			realtek,power-gpio = <&rtk_iso_gpio 1 1 0>;
+		};
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio = <&rtk_iso_gpio 31 1 0>;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio = <&rtk_iso_gpio 32 1 0>;
+		};
+		/* For port3 */
+		gpio3: gpio3 {
+			realtek,power-gpio = <&rtk_iso_gpio 32 1 0>;
+		};
+	};
+
+	dwc3_drd: rtk_dwc3_drd@98013200 {
+		compatible = "Realtek,dwc3";
+
+		status = "okay";
+
+		dwc3_drd@98020000 {
+			dr_mode = "peripheral"; /*host, peripheral*/
+		};
+
+		rtk_dwc3_drd_type_c@0 {
+			compatible = "Realtek,dwc3-type_c";
+			drd_mode;  //depend on dr_mode = "peripheral"
+		};
+
+	};
+
+	dwc3_u2host: rtk_dwc3_u2host@98013E00 {
+		compatible = "Realtek,dwc3";
+
+		status = "okay";
+	};
+
+	ehci@98013000 {
+		compatible = "Realtek,rtd129x-ehci";
+
+		status = "okay";
+	};
+
+	ohci@98013400 {
+		compatible = "Realtek,rtd129x-ohci";
+
+		status = "okay";
+	};
+
+	dwc3_u3host_usb3phy@0 {
+		compatible = "Realtek,usb3phy";
+
+		status = "okay";
+	};
+
+	dwc3_u3host_usb2phy@0 {
+		compatible = "Realtek,usb2phy";
+
+		status = "okay";
+	};
+
+	dwc3_u3host: rtk_dwc3_u3host@98013E00 {
+		compatible = "Realtek,dwc3";
+
+		status = "okay";
+	};
+};

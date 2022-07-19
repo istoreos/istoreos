@@ -1,0 +1,26 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "ARS2";
+	leds {
+		red {
+			gpio = <98 GPIO_ACTIVE_HIGH>;
+		};
+		green {
+			gpio = <97 GPIO_ACTIVE_HIGH>;
+		};
+	};
+	keys {
+		power {
+			gpio = <106 GPIO_ACTIVE_LOW>;
+		};
+		reboot {
+			gpio = <100 GPIO_ACTIVE_LOW>;
+		};
+	};
+	fans {
+		gpio = <15 GPIO_ACTIVE_HIGH>;
+	};
+};

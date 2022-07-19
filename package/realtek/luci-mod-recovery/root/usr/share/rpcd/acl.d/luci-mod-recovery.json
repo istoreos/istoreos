@@ -1,0 +1,14 @@
+{
+	"luci-mod-recovery-flash": {
+		"description": "Grant access to flash operations",
+		"write": {
+			"file": {
+				"/sbin/firstboot -y": [ "exec" ],
+				"/sbin/restore_host_conf /tmp/backup.tar.gz": [ "exec" ]
+			},
+			"ubus": {
+				"file": [ "exec" ]
+			}
+		}
+	}
+}

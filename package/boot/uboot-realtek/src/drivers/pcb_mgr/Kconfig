@@ -1,0 +1,9 @@
+menu "Pcb for flash type control"
+	  
+config FLASH_TYPE_CHOOSE
+	bool "open and build the pcb_utils"
+	help
+	  Support for the build the flash type choose	  
+	   
+
+endmenu

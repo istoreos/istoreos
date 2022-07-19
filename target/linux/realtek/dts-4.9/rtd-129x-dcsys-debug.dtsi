@@ -1,0 +1,141 @@
+/*
+[Module ID table]
+VO1: 0x0
+AIO: 0x0a
+CP: 0x11
+NAT: 0x12
+MD: 0x13
+NAT2: 0x14
+JPEG: 0x15
+TP: 0x17
+GPU: 0x19
+SCPU_NWC: 0x20
+SCPU_SWC: 0x21
+ACPU: 0x23
+HIF: 0x24
+AEE: 0x28
+ADE: 0x29
+USB: 0x2a
+ETN: 0x2e
+CR: 0x80
+NF: 0x83
+PCIE0: 0x84
+PCIE1: 0x86
+VE1: 0x30
+VE2: 0x31
+VE3: 0x32
+SE: 0x38
+MIPI: 0x40
+SATA: 0x48
+
+[access type]
+invalid: 0x0
+read: 0x1
+write: 0x2
+read or write: 0x3
+
+[memory trash detection mode]
+mode1: 0x1 (Given a region, trap if module_ID and access_type match)
+mode2: 0x2 (Given a region, trap if module_ID not match and access_type match)
+mode3: 0x3 (Given a module_ID and access_type, trap if request falls out of range)
+
+[Over DRAM access detection]
+Disable: 0x0
+Enable: 0x1
+
+[interrupt to CPU]
+SCPU: 0x0
+ACPU: 0x1
+VCPU: 0x2
+*/
+
+/{
+	dc_sys_debug@98008000 {
+		compatible = "realtek,rtk-dcsys-debug";
+		reg = <0x98008000 0x1000>;
+		interrupts = <0 35 4>;
+		err_cmd_detect = <0x1>, /* Enable over DRAM access detection */
+			<0x0>; /* interrupt to CPU */
+		mt_0 = <0x0>,  /* NUM0 Enable memory trash detection */
+			<0x0>, /* NUM0 start address*/
+			<0x0>, /* NUM0 end address*/
+			<0x0>, /* NUM0 module ID0*/
+			<0xa>, /* NUM0 module ID1*/
+			<0x0>, /* NUM0 module ID2*/
+			<0x0>, /* NUM0 module ID3*/
+			<0x0>, /* NUM0 interrupt to CPU*/
+			<0x3>, /* NUM0 access type*/
+			<0x1>; /* NUM0 mode*/
+		mt_1 = <0x0>, /* NUM1 Enable memory trash detection */
+			<0x0>, /* NUM1 start address*/
+			<0x0>, /* NUM1 end address*/
+			<0x0>, /* NUM1 module ID0*/
+			<0x0>, /* NUM1 module ID1*/
+			<0x0>, /* NUM1 module ID2*/
+			<0x0>, /* NUM1 module ID3*/
+			<0x0>, /* NUM1 interrupt to CPU*/
+			<0x0>, /* NUM1 access type*/
+			<0x0>; /* NUM1 mode*/
+		mt_2 = <0x0>, /* NUM2 Enable memory trash detection */
+			<0x0>, /* NUM2 start address*/
+			<0x0>, /* NUM2 end address*/
+			<0x0>, /* NUM2 module ID0*/
+			<0x0>, /* NUM2 module ID1*/
+			<0x0>, /* NUM2 module ID2*/
+			<0x0>, /* NUM2 module ID3*/
+			<0x0>, /* NUM2 interrupt to CPU*/
+			<0x0>, /* NUM2 access type*/
+			<0x0>; /* NUM2 mode*/
+		mt_3 = <0x0>,  /* NUM3 Enable memory trash detection */
+			<0x0>, /* NUM3 start address*/
+			<0x0>, /* NUM3 end address*/
+			<0x0>, /* NUM3 module ID0*/
+			<0x0>, /* NUM3 module ID1*/
+			<0x0>, /* NUM3 module ID2*/
+			<0x0>, /* NUM3 module ID3*/
+			<0x0>, /* NUM3 interrupt to CPU*/
+			<0x0>, /* NUM3 access type*/
+			<0x0>; /* NUM3 mode*/
+		mt_4 = <0x0>,  /* NUM4 Enable memory trash detection */
+			<0x0>, /* NUM4 start address*/
+			<0x0>, /* NUM4 end address*/
+			<0x0>, /* NUM4 module ID0*/
+			<0x0>, /* NUM4 module ID1*/
+			<0x0>, /* NUM4 module ID2*/
+			<0x0>, /* NUM4 module ID3*/
+			<0x0>, /* NUM4 interrupt to CPU*/
+			<0x0>, /* NUM4 access type*/
+			<0x0>; /* NUM4 mode*/
+		mt_5 = <0x0>,  /* NUM5 Enable memory trash detection */
+			<0x0>, /* NUM5 start address*/
+			<0x0>, /* NUM5 end address*/
+			<0x0>, /* NUM5 module ID0*/
+			<0x0>, /* NUM5 module ID1*/
+			<0x0>, /* NUM5 module ID2*/
+			<0x0>, /* NUM5 module ID3*/
+			<0x0>, /* NUM5 interrupt to CPU*/
+			<0x0>, /* NUM5 access type*/
+			<0x0>; /* NUM5 mode*/
+		mt_6 = <0x0>,  /* NUM6 Enable memory trash detection */
+			<0x0>, /* NUM6 start address*/
+			<0x0>, /* NUM6 end address*/
+			<0x0>, /* NUM6 module ID0*/
+			<0x0>, /* NUM6 module ID1*/
+			<0x0>, /* NUM6 module ID2*/
+			<0x0>, /* NUM6 module ID3*/
+			<0x0>, /* NUM6 interrupt to CPU*/
+			<0x0>, /* NUM6 access type*/
+			<0x0>; /* NUM6 mode*/
+		mt_7 = <0x0>,  /* NUM7 Enable memory trash detection */
+			<0x0>, /* NUM7 start address*/
+			<0x0>, /* NUM7 end address*/
+			<0x0>, /* NUM7 module ID0*/
+			<0x0>, /* NUM7 module ID1*/
+			<0x0>, /* NUM7 module ID2*/
+			<0x0>, /* NUM7 module ID3*/
+			<0x0>, /* NUM7 interrupt to CPU*/
+			<0x0>, /* NUM7 access type*/
+			<0x0>; /* NUM7 mode*/
+		status = "okay";
+	};
+};

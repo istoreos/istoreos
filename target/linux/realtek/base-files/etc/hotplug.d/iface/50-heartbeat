@@ -1,0 +1,36 @@
+#!/bin/sh
+
+[ -n "$DEVICE" ] || exit 0
+[ "$ACTION" = "ifup" ] || exit 0
+
+# CONST
+
+API='https://ia.51.la/go1?id=21125455&pvFlag=1'
+REFERER_T='https://${MODEL}.2.dev.jjm.c0m/device?mac=${MAC}&sn=${SN}'
+
+COOKIE_JAR=/etc/.heartbeat.cookie
+
+# at most 1 request per day
+[ `find $COOKIE_JAR -mtime -1 | wc -l` = 1 ] && exit 0
+
+# VAR
+AIP=`nslookup ia.51.la 114.114.114.114 | grep 'Address 1:' | tail -c +12`
+
+[ -n "$AIP" ] || exit 1
+
+MODEL=`cat /proc/device-tree/model`
+
+MAC=`cat /sys/class/net/eth0/address`
+
+SN=`factory list | grep '^barcode=' | head -n1 | tail -c +9`
+
+REFERER=`MAC=$MAC SN=$SN MODEL=$MODEL sh -c "echo \"$REFERER_T\""`
+
+OS="`uname -s`; `uname -m -r -o`; $MODEL"
+
+curl "$API" \
+  -A 'Mozilla/5.0 ('"$OS"') AppleWebKit/537.36 (KHTML, like Gecko) LinkEase/1.0 Safari/537.36' \
+  -e $REFERER \
+  -b $COOKIE_JAR -c $COOKIE_JAR \
+  --resolve ia.51.la:80:$AIP --resolve ia.51.la:443:$AIP \
+ && touch $COOKIE_JAR

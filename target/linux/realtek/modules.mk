@@ -176,16 +176,16 @@ define KernelPackage/rtd1295hwnat
 	CONFIG_RTD_1295_HWNAT=y \
 	CONFIG_BRIDGE_IGMP_SNOOPING=y \
 	CONFIG_RTD_1295_MAC0_SGMII_LINK_MON=y \
-	CONFIG_RTL_HARDWARE_NAT=y \
+	CONFIG_RTL_HARDWARE_NAT=n \
 	CONFIG_RTL_819X=y \
-	CONFIG_RTL_HW_NAPT=y \
+	CONFIG_RTL_HW_NAPT=n \
 	CONFIG_RTL_LAYERED_ASIC_DRIVER=y \
-	CONFIG_RTL_LAYERED_ASIC_DRIVER_L3=y \
-	CONFIG_RTL_LAYERED_ASIC_DRIVER_L4=y \
+	CONFIG_RTL_LAYERED_ASIC_DRIVER_L3=n \
+	CONFIG_RTL_LAYERED_ASIC_DRIVER_L4=n \
 	CONFIG_RTL_LAYERED_DRIVER_ACL=y \
 	CONFIG_RTL_LAYERED_DRIVER_L2=y \
-	CONFIG_RTL_LAYERED_DRIVER_L3=y \
-	CONFIG_RTL_LAYERED_DRIVER_L4=y \
+	CONFIG_RTL_LAYERED_DRIVER_L3=n \
+	CONFIG_RTL_LAYERED_DRIVER_L4=n \
 	CONFIG_RTL_LINKCHG_PROCESS=y \
 	CONFIG_RTL_NETIF_MAPPING=y \
 	CONFIG_RTL_PROC_DEBUG=y \
@@ -201,7 +201,7 @@ define KernelPackage/rtd1295hwnat
 	CONFIG_RTL_MULTI_LAN_DEV=y \
 	CONFIG_AUTO_DHCP_CHECK=n \
 	CONFIG_RTL_HW_MULTICAST_ONLY=n \
-	CONFIG_RTL_HW_L2_ONLY=n \
+	CONFIG_RTL_HW_L2_ONLY=y \
 	CONFIG_RTL_MULTIPLE_WAN=n \
 	CONFIG_RTL865X_LANPORT_RESTRICTION=n \
 	CONFIG_RTL_IVL_SUPPORT=y \
@@ -268,12 +268,13 @@ define KernelPackage/rtd1295hwnat/config
 		bool "Enable HW VLAN support"
 		select KERNEL_VLAN_8021Q
 		select KERNEL_RTL_IVL_SUPPORT
-		default y
+		default n
 		help
-		  Enable HW QoS for HW NAT.
+		  Enable HW VLAN for HW NAT.
 
 	config KERNEL_RTL_TSO
 		bool "Enable HW TSO support"
+		depends on !KERNEL_RTL_IPTABLES_FAST_PATH
 		default y
 		help
 		  Enable HW TSO for HW NAT.
@@ -284,7 +285,7 @@ define KernelPackage/rtd1295hwnat/config
 		select KERNEL_IP_NF_IPTABLES
 		select KERNEL_PPP
 		select KERNEL_RTL_FAST_PPPOE
-		default y
+		default n
 		help
 		  Enable fastpath when packets go through CPU.
 
@@ -307,11 +308,83 @@ define KernelPackage/rtd1295hwnat/config
 		  Support Realtek RTL8363, RTL8367, RTL8370 series switches.
 
 	config KERNEL_RTL_BR_SHORTCUT
-		bool "Enable bridge shortcut"
-		default y
+		bool "Enable bridge shortcut (WiFi)"
+		default n
 		help
 		  Enable Bridge Shortcut between WiFi and HW NAT
   endif
 endef
 
 $(eval $(call KernelPackage,rtd1295hwnat))
+
+define KernelPackage/openmax
+  SECTION:=kernel
+  CATEGORY:=Kernel modules
+  SUBMENU:=$(RTK_MENU)
+  TITLE:=OpenMAX kernel options
+  KCONFIG:= \
+	CONFIG_ION=y \
+	CONFIG_ION_TEST=n \
+	CONFIG_ION_DUMMY=n \
+	CONFIG_ION_RTK_PHOENIX=y \
+	CONFIG_FIQ_DEBUGGER=n \
+	CONFIG_FSL_MC_BUS=n \
+	CONFIG_RTK_CODEC=y \
+	CONFIG_RTK_RESERVE_MEMORY=y \
+	CONFIG_VE1_CODEC=y \
+	CONFIG_VE3_CODEC=y \
+	CONFIG_IMAGE_CODEC=y \
+	CONFIG_ANDROID=y \
+	CONFIG_ASHMEM=y \
+	CONFIG_ANDROID_TIMED_OUTPUT=n \
+	CONFIG_ANDROID_TIMED_GPIO=n \
+	CONFIG_ANDROID_LOW_MEMORY_KILLER=n \
+	CONFIG_SYNC=y \
+	CONFIG_SW_SYNC=y \
+	CONFIG_SW_SYNC_USER=y \
+	CONFIG_ZSMALLOC=y \
+	CONFIG_PGTABLE_MAPPING=n \
+	CONFIG_ZSMALLOC_STAT=n \
+	CONFIG_REGMAP=y \
+	CONFIG_REGMAP_I2C=y \
+	CONFIG_JUMP_LABEL=y \
+	CONFIG_KSM=y \
+	CONFIG_UIO=y \
+	CONFIG_UIO_ASSIGN_MINOR=y \
+	CONFIG_UIO_RTK_RBUS=y \
+	CONFIG_UIO_RTK_REFCLK=y \
+	CONFIG_UIO_RTK_SE=y \
+	CONFIG_UIO_RTK_MD=y \
+	CONFIG_UIO_CIF=n \
+	CONFIG_UIO_PDRV_GENIRQ=n \
+	CONFIG_UIO_DMEM_GENIRQ=n \
+	CONFIG_UIO_AEC=n \
+	CONFIG_UIO_SERCOS3=n \
+	CONFIG_UIO_PCI_GENERIC=n \
+	CONFIG_UIO_NETX=n \
+	CONFIG_UIO_PRUSS=n \
+	CONFIG_UIO_MF624=n \
+	CONFIG_STAGING=y \
+	CONFIG_FSL_MC_BUS=n \
+	CONFIG_CMA=y \
+	CONFIG_CMA_DEBUG=n \
+	CONFIG_CMA_DEBUGFS=y \
+	CONFIG_CMA_AREAS=7 \
+	CONFIG_DMA_CMA=y \
+	CONFIG_CMA_SIZE_MBYTES=32 \
+	CONFIG_CMA_SIZE_SEL_MBYTES=y \
+	CONFIG_CMA_SIZE_SEL_PERCENTAGE=n \
+	CONFIG_CMA_SIZE_SEL_MIN=n \
+	CONFIG_CMA_SIZE_SEL_MAX=n \
+	CONFIG_CMA_ALIGNMENT=4 \
+	CONFIG_ADF=n \
+
+  DEPENDS:=
+  FILES:=
+endef
+
+define KernelPackage/openmax/description
+  This package enables kernel options for OpenMAX.
+endef
+
+$(eval $(call KernelPackage,openmax))

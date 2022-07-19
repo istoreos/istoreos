@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Recovery Mode"
+msgstr "恢复模式"
+
+msgid "All configuration will lost after reboot!"
+msgstr "重启后所有配置都不会保留！"
+
+msgid "The reset command failed with code %d"
+msgstr "重置失败，代码 %d"
+
+msgid "Reset success"
+msgstr "重置成功"
+
+msgid "Restore success"
+msgstr "恢复成功"
+
+msgid ""
+"The uploaded backup archive appears to be valid and contains the files "
+"listed below. Press \"Continue\" to restore the backup, or "
+"\"Cancel\" to abort the operation."
+msgstr ""
+"上传的备份归档有效，并且包含以下列出的文件。点击“继续”恢复备份，或"
+"点击“取消”中止操作。"

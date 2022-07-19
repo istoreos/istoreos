@@ -272,7 +272,9 @@ default_postinst() {
 			uci commit
 		fi
 
-		rm -f /tmp/luci-indexcache
+		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
+			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache
+		fi
 	fi
 
 	local shell="$(command -v bash)"

@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2016 OpenWrt.org
+
+START=99
+STOP=00
+
+start() {
+	start-stop-daemon -m -p /var/run/rtk-supplicant.pid -b -S -x /usr/bin/rtk-supplicant
+}
+
+
+stop() {
+	start-stop-daemon -p /var/run/rtk-supplicant.pid -K -s SIGQUIT
+	sleep 2
+}

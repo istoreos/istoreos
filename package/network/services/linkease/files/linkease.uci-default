@@ -1,0 +1,13 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@linkease[-1]
+	add ucitrack linkease
+	set ucitrack.@linkease[-1].init=linkease
+	commit ucitrack
+EOF
+
+/etc/init.d/linkease enable
+/etc/init.d/linkease start
+
+exit 0

@@ -1,0 +1,211 @@
+From 8cdaee40fe00508600e4a2a42355df4ae8426de1 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 2 Jun 2021 11:31:58 +0800
+Subject: [PATCH] support elf64
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ include/elf.h | 131 +++++++++++++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 129 insertions(+), 2 deletions(-)
+
+diff --git a/include/elf.h b/include/elf.h
+index 63d93416a3..63d228a217 100644
+--- a/include/elf.h
++++ b/include/elf.h
+@@ -28,6 +28,16 @@ typedef int32_t		Elf32_Sword;	/* Signed large integer */
+ typedef uint32_t	Elf32_Word;	/* Unsigned large integer */
+ typedef uint16_t	Elf32_Half;	/* Unsigned medium integer */
+ 
++/* 64-bit ELF base types */
++typedef uint64_t	Elf64_Addr;
++typedef uint16_t	Elf64_Half;
++typedef int16_t		Elf64_SHalf;
++typedef uint64_t	Elf64_Off;
++typedef int32_t		Elf64_Sword;
++typedef uint32_t	Elf64_Word;
++typedef uint64_t	Elf64_Xword;
++typedef int64_t		Elf64_Sxword;
++
+ /* e_ident[] identification indexes */
+ #define EI_MAG0		0		/* file ID */
+ #define EI_MAG1		1		/* file ID */
+@@ -85,7 +95,7 @@ typedef uint16_t	Elf32_Half;	/* Unsigned medium integer */
+ 		      (ehdr).e_ident[EI_MAG3] == ELFMAG3)
+ 
+ /* ELF Header */
+-typedef struct elfhdr{
++typedef struct {
+ 	unsigned char	e_ident[EI_NIDENT]; /* ELF Identification */
+ 	Elf32_Half	e_type;		/* object file type */
+ 	Elf32_Half	e_machine;	/* machine */
+@@ -103,6 +113,24 @@ typedef struct elfhdr{
+ 					   header string table" entry offset */
+ } Elf32_Ehdr;
+ 
++typedef struct {
++	unsigned char	e_ident[EI_NIDENT]; /* ELF Identification */
++	Elf64_Half	e_type;		/* object file type */
++	Elf64_Half	e_machine;	/* machine */
++	Elf64_Word	e_version;	/* object file version */
++	Elf64_Addr	e_entry;	/* virtual entry point */
++	Elf64_Off	e_phoff;	/* program header table offset */
++	Elf64_Off	e_shoff;	/* section header table offset */
++	Elf64_Word	e_flags;	/* processor-specific flags */
++	Elf64_Half	e_ehsize;	/* ELF header size */
++	Elf64_Half	e_phentsize;	/* program header entry size */
++	Elf64_Half	e_phnum;	/* number of program header entries */
++	Elf64_Half	e_shentsize;	/* section header entry size */
++	Elf64_Half	e_shnum;	/* number of section header entries */
++	Elf64_Half	e_shstrndx;	/* section header table's "section
++					   header string table" entry offset */
++} Elf64_Ehdr;
++
+ /* e_type */
+ #define ET_NONE		0		/* No file type */
+ #define ET_REL		1		/* relocatable file */
+@@ -220,6 +248,20 @@ typedef struct {
+ 	Elf32_Word	sh_entsize;	/* section entry size */
+ } Elf32_Shdr;
+ 
++typedef struct {
++	Elf64_Word	sh_name;	/* name - index into section header
++					   string table section */
++	Elf64_Word	sh_type;	/* type */
++	Elf64_Xword	sh_flags;	/* flags */
++	Elf64_Addr	sh_addr;	/* address */
++	Elf64_Off	sh_offset;	/* file offset */
++	Elf64_Xword	sh_size;	/* section size */
++	Elf64_Word	sh_link;	/* section header table index link */
++	Elf64_Word	sh_info;	/* extra information */
++	Elf64_Xword	sh_addralign;	/* address alignment */
++	Elf64_Xword	sh_entsize;	/* section entry size */
++} Elf64_Shdr;
++
+ /* Special Section Indexes */
+ #define SHN_UNDEF	0		/* undefined */
+ #define SHN_LORESERVE	0xff00		/* lower bounds of reserved indexes */
+@@ -379,6 +421,17 @@ typedef struct
+ 	Elf32_Sword	r_addend;
+ } Elf32_Rela;
+ 
++typedef struct {
++	Elf64_Addr r_offset;	/* Location at which to apply the action */
++	Elf64_Xword r_info;	/* index and type of relocation */
++} Elf64_Rel;
++
++typedef struct {
++	Elf64_Addr r_offset;	/* Location at which to apply the action */
++	Elf64_Xword r_info;	/* index and type of relocation */
++	Elf64_Sxword r_addend;	/* Constant addend used to compute value */
++} Elf64_Rela;
++
+ /* Extract relocation info - r_info */
+ #define ELF32_R_SYM(i)		((i) >> 8)
+ #define ELF32_R_TYPE(i)		((unsigned char) (i))
+@@ -396,6 +449,17 @@ typedef struct {
+ 	Elf32_Word	p_align;	/* memory alignment */
+ } Elf32_Phdr;
+ 
++typedef struct {
++	Elf64_Word	p_type;		/* segment type */
++	Elf64_Word	p_flags;	/* flags */
++	Elf64_Off	p_offset;	/* segment offset */
++	Elf64_Addr	p_vaddr;	/* virtual address of segment */
++	Elf64_Addr	p_paddr;	/* physical address of segment */
++	Elf64_Xword	p_filesz;	/* number of bytes in file for seg */
++	Elf64_Xword	p_memsz;	/* number of bytes in mem. for seg */
++	Elf64_Xword	p_align;	/* memory alignment */
++} Elf64_Phdr;
++
+ /* Segment types - p_type */
+ #define PT_NULL		0		/* unused */
+ #define PT_LOAD		1		/* loadable segment */
+@@ -431,6 +495,17 @@ typedef struct
+ 
+ extern Elf32_Dyn	_DYNAMIC[];
+ 
++typedef struct {
++	Elf64_Sxword d_tag;		/* entry tag value */
++	union {
++		Elf64_Xword d_val;
++		Elf64_Addr d_ptr;
++	} d_un;
++} Elf64_Dyn;
++
++#define ELF64_R_SYM(i)			((i) >> 32)
++#define ELF64_R_TYPE(i)			((i) & 0xffffffff)
++
+ /* Dynamic Array Tags - d_tag */
+ #define DT_NULL		0		/* marks end of _DYNAMIC array */
+ #define DT_NEEDED	1		/* string table offset of needed lib */
+@@ -485,6 +560,41 @@ unsigned long elf_hash(const unsigned char *name);
+ 
+ #define ELF_TARG_VER	1	/* The ver for which this code is intended */
+ 
++/* ELF register definitions */
++#define R_386_NONE	0
++#define R_386_32	1
++#define R_386_PC32	2
++#define R_386_GOT32	3
++#define R_386_PLT32	4
++#define R_386_COPY	5
++#define R_386_GLOB_DAT	6
++#define R_386_JMP_SLOT	7
++#define R_386_RELATIVE	8
++#define R_386_GOTOFF	9
++#define R_386_GOTPC	10
++#define R_386_NUM	11
++
++/* x86-64 relocation types */
++#define R_X86_64_NONE		0	/* No reloc */
++#define R_X86_64_64		1	/* Direct 64 bit  */
++#define R_X86_64_PC32		2	/* PC relative 32 bit signed */
++#define R_X86_64_GOT32		3	/* 32 bit GOT entry */
++#define R_X86_64_PLT32		4	/* 32 bit PLT address */
++#define R_X86_64_COPY		5	/* Copy symbol at runtime */
++#define R_X86_64_GLOB_DAT	6	/* Create GOT entry */
++#define R_X86_64_JUMP_SLOT	7	/* Create PLT entry */
++#define R_X86_64_RELATIVE	8	/* Adjust by program base */
++/* 32 bit signed pc relative offset to GOT */
++#define R_X86_64_GOTPCREL	9
++#define R_X86_64_32		10	/* Direct 32 bit zero extended */
++#define R_X86_64_32S		11	/* Direct 32 bit sign extended */
++#define R_X86_64_16		12	/* Direct 16 bit zero extended */
++#define R_X86_64_PC16		13	/* 16 bit sign extended pc relative */
++#define R_X86_64_8		14	/* Direct 8 bit sign extended  */
++#define R_X86_64_PC8		15	/* 8 bit sign extended pc relative */
++
++#define R_X86_64_NUM		16
++
+ /*
+  * XXX - PowerPC defines really don't belong in here,
+  * but we'll put them in for simplicity.
+@@ -570,6 +680,23 @@ unsigned long elf_hash(const unsigned char *name);
+    that may still be in object files.  */
+ #define R_PPC_TOC16             255
+ 
++ /* ARM relocs */
++#define R_ARM_NONE		0	/* No reloc */
++#define R_ARM_RELATIVE		23	/* Adjust by program base */
++
++/* AArch64 relocs */
++#define R_AARCH64_NONE		0	/* No relocation */
++#define R_AARCH64_RELATIVE	1027	/* Adjust by program base */
++
++/* RISC-V relocations */
++#define R_RISCV_32		1
++#define R_RISCV_64		2
++#define R_RISCV_RELATIVE	3
++
+ int valid_elf_image(unsigned long addr);
++unsigned long load_elf64_image_phdr(unsigned long addr);
++unsigned long load_elf64_image_shdr(unsigned long addr);
++unsigned long load_elf_image_phdr(unsigned long addr);
++unsigned long load_elf_image_shdr(unsigned long addr);
+ 
+-#endif /* _ELF_H */
++#endif /* _ELF_H */
+\ No newline at end of file
+-- 
+2.23.0
+

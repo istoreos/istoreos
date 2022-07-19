@@ -1,0 +1,90 @@
+/ {
+	/include/ "rtd-129x-sata.dtsi"
+
+	sata_phy: sata_phy@9803FF60 {
+		clocks = <&clk_en_1 7>;
+		sata-phy@0 {
+			reg = <0>;
+			resets = <&rst1 10>;
+			reset-names = "rstn_sata_phy_pow_0";
+			spread-spectrum = <0>;
+			phy-param = <0x00001111>, <0x00005111>, <0x00009111>,
+					<0x336a0511>, <0x336a4511>, <0x336a8511>,
+					<0xE0700111>, <0xE05C4111>, <0xE04A8111>,
+					<0x00150611>, <0x00154611>, <0x00158611>,
+					<0xC6000A11>, <0xC6004A11>, <0xC6008A11>,
+					<0x70000211>, <0x70004211>, <0x70008211>,
+					<0xC6600A11>, <0xC6604A11>, <0xC6608A11>,
+					<0x20041911>, <0x20045911>, <0x20049911>,
+					<0x94aa2011>, <0x94aa6011>, <0x94aaa011>,
+					<0x17171511>, <0x17175511>, <0x17179511>,
+					<0x07701611>, <0x07705611>, <0x07709611>,
+					<0x40002a11>, <0x40006a11>, <0x4000aa11>,
+					<0x27710311>, <0x27684311>, <0x27648311>,
+					<0x29001011>, <0x29005011>, <0x29009011>,
+					<0x40000C11>, <0x40004C11>, <0x40008C11>,
+					<0x00271711>, <0x00275711>, <0x00279711>;
+			/delete-property/ phy-param;
+			tx-driving = <2>;
+			
+			tx-driving-tbl = // user can define tx driving here //
+					<0x94a72011>, <0x94a76011>, <0x94a7a011>,
+					<0x587a2111>, <0x587a6111>, <0x587aa111>;
+			/delete-property/ tx-driving-tbl;
+		};
+		sata-phy@1 {
+			reg = <1>;
+			resets = <&rst4 7>;
+			reset-names = "rstn_sata_phy_pow_1";
+			spread-spectrum = <0>;
+			phy-param = <0x00001111>, <0x00005111>, <0x00009111>,
+					<0x336a0511>, <0x336a4511>, <0x336a8511>,
+					<0xE0700111>, <0xE05C4111>, <0xE04A8111>,
+					<0x00150611>, <0x00154611>, <0x00158611>,
+					<0xC6000A11>, <0xC6004A11>, <0xC6008A11>,
+					<0x70000211>, <0x70004211>, <0x70008211>,
+					<0xC6600A11>, <0xC6604A11>, <0xC6608A11>,
+					<0x20041911>, <0x20045911>, <0x20049911>,
+					<0x94aa2011>, <0x94aa6011>, <0x94aaa011>,
+					<0x17171511>, <0x17175511>, <0x17179511>,
+					<0x07701611>, <0x07705611>, <0x07709611>,
+					<0x40002a11>, <0x40006a11>, <0x4000aa11>,
+					<0x27710311>, <0x27684311>, <0x27648311>,
+					<0x29001011>, <0x29005011>, <0x29009011>,
+					<0x40000C11>, <0x40004C11>, <0x40008C11>,
+					<0x00271711>, <0x00275711>, <0x00279711>;
+			/delete-property/ phy-param;
+			tx-driving = <2>;
+			
+			tx-driving-tbl = // user can define tx driving here //
+					<0x94a72011>, <0x94a76011>, <0x94a7a011>,
+					<0x587a2111>, <0x587a6111>, <0x587aa111>;
+			/delete-property/ tx-driving-tbl;
+		};
+	};
+
+	ahci_sata: sata@9803F000 {
+		clocks = <&clk_en_1 2>,
+			<&clk_en_1 7>,
+			<&clk_en_2 25>,
+			<&clk_en_2 26>;
+		sata-port@0 {
+			reg = <0>;
+			phys = <&sata_phy 0>;
+			resets = <&rst1 5>,
+				<&rst1 7>;
+			reset-names = "rstn_sata_0",
+				"rstn_sata_phy_0";
+			gpios = <&rtk_misc_gpio 56 1 1>;
+		};
+		sata-port@1 {
+			reg = <1>;
+			phys = <&sata_phy 1>;
+			resets = <&rst4 10>,
+				<&rst4 9>;
+			reset-names = "rstn_sata_1",
+				"rstn_sata_phy_1";
+			gpios = <&rtk_iso_gpio 15 1 1>;
+		};
+	};
+};

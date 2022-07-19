@@ -1,0 +1,113 @@
+#include "rtd-1295.dtsi"
+#include "rtd-129x-dvfs.dtsi"
+
+/ {
+	model= "Realtek_RTD1295";
+	compatible = "Realtek,FPGA_v7", "Realtek,rtd-1295";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	timer {
+		clock-frequency = <27000000>;
+	};
+
+	timer0@9801b000 {
+		clock-frequency = <27000000>;
+	};
+
+	timer1@9801b000 {
+		clock-frequency = <27000000>;
+	};
+
+	uart0: serial0@98007800 {
+		clock-frequency = <27000000>;
+	};
+
+	uart1: serial1@9801B200 {
+		clock-frequency = <432000000>;
+	};
+
+	uart2: serial2@9801B400 {
+		clock-frequency = <432000000>;
+	};
+
+	chosen {
+		swiotlb-memory-reservation-size = <512>;
+		swiotlb-force = <0>;
+	};
+#ifdef NAS_MM
+	rtk,ion {
+		compatible = "Realtek,rtk-ion";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		rtk,ion-heap@0 {    /* SYSTEM_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <0>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@1 {    /* System contig */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <1>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@4 {    /* DMA_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <4>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@8 {    /* Audio */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <8>;
+		};
+		rtk,ion-heap@7 {    /* TYPE_MEDIA */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <7>;
+		};
+	};
+
+    fb {
+        compatible = "Realtek,rtk-fb";
+        buffer-cnt = <3>;
+        resolution = <1920 1080>;
+        fps = <60>;
+    };
+
+    test_vo@98005000 {
+        compatible = "Realtek,rtk1295-test_vo";
+        reg = <0x98005000 0x1000>, <0x9800D000 0x1000>, <0x98000000 0x1000>;
+        //interrupts = <0 31 4>;
+        interrupts = <0 34 4>;
+    };
+#endif
+
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios =
+			<&rtk_misc_gpio 8 0 0>,			/* install button, input, default N/A */
+			<&rtk_misc_gpio 100 1 1>;		/* audio dac unmute , output, default high */
+	};
+
+	rfkill: rfkilligpio@0{
+		gpios = <&rtk_iso_gpio 24 1 0>;                         /*bt power , output, default low */
+		 status = "okay";
+	};
+
+    power-management{
+        compatible = "Realtek,power-management";
+
+		/* GPIO Wakeup */
+		wakeup-gpio-enable = /* (0) disable (1) enable */
+			<1>, /* Wakeup from BT : enable */
+			<1>,/* Wakeup from GPIO : enable */
+			<0>; /* Wakeup from WiFi : disable */
+		wakeup-gpio-list = /* <&rtk_iso_gpio {num} {force input (0) } {default N/A (0)] }> */
+			<&rtk_iso_gpio 14 0 0>, /* BT wakeup host pin */
+			<&rtk_iso_gpio 4 0 0>, /* GPIO wakeup host pin */
+			<&rtk_iso_gpio 33 0 0>; /* WiFi wakeup host pin */
+		wakeup-gpio-activity = /* (0) active low (1) active high*/
+			<1>, /* BT : high activity */
+			<0>,/* GPIO : low activity */
+			<1>; /* Wifi : high activity */
+    };
+};

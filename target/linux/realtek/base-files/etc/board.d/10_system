@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Copyright (C) 2018 OpenWrt.org
+#
+
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+board=$(board_name)
+
+case "$board" in
+Realtek,rtd-129*)
+	if [ -e /proc/device-tree/chosen/default-hostname ]; then
+		ucidef_set_hostname `cat /proc/device-tree/chosen/default-hostname`
+	fi
+	if [ -e /proc/device-tree/chosen/default-password ]; then
+		PSW=`cat /proc/device-tree/chosen/default-password | openssl rsautl -verify -inkey /etc/public.key -pubin`
+		sed -i 's#root:.*#root:'"$PSW"':18743:0:99999:7:::#g' /etc/shadow
+	fi
+	;;
+*)
+	;;
+esac
+
+board_config_flush
+
+exit 0

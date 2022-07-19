@@ -110,6 +110,13 @@ endif
 		$(BUNDLER_COMMAND))
 	$(CP) $(TOPDIR)/staging_dir/host/lib/libfakeroot* $(PKG_BUILD_DIR)/staging_dir/host/lib
 	STRIP=$(STAGING_DIR_HOST)/bin/sstrip $(SCRIPT_DIR)/rstrip.sh $(PKG_BUILD_DIR)/staging_dir/host/bin/
+
+	rm -f $(PKG_BUILD_DIR)/target/linux/realtek/image/blob/private.key
+	echo > $(PKG_BUILD_DIR)/target/linux/realtek/image/rescue.mk
+
+	$(SED) '1h;2,$$H;$$!d;g' \
+		-e 's/Target-Profile: DEVICE_rescue[^@]*@@//g' $(PKG_BUILD_DIR)/.targetinfo
+
 	(cd $(BUILD_DIR); \
 		tar -I '$(STAGING_DIR_HOST)/bin/xz -7e -T$(if $(filter 1,$(NPROC)),2,0)' -cf $@ $(IB_NAME) \
 		--mtime="$(shell date --date=@$(SOURCE_DATE_EPOCH))"; \

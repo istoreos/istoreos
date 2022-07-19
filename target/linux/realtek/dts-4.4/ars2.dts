@@ -1,0 +1,68 @@
+/dts-v1/;
+
+#include "rtd1296-4GB.dtsi"
+
+/ {
+	model= "ARS2";
+	chosen {
+		default-hostname = "ARS2";
+	};
+
+	aliases {
+		led-boot = &led_green;
+		led-failsafe = &led_red;
+		led-running = &led_green;
+		led-upgrade = &led_red;
+	};
+
+	sata@9803F000 {
+		sata0: sata-port@0 {
+			led-io = <&rtk_misc_gpio 11 RTK_GPIO_DIROUT 0>;
+		};
+		sata1: sata-port@1 {
+			led-io = <&rtk_misc_gpio 12 RTK_GPIO_DIROUT 0>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_green: green {
+			label = "green:router";
+			gpios = <&rtk_misc_gpio 97 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+		led_red: red {
+			label = "red:router";
+			gpios = <&rtk_misc_gpio 98 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	thermal@0x9801D100 {
+		/* trip points -----------------------  */
+		/*         | temp | hyst |   cdev    |  */
+		/*         |      |      | id | data |  */
+		trip-points = <
+		/* 0 */    85      3    2      0
+		/* 1 */   115      3    0      0
+		/* 2 */   125      3    0      1
+		/* 3 */   120      7    1      2
+		/* 4 */   130      0    3      0
+		>;
+		/* freq range (KHz) to each trip point */
+		cpufreq,freqs = <
+		1300000 800000 /* bind to trip-point 1 */
+		700000 300000 /* bind to trip-point 2 */
+		>;
+		/* cpu core list used by the cooling device */
+		cpu-core,cpu-list = <&A53_3>, <&A53_2>;
+	};
+
+	gpio_fan {
+		compatible = "gpio-fan";
+		gpios = <&rtk_misc_gpio 15 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		gpio-fan,speed-map = <0 0>,
+				<5000 1>;
+		#cooling-cells = <2>; /* min followed by max */
+	};
+};

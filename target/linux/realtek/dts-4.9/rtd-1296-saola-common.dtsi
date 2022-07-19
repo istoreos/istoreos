@@ -1,0 +1,122 @@
+#include "rtd-1296.dtsi"
+
+/ {
+	model= "Realtek_RTD1296";
+	compatible = "Realtek,rtd-1296";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	arch_timer {
+		clock-frequency = <27000000>;
+	};
+
+	timer0@9801B000 {
+		clock-frequency = <27000000>;
+	};
+
+	timer1@9801B000 {
+		clock-frequency = <27000000>;
+	};
+
+	serial0@98007800 {
+		clock-frequency = <27000000>;
+	};
+
+	serial1@9801B200 {
+		clock-frequency = <432000000>;
+	};
+
+	serial2@9801B400 {
+		clock-frequency = <432000000>;
+	};
+
+	chosen {
+		swiotlb-memory-reservation-size = <512>;
+		swiotlb-force = <0>;
+	};
+
+	rtk,ion {
+		compatible = "Realtek,rtk-ion";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rtk,ion-heap@0 { /* SYSTEM_HEAP */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <0>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@1 { /* System contig */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <1>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@4 { /* DMA_HEAP */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <4>;
+			rtk,memory-reservation-size = <0x0>;
+		};
+
+		rtk,ion-heap@8 { /* Audio */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <8>;
+		};
+
+		rtk,ion-heap@7 { /* TYPE_MEDIA */
+			compatible = "Realtek,rtk-ion-reserve";
+			reg = <7>;
+		};
+	};
+
+	fb {
+		compatible = "Realtek,rtk-fb";
+		buffer-cnt = <3>;
+		resolution = <1920 1080>;
+		fps = <60>;
+	};
+
+	test_vo@98005000 {
+		compatible = "Realtek,rtk1295-test_vo";
+		reg = <0x98005000 0x1000>,
+			<0x9800D000 0x1000>,
+			<0x98000000 0x1000>;
+		interrupts = <0 34 4>;
+	};
+
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios = <&rtk_misc_gpio 8 0 0>, /* install button */
+			<&rtk_misc_gpio 100 1 1>; /* audio dac unmute */
+	};
+
+	rfkilligpio{
+		gpios = <&rtk_iso_gpio 24 1 0>; /* bt power */
+		status = "okay";
+	};
+
+	/*
+	 * Suspend GPIO control
+	 *
+	 * [wakeup-gpio-list]
+	 * rtk_iso_gpio 14: BT wakeup host pin
+	 * rtk_iso_gpio 33: WiFi wakeup host pin
+	 *
+	 * [wakeup-gpio-enable]
+	 * Wakeup from BT: <0>disabele
+	 * Wakeup from WiFi: <1> enable
+	 *
+	 * [wakeup-gpio-activity]
+	 * BT pin: <1>active high
+	 * WIFI pin: <0>active low
+	 */
+	power-management@0  {
+		compatible = "Realtek,power-management";
+		wakeup-gpio-list = <&rtk_iso_gpio 14 0 0>,
+			<&rtk_iso_gpio 33 0 0>;
+		wakeup-gpio-enable = <0>, <1>;
+		wakeup-gpio-activity =<1>, <0>;
+	};
+};
+

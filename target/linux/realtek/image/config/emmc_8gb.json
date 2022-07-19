@@ -1,0 +1,27 @@
+{
+  "size": "0x1C8000000",
+  "fw_table_offset": "0x620000",
+  "gold_table_offset": "0x630000",
+  "fw_start": "0x630200",
+  "fw_align": "0x200",
+  "gold_start": "0x6000000",
+  "part_start": "0x8000000",
+  "part_align": "0x2000",
+  "fw": [
+    {"type":"RESCUE_DT", "target":"0x2140000", "file":"rescue.emmc.dtb"},
+    {"type":"RESCUE_ROOTFS", "target":"0x30000000", "file":"rescue.root.emmc.cpio.gz_pad.img"},
+    {"type":"AKERNEL", "target":"0x1b00000", "file":"bluecore.audio"},
+    {"type":"KERNEL_DT", "target":"0x2100000", "file":"rtd-129x.dtb"},
+    {"type":"KERNEL", "target":"0x3000000", "file":"Image"}
+  ],
+  "gold": [
+    {"type":"RESCUE_DT", "target":"0x2140000", "file":"rescue.dtb"},
+    {"type":"RESCUE_ROOTFS", "target":"0x2200000", "file":"rescue.cpio.gz"},
+    {"type":"AKERNEL", "target":"0x1b00000", "file":"rescue.audio"},
+    {"type":"KERNEL", "target":"0x3000000", "file":"rescue.Image"}
+  ],
+  "part": [
+    {"name":"rootfs", "mp":"/", "size":"0x8000000", "filetype":"img", "filesystem":"squashfs", "file":"rootfs.bin"},
+    {"name":"etc", "mp":"etc", "size":"-1", "filetype":"bin", "filesystem":"ext4", "file":"etc.bin"}
+  ]
+}

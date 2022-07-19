@@ -1,0 +1,65 @@
+/dts-v1/;
+#define CONFIG_ARCH_RTD129X
+#include "../../../../../include/soc/realtek/memory.h"
+
+/memreserve/ SYS_BOOTCODE_MEMBASE       SYS_BOOTCODE_MEMSIZE        ; /* 0x00000000 ~ 0x00030000 */
+/memreserve/ RPC_COMM_PHYS              RPC_COMM_SIZE               ; /* 0x0001f000 ~ 0x0001ffff */
+/memreserve/ ACPU_FIREWARE_PHYS         ACPU_FIREWARE_SIZE          ; /* 0x01b00000 ~ 0x01efffff */
+/memreserve/ RPC_RINGBUF_PHYS           RPC_RINGBUF_SIZE            ; /* 0x01ffe000 ~ 0x02001fff */
+/memreserve/ ACPU_IDMEM_PHYS            ACPU_IDMEM_SIZE             ; /* 0x10000000 ~ 0x10013fff */
+/memreserve/ HW_SECURE_RAM_START        HW_SECURE_RAM_SIZE          ; /* 32KB */
+/memreserve/ HW_NOR_REMAP_START         HW_NOR_REMAP_SIZE           ; /* 32MB */
+/memreserve/ HW_JTAG_GIC_RSV_START      HW_JTAG_GIC_RSV_SIZE        ; /* 8MB  */
+
+#include "rtd-1296-saola-common.dtsi"
+
+/ {
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=7";
+	};
+
+	memory {
+		device_type = "memory";
+        	reg = <0x00000000 0x98000000 0x98200000 0x66E00000 0xff800000 0x7f0000>; /* 4096 MB */
+	};
+
+	mem_remap {
+        compatible = "Realtek,rtk1295-mem_remap";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+        rbus {
+            reg = <RBUS_BASE_PHYS RBUS_BASE_SIZE>;
+        };
+        common {
+            reg = <RPC_COMM_PHYS RPC_COMM_SIZE>;
+        };
+        ringbuf {
+            reg = <RPC_RINGBUF_PHYS RPC_RINGBUF_SIZE>;
+        };
+    };
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rbus_reserved: rbus {
+			no-map;
+			size = <0x00200000>;
+			alloc-ranges = <0x98000000 0x00200000>;
+		};
+
+		pcie1_reserved: pcie1 {
+			no-map;
+			size = <0x01000000>;
+			alloc-ranges = <0xC0000000 0x01000000>;
+		};
+
+		pcie2_reserved: pcie2 {
+			no-map;
+			size = <0x01000000>;
+			alloc-ranges = <0xC1000000 0x01000000>;
+		};
+	};
+};

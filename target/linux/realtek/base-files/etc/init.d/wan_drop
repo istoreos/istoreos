@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2016 OpenWrt.org
+
+START=20
+
+start() {
+	local PROTO=`uci get network.wan.proto`
+	logger -t 'wan_drop' "current proto $PROTO"
+	if [ "$PROTO" = "pppoe" ]; then
+		WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
+		if [ "`uci get ${WAN_ZONE}.input`" = "ACCEPT" ]; then
+			logger -t 'wan_drop' "set firewall drop input from wan"
+			uci -q batch <<-EOF >/dev/null
+				set ${WAN_ZONE}.input=DROP
+				commit firewall
+EOF
+			/etc/init.d/firewall reload
+		fi
+	fi
+}

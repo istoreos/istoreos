@@ -1,0 +1,181 @@
+/dts-v1/;
+#define CONFIG_ARCH_RTD129X
+#include "../../../../../include/soc/realtek/memory.h"
+
+/memreserve/ SYS_BOOTCODE_MEMBASE       SYS_BOOTCODE_MEMSIZE        ; /* 0x00000000 ~ 0x00030000 */
+/memreserve/ RPC_COMM_PHYS              RPC_COMM_SIZE               ; /* 0x0001f000 ~ 0x001fffff */
+/memreserve/ ION_MEDIA_HEAP_PHYS1       ION_MEDIA_HEAP_SIZE1        ; /* 0x02900000 ~ 0x08cfffff */
+/memreserve/ ACPU_FIREWARE_PHYS         ACPU_FIREWARE_SIZE          ; /* 0x01b00000 ~ 0x01efffff */
+/memreserve/ ION_AUDIO_HEAP_PHYS        ION_AUDIO_HEAP_SIZE         ; /* 0x02600000 ~ 0x028fffff */
+/memreserve/ RPC_RINGBUF_PHYS           RPC_RINGBUF_SIZE            ; /* 0x01ffe000 ~ 0x02001fff */
+/memreserve/ ION_MEDIA_HEAP_PHYS2       ION_MEDIA_HEAP_SIZE2        ; /* 0x11000000 ~ 0x141fffff */
+/memreserve/ ACPU_IDMEM_PHYS            ACPU_IDMEM_SIZE             ; /* 0x10000000 ~ 0x10013fff */
+
+
+#include "rtd-1295-MM.dtsi"
+#include "rtd-129x-dvfs.dtsi"
+
+/ {
+	model= "Realtek_RTD1295";
+	compatible = "Realtek,FPGA_v7", "Realtek,rtd-1295";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=7";
+        compatible = "Realtek,rtk1295-cma_info";
+        /* NOTE ---------------------------------------------------------------------------------------------*/
+        /* <flag size base>                                                                                  */
+        /* flag: reserved                                                                                    */
+        /* size: unit is byte                                                                                */
+        /* base: unit is byte                                                                                */
+        /* --------------------------------------------------------------------------------------------------*/
+        /* Array size not over 8;                                                                            */
+        /* You may change the max array size in KConfig, max CMA array size is CONFIG_CMA_AREAS+1            */
+        /* If cma-region-enable is enabled<1>, kernel driver will use cma-region-info to initial CMA memory. */
+        /* If cma-region-enable is disabled<0>, kernel driver will use cma= to initial CMA memory.           */
+        /* if both setting is loaded, cma-region-info had higher priority.                                   */
+        /* --------------------------------------------------------------------------------------------------*/
+        cma-region-enable = <1>;
+        cma-region-info = <0x00000000 0x01000000 0x1100000>;
+        /*cma-region-info = <0x00000000 0x01000000 0x12c00000>, <0x00000000 0x12c00000 0x20000000>;*/
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0 0x80000000>;	/* 2048 MB */
+	};
+	mem_remap {
+        compatible = "Realtek,rtk1295-mem_remap";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+        rbus {
+            reg = <RBUS_BASE_PHYS RBUS_BASE_SIZE>;
+        };
+        common {
+            reg = <RPC_COMM_PHYS RPC_COMM_SIZE>;
+        };
+        ringbuf {
+            reg = <RPC_RINGBUF_PHYS RPC_RINGBUF_SIZE>;
+        };
+    };
+
+    rtk,ion {
+		compatible = "Realtek,rtk-ion";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		rtk,ion-heap@0 {    /* SYSTEM_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <0>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@1 {    /* System contig */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <1>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@4 {    /* DMA_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <4>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+        rtk,ion-heap@8 {    /* Audio */
+            compatible = "Realtek,rtk-ion-reserve";
+            reg = <8>;
+            rtk,memory-reserve = <
+                ION_AUDIO_HEAP_PHYS ION_AUDIO_HEAP_SIZE ION_AUDIO_HEAP_FLAG
+                >;
+        };
+        rtk,ion-heap@7 {    /* TYPE_MEDIA */
+            compatible = "Realtek,rtk-ion-reserve";
+            reg = <7>;
+            rtk,memory-reserve = <
+                ION_MEDIA_HEAP_PHYS1 ION_MEDIA_HEAP_SIZE1 ION_MEDIA_HEAP_FLAG1
+                ION_MEDIA_HEAP_PHYS2 ION_MEDIA_HEAP_SIZE2 ION_MEDIA_HEAP_FLAG2
+                >;
+        };
+    };
+
+    fb {
+        compatible = "Realtek,rtk-fb";
+        buffer-cnt = <3>;
+        resolution = <1920 1080>;
+        fps = <60>;
+        /*Pixel Format*/
+      	/*RGB565            = 4, */   /* 16-bit RGB    (565)  with constant alpha */
+      	/*ARGB1555          = 5, */   /* 16-bit ARGB   (1555) */
+      	/*ARGB8888          = 7, */   /* 32-bit ARGB   (8888) */
+      	/*RGBA5551          = 13,*/   /* 16-bit RGBA   (5551) */
+      	/*RGBA8888          = 15,*/   /* 32-bit RGBA   (8888) */
+		pixel_format = <7>;
+		status = "okay";
+    };
+
+    hdmitx@9800D000 {
+        compatible = "Realtek,rtk119x-hdmitx";
+		reg = <0x9800d000 0x560>,<0x98007200 0x4>; /* HDMITX, I2C1_REQ_CTRL */
+        gpios = <&rtk_iso_gpio 6 0 0>; /*HPD, input, default N/A */
+        interrupt-parent = <&rtk_iso_gpio>;
+        interrupts = <6>; /*HPD*/
+        status = "okay";
+
+		scdc_rr@98007200 {
+			enable-scdc-rr = <0>;
+			interrupt-parent = <&mux_intc>;
+			#interrupt-cells = <1>;
+			interrupt-controller;
+			interrupts = <1 31>;
+		};
+    };
+
+    hdcptx@1800D000 {
+        compatible = "Realtek,rtk129x-hdcptx";
+        reg = <0x9800d000 0x400>;
+        interrupts = <0 31 4>;   /*gen Ri*/
+    };
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios = <&rtk_misc_gpio 8 0 0>;
+		/* install button, input, default N/A */
+	};
+
+	rtk_iso_gpio: rtk_iso_gpio@98007100 {
+		gpios = <&rtk_iso_gpio 21 1 0>;
+		/* igpio21, output, default low */
+	};
+
+	timer {
+		clock-frequency = <27000000>;
+	};
+
+	timer0@9801b000 {
+		clock-frequency = <27000000>;
+	};
+
+	uart0: serial0@98007800 {
+		clock-frequency = <27000000>;
+	};
+
+	rfkill: rfkilligpio@0{
+		gpios = <&rtk_iso_gpio 24 1 0>;                         /*bt power , output, default low */
+		status = "okay";
+	};
+
+	power-management{
+		compatible = "Realtek,power-management";
+
+		/* GPIO Wakeup */
+		wakeup-gpio-enable = /* (0) disable (1) enable */
+			<0>, /* Wakeup from BT : disable */
+			<1>; /* Wakeup from WiFi : disable */
+		wakeup-gpio-list = /* <&rtk_iso_gpio {num} {force input (0) } {default N/A (0)] }> */
+			<&rtk_iso_gpio 14 0 0>, /* BT wakeup host pin */
+			<&rtk_iso_gpio 33 0 0>; /* WiFi wakeup host pin */
+		wakeup-gpio-activity = /* (0) active low (1) active high*/
+			<0>, /* BT : high activity */
+			<0>; /* Wifi : high activity */
+	};
+};

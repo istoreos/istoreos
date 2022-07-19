@@ -1,0 +1,224 @@
+--- a/Makefile
++++ b/Makefile
+@@ -2420,7 +2420,11 @@ ifeq ($(CONFIG_RTL8723B), y)
+ $(MODULE_NAME)-$(CONFIG_MP_INCLUDED)+= core/rtw_bt_mp.o
+ endif
+ 
++ifneq ($(CONFIG_RTL8822BU),)
+ obj-$(CONFIG_RTL8822BU) := $(MODULE_NAME).o
++else
++obj-m := $(MODULE_NAME).o
++endif
+ 
+ else
+ 
+--- a/include/linux/wireless.h
++++ /dev/null
+@@ -1,87 +0,0 @@
+-/******************************************************************************
+- *
+- * Copyright(c) 2007 - 2017 Realtek Corporation.
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of version 2 of the GNU General Public License as
+- * published by the Free Software Foundation.
+- *
+- * This program is distributed in the hope that it will be useful, but WITHOUT
+- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+- * more details.
+- *
+- *****************************************************************************/
+-
+-#ifndef _LINUX_WIRELESS_H
+-#define _LINUX_WIRELESS_H
+-
+-/***************************** INCLUDES *****************************/
+-
+-#if 0
+-	#include <linux/types.h>		/* for __u* and __s* typedefs */
+-	#include <linux/socket.h>		/* for "struct sockaddr" et al	*/
+-	#include <linux/if.h>			/* for IFNAMSIZ and co... */
+-#else
+-	#define __user
+-	/* typedef uint16_t	__u16; */
+-	#include <sys/socket.h>			/* for "struct sockaddr" et al	*/
+-	#include <net/if.h>			/* for IFNAMSIZ and co... */
+-#endif
+-
+-/****************************** TYPES ******************************/
+-#ifdef CONFIG_COMPAT
+-struct compat_iw_point {
+-	compat_caddr_t pointer;
+-	__u16 length;
+-	__u16 flags;
+-};
+-#endif
+-/* --------------------------- SUBTYPES --------------------------- */
+-/*
+- *	For all data larger than 16 octets, we need to use a
+- *	pointer to memory allocated in user space.
+- */
+-struct	iw_point {
+-	void __user	*pointer;	/* Pointer to the data  (in user space) */
+-	__u16		length;		/* number of fields or size in bytes */
+-	__u16		flags;		/* Optional params */
+-};
+-
+-
+-/* ------------------------ IOCTL REQUEST ------------------------ */
+-/*
+- * This structure defines the payload of an ioctl, and is used
+- * below.
+- *
+- * Note that this structure should fit on the memory footprint
+- * of iwreq (which is the same as ifreq), which mean a max size of
+- * 16 octets = 128 bits. Warning, pointers might be 64 bits wide...
+- * You should check this when increasing the structures defined
+- * above in this file...
+- */
+-union	iwreq_data {
+-	/* Config - generic */
+-	char		name[IFNAMSIZ];
+-	/* Name : used to verify the presence of  wireless extensions.
+-	 * Name of the protocol/provider... */
+-
+-	struct iw_point	data;		/* Other large parameters */
+-};
+-
+-/*
+- * The structure to exchange data for ioctl.
+- * This structure is the same as 'struct ifreq', but (re)defined for
+- * convenience...
+- * Do I need to remind you about structure size (32 octets) ?
+- */
+-struct	iwreq {
+-	union {
+-		char	ifrn_name[IFNAMSIZ];	/* if name, e.g. "eth0" */
+-	} ifr_ifrn;
+-
+-	/* Data part (defined just above) */
+-	union	iwreq_data	u;
+-};
+-
+-#endif	/* _LINUX_WIRELESS_H */
+--- a/os_dep/linux/ioctl_cfg80211.h
++++ b/os_dep/linux/ioctl_cfg80211.h
+@@ -427,15 +427,6 @@ void rtw_cfg80211_deinit_rfkill(struct w
+ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8 ht, bool started);
+ #endif
+ 
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 26)) && (LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0))
+-#define NL80211_BAND_2GHZ IEEE80211_BAND_2GHZ
+-#define NL80211_BAND_5GHZ IEEE80211_BAND_5GHZ
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
+-#define NL80211_BAND_60GHZ IEEE80211_BAND_60GHZ
+-#endif
+-#define NUM_NL80211_BANDS IEEE80211_NUM_BANDS
+-#endif
+-
+ #define rtw_band_to_nl80211_band(band) \
+ 	(band == BAND_ON_2_4G) ? NL80211_BAND_2GHZ : \
+ 	(band == BAND_ON_5G) ? NL80211_BAND_5GHZ : NUM_NL80211_BANDS
+--- a/os_dep/linux/ioctl_cfg80211.c
++++ b/os_dep/linux/ioctl_cfg80211.c
+@@ -1086,9 +1086,7 @@ int rtw_cfg80211_indicate_connect(_adapt
+ #ifdef CONFIG_P2P
+ 	struct wifidirect_info *pwdinfo = &(padapter->wdinfo);
+ #endif
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+ 	struct cfg80211_roam_info roam_info ={};
+-#endif
+ 
+ 	RTW_INFO(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
+ 	if (pwdev->iftype != NL80211_IFTYPE_STATION
+@@ -1170,7 +1168,6 @@ check_bss:
+ 		notify_channel = ieee80211_get_channel(wiphy, freq);
+ 		#endif
+ 
+-		#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)
+ 		roam_info.bssid = cur_network->network.MacAddress;
+ 		roam_info.req_ie = pmlmepriv->assoc_req + sizeof(struct rtw_ieee80211_hdr_3addr) + 2;
+ 		roam_info.req_ie_len = pmlmepriv->assoc_req_len - sizeof(struct rtw_ieee80211_hdr_3addr) - 2;
+@@ -1178,18 +1175,6 @@ check_bss:
+ 		roam_info.resp_ie_len = pmlmepriv->assoc_rsp_len - sizeof(struct rtw_ieee80211_hdr_3addr) - 6;
+ 
+ 		cfg80211_roamed(padapter->pnetdev, &roam_info, GFP_ATOMIC);
+-		#else
+-		cfg80211_roamed(padapter->pnetdev
+-			#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39) || defined(COMPAT_KERNEL_RELEASE)
+-			, notify_channel
+-			#endif
+-			, cur_network->network.MacAddress
+-			, pmlmepriv->assoc_req + sizeof(struct rtw_ieee80211_hdr_3addr) + 2
+-			, pmlmepriv->assoc_req_len - sizeof(struct rtw_ieee80211_hdr_3addr) - 2
+-			, pmlmepriv->assoc_rsp + sizeof(struct rtw_ieee80211_hdr_3addr) + 6
+-			, pmlmepriv->assoc_rsp_len - sizeof(struct rtw_ieee80211_hdr_3addr) - 6
+-			, GFP_ATOMIC);
+-		#endif /*LINUX_VERSION_CODE >= KERNEL_VERSION(4, 12, 0)*/
+ 
+ 		RTW_INFO(FUNC_ADPT_FMT" call cfg80211_roamed\n", FUNC_ADPT_ARG(padapter));
+ 
+@@ -2379,9 +2364,6 @@ enum nl80211_iftype {
+ static int cfg80211_rtw_change_iface(struct wiphy *wiphy,
+ 				     struct net_device *ndev,
+ 				     enum nl80211_iftype type,
+-#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0))
+-				     u32 *flags,
+-#endif
+ 				     struct vif_params *params)
+ {
+ 	enum nl80211_iftype old_type;
+@@ -2544,12 +2526,10 @@ void rtw_cfg80211_indicate_scan_done(_ad
+ 	struct rtw_wdev_priv *pwdev_priv = adapter_wdev_data(adapter);
+ 	_irqL	irqL;
+ 
+-#if (KERNEL_VERSION(4, 7, 0) <= LINUX_VERSION_CODE)
+ 	struct cfg80211_scan_info info;
+ 
+ 	memset(&info, 0, sizeof(info));
+ 	info.aborted = aborted;
+-#endif
+ 
+ 	_enter_critical_bh(&pwdev_priv->scan_req_lock, &irqL);
+ 	if (pwdev_priv->scan_request != NULL) {
+@@ -2561,11 +2541,7 @@ void rtw_cfg80211_indicate_scan_done(_ad
+ 		if (pwdev_priv->scan_request->wiphy != pwdev_priv->rtw_wdev->wiphy)
+ 			RTW_INFO("error wiphy compare\n");
+ 		else
+-#if (KERNEL_VERSION(4, 7, 0) <= LINUX_VERSION_CODE)
+ 			cfg80211_scan_done(pwdev_priv->scan_request, &info);
+-#else
+-			cfg80211_scan_done(pwdev_priv->scan_request, aborted);
+-#endif
+ 
+ 		pwdev_priv->scan_request = NULL;
+ 	} else {
+@@ -4983,9 +4959,6 @@ static int
+ 		unsigned char name_assign_type,
+ 		#endif
+ 		enum nl80211_iftype type,
+-		#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0))
+-		u32 *flags,
+-		#endif
+ 		struct vif_params *params)
+ {
+ 	int ret = 0;
+@@ -9865,17 +9838,6 @@ static void rtw_cfg80211_preinit_wiphy(_
+ 	/* wiphy->flags |= WIPHY_FLAG_OFFCHAN_TX | WIPHY_FLAG_HAVE_AP_SME; */
+ #endif
+ 
+-#if defined(CONFIG_PM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0) && \
+-			   LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0))
+-	wiphy->flags |= WIPHY_FLAG_SUPPORTS_SCHED_SCAN;
+-#ifdef CONFIG_PNO_SUPPORT
+-	wiphy->max_sched_scan_ssids = MAX_PNO_LIST_COUNT;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
+-	wiphy->max_match_sets = MAX_PNO_LIST_COUNT;
+-#endif
+-#endif
+-#endif
+-
+ #if defined(CONFIG_PM) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0))
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
+ 	wiphy->wowlan = wowlan_stub;

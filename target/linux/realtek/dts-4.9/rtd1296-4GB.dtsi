@@ -1,0 +1,29 @@
+#include <dt-bindings/soc/rtd129x,memory.h>
+
+/* 0x7fff0000 ~ 0x7fffffff */
+/memreserve/ HW_LIMITATION_3GB_START HW_LIMITATION_3GB_SIZE;
+/* 0x80000000 ~ 0x80007fff */
+/memreserve/ HW_SECURE_RAM_START HW_SECURE_RAM_SIZE;
+/* 0x88100000 ~ 0x8A0FFFFF */
+/memreserve/ HW_NOR_REMAP_START HW_NOR_REMAP_SIZE;
+/* HW_JTAG_GIC_RSV */
+/memreserve/ 0xFF000000 0x00800000;
+
+#include "rtd1296-base.dtsi"
+
+/ {
+
+	model= "RTD1296_4GB";
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0 0xffff0000>; /* 4096 MB */
+	};
+
+	reserved-memory {
+		rbus@0 {
+			no-map;
+		};
+	};
+};
+

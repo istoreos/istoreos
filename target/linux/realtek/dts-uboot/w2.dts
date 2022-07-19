@@ -1,0 +1,23 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "BPI_W2";
+	leds {
+		red {
+			gpio = <128 GPIO_ACTIVE_LOW>;
+		};
+		green {
+			gpio = <97 GPIO_ACTIVE_LOW>;
+		};
+	};
+	keys {
+		power {
+			gpio = <131 GPIO_ACTIVE_LOW>;
+		};
+	};
+	fans {
+		gpio = <15 GPIO_ACTIVE_HIGH>;
+	};
+};

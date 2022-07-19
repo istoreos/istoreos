@@ -1,0 +1,73 @@
+From ed580e7f928530994a3ada701795a94a7f805807 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 3 Jun 2021 14:40:15 +0800
+Subject: [PATCH] enable gpio debuging
+
+---
+ drivers/gpio/rt_gpio.c           | 39 ++++++++++++++++++++++++++++++++
+ include/configs/rtd1295_common.h |  1 +
+ 2 files changed, 40 insertions(+)
+
+diff --git a/drivers/gpio/rt_gpio.c b/drivers/gpio/rt_gpio.c
+index c1eecdf1d6..87899f2cba 100644
+--- a/drivers/gpio/rt_gpio.c
++++ b/drivers/gpio/rt_gpio.c
+@@ -448,3 +448,42 @@ int setISOGPIO_pullsel(int ISOGPIO_NUM, unsigned char pull_sel)
+ 	set_pconf_pullsel(ISOGPIO_NUM+101, pull_sel);
+ 	return 0;
+ }
++
++int gpio_free(unsigned gpio)
++{
++	return 0;
++}
++
++int gpio_direction_input(unsigned gpio)
++{
++	return 0;
++}
++
++int gpio_direction_output(unsigned gpio, int value)
++{
++	if (gpio > 100) {
++		return setISOGPIO(gpio - 101, value);
++	} else {
++		return setGPIO(gpio, value);
++	}
++}
++
++int gpio_get_value(unsigned gpio)
++{
++	if (gpio > 100) {
++		return getISOGPIO(gpio - 101);
++	} else {
++		return getGPIO(gpio);
++	}
++}
++
++#include <errno.h>
++
++int gpio_request(unsigned gpio, const char *label)
++{
++	if (gpio < 135) {
++		return 0;
++	} else {
++		return -ENXIO;
++	}
++}
+\ No newline at end of file
+diff --git a/include/configs/rtd1295_common.h b/include/configs/rtd1295_common.h
+index 2f56f80493..727874b8de 100644
+--- a/include/configs/rtd1295_common.h
++++ b/include/configs/rtd1295_common.h
+@@ -323,6 +323,7 @@
+ #define PANEL_CONFIG_FROM_FACTORY_PANEL_BIN
+ 
+ /* GPIO */
++#define CONFIG_CMD_GPIO
+ #define CONFIG_REALTEK_GPIO
+ #define CONFIG_INSTALL_GPIO_NUM    		8
+ #define CONFIG_HDMITx_HPD_IGPIO_NUM		6
+-- 
+2.23.0
+
