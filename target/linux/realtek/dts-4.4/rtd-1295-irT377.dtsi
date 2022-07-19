@@ -1,0 +1,51 @@
+/*
+ * rtd-1295-irT377.dtsi - IRDA remote Device Tree Include file for REALTEK 1295 family SoC
+ */
+
+/ {
+	irda@98007400 {
+		Realtek,irrx-protocol = <1>;	//NEC = 1, RC5 = 2, SHARP = 3, SONY = 4, C03 = 5, RC6 = 6, RAW_NEC = 7, RCA = 8, PANASONIC = 9, KONKA=10, RAW_RC6 = 11, RC6_MODE_6 = 12, TOSHIBA = 13
+		Realtek,irtx-protocol = <1>;	//NEC_TX = 1, RC5_TX = 2, SHARP_TX = 3, SONY_TX = 4,	C03_TX = 5, RC6_TX = 6, RCA_TX = 7, PANASONIC_TX = 8, KONKA_TX=9,
+
+		Realtek,cust-code = <0x7F80>;
+		Realtek,scancode-msk = <0x00FF0000>;
+		Realtek,custcode-msk = <0x0000FFFF>;
+		Realtek,keymap-tbl = <
+		// scancode	keycode
+			0x18 	116		//KEY_POWER			//POWER
+			0x5A 	353		//KEY_SELECT			//SOURCE
+			0x58 	154		//KEY_CYCLEWINDOWS	//PIP
+			0x1A 	377		//KEY_TV				//TV SYSTEM
+			0x14 	102		//KEY_HOME				//HOME
+			0x56 	357		//KEY_OPTION			//OPTION MENU
+			0x54	358		//KEY_INFO				//MEDIA_INFO
+			0x19 	232		//KEY_REPLY				//REPEAT
+			0x57 	158		//KEY_BACK				//RETURN
+			0x55 	207		//KEY_PLAY				//PLAY/PAUSE
+			0x17 	128		//KEY_STOP				//STOP
+			0x15 	372		//KEY_ZOOM				//ZOOM_IN
+			0x4F 	168		//KEY_REWIND			//FR
+			0x4D 	103		//KEY_UP				//UP
+			0x16 	208		//KEY_FASTFORWARD		//FF
+			0x0C 	105		//KEY_LEFT				//LEFT
+			0x4C 	352		//KEY_OK				//OK
+			0x0E 	106		//KEY_RIGHT				//RIGHT
+			0x08 	412		//KEY_PREVIOUS			//PREVIOUS
+			0x48 	108		//KEY_DOWN				//DOWN
+			0x09 	407		//KEY_NEXT				//NEXT
+			0x4B 	114		//KEY_VOLUMEDOWN		//VOL-
+			0x49 	115		//KEY_VOLUMEUP			//VOL+
+			0x0B 	532		//KEY_TOUCHPAD_OFF		//CURSOR
+			0x0A 	531		//KEY_TOUCHPAD_ON		//GESTURE
+			0xEEEE	0		//REL_X				//mouse X-axi	0xEEEE : REL event type
+			0xEEEE	1		//REL_Y				//mouse Y-axi	0xEEEE : REL event type
+			0xFFFF	272		//BTN_LEFT			//mouse left key	0xFFFF : KEY event type
+			0xFFFF	113	//KEY_MUTE			//mute key in AirFunAPP	0xFFFF : KEY event type
+		>;
+		Realtek,reg-ir-dpir = <50>;	/*IR detect interval, NEC default=50ms, should less than 100ms, and bigger than 9ms*/
+	};
+
+
+
+};
+

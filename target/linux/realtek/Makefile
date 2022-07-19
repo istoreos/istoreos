@@ -2,11 +2,10 @@
 #
 include $(TOPDIR)/rules.mk
 
-ARCH:=aarch64
 BOARD:=realtek
 BOARDNAME:=Realtek SoC
 SUBTARGETS:=rtd129x
-FEATURES:=fpu usb pci pcie gpio nand squashfs ramdisk
+FEATURES:=fpu usb pci pcie gpio squashfs dt
 MAINTAINER:=william.lee <william.lee@realtek.com>
 
 KERNEL_PATCHVER:=4.9

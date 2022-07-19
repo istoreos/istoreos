@@ -1,0 +1,12 @@
+#!/bin/sh
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@ddnsto[-1]
+	add ucitrack ddnsto
+	set ucitrack.@ddnsto[-1].init=ddnsto
+	commit ucitrack
+EOF
+
+/etc/init.d/ddnsto enable
+
+exit 0

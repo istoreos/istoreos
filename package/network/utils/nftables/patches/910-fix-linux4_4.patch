@@ -1,0 +1,24 @@
+--- a/src/xfrm.c
++++ b/src/xfrm.c
+@@ -16,6 +16,9 @@
+ #include <string.h>
+ 
+ #include <netinet/ip.h>
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <linux/netfilter.h>
+ #include <linux/xfrm.h>
+ 
+--- a/src/parser_bison.y
++++ b/src/parser_bison.y
+@@ -17,6 +17,9 @@
+ #include <netinet/ip.h>
+ #include <netinet/tcp.h>
+ #include <netinet/if_ether.h>
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <linux/netfilter.h>
+ #include <linux/netfilter/nf_tables.h>
+ #include <linux/netfilter/nf_conntrack_tuple_common.h>

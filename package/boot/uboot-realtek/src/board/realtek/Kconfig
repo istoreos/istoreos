@@ -1,0 +1,56 @@
+menu "RealTek Board Type"
+	depends on TARGET_RTD1295 || TARGET_RTD1395
+
+choice
+	prompt "Board Type Select"
+
+config BOARD_FPGA
+	bool "FPGA Board"
+
+config BOARD_QA
+	bool "QA Board"
+
+endchoice
+endmenu
+
+config NAS_ENABLE
+	bool "NAS version Feature"
+
+if TARGET_RTD1295
+
+config SYS_VENDOR
+	default "realtek"
+
+config SYS_SOC
+	default "rtd1295"
+
+config SYS_BOARD
+	default "1295_fpga" if BOARD_FPGA
+	default "1295_qa" if BOARD_QA
+
+config SYS_CONFIG_NAME
+	string "Definition of flash type"
+	default "rtd1295_fpga" if BOARD_FPGA
+	default "rtd1295_qa_emmc_64" if BOARD_QA
+
+
+endif #TARGET_RTD1295
+
+if TARGET_RTD1395
+
+config SYS_VENDOR
+	default "realtek"
+
+config SYS_SOC
+	default "rtd1395"
+
+config SYS_BOARD
+	default "1395_fpga" if BOARD_FPGA
+	default "1395_qa" if BOARD_QA
+
+config SYS_CONFIG_NAME
+	default "rtd1395_fpga" if BOARD_FPGA
+	default "rtd1395_qa_emmc" if BOARD_QA
+
+
+endif #TARGET_RTD1395

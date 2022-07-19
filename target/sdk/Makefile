@@ -156,6 +156,9 @@ $(BIN_DIR)/$(SDK_NAME).tar.xz: clean
 	else \
 		cat $(TOPDIR)/feeds.conf.default >> $(SDK_BUILD_DIR)/feeds.conf.default; \
 	fi
+	$(CP) -L \
+		./files/feeds.conf.default \
+		$(SDK_BUILD_DIR)/
 	$(SED) 's,^# REVISION:=.*,REVISION:=$(REVISION),g' $(SDK_BUILD_DIR)/include/version.mk
 	$(SED) 's,^# SOURCE_DATE_EPOCH:=.*,SOURCE_DATE_EPOCH:=$(SOURCE_DATE_EPOCH),g' $(SDK_BUILD_DIR)/include/version.mk
 	$(SED) '/LINUX_VERMAGIC:=/ { s,unknown,$(LINUX_VERMAGIC),g }' $(SDK_BUILD_DIR)/include/kernel.mk
@@ -163,6 +166,11 @@ $(BIN_DIR)/$(SDK_NAME).tar.xz: clean
 	find $(SDK_BUILD_DIR) -name .svn | $(XARGS) rm -rf
 	find $(SDK_BUILD_DIR) -name CVS | $(XARGS) rm -rf
 	-make -C $(SDK_BUILD_DIR)/scripts/config clean
+
+	rm -f $(SDK_BUILD_DIR)/target/linux/realtek/image/blob/private.key
+
+	echo > $(SDK_BUILD_DIR)/target/linux/realtek/image/rescue.mk
+
 	(cd $(BUILD_DIR); \
 		tar -I '$(STAGING_DIR_HOST)/bin/xz -7e -T$(if $(filter 1,$(NPROC)),2,0)' -cf $@ $(SDK_NAME) \
 		--mtime="$(shell date --date=@$(SOURCE_DATE_EPOCH))"; \

@@ -1,0 +1,142 @@
+From f4ea95a7bf8da37254d39efb4458c083af15194d Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Fri, 4 Jun 2021 18:13:30 +0800
+Subject: [PATCH] generate MAC address by cpu sn
+
+---
+ arch/arm/cpu/armv8/rtd1295/Makefile     |  1 +
+ arch/arm/cpu/armv8/rtd1295/ethaddr.c    | 15 +++++++++++++++
+ arch/arm/include/asm/arch-rtd1295/cpu.h |  4 ++++
+ common/cmd_nvedit.c                     | 10 ++++++++--
+ common/env_factory.c                    | 14 ++++++++++++--
+ include/environment.h                   |  2 ++
+ 6 files changed, 42 insertions(+), 4 deletions(-)
+ create mode 100644 arch/arm/cpu/armv8/rtd1295/ethaddr.c
+
+diff --git a/arch/arm/cpu/armv8/rtd1295/Makefile b/arch/arm/cpu/armv8/rtd1295/Makefile
+index 45f9a30ef0..879bd799bc 100644
+--- a/arch/arm/cpu/armv8/rtd1295/Makefile
++++ b/arch/arm/cpu/armv8/rtd1295/Makefile
+@@ -21,6 +21,7 @@ obj-y  += ddr.o
+ obj-y  += ir.o
+ obj-y  += usb.o
+ obj-y  += usb-phy.o
++obj-y  += ethaddr.o
+ 
+ 
+ obj-$(CONFIG_CMD_GICTEST) += gic.o
+diff --git a/arch/arm/cpu/armv8/rtd1295/ethaddr.c b/arch/arm/cpu/armv8/rtd1295/ethaddr.c
+new file mode 100644
+index 0000000000..d9dfd9ca24
+--- /dev/null
++++ b/arch/arm/cpu/armv8/rtd1295/ethaddr.c
+@@ -0,0 +1,15 @@
++
++#include <linux/string.h>
++#include <asm/arch/cpu.h>
++#include <stdarg.h>
++#include <vsprintf.h>
++
++/*
++ * Generate primary MAC address
++ */
++void gen_primary_mac(char *value)
++{
++	unsigned int sn = get_rtd129x_cpu_sn();
++	sprintf(value, "02:%02x:%02x:%02x:%02x:20",
++		sn & 0xff, (sn >> 8) & 0xff, (sn >> 16) & 0xff, (sn >> 24) & 0xff);
++}
+diff --git a/arch/arm/include/asm/arch-rtd1295/cpu.h b/arch/arm/include/asm/arch-rtd1295/cpu.h
+index 6835ce0b7f..d14c9e9602 100644
+--- a/arch/arm/include/asm/arch-rtd1295/cpu.h
++++ b/arch/arm/include/asm/arch-rtd1295/cpu.h
+@@ -77,6 +77,10 @@ static inline u32 get_rtd129x_cpu_revision(void) {
+ 	return val; 
+ }
+ 
++static inline unsigned int get_rtd129x_cpu_sn(void) {
++	return __raw_readl((volatile u32*)(EFUSE_ADDR));
++}
++
+ #endif
+ 
+ 
+diff --git a/common/cmd_nvedit.c b/common/cmd_nvedit.c
+index c26d1cb376..1a3dbe3219 100644
+--- a/common/cmd_nvedit.c
++++ b/common/cmd_nvedit.c
+@@ -741,6 +741,13 @@ int envmatch(uchar *s1, int i2)
+ 	return -1;
+ }
+ 
++__attribute__((weak))
++void gen_primary_mac(char *value)
++{
++	srand(get_ticks());
++	sprintf(value, "00:10:20:30:%02x:%02x", rand() % 256, rand() % 256);
++}
++
+ #ifndef CONFIG_SPL_BUILD
+ static int do_env_default(cmd_tbl_t *cmdtp, int __flag,
+ 			  int argc, char * const argv[])
+@@ -770,8 +777,7 @@ static int do_env_default(cmd_tbl_t *cmdtp, int __flag,
+ 		/* Reset the whole environment */
+ 		set_default_env("## Resetting to default environment\n");
+ 		
+-		srand(get_ticks());
+-		sprintf(tmp_value, "00:10:20:30:%02x:%02x", rand() % 256, rand() % 256);
++		gen_primary_mac(tmp_value);
+ 		value = tmp_value;
+ 		setenv("ethaddr", value);
+ 		/*MAC address will be changed every time when setting default values.*/
+diff --git a/common/env_factory.c b/common/env_factory.c
+index b965fefecf..811863ba8b 100644
+--- a/common/env_factory.c
++++ b/common/env_factory.c
+@@ -135,18 +135,28 @@ void delete_env(void)
+ 
+ void env_relocate_spec(void)
+ {
++	char tmp_value[32];
+ #if !defined(ENV_IS_EMBEDDED)
+ 	char *buf = NULL;
+ 
+ 	if (read_env((unsigned long)CONFIG_ENV_SIZE, (const void **)&buf)){
+ 		set_default_env(NULL);
++		gen_primary_mac(tmp_value);
++		setenv("ethaddr", tmp_value);
+ #ifdef NAS_ENABLE
+ 		saveenv();
+ #endif
++		return;
+     }
+ 
+-	env_import(buf, 1);
+-
++	if (env_import(buf, 1)) {
++		char* ethaddr = getenv("ethaddr");
++		if (!ethaddr || !strcmp("00:10:20:30:40:50", ethaddr)) {
++			gen_primary_mac(tmp_value);
++			setenv("ethaddr", tmp_value);
++			saveenv();
++		}
++	}
+ #endif
+ }
+ 
+diff --git a/include/environment.h b/include/environment.h
+index b530d3c6e5..f80f0da452 100644
+--- a/include/environment.h
++++ b/include/environment.h
+@@ -227,6 +227,8 @@ int env_import(const char *buf, int check);
+ /* Export from hash table into binary representation */
+ int env_export(env_t *env_out);
+ 
++void gen_primary_mac(char *value);
++
+ #endif /* DO_DEPS_ONLY */
+ 
+ #endif /* _ENVIRONMENT_H_ */
+-- 
+2.23.0
+

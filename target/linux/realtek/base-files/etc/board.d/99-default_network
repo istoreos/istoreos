@@ -8,7 +8,7 @@ json_is_a network object && exit 0
 
 board=$(board_name)
 
-ipaddr="192.168.0.9"
+ipaddr="192.168.100.1"
 lan_if="eth0"
 
 case "$board" in
@@ -17,12 +17,17 @@ Realtek,rtd-129*)
 		lan_if="eth1"
 		ucidef_set_interface_wan "eth0" "dhcp"
 	fi
+    if [ -e /proc/device-tree/chosen/default-ip ]; then
+        ipaddr=`cat /proc/device-tree/chosen/default-ip`
+    fi
 	;;
 *)
 	;;
 esac
 
 ucidef_set_interface_lan "$lan_if" "static" "$ipaddr"
+
+ucidef_set_interface "lan" ipaddr "$ipaddr"
 
 board_config_flush
 

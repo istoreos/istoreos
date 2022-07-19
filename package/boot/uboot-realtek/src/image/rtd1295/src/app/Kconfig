@@ -1,0 +1,9 @@
+menu "MIPS Image Build"
+
+	  
+config MIPS_IMAGE_BUILD
+	bool "build the mips image"
+	help
+	  Support for the build the mips image	  
+
+endmenu

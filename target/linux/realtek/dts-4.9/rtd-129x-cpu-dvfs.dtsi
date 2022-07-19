@@ -1,0 +1,80 @@
+&dvfs {
+	cpu_opps: opp-table-0 {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-300mhz {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-400mhz {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <150000>;
+			status = "disabled";
+		};
+		opp-500mhz {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <800000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-600mhz {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <825000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-700mhz {
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <850000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-800mhz {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <875000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-900mhz {
+			opp-hz = /bits/ 64 <900000000>;
+			opp-microvolt = <900000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-1000mhz {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <925000>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-1100mhz {
+			opp-hz = /bits/ 64 <1100000000>;
+			opp-microvolt = <962500>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-1200mhz {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <1012500>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-1300mhz {
+			opp-hz = /bits/ 64 <1300000000>;
+			opp-microvolt = <1062500>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp-1400mhz {
+			opp-hz = /bits/ 64 <1400000000>;
+			opp-microvolt = <1100000>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+			status = "okay";
+		};
+	};
+};

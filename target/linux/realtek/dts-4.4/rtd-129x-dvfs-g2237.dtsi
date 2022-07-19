@@ -1,0 +1,74 @@
+/*
+ * GMT-G2237 Device Tree Node and DVFS table for CPU driver
+ */
+&i2c_5 {
+	g2237@12 {
+		compatible = "gmt-g2237";
+		reg = <0x12>;
+		status = "okay";
+		dcdc1 {
+			regulator-name = "vd33";
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <3700000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <0>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		dcdc2 {
+			regulator-name = "core";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <0>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		cpu_regx: dcdc3 {
+			regulator-name = "cpudvs";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <0>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		dcdc5 {
+			regulator-name = "vd18";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <2500000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <0>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		ldo1 {
+			regulator-name = "vd25";
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <3000000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <0>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+	};
+};
+
+&dvfs {
+	cpu-supply  = <&cpu_regx>;
+}; /* &dvfs */

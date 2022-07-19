@@ -1,0 +1,92 @@
+#
+# USB Gadget support on a system involves
+#    (a) a peripheral controller, and
+#    (b) the gadget driver using it.
+#
+# NOTE:  Gadget support ** DOES NOT ** depend on host-side CONFIG_USB !!
+#
+#  - Host systems (like PCs) need CONFIG_USB (with "A" jacks).
+#  - Peripherals (like PDAs) need CONFIG_USB_GADGET (with "B" jacks).
+#  - Some systems have both kinds of controllers.
+#
+# With help from a special transceiver and a "Mini-AB" jack, systems with
+# both kinds of controller can also support "USB On-the-Go" (CONFIG_USB_OTG).
+#
+
+menuconfig USB_GADGET
+	bool "USB Gadget Support"
+	help
+	   USB is a master/slave protocol, organized with one master
+	   host (such as a PC) controlling up to 127 peripheral devices.
+	   The USB hardware is asymmetric, which makes it easier to set up:
+	   you can't connect a "to-the-host" connector to a peripheral.
+
+	   U-Boot can run in the host, or in the peripheral.  In both cases
+	   you need a low level bus controller driver, and some software
+	   talking to it.  Peripheral controllers are often discrete silicon,
+	   or are integrated with the CPU in a microcontroller.  The more
+	   familiar host side controllers have names like "EHCI", "OHCI",
+	   or "UHCI", and are usually integrated into southbridges on PC
+	   motherboards.
+
+	   Enable this configuration option if you want to run U-Boot inside
+	   a USB peripheral device.  Configure one hardware driver for your
+	   peripheral/device side bus controller, and a "gadget driver" for
+	   your peripheral protocol.
+
+if USB_GADGET
+
+config USB_GADGET_ATMEL_USBA
+	bool "Atmel USBA"
+	select USB_GADGET_DUALSPEED
+	help
+	  USBA is the integrated high-speed USB Device controller on
+	  the AT32AP700x, some AT91SAM9 and AT91CAP9 processors from Atmel.
+
+config USB_GADGET_RTK
+	bool "Realtek usb gadget"
+	select USB_GADGET_DUALSPEED
+	help
+	  Realtek USB Device controller on SOC.
+
+config CI_UDC
+	bool "ChipIdea device controller"
+	select USB_GADGET_DUALSPEED
+	help
+	  Say Y here to enable device controller functionality of the
+	  ChipIdea driver.
+
+config USB_GADGET_VBUS_DRAW
+	int "Maximum VBUS Power usage (2-500 mA)"
+	range 2 500
+	default 2
+	help
+	   Some devices need to draw power from USB when they are
+	   configured, perhaps to operate circuitry or to recharge
+	   batteries.  This is in addition to any local power supply,
+	   such as an AC adapter or batteries.
+
+	   Enter the maximum power your device draws through USB, in
+	   milliAmperes.  The permitted range of values is 2 - 500 mA;
+	   0 mA would be legal, but can make some hosts misbehave.
+
+	   This value will be used except for system-specific gadget
+	   drivers that have more specific information.
+
+# Selected by UDC drivers that support high-speed operation.
+config USB_GADGET_DUALSPEED
+	bool
+
+config USBDOWNLOAD_GADGET
+	bool "Enable USB download gadget"
+	help
+	  Composite USB download gadget support (g_dnl) for download functions.
+	  This code works on top of composite gadget.
+
+config USB_FUNCTION_FASTBOOT
+	bool "Enable USB Gadget Fastboot function"
+	depends on USBDOWNLOAD_GADGET
+	help
+	  Enable USB gadget fastboot function.
+
+endif # USB_GADGET

@@ -59,11 +59,6 @@ switch_to_ramfs() {
 
 	/bin/mount -o remount,ro /mnt
 	/bin/umount -l /mnt
-
-	grep /overlay /proc/mounts > /dev/null && {
-		/bin/mount -o noatime,remount,ro /overlay
-		/bin/umount -l /overlay
-	}
 }
 
 kill_remaining() { # [ <signal> [ <loop> ] ]
@@ -129,10 +124,16 @@ if [ -n "$IMAGE" ] && type 'platform_pre_upgrade' >/dev/null 2>/dev/null; then
 	platform_pre_upgrade "$IMAGE"
 fi
 
-if [ -n "$(rootfs_type)" ]; then
+ROOTFS_TYPE=$(rootfs_type)
+if [ -n "$ROOTFS_TYPE" -a "$ROOTFS_TYPE" != "tmpfs" -a "$ROOTFS_TYPE" != "rootfs" ]; then
 	v "Switching to ramdisk..."
 	switch_to_ramfs
 fi
+
+grep /overlay /proc/mounts > /dev/null && {
+	/bin/mount -o noatime,remount,ro /overlay
+	/bin/umount -l /overlay
+}
 
 # Exec new shell from ramfs
 exec /bin/busybox ash -c "$COMMAND"

@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Recovery Mode"
+msgstr "Recovery Mode"
+
+msgid "All configuration will lost after reboot!"
+msgstr "All configuration will lost after reboot!"
+
+msgid "Reset success"
+msgstr ""
+
+msgid "Restore success"
+msgstr ""
+
+msgid ""
+"The uploaded backup archive appears to be valid and contains the files "
+"listed below. Press \"Continue\" to restore the backup and reboot, or "
+"\"Cancel\" to abort the operation."
+msgstr ""
+

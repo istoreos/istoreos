@@ -1,0 +1,82 @@
+/dts-v1/;
+#define CONFIG_ARCH_RTD129X
+#include "../../../../../include/soc/realtek/memory.h"
+
+/memreserve/ SYS_BOOTCODE_MEMBASE       SYS_BOOTCODE_MEMSIZE        ; /* 0x00000000 ~ 0x00030000 */
+/memreserve/ RPC_COMM_PHYS              RPC_COMM_SIZE               ; /* 0x0001f000 ~ 0x001fffff */
+/memreserve/ ACPU_FIREWARE_PHYS         ACPU_FIREWARE_SIZE          ; /* 0x01b00000 ~ 0x01efffff */
+/memreserve/ RPC_RINGBUF_PHYS           RPC_RINGBUF_SIZE            ; /* 0x01ffe000 ~ 0x02001fff */
+/memreserve/ ACPU_IDMEM_PHYS            ACPU_IDMEM_SIZE             ; /* 0x10000000 ~ 0x10013fff */
+/memreserve/ ROOTFS_RESCUE_START        ROOTFS_RESCUE_SIZE          ; /* RootFS */
+
+#include "rtd-1295.dtsi"
+#include "rtd-129x-dvfs.dtsi"
+
+/ {
+	model= "Realtek_RTD1295";
+	compatible = "Realtek,FPGA_v7", "Realtek,rtd-1295";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=7";
+		linux,initrd-start = <ROOTFS_RESCUE_START>;
+		linux,initrd-end = <ROOTFS_RESCUE_END>;
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0 0x40000000>;	/* 1024 MB */
+	};
+	mem_remap {
+        compatible = "Realtek,rtk1295-mem_remap";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+        rbus {
+            reg = <RBUS_BASE_PHYS RBUS_BASE_SIZE>;
+        };
+        common {
+            reg = <RPC_COMM_PHYS RPC_COMM_SIZE>;
+        };
+        ringbuf {
+            reg = <RPC_RINGBUF_PHYS RPC_RINGBUF_SIZE>;
+        };
+    };
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios = <&rtk_misc_gpio 8 0 0>;
+		/* install button, input, default N/A */
+	};
+
+	rtk_iso_gpio: rtk_iso_gpio@98007100 {
+		gpios = <&rtk_iso_gpio 21 1 0>;
+		/* igpio21, output, default low */
+	};
+
+	timer {
+		clock-frequency = <27000000>;
+	};
+
+	timer0@9801b000 {
+		clock-frequency = <27000000>;
+	};
+
+
+	uart0: serial0@98007800 {
+		clock-frequency = <27000000>;
+	};
+
+
+	serial1@9801B200 { status = "disabled"; };
+	hdmirx@98034000  { status = "disabled"; };
+	sdmmc@98010400   { status = "disabled"; };
+	md@9800b000      { status = "disabled"; };
+	se@9800c000      { status = "disabled"; };
+	rtc@0x9801B600   { status = "disabled"; };
+	jpeg@9803e000    { status = "disabled"; };
+	ve1@98040000     { status = "disabled"; };
+	ve3@98048000     { status = "disabled"; };
+	gpu@0x98050000   { status = "disabled"; };
+};

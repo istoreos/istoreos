@@ -1,0 +1,62 @@
+config USB_DWC3
+	bool "DesignWare USB3 DRD Core Support"
+	depends on USB_HOST || USB_GADGET
+	help
+	  Say Y here if your system has a Dual Role SuperSpeed
+	  USB controller based on the DesignWare USB3 IP Core.
+
+if USB_DWC3
+
+choice
+	bool "DWC3 Mode Selection"
+
+config USB_DWC3_HOST
+	bool "Host only mode"
+	depends on USB
+	help
+	  Select this when you want to use DWC3 in host mode only,
+	  thereby the gadget feature will be regressed.
+
+config USB_DWC3_GADGET
+	bool "Gadget only mode"
+	depends on USB_GADGET
+	select USB_GADGET_DUALSPEED
+	help
+	  Select this when you want to use DWC3 in gadget mode only,
+	  thereby the host feature will be regressed.
+
+endchoice
+
+comment "Platform Glue Driver Support"
+
+config USB_DWC3_OMAP
+	bool "Texas Instruments OMAP5 and similar Platforms"
+	help
+	  Some platforms from Texas Instruments like OMAP5, DRA7xxx and
+	  AM437x use this IP for USB2/3 functionality.
+
+	  Say 'Y' here if you have one such device
+
+config USB_DWC3_RTK
+	bool "Realtek USB DWC3 driver"
+	help
+	  Realtek support usb dwc3 device driver on SOC
+
+menu "PHY Subsystem"
+
+config USB_DWC3_PHY_OMAP
+	bool "TI OMAP SoC series USB DRD PHY driver"
+	help
+	  Enable single driver for both USB2 PHY programming and USB3 PHY
+	  programming for TI SoCs.
+
+config USB_DWC3_PHY_SAMSUNG
+	bool "Exynos5 SoC series USB DRD PHY driver"
+	help
+	  Enable USB DRD PHY support for Exynos 5 SoC series.
+	  This driver provides PHY interface for USB 3.0 DRD controller
+	  present on Exynos5 SoC series.
+
+endmenu
+
+endif

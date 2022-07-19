@@ -2,6 +2,7 @@
 # Copyright (C) 2010 OpenWrt.org
 
 DEFAULT_OVERLAY_FS="ext4"
+OVERLAY_LABEL="etc"
 
 get_overlay_partition_from_kernel_cmdline()
 {
@@ -14,36 +15,54 @@ get_overlay_partition_from_kernel_cmdline()
 		esac
 	done
 
-	[ -z "$OVERLAY_DEV" ] && return -1
+	if [ -z "$OVERLAY_DEV" ]; then
+		OVERLAY_DEV=`blkid -L $OVERLAY_LABEL | grep /mmcblk0p`
+		echo "overlay dev not define by cmdline, fine $OVERLAY_LABEL got $OVERLAY_DEV"
+	fi
+
+	[ -z "$OVERLAY_DEV" ] && return 1
 
 	echo "- mount overlayfs -"
 
 	# Check device existence
 	[ ! -e $OVERLAY_DEV ] && \
-	echo "overlay: $OVERLAY_DEV not found" && return -1
+		echo "overlay: $OVERLAY_DEV not found" && return 1
 
 	# Check filesystem
-	FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	if dd if=$OVERLAY_DEV bs=5 count=1 | grep -qF RESET; then
+		FSTYPE=RESET
+	else
+		FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	fi
+
 	[ -z "$FSTYPE" ] && \
-	echo "overlay: no valid filesystem" || \
-	echo "overlay: filesystem $FSTYPE found"
+		echo "overlay: no valid filesystem" || \
+		echo "overlay: filesystem $FSTYPE found"
 }
 
 format_overlay_partition()
 {
+	local RET
 	[ "$FSTYPE" = "$OVERLAY_FS" ] && return 0
 
 	echo "overlay: try to format $OVERLAY_DEV as $OVERLAY_FS partition"
 
 	case "$OVERLAY_FS" in
 		ext4)
-			mkfs.ext4 -q -L RTKNAS $OVERLAY_DEV
+			mkfs.ext4 -q -FF -L $OVERLAY_LABEL $OVERLAY_DEV
 			RET=$?
+			;;
+		*)
+			echo "overlay: unhandled fs type : $OVERLAY_FS"
+			RET=1
 			;;
 	esac
 
-	[ $RET -ne 0 ] && \
-	echo "overlay: format command failed ret: $RET"
+	if [ $RET -ne 0 ]; then
+		echo "overlay: format command failed ret: $RET"
+	else
+		FSTYPE=$OVERLAY_FS
+	fi
 
 	return $RET
 }
@@ -53,6 +72,7 @@ check_overlay_partition()
 	case "$FSTYPE" in
 		ext4)
 			fsck.ext4 -y $OVERLAY_DEV
+			sync
 			resize2fs $OVERLAY_DEV
 			sync
 			;;
@@ -61,22 +81,33 @@ check_overlay_partition()
 
 mount_overlay_partition()
 {
+	local RET
 	mount -t $OVERLAY_FS $OVERLAY_DEV /overlay
 	RET=$?
 
 	[ $RET -ne 0 ] && \
-	echo "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
+		echo "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
 
 	echo 'overlay: successfully mounted'
 
+	if [ -f /overlay/.reset ]; then
+		rm -rf /overlay/upper /overlay/work
+		rm -f /overlay/.reset
+		sync /overlay
+	fi
+
 	mkdir -p /overlay/upper /overlay/work
+}
+
+pivot_root_to_overlayfs()
+{
 	mount -o noatime,lowerdir=/,upperdir=/overlay/upper,workdir=/overlay/work -t overlay "overlayfs:/overlay" /mnt \
-		|| return -1
+		|| return 1
 
 	# pivot
 	mount --move /proc /mnt/proc
 
-	pivot_root /mnt /mnt/rom || return -1
+	pivot_root /mnt /mnt/rom || return 1
 
 	mount --move /rom/dev /dev
 	mount --move /rom/tmp /tmp
@@ -86,15 +117,23 @@ mount_overlay_partition()
 
 do_mount_overlayfs()
 {
-	[ ! -e /rom/note ] && return
+	[ ! -e /rom/note ] && return 0
 
-	get_overlay_partition_from_kernel_cmdline || return -1
+	get_overlay_partition_from_kernel_cmdline || return 1
 
-	format_overlay_partition || return -1
+	format_overlay_partition || return 1
 
 	check_overlay_partition
 
-	mount_overlay_partition || return -1
+	mount_overlay_partition || return 1
+
+	# if we are in recovery mode, just skip pivot_root
+	if [ -f /.recovery_mode ]; then
+		rm -f /rom/note
+		return 0
+	fi
+
+	pivot_root_to_overlayfs || return 1
 }
 
 [ -n "$1" ] || ( do_mount_overlayfs && exit 0 )

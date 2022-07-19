@@ -1,0 +1,33 @@
+# Copyright (C) 2006 OpenWrt.org
+# Copyright (C) 2021 jjm2473
+
+recovery_mode() {
+	unset RECOVERY
+	touch /.recovery_mode
+
+	echo ' ================== RECOVERY MODE ====================' | tee -a /etc/banner
+
+	# force disable https
+	sed -i '/list listen_https/d' /etc/config/uhttpd
+	# add title to html header
+	sed -i 's!<a class="brand" href="#"><%=boardinfo.hostname or "?"%></a>!<a class="brand" href="#"><%=boardinfo.hostname or "?"%> - <%:Recovery Mode%></a>!g' /usr/lib/lua/luci/view/themes/material/header.htm
+	# add warning
+	sed -i '/./{H;$!d} ; x ; s#and not luci.sys.user.getpasswd("root") then -%>.*<%- end -%>#then -%>\n\
+<div class="alert-message danger">\n\
+<h4><%:Recovery Mode%></h4>\n\
+<p><%:All configuration will lost after reboot!%></p>\n\
+</div>\n\
+<%- end -%>#' /usr/lib/lua/luci/view/themes/material/header.htm
+
+	cat /www/luci-static/resources/view/system/flash_recovery.js > /www/luci-static/resources/view/system/flash.js
+
+	ln -s /usr/sbin/jffs2reset /sbin/jffs2reset
+
+	sed -i 's/_dropbearkey -y -f/test -f/g' /etc/init.d/dropbear
+
+	sed -i 's/ ecdsa / /g' /etc/init.d/dropbear
+
+	mount_root
+}
+
+[ -n "$RECOVERY" ] && boot_hook_add initramfs recovery_mode

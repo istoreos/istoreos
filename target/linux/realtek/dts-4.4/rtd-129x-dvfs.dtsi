@@ -1,0 +1,15 @@
+/*
+*  DVFS table: SCPU frequency more than 1Ghz and use pmic-g2227 to control voltage
+*/
+
+/ {
+    dvfs: dvfs {
+	    compatible = "Realtek,rtk129x-dvfs";
+	    status = "okay";
+    };
+};
+
+#include "rtd-129x-dvfs-g2227.dtsi"
+// #include "rtd-129x-dvfs-gpio.dtsi"
+// #include "rtd-129x-dvfs-sy8089a.dtsi"
+// #include "rtd-129x-dvfs-g2237.dtsi"

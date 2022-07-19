@@ -1,0 +1,42 @@
+
+#define CONFIG_ARCH_RTD129X
+#include <soc/realtek/memory.h>
+
+/memreserve/ HW_SECURE_RAM_START        HW_SECURE_RAM_SIZE          ; /* 0x80000000 + 32KB */
+/memreserve/ HW_NOR_REMAP_START         HW_NOR_REMAP_SIZE           ; /* 0x88100000 + 32MB */
+/memreserve/ HW_JTAG_GIC_RSV_START      HW_JTAG_GIC_RSV_SIZE        ; /* 0xFF000000 + 8MB  */
+
+#include "rtd1296-base.dtsi"
+
+/ {
+	model= "RTD1296_4GB";
+
+	memory {
+		device_type = "memory";
+		reg = <0x00000000 0x98000000 0x98200000 0x66E00000 0xff800000 0x7f0000>; /* 4096 MB */
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		rbus_reserved: rbus {
+			no-map;
+			size = <0x00200000>;
+			alloc-ranges = <0x98000000 0x00200000>;
+		};
+
+		pcie1_reserved: pcie1 {
+			no-map;
+			size = <0x01000000>;
+			alloc-ranges = <0xC0000000 0x01000000>;
+		};
+
+		pcie2_reserved: pcie2 {
+			no-map;
+			size = <0x01000000>;
+			alloc-ranges = <0xC1000000 0x01000000>;
+		};
+	};
+};

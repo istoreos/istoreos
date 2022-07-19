@@ -1,0 +1,1173 @@
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include "rtd-129x-common.dtsi"
+/include/ "rtd-1295-pinctrl.dtsi"
+/include/ "rtd-1295-irda.dtsi"
+/include/ "rtd-1296-usb.dtsi"
+/include/ "rtd-1296-sata.dtsi"
+/include/ "rtd-1295-hdmirxEDID.dtsi"
+/include/ "rtd-129x-dcsys-debug.dtsi"
+
+/{
+	compatible = "realtek,rtd1296";
+	interrupt-parent = <&gic>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		A53_0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x0>;
+			enable-method = "rtk-spin-table";
+			cpu-release-addr = <0x0 0x9801AA44>;
+			next-level-cache = <&a53_l2>;
+			clocks = <&cc CC_PLL_SCPU>;
+			cpu-supply = <&cpu_supp>;
+			operating-points-v2 = <&cpu_opps>;
+			#cooling-cells = <2>;
+		};
+
+		A53_1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x1>;
+			enable-method = "rtk-spin-table";
+			cpu-release-addr = <0x0 0x9801AA44>;
+			next-level-cache = <&a53_l2>;
+			clocks = <&cc CC_PLL_SCPU>;
+			cpu-supply = <&cpu_supp>;
+			operating-points-v2 = <&cpu_opps>;
+			#cooling-cells = <2>;
+		};
+
+		A53_2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x02>;
+			enable-method = "rtk-spin-table";
+			cpu-release-addr = <0x0 0x9801AA44>;
+			next-level-cache = <&a53_l2>;
+			clocks = <&cc CC_PLL_SCPU>;
+			cpu-supply = <&cpu_supp>;
+			operating-points-v2 = <&cpu_opps>;
+			#cooling-cells = <2>;
+		};
+
+		A53_3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53", "arm,armv8";
+			reg = <0x03>;
+			enable-method = "rtk-spin-table";
+			cpu-release-addr = <0x0 0x9801AA44>;
+			next-level-cache = <&a53_l2>;
+			clocks = <&cc CC_PLL_SCPU>;
+			cpu-supply = <&cpu_supp>;
+			operating-points-v2 = <&cpu_opps>;
+			#cooling-cells = <2>;
+		};
+
+		a53_l2: l2-cache {
+			compatible = "cache";
+		};
+	};
+
+	soc@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x98000000 0x70000>;
+		compatible = "simple-bus";
+		device_type = "soc";
+		ranges;
+
+
+	};
+
+
+
+	arch_timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 13 0xf08>,
+			<1 14 0xf08>,
+			<1 11 0xf08>,
+			<1 10 0xf08>;
+		clock-frequency = <27000000>;
+	};
+
+	gic: interrupt-controller@FF010000 {
+		compatible = "arm,cortex-a15-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg = <0xFF011000 0x1000>,
+			<0xFF012000 0x1000>;
+	};
+
+	pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <0 48 4>;
+		interrupt-affinity = <&A53_0>,
+			<&A53_1>,
+			<&A53_2>,
+			<&A53_3>;
+	};
+
+	pinctrl: pinctrl@9801A000 {
+		compatible = "realtek,rtk129x-pinctrl";
+		reg = <0x9801A000 0x97c>,
+			<0x9804d000 0x010>,
+			<0x98012000 0x640>,
+			<0x98007000 0x340>;
+		#gpio-range-cells = <3>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdcard_pins_low>,
+			<&sdcard_pins_high>,
+			<&uart0_pins>,
+			<&uart1_pins>,
+			<&uart2_pins_0>,
+			<&pcie1_clk_pins>,
+			<&pcie2_clk_pins>,
+			<&rgmii0_pins>,
+			<&spdif_pins>,
+			<&pwm0_0_pins>,
+			<&etn_led_pins>;
+		status = "okay";
+	};
+
+	mux_intc: intc@9801B000 {
+		compatible = "Realtek,rtk-irq-mux";
+		Realtek,mux-nr = <2>;
+		#interrupt-cells = <2>;
+		interrupt-controller;
+		reg = <0x9801B000 0x100>, /* MISC_TOP MISC_ISO */
+			<0x98007000 0x100>;
+		interrupts = <0 40 4>, <0 41 4>;
+		intr-status = <0xc>, <0x0>;
+		intr-en = <0x80>, <0x40>;
+		status = "okay";
+	};
+
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		compatible = "realtek,rtk-misc-gpio-irq-mux";
+		gpio-controller;
+		#gpio-cells = <3>; /*must be the same with gpiochip.of_gpio_n_cells*/
+		Realtek,gpio_base = <0>;
+		Realtek,gpio_numbers = <101>;
+		interrupt-parent = <&mux_intc>;
+		#interrupt-cells = <1>;
+		interrupt-controller;
+		interrupts = <0 19>, <0 20>; /*GPIOA_INT   GPIODA_INT*/
+		reg = <0x9801b000 0x100>,
+			<0x9801b100 0x100>; /* MISC_SYS MISC_GPIO*/
+		gpio-ranges = <&pinctrl 0 0 101>;
+		status = "okay";
+	};
+
+	rtk_iso_gpio: rtk_iso_gpio@98007100 {
+		compatible = "realtek,rtk-iso-gpio-irq-mux";
+		gpio-controller;
+		#gpio-cells = <3>;
+		Realtek,gpio_base = <101>;
+		Realtek,gpio_numbers = <35>;
+		interrupt-parent = <&mux_intc>;
+		#interrupt-cells = <1>;
+		interrupt-controller;
+		interrupts = <1 19>, <1 20>; /*GPIOA_INT   GPIODA_INT*/
+		reg = <0x98007000 0x100>,
+			<0x98007100 0x100>; /* ISO_SYS ISO_GPIO*/
+		gpio-ranges = <&pinctrl 0 101 35>;
+		status = "okay";
+	};
+
+	rbus@98000000 {
+		compatible = "realtek,uio";
+		reg = <0x98000000 0x200000>;
+		status = "okay";
+	};
+
+	md@9800b000 {
+		compatible = "realtek,md";
+		reg = <0x9800b000 0x1000>;
+		interrupts = <0 38 4>; /* 70 - 32 = 38 */
+		clocks = <&clk_en_1 CLK_EN_MD>;
+		resets = <&rst1 RSTN_MD>;
+		status = "okay";
+	};
+
+	se@9800c000 {
+		compatible = "realtek,se";
+		reg = <0x9800c000 0x1000>;
+		interrupts = <0 20 4>; /* 52 - 32 = 20 */
+		clocks = <&clk_en_1 CLK_EN_SE>;
+		resets = <&rst1 RSTN_SE>;
+		power-domains = <&pd0 PD_SRAM_DISP_SE>;
+		status = "okay";
+	};
+
+	refclk@9801b540 {
+		compatible = "realtek,uio";
+		reg = <0x9801b000 0x1000>;
+		status = "okay";
+	};
+
+	hdmitx@9800D000 {
+		compatible = "realtek,rtd129x-hdmitx";
+		reg = <0x9800d000 0x560>, /* HDMITX */
+			<0x98007200 0x4>; /* I2C1_REQ_CTRL */
+		gpio-hpd-detect = <&rtk_iso_gpio 6 0 0>; /* Hotplug detect pin */
+		clocks = <&clk_en_1 CLK_EN_HDMI>;
+		clock-names = "clk_en_hdmi";
+		resets = <&rst1 RSTN_HDMI>;
+		reset-names = "rstn_hdmi";
+		status = "okay";
+
+		scdc_rr {
+			enable-scdc-rr = <0>;
+			interrupt-parent = <&mux_intc>;
+			#interrupt-cells = <1>;
+			interrupt-controller;
+			interrupts = <1 31>;
+		};
+	};
+
+	hdcptx@9800D000 {
+		compatible = "realtek,rtk129x-hdcptx";
+		reg = <0x9800d000 0x400>;
+		interrupts = <0 31 4>; /*gen Ri*/
+		status = "okay";
+	};
+
+	hdmirx@98034000 {
+		compatible = "Realtek,rtk-mipi-top";
+		reg = <0x98037000 0xE0>,
+			<0x98034000 0xF54>,
+			<0x98035F00 0x2C>,
+			<0x98037700 0x98>,
+			<0x98004000 0xF0>,
+			<0x98004100 0x104>;
+		interrupts = <0 23 4>;
+		gpio-rx-hpd-ctrl = <&rtk_iso_gpio 22 1 0>;
+		power-saving = <0>; /* 1:ON,0:OFF; Turn off RX when cable unplugged */
+		clocks = <&clk_en_2 CLK_EN_HDMIRX>,
+			<&clk_en_1 CLK_EN_MIPI>,
+			<&clk_en_2 CLK_EN_CBUS_TX>,
+			<&iclk_en CLK_EN_CBUS_OSC>,
+			<&iclk_en CLK_EN_CBUS_SYS>,
+			<&iclk_en CLK_EN_CBUSTX_SYS>,
+			<&iclk_en CLK_EN_CBUSRX_SYS>,
+			<&clk_en_1 CLK_EN_TP>,
+			<&clk_en_1 CLK_EN_CP>;
+		clock-names = "hdmirx",
+			"mipi",
+			"cbus_tx",
+			"cbus_osc",
+			"cbus_sys",
+			"cbustx_sys",
+			"cbusrx_sys",
+			"tp",
+			"cp";
+		resets = <&rst4 RSTN_HDMIRX>,
+			<&rst4 RSTN_HDMIRX_WRAP>,
+			<&rst1 RSTN_MIPI>,
+			<&rst2 RSTN_CBUS_TX>,
+			<&irst IRSTN_CBUS>,
+			<&irst IRSTN_CBUSTX>,
+			<&irst IRSTN_CBUSRX>,
+			<&rst1 RSTN_TP>,
+			<&rst1 RSTN_CP>;
+		reset-names = "hdmirx",
+			"hdmirx_wrap",
+			"mipi",
+			"cbus_tx",
+			"cbus",
+			"cbustx",
+			"cbusrx",
+			"tp",
+			"cp";
+		power-domains = <&pd0 PD_SRAM_DISP_HDMIRX>;
+		status = "okay";
+	};
+
+	uart0: serial0@98007800 {
+		compatible = "snps,dw-apb-uart";
+		interrupt-parent = <&mux_intc>;
+		reg = <0x98007800 0x400>,
+			<0x98007000 0x100>;
+		interrupts-st-mask = <0x4>;
+		interrupts = <1 2>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		clocks = <&iclk_en CLK_EN_MISC_UR0>;
+		clock-frequency = <27000000>; /* This value must be override by the board. */
+		status = "okay";
+	};
+
+	uart1: serial1@9801B200 {
+		compatible = "snps,dw-apb-uart";
+		interrupt-parent = <&mux_intc>;
+		reg = <0x9801B200 0x100>,
+			<0x9801B00c 0x100>;
+		interrupts-st-mask = <0x8>;
+		interrupts = <0 3>, <0 5>; /*UR1_INT and UR1_TO_INT*/
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		clocks = <&clk_en_2 CLK_EN_UR1>;
+		resets = <&rst2 RSTN_UR1>;
+		/* This value must be overriden by the board. */
+		clock-frequency = <0>;
+		status = "okay";
+	};
+
+	uart2: serial2@9801B400 {
+		compatible = "snps,dw-apb-uart";
+		interrupt-parent = <&mux_intc>;
+		reg = <0x9801B400 0x100>,
+			<0x9801B00c 0x100>;
+		interrupts-st-mask = <0x100>;
+		interrupts = <0 8>, <0 13>; /*UR2_INT and UR2_TO_INT*/
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		clocks = <&clk_en_2 CLK_EN_UR2>;
+		resets = <&rst2 RSTN_UR2>;
+		/* This value must be overriden by the board. */
+		clock-frequency = <0>;
+		status = "disabled"; /* Disable UR2 first since we don't use it now */
+	};
+
+	nic: gmac@98016000 {
+		compatible = "Realtek,r8168";
+		reg = <0x98016000 0x1000>,
+			<0x98007000 0x1000>;
+		interrupts = <0 22 4>;
+		rtl-config = <1>;
+		mac-version = <42>; /* RTL_GIGA_MAC_VER_42 */
+		rtl-features = <2>; /* BIT(2) GMii */
+		output-mode = <0>; /* 0:embedded PHY, 1:RGMII to MAC, 2:RGMII to PHY */
+		rgmii-voltage = <1>; /* 1:1.8V, 2: 2.5V, 3:3.3V */
+		rgmii-tx-delay = <0>; /* 0: 0ns, 1: 2ns */
+		rgmii-rx-delay = <0>; /* 0: 0ns, 1: 2ns */
+		ext-phy-id = <1>; /* 0 ~ 31, only valid when output-mode = 2 */
+		clocks = <&iclk_en CLK_EN_ETN_250M>,
+			<&iclk_en CLK_EN_ETN_SYS>;
+		clock-names = "etn_250m",
+			"etn_sys";
+		resets = <&irst IRSTN_GMAC>,
+			<&irst IRSTN_GPHY>;
+		reset-names = "gmac",
+			"gphy";
+		status = "okay";
+	};
+
+	hwnat: gmac@98060000 {
+		compatible = "Realtek,rtd1295-hwnat";
+		reg = <0x98060000 0x170000>, /* NAT */
+			<0x98000000 0x20000>, /* CLK SYS */
+			<0x9803FF00 0x100>; /* SATA Wrapper */
+		interrupts = <0 24 4>;
+		offload_enable = <0>; /* 0:disable, 1:enable HW NAT offload */
+		rgmii_voltage = <1>; /* 1:1.8V, 2: 2.5V, 3:3.3V */
+		rgmii0_tx_delay = <0>; /* 0 to 7: 0.5ns per step */
+		rgmii0_rx_delay = <4>; /* 0 to 7: 0.5ns per step */
+		rgmii1_tx_delay = <0>; /* 0 to 7: 0.5ns per step */
+		rgmii1_rx_delay = <4>; /* 0 to 7: 0.5ns per step */
+		rgmii_enable = <1>; /* 0:disable, 1:enable */
+		mac0_enable = <1>; /* 0:disable, 1:enable */
+		mac0_mode = <0>; /* 0:RGMII to PHY, 1:SGMII to PHY, 2: RGMII to MAC, 3: SGMII to MAC */
+		mac5_conn_to = <0>; /* 0:PHY, 1:MAC */
+		mac0_phy_id = <2>; /* PHY ID 2 for RGMII, 3 for SGMII */
+		mac4_phy_id = <4>;
+		mac5_phy_id = <1>;
+		led_mode = <1>; /* 0~3: SCAN_0~3, 4~6: DIRECT 0~2 */
+		gpio_link_led_enable = <0>; /* 0:disable, 1:enable */
+		gpios = <&rtk_iso_gpio 27 1 0>; /* Link LED, output, default low */
+
+		local-mac-address = [00 01 73 00 00 01];
+
+		clocks = <&cc CC_PLL_DDSA>,
+			<&clk_en_1 CLK_EN_SATA_0>,
+			<&clk_en_1 CLK_EN_SATA_ALIVE_0>,
+			<&clk_en_2 CLK_EN_SATA_1>,
+			<&clk_en_2 CLK_EN_SATA_ALIVE_1>,
+			<&cc CC_PLL_DDSB>,
+			<&clk_en_2 CLK_EN_NAT>,
+			<&iclk_en CLK_EN_ETN_250M>,
+			<&iclk_en CLK_EN_ETN_SYS>;
+		clock-names = "pll_ddsa",
+			"sata_0",
+			"sata_alive_0",
+			"sata_1",
+			"sata_alive_1",
+			"pll_ddsb",
+			"nat",
+			"etn_250m",
+			"etn_sys";
+		resets = <&rst1 RSTN_SATA_0>,
+			<&rst1 RSTN_SATA_PHY_0>,
+			<&rst1 RSTN_SATA_PHY_POW_0>,
+			<&rst1 SATA_FUNC_EXIST_0>,
+			<&rst2 RSTN_SDS_PHY>,
+			<&rst1 RSTN_NAT>,
+			<&irst IRSTN_GMAC>,
+			<&irst IRSTN_GPHY>;
+		reset-names = "sata_0",
+			"sata_phy_0",
+			"sata_phy_pow_0",
+			"sata_func_exist_0",
+			"rstn_sds_phy",
+			"nat",
+			"gmac",
+			"gphy";
+		power-domains = <&pd0 PD_SRAM_NAT>;
+		status = "disabled";
+	};
+
+	timer0@9801B000 {
+		compatible = "realtek,rtk-timer0";
+		reg = <0x9801B000 0x600>,
+			<0xFF018000 0x10>;
+		interrupts = <0 17 4>;
+		clock-frequency = <27000000>;
+		status = "okay";
+	};
+
+	timer1@9801B000 {
+		compatible = "realtek,rtk-timer1";
+		reg = <0x9801B000 0x600>,
+			<0xFF018000 0x10>;
+		interrupts = <0 18 4>;
+		clock-frequency = <27000000>;
+		status = "okay";
+	};
+
+	pcie@9804E000 {
+		compatible = "realtek,rtk-pcie-slot1";
+		reg = <0x9804E000 0x00001000
+			0x9804F000 0x00001000
+			0x9801C600 0x00000100
+			0x9801A000 0x00000300
+			0x98012000 0x00001000>;
+		interrupt-names = "rtk-pcie1-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <0>;
+		device_type = "pci";
+		gpios = <&rtk_iso_gpio 29 1 0 >;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		ranges = <0x02000000 0x00000000 0xC0000000  0xC0000000 0x00000000 0x01000000
+			0x01000000 0x00000000 0x00030000  0x00030000 0x00000000 0x00010000>;
+		resets = <&rst2 RSTN_PCIE0>,
+			<&rst2 RSTN_PCIE0_CORE>,
+			<&rst2 RSTN_PCIE0_POWER>,
+			<&rst2 RSTN_PCIE0_NONSTITCH>,
+			<&rst2 RSTN_PCIE0_STITCH>,
+			<&rst2 RSTN_PCIE0_PHY>,
+			<&rst4 RSTN_PCIE0_PHY_MDIO>;
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"phy",
+			"phy_mdio";
+		clocks = <&clk_en_1 CLK_EN_PCIE0>;
+		status = "okay";
+		phys_a = <0x31810801>,
+			<0xB2001101>,
+			<0x00100001>;
+		phys_b = <0x00000003>,
+			<0x00900001>,
+			<0x40080401>,
+			<0x5AC10801>,
+			<0x32b40f01>,
+			<0x72001101>;
+	};
+
+	pcie2@9803B000 {
+		compatible = "realtek,rtk-pcie-slot2";
+		reg = <0x9803B000 0x00001000
+			0x9803C000 0x00001000
+			0x9801C600 0x00000100
+			0x9801A000 0x00000300
+			0x98012000 0x00001000>;
+		interrupt-names = "rtk-pcie2-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <1>;
+		device_type = "pci";
+		gpios = <&rtk_iso_gpio 30 1 0>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		ranges = <0x02000000 0x00000000 0xC1000000  0xC1000000 0x00000000 0x01000000
+			0x01000000 0x00000000 0x00040000  0x00040000 0x00000000 0x00010000>;
+		speed-mode = <0>; // 0:GEN1, 1:GEN2
+		resets = <&rst2 RSTN_PCIE1>,
+			<&rst2 RSTN_PCIE1_CORE>,
+			<&rst2 RSTN_PCIE1_POWER>,
+			<&rst2 RSTN_PCIE1_NONSTITCH>,
+			<&rst2 RSTN_PCIE1_STITCH>,
+			<&rst2 RSTN_PCIE1_PHY>,
+			<&rst4 RSTN_PCIE1_PHY_MDIO>;
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"phy",
+			"phy_mdio";
+		clocks = <&clk_en_2 CLK_EN_PCIE1>;
+		status = "okay";
+		phys = <0x00000003>, /* #Write soft reset */
+			<0x27E90301>,
+			<0x52F50401>, /* #F code,close SSC */
+			<0xead70501>, /* #modify N code */
+			<0x000c0601>, /* #modify CMU ICP(TX jitter) */
+			<0xa6530a01>, /* #modify CMU RS(tx jitter) */
+			<0xC4662001>, /* #modify AMP */
+			<0x8EA01B01>,
+			<0x8EA05B01>,
+			<0xa84a0101>, /* #modify Rx parameter */
+			<0xb8032b01>, /* #clk driving */
+			<0x27e94301>, /* #EQ */
+			<0x52f54401>, /* #F code,close SSC */
+			<0xead74501>, /* #modify N code */
+			<0x000c4601>, /* #modify CMU ICP(TX jitter) */
+			<0xa6534a01>, /* #modify CMU RS(tx jitter) */
+			<0xd4776001>, /* #modify AMP */
+			<0xa84a4101>, /* #modify Rx parameter */
+			<0xa8036b01>, /* #clk driving */
+			<0x01225a01>,
+			<0x521C0901>, /* #for calibration bit[9]=1" */
+			<0x501C0901>, /* #for calibration bit[9]=0" */
+			<0x521C0901>, /* #for calibration bit[9]=1" */
+			<0x08282401>,
+			<0x08286401>;
+	};
+
+	sdio@98010A00 {
+		compatible = "Realtek,rtk1295-sdio";
+		gpios = <&rtk_iso_gpio 23 1 1>;
+		reg = <0x98010c00 0x200>,
+			<0x98000000 0x200000>;
+		interrupts = <0 45 4>;
+		clocks = <&clk_en_1 CLK_EN_SDIO>,
+			<&clk_en_1 CLK_EN_SDIO_IP>;
+		clock-names = "sdio",
+			"sdio_ip";
+		resets = <&rst2 RSTN_SDIO>;
+		status = "okay";
+	};
+
+	sdmmc@98010400 {
+		compatible = "Realtek,rtk1295-sdmmc";
+		gpios = <&rtk_misc_gpio 99 1 0>; /*sd power , output, default high  (poweroff) */
+		reg = <0x98000000 0x400>, /* CRT */
+			<0x98010400 0x200>, /* SDMMC */
+			<0x9801A000 0x400>, /* BS2 */
+			<0x98012000 0xa00>, /* EMMC */
+			<0x98010A00 0x40>; /* SDIO */
+		interrupts = <0 44 4>;
+		resets = <&rst2 RSTN_CR>;
+		clocks = <&clk_en_1 CLK_EN_CR>,
+			<&clk_en_1 CLK_EN_SD_IP>;
+		clock-names = "cr",
+			"sd_ip";
+		status = "okay";
+	};
+
+	emmc@98012000 {
+		compatible = "Realtek,rtk1295-emmc";
+		reg = <0x98012000 0xa00>, /*EMMC*/
+			<0x98000000 0x600>, /*CRT */
+			<0x9801A000 0x80>, /*SB2*/
+			<0x9801B000 0x150>; /*MISC*/
+		interrupts = <0 42 4>;
+		speed-step = <2>; /* 0: sdr50, 1: ddr50, 2: hs200, 3: hs400 */
+		clocks = <&clk_en_1 CLK_EN_EMMC>,
+			<&clk_en_1 CLK_EN_EMMC_IP>,
+			<&clk_en_1 CLK_EN_CR>;
+		clock-names = "emmc",
+			"emmc_ip",
+			"cr";
+		resets = <&rst2 RSTN_EMMC>;
+		reset-names = "emmc";
+		status = "okay";
+		pddrive_nf_s0 = <1 0x77 0x77 0x77 0x33>; /* pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for sdr50 */
+		pddrive_nf_s2 = <1 0xbb 0xbb 0xbb 0x33>; /* pddrive_nf0, pddrive_nf1, pddrive_nf2, pddrive_nf3, pddrive_nf4 ; for hs200 */
+		phase_tuning = <0 0>; /* arg0: tx tuning switch, arg1: rx tuning switch*/
+	};
+
+	pu_pll@98000000 {
+		compatible = "Realtek,rtk1295-pu_pll";
+		reg = <0x98000000 0x200>;
+	};
+
+	jpeg@9803e000 {
+		compatible = "Realtek,rtk1295-jpeg";
+		reg = <0x9803e000 0x1000>,
+			<0x98000000 0x200>,
+			<0x98007000 0x30>;
+		interrupts = <0 52 4>;
+		clocks = <&clk_en_2 CLK_EN_JPEG>;
+		clock-names = "jpeg";
+		resets = <&rst2 RSTN_JPEG>;
+		status = "okay";
+	};
+
+	ve1@98040000 {
+		compatible = "Realtek,rtk1295-ve1";
+		reg = <0x98040000 0x8000>,
+			<0x98000000 0x200>,
+			<0x98007000 0x30>;
+		interrupts = <0 53 4>, <0 54 4>;
+		clocks = <&cc CC_CLK_VE1>,
+			<&cc CC_CLK_VE2>;
+		clock-names = "clk_ve1",
+			"clk_ve2";
+		resets = <&rst1 RSTN_VE1>,
+			<&rst1 RSTN_VE2>;
+		reset-names = "ve1",
+			"ve2";
+		status = "okay";
+	};
+
+	ve3@98048000 {
+		compatible = "Realtek,rtk1295-ve3";
+		reg = <0x98048000 0x4000>,
+			<0x98000000 0x200>,
+			<0x98007000 0x30>;
+		interrupts = <0 55 4>;
+		clocks = <&cc CC_CLK_VE3>;
+		resets = <&rst1 RSTN_VE3>;
+		status = "okay";
+	};
+
+	scpu_wrapper@9801d000 {
+		compatible = "Realtek,rtk-scpu_wrapper";
+		reg = <0x9801d000 0x500>;
+		interrupts = <0 46 4>;
+		status = "okay";
+	};
+
+	sb2_lock_avlog: sb2-lock@9801A63C {
+		reg = <0x9801A63C 0x4>;
+		compatible = "realtek,sb2-sem", "realtek,sb2-sem-avlog";
+	};
+
+	sb2@9801a000 {
+		compatible = "Realtek,rtk-sb2";
+		reg = <0x9801a000 0x900>;
+		interrupts = <0 36 4>;
+		status = "okay";
+	};
+
+	rpc@9801a104 {
+		compatible = "Realtek,rtk-rpc";
+		reg = <0x9801a104 0xc>, /* rpc intr en */
+			<0x01ffe000 0x4000>, /* rpc ring buffer */
+			<0x0001f000 0x1000>, /* rpc common */
+			<0x9801a020 0x4>; /* rbus sync */
+		interrupts = <0 33 4>;
+		status = "okay";
+	};
+
+	irda@98007400 {
+		compatible = "Realtek,rtk-irda";
+		interrupt-parent = <&mux_intc>;
+		reg = <0x98007000 0x400>,
+			<0x98007400 0x100>;
+		interrupts = <1 5>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ir_rx_pins>,
+			    <&ir_tx_pins>;
+		resets = <&irst IRSTN_IR>;
+		clocks = <&iclk_en CLK_EN_MISC_IR>;
+		status = "okay";
+	};
+
+	rtc@9801B600 {
+		compatible = "realtek,rtk-rtc";
+		reg = <0x9801B600 0x100>,
+			<0x98007000 0x100>;
+		rtc-base-year = <2014>;
+		clocks = <&clk_en_2 CLK_EN_MISC_RTC>;
+		status = "okay";
+	};
+
+	watchdog@0x98007680 {
+		compatible = "realtek,rtk-watchdog";
+		reg = <0x98007680 0x100>;
+		rst-oe = <0>; /* 0:input, 1:output */
+		timeout-sec = <20>;
+		status = "okay";
+	};
+
+	rtk-rstctrl@0x98007000 {
+		compatible = "Realtek,rtk-rstctrl";
+		reg = <0x98007600 0x100>;
+		rst-reg-offset = <0x40>;
+	};
+
+	i2c_0: i2c@0x98007D00 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x98007D00 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <1 8>;
+		i2c-num = <0>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&iclk_en CLK_EN_I2C0>;
+		resets = <&irst IRSTN_I2C_0>;
+	};
+
+	i2c_1: i2c@0x98007C00 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x98007C00 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <1 11>;
+		i2c-num = <1>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&iclk_en CLK_EN_I2C1>;
+		resets = <&irst IRSTN_I2C_1>;
+	};
+
+	i2c_2: i2c@0x9801B700 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x9801B700 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <0 26>;
+		i2c-num = <2>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_2>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clk_en_2 CLK_EN_MISC_I2C_2>;
+		resets = <&rst2 RSTN_I2C_2>;
+	};
+
+	i2c_3: i2c@0x9801B900 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x9801B900 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <0 23>;
+		i2c-num = <3>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clk_en_2 CLK_EN_MISC_I2C_3>;
+		resets = <&rst2 RSTN_I2C_3>;
+	};
+
+	i2c_4: i2c@0x9801BA00 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x9801BA00 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <0 15>;
+		i2c-num = <4>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_4>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clk_en_2 CLK_EN_MISC_I2C_4>;
+		resets = <&rst2 RSTN_I2C_4>;
+	};
+
+	i2c_5: i2c@0x9801BB00 {
+		compatible = "realtek,rtk-i2c";
+		reg = <0x9801BB00 0x400>;
+		interrupt-parent = <&mux_intc>;
+		interrupts = <0 14>;
+		i2c-num = <5>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&i2c_pins_5>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clk_en_2 CLK_EN_MISC_I2C_5>;
+		resets = <&rst2 RSTN_I2C_5>;
+
+		rts5400@6A {
+			compatible = "rtk-rts5400";
+			status = "disabled";
+			reg = <0x6A>;
+			realtek,12v-power-gpio = <&rtk_misc_gpio 16 1 0>; /*1296 u3host power, output, default low */
+		};
+	};
+
+	spi_0: spi@9801BD00 {
+		compatible = "Realtek,rtk129x-spi";
+		reg = <0x9801BD00 50>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&gspi_pins>;
+		spi-cs-gpio = <&rtk_misc_gpio 6 1 1>;
+		clocks = <&clk_en_1 CLK_EN_GSPI>;
+		resets = <&rst1 RSTN_GSPI>;
+		status = "okay";
+	};
+
+	pwm: pwm@980070D0 {
+		compatible = "Realtek,rtd1295-pwm";
+		#pwm-cells = <2>;
+		reg = <0x980070D0 0xC>;
+		status = "okay";
+		pwm_0 {
+			enable = <0>;
+			clkout_div = <0xff>; //default OCD: from 0x0 to 0xff
+			clksrc_div = <0x1>; //default OSD: from 0x0 to 0xf
+			duty_rate = <5>; //default duty_rate 0 ~ 100
+		};
+		pwm_1 {
+			enable = <1>;
+			clkout_div = <0xff>; //default OCD: from 0x0 to 0xff
+			clksrc_div = <0x1>; //default OSD: from 0x0 to 0xf
+			duty_rate = <50>; //default duty_rate 0 ~ 100
+		};
+		pwm_2 {
+			enable = <0>;
+			clkout_div = <0xff>; //default OCD: from 0x0 to 0xff
+			clksrc_div = <0x1>; //default OSD: from 0x0 to 0xf
+			duty_rate = <50>; //default duty_rate 0 ~ 100
+		};
+		pwm_3 {
+			enable = <0>;
+			clkout_div = <0xff>; //default OCD: from 0x0 to 0xff
+			clksrc_div = <0x1>; //default OSD: from 0x0 to 0xf
+			duty_rate = <50>; //default duty_rate 0 ~ 100
+		};
+	};
+
+	rtk-lsadc@0x98012800 {
+		compatible = "Realtek,rtk-lsadc";
+		interrupt-parent = <&mux_intc>;
+		interrupts = <0 21>, <0 22>; /* LSADC0_INT, LSADC1_INT */
+		reg = <0x9801B00C 0x4>, /* MISC_ISR */
+			<0x98012800 0x200>, /* LSADC */
+			<0x9800034C 0x4>; /* LSADC_PG */
+		status = "disabled";
+		clk_gating_en = <1>, /* LSADC0 0:disable; 1:enable */
+						<1>; /* LSADC1 0:disable; 1:enable */
+		vdd_mux_sel = <0>; /* 0:VDD1; 1:VDD2 */
+		vdd_mux1 = <0>; /* 0 ~ 15: VDD_IN source selection */
+		vdd_mux2 = <0>; /* 0 ~ 15: VDD_IN source selection */
+		vdd_mux_en = <1>; /* 0:disable; 1:enable */
+
+		rtk-lsadc0-pad0 {
+			//compatible = "Realtek,rtk-lsadc0-pad0";
+			activate = <1>; /* 0:in-activate; 1:activate */
+			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
+			sw_idx = <0>; /* 0:External input pin 0; 1:External input pin 1 */
+			voltage_threshold = <32>; /* 8 bit : 0 ~ 255 */
+		};
+
+		rtk-lsadc0-pad1 {
+			//compatible = "Realtek,rtk-lsadc0-pad1";
+			activate = <1>; /* 0:in-activate; 1:activate */
+			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
+			sw_idx = <1>; /* 0:External input pin 0; 1:External input pin 1 */
+			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
+		};
+
+		rtk-lsadc1-pad0 {
+			//compatible = "Realtek,rtk-lsadc1-pad0";
+			activate = <1>; /* 0:in-activate; 1:activate */
+			ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
+			sw_idx = <0>; /* 0:VDD; 1:GND */
+			voltage_threshold = <32>; /* 8 bit : 0 ~ 255 */
+			detect_range_ctrl = <0>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
+		};
+
+		rtk-lsadc1-pad1 {
+			//compatible = "Realtek,rtk-lsadc1-pad1";
+			activate = <1>; /* 0: in-activate; 1:activate */
+			ctrl_mode = <0>; /* 0: Voltage mode; 1:Current mode*/
+			sw_idx = <0>; /* 0:VDD; 1:GND */
+			voltage_threshold = <16>; /* 8 bit : 0 ~ 255 */
+			detect_range_ctrl = <1>; /* 0:0V ~ 1.024V; 1:0.5V ~ 1.524V */
+		};
+	};
+
+	cec0@98037800 {
+		compatible = "Realtek,rtk-cec0";
+		reg = <0x98037800 0xe0>,
+			<0x98007000 0x100>,
+			<0x98037500 0x100>;
+		interrupts = <0 26 4>;
+		module-enable = <1>;
+		clocks = <&cc CC_CLK_SYS>,
+			<&iclk_en CLK_EN_CBUS_OSC>,
+			<&iclk_en CLK_EN_CBUS_SYS>,
+			<&iclk_en CLK_EN_CBUSTX_SYS>,
+			<&iclk_en CLK_EN_CBUSRX_SYS>;
+		clock-names = "sys",
+			"cbus_osc",
+			"cbus_sys",
+			"cbustx_sys",
+			"cbusrx_sys";
+		resets = <&irst IRSTN_CBUS>,
+			<&irst IRSTN_CBUSTX>,
+			<&irst IRSTN_CBUSRX>;
+		reset-names = "cbus",
+			"cbustx",
+			"cbusrx";
+		status = "okay";
+	};
+
+	rfkill: rfkilligpio {
+		compatible = "realtek,rfkill";
+		gpios = <&rtk_iso_gpio 24 1 0>; /*bt power , output, default low */
+		status = "disabled";
+	};
+
+	rtk-gpio-regulator {
+		compatible = "rtkgpio-regulator";
+		gpios = <&rtk_iso_gpio 16 1 0>, <&rtk_iso_gpio 17 1 1>;
+		//status = "disabled";
+		status = "okay";
+		vdd: rtkgpio_regulator {
+			regulator-min-microvolt = <850000>;
+			regulator-max-microvolt = <1050000>;
+		};
+	};
+
+	power-management@0 {
+		compatible = "Realtek,power-management";
+		/*system-power-controller;*/ /* Disable rtk suspend */
+		reg = <0x98000000 0x1800>,   /* CRT */
+			<0x98006000 0x1000>, /* AIO */
+			<0x98007000 0x1000>, /* ISO */
+			<0x98018000 0x2000>, /* TVE */
+			<0x9801A000 0x1000>, /* SB2 */
+			<0x9801B000 0x1000>; /* MISC */
+		suspend-mode = <0>; // 0:SUSPEND_TO_RAM, 1:SUSPEND_TO_COOLBOOT, 2:SUSPEND_TO_WFI
+		pwms = <&pwm 0 37878>;
+		status = "okay";
+	};
+
+	dptx@9803D000 {
+		compatible = "Realtek,rtk-dptx";
+		reg = <0x9803D000 0x1000>, <0x98000000 0x1000>, <0x98009400 0x600>, <0x98005000 0x1000>;
+		interrupts = <0 29 4>; /*gen Ri*/
+		clocks = <&clk_en_1 CLK_EN_TVE>,
+			<&clk_en_1 CLK_EN_VO>,
+			<&clk_en_1 CLK_EN_LVDS>;
+		clock-names = "clk_en_tve",
+			"clk_en_vo",
+			"clk_en_lvds";
+		resets = <&rst4 RSTN_DISP>,
+			<&rst1 RSTN_TVE>,
+			<&rst1 RSTN_VO>,
+			<&rst1 RSTN_LVDS>;
+		reset-names = "dp",
+			"tve",
+			"vo",
+			"lvds";
+		status = "okay";
+		dp_hpd {
+			gpios = <&rtk_iso_gpio 7 0 0>; /*HPD, input, default N/A */
+			interrupt-parent = <&rtk_iso_gpio>;
+			interrupts = <7>; /*HPD*/
+		};
+	};
+
+	mcp@0 {
+		compatible = "Realtek,rtk-mcp";
+		reg = <0x98015000 0x1000>,
+			<0x98014000 0x1000>;
+		status = "okay";
+	};
+
+	rtk_boot {
+		compatible = "Realtek,rtk_boot";
+		resume-entry-addr = <0x00021000>;
+		status = "okay";
+	};
+
+	cpu_tm: thermal-sensor@9801D150 {
+		compatible = "realtek,rtd129x-thermal-sensor";
+		reg = <0x9801D150 0x1C>;
+		#thermal-sensor-cells = <0>;
+
+		userspace-trip = <&cpu_userspace 30000>;
+		status = "okay";
+	};
+
+	cr_tm: thermal-sensor@980124B4 {
+		compatible = "realtek,rtd129x-thermal-sensor";
+		reg = <0x980124B4 0x1C>;
+		#thermal-sensor-cells = <0>;
+		status = "okay";
+	};
+
+	gpu: gpu@98050000 {
+		compatible = "arm,mali-midgard";
+		reg = <0x98050000 0xffff>;
+		interrupts = <0 67 4>, <0 68 4>, <0 66 4>;
+		interrupt-names = "JOB", "MMU", "GPU";
+		clocks = <&cc CC_CLK_GPU>;
+		clock-names = "clk_mali";
+		resets = <&rst1 RSTN_GPU>;
+		mali-supply = <&gpu_supp>;
+		#cooling-cells = <2>;
+		status = "okay";
+		power-model {
+			compatible = "arm,mali-simple-power-model";
+			static-coefficient = <2427750>;
+			dynamic-coefficient = <4687>;
+			ts = <20000 2000 (-20) 2>;
+			thermal-zone = "cpu-thermal";
+		};
+	};
+
+	audio-in-device {
+		compatible = "realtek,audio-in";
+		status = "disabled";
+	};
+
+	audio-out-devices {
+		compatible = "realtek,audio-out";
+		status = "okay";
+		dac {
+			compatible = "dac";
+			status = "okay";
+		};
+		spdif {
+			compatible = "spdif";
+			status = "okay";
+		};
+		i2s {
+			compatible = "i2s";
+			status = "okay";
+		};
+		hdmi {
+			compatible = "hdmi";
+			status = "okay";
+		};
+		global {
+			compatible = "global";
+			status = "okay";
+		};
+	};
+
+	busfreq {
+		compatible = "realtek,rtd129x-busfreq";
+		enable = <1>;
+		polling-ms = <1000>;
+		clocks = <&cc CC_PLL_BUS_H>;
+		status = "okay";
+
+		clk-0 {
+			clocks = <&cc CC_CLK_SYS>;
+			rate = <128 256>;
+		};
+		clk-1 {
+			clocks = <&cc CC_PLL_BUS_H>;
+			rate = <200 459>;
+		};
+	};
+
+	dvfs: dvfs {
+	};
+
+	thermal-zones {
+		cpu_thermal: cpu-thermal {
+			polling-delay-passive = <250>;
+			polling-delay = <1000>;
+			thermal-sensors = <&cpu_tm>;
+
+			trips {
+				fan_alert0: fan-alert0 {
+					temperature = <85000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+				fan_alert1: fan-alert1 {
+					temperature = <95000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+				cpu_alert0: cpu-alert0 {
+					temperature = <105000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+				cpu_alert1: cpu-alert1 {
+					temperature = <115000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+				cpu_crit: cpu-crit {
+					temperature = <130000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+				gpu_alert0: gpu-alert0 {
+					temperature = <95000>;
+					hysteresis = <4000>;
+					type = "passive";
+				};
+				gpu_alert1: gpu-alert1 {
+					temperature = <100000>;
+					hysteresis = <4000>;
+					type = "passive";
+				};
+				cpu_userspace: cpu-userspace {
+					temperature = <150000>;
+					hysteresis = <0>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&cpu_alert0>;
+					cooling-device = <&A53_0 1 6>;
+				};
+				map1 {
+					trip = <&cpu_alert1>;
+					cooling-device = <&A53_0 7 10>;
+				};
+				map2 {
+					trip = <&gpu_alert0>;
+					cooling-device = <&gpu 2 2>;
+				};
+				map3 {
+					trip = <&gpu_alert1>;
+					cooling-device = <&gpu 5 5>;
+				};
+				map4 {
+					trip = <&cpu_userspace>;
+					cooling-device = <&A53_0 9 9>;
+				};
+			};
+		};
+
+		cr-thermal {
+			polling-delay-passive = <0>;
+			polling-delay = <0>;
+			thermal-sensors = <&cr_tm>;
+		};
+	};
+};
+
+#include "rtd-129x-g2227-regulator.dtsi"
+#include "rtd-129x-gpu-dvfs.dtsi"
+#include "rtd-129x-cpu-dvfs.dtsi"

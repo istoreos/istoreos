@@ -1,0 +1,20 @@
+#!/bin/sh
+
+if [ -d /www/luci-static/argon_light_green -a -e /proc/device-tree/chosen/default-password ]; then
+    uci -q batch <<-EOF >/dev/null
+        set luci.main.mediaurlbase=/luci-static/argon_light_green
+        commit luci
+EOF
+elif [ -d /www/luci-static/argon_dark ]; then
+    uci -q batch <<-EOF >/dev/null
+        set luci.main.mediaurlbase=/luci-static/argon_dark
+        commit luci
+EOF
+elif [ -d /www/luci-static/material ]; then
+    uci -q batch <<-EOF >/dev/null
+        set luci.main.mediaurlbase=/luci-static/material
+        commit luci
+EOF
+fi
+
+exit 0

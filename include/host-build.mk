@@ -142,6 +142,7 @@ ifndef DUMP
   $(if $(DUMP),,$(call HostHost/Autoclean))
 
   $(HOST_STAMP_PREPARED):
+	@mkdir -p $(STAGING_DIR_HOST)/lib
 	@-rm -rf $(HOST_BUILD_DIR)
 	@mkdir -p $(HOST_BUILD_DIR)
 	$(foreach hook,$(Hooks/HostPrepare/Pre),$(call $(hook))$(sep))

@@ -1,0 +1,1037 @@
+/**
+ * Power control:
+ *   to control power of modules
+ *
+ *  General properties
+ *    power-on:
+ *      0: power off after powerctrl initialized
+ *      1: power on after powerctrl initialized
+ *      9/others: default value
+ *    power-state: alternative way to set power-state
+ *      off: equal to 0 in power-on
+ *      on:  equal to 1 in power-on
+ *      managed: power-control will power on/off depend on related conditions
+ *      driver-controlled: equal to 9 in power-on
+ */
+
+/{
+    /**
+     * powerctrl-simple:
+     *   compatible is 'realtek,powerctrl-simple'
+     *
+     *   Properties:
+     *     reg:   address to be set. the order is for top to down
+     *            during power-of process. And the order is reversed
+     *            during power-on process.
+     *
+     *     shift: offset of address
+     *
+     *     width: number of bits to be set
+     *
+     *   Optional Properties:
+     *     is-l4-icg: marked as l4-icg if power_on/power_off only work 
+     *            when reference clocks and reset are set.
+     *
+     *     is-analog: marked as analog, power_on/power_off will enable 
+     *            the reference clock/reset
+     *
+     *     delayed: initization will be delayed
+     *
+     *     clocks: (array not accepted) reference clock
+     * 
+     *     resets: (array not accepted) reference reset
+     *
+     *     on-value:  value to be set when power-on
+     *     off-value: value to be set when power-off
+     *
+     *   NOTE: Array size of shift, width, on-value, off-value should
+     *         be equal to number of address in reg, only if the
+     *         properties is exist.
+     *
+     * powerctrl-sram
+     */
+    power_control  {
+        #address-cells = <1>;
+        #size-cells    = <1>;
+        ranges;
+
+        pctrl_clk_en@9800000c {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x9800000c 0x4>;
+            mask = <0xec803012>;
+            power-state = "off";
+        };
+
+        pctrl_clk_en@98000010 {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x98000010 0x4>;
+            mask = <0x0100E0A2>;
+            power-state = "off";
+        };
+
+        pctrl_clk_en@9800708c {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x9800708c 0x4>;
+            mask = <0x000006F8>;
+            power-state = "off";
+        };
+
+        pctrl_soft_reset@98000000 {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x98000000 0x4>;
+            mask = <0x60000354>;
+            power-state = "off";
+        };
+
+        pctrl_soft_reset@98000004 {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x98000004 0x4>;
+            mask = <0x507BE1FC>;
+            power-state = "off";
+        };
+
+        pctrl_soft_reset@98000050 {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x98000050 0x4>;
+            mask = <0x00007020>;
+            power-state = "off";
+        };
+
+        pctrl_soft_reset@98007088 {
+            compatible = "realtek,powerctrl-once";
+            reg  = <0x98007088 0x4>;
+            mask = <0x00002062>;
+            power-state = "off";
+        };
+
+        /* VE1 */
+        pctrl_ve1: pctrl_ve1 {
+            #powerctrl-cells = <0>;
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0x98000400 0x4>, /* iso cell */
+                             <0x9800038c 0x4>, /* sram_pwr3 */
+                             <0x98000390 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <0>;
+            /* realted resets: used in power-on flow */
+            resets         = <&rst1 13>;
+            reset-names    = "rstn_ve1";
+
+            power-state    = "off"; 
+        };
+
+        pctrl_l4_icg_ve1 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98043000 0x4>;
+            shift      = <6>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_ve1>;
+            resets = <&rst1 13>;
+            powerctrls = <&pctrl_ve1>;
+
+            status = "disabled"; /* HW BUG */
+        };
+
+        /* VE2 */
+        pctrl_ve2: pctrl_ve2 {
+            #powerctrl-cells = <0>;
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0x98000400 0x4>, /* iso cell */
+                             <0x980003cc 0x4>, /* sram_pwr3 */
+                             <0x980003d0 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <4>;
+            /* realted resets: used in power-on flow */
+            resets         = <&rst1 14>;
+            reset-names    = "rstn_ve2";
+           
+            power-state    = "off";
+        };
+
+        pctrl_l4_icg_ve2 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98047e00 0x4>;
+            shift      = <6>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_ve2>;
+            resets = <&rst1 14>;
+            powerctrls = <&pctrl_ve2>;
+
+            status = "disabled"; /* HW BUG */
+        };
+
+        /* VE3 */
+        pctrl_ve3: pctrl_ve3 {
+            #powerctrl-cells = <0>;
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0x98000400 0x4>, /* iso cell */
+                             <0x980003ec 0x4>, /* sram_pwr3 */
+                             <0x980003f0 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <6>;
+            /* realted resets: used in power-on flow */
+            resets         = <&rst1 15>;
+            reset-names    = "rstn_ve3";
+
+            power-state    = "off";
+        };
+
+        pctrl_l4_icg_ve3 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980480e8 0x4>;
+            shift      = <6>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_ve3>;
+            resets = <&rst1 15>;
+            powerctrls = <&pctrl_ve3>;
+            
+            status = "disabled"; /* HW BUG? */
+        };
+
+        /* JPEG */
+        pctrl_l4_icg_jpeg {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9803ef00 0x4>;
+            shift      = <1>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&jpeg_gates 3>;
+            resets = <&rst2 1>;
+            
+            power-state = "managed";
+        };
+
+        /* GPU */
+        pctrl_gpu: pctrl_gpu {
+            #powerctrl-cells = <0>;
+            compatible = "realtek,powerctrl-sram";
+            reg        = <0x0 0x0>, /* iso cell: 0 for unused */
+                         <0x9800036c 0x4>, /* sram_pwr3 */
+                         <0x980003a4 0x4>; /* sram_pwr4 */
+
+            power-state    = "off";
+        };
+
+        pctrl_l4_icg_gpu {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98055004 0x4>,
+                         <0x980540b4 0x4>;
+            shift      = <16 0>;
+            width      = < 1 1>;
+            on-value   = < 1 1>;
+            off-value  = < 0 0>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_gpu>;
+            resets = <&rst1 18>;
+            powerctrls = <&pctrl_gpu>;
+
+            status = "disabled"; /* pctrl_gpu is controlled by driver */
+        };
+
+
+        pctrl_gpu_core@1 {
+            compatible = "realtek,powerctrl-gpu-core";
+            reg        = <0x98050180 0x4>, /* power-on */
+                         <0x980501c0 0x4>; /* power-off */
+            on-shift   = <0>;
+            off-shift  = <0>;
+            pctrl-name = "pctrl_gpu_core_1";
+
+            power-state    = "off";
+        };
+
+        pctrl_gpu_core@2 {
+            compatible = "realtek,powerctrl-gpu-core";
+            reg        = <0x98050180 0x4>, /* power-on */
+                         <0x980501c0 0x4>; /* power-off */
+            on-shift   = <1>;
+            off-shift  = <1>;
+            pctrl-name = "pctrl_gpu_core_2";
+
+            power-state    = "off";
+        };
+
+        pctrl_gpu_core@3 {
+            compatible = "realtek,powerctrl-gpu-core";
+            reg        = <0x98050180 0x4>, /* power-on */
+                         <0x980501c0 0x4>; /* power-off */
+            on-shift   = <2>;
+            off-shift  = <2>;
+            pctrl-name = "pctrl_gpu_core_3";
+
+            power-state    = "off";
+        };
+
+        /* DISP_TOP */
+        pctrl_disp_top {
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0x98000400 0x4>, /* iso cell */
+                             <0x9800036c 0x4>, /* sram_pwr3 */
+                             <0x98000370 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <8>;
+            /* realted resets: used in power-on flow */
+            resets         = <&rst4 15>;
+            reset-names    = "rstn_disp";
+        };
+
+
+        /* AIO */
+        pctrl_l4_icg_aio{
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98006508 0x4>, 
+                         <0x98006508 0x4>;
+            shift      = <0 5>;
+            width      = <1 2>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 10>;
+            resets = <&rst1 17>;
+
+            power-state = "managed";
+        };
+
+        pctrl_audio_dac {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98006604 0x4>,
+                         <0x98006604 0x4>,
+                         <0x98006604 0x4>,
+                         <0x98006604 0x4>,
+                         <0x98006604 0x4>;
+            shift      = <8 10 12 16 18>;
+            width      = <2  2  2  2  2>;
+            on-value   = <3  3  3  3  3>;
+            off-value  = <2  2  2  2  2>;
+            state,on-value  = <1 1 1 1 1>;
+            state,off-value = <0 0 0 0 0>;
+            is-analog;
+            /* reference sources */
+            clocks     = <&clk_enable_2 19>;
+            
+            power-state = "managed";
+        };
+
+        /* TVE */
+        pctrl_video_dac { 
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980183a0 0x4>;
+            shift      = <30>;
+            width      = <2>;
+            is-analog;
+            /* reference sources */
+            clocks = <&clk_enable_1 14>;
+            resets = <&rst1 19>;
+
+            power-state = "managed";
+        };
+
+        /* HDMI_TX 2.0 */
+        pctrl_mhl3_en {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9800d500 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            is-analog;
+            /* reference sources */
+            clocks = <&clk_enable_1 8>;
+            resets = <&rst1 12>;
+
+            power-state = "off";
+        };
+
+        /* SE */
+        pctrl_l4_icg_se {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9800c80c 0x4>;
+            shift      = <27>;
+            width      = <5>;
+            on-value   = <0x00>;
+            off-value  = <0x1f>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 17>;
+            resets = <&rst1 22>;
+
+            power-state = "managed";
+        };
+
+        /* MIPI_CSI */
+        pctrl_l4_icg_mipi {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980041dc 0x4>;
+            shift      = <6>;
+            width      = <3>;
+            on-value   = <7>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 27>;
+            resets = <&rst1 30>;
+
+            power-state = "managed";
+        };
+
+        pctrl_mipi_aphy {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9800420c 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-analog;
+            /* reference sources */
+            clocks = <&clk_enable_1 27>;
+            resets = <&rst1 30>;
+
+            ref-status,by-name = "hdmirx";
+            power-state = "managed";
+        };
+
+        /* LVDS TX */
+
+        /* ACPU */
+
+        /* C_BUS */
+        pctrl_cbus: pctrl_cbus {
+            #powerctrl-cells = <0>;
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98037008 0x4>,
+                         <0x98037008 0x4>;
+            shift      = <20 0>;
+            width      = < 1 1>;
+            is-analog;
+            /* reference sources */
+            clocks = <&iso_clk_enable 4>;
+            resets = <&iso_rst 5>;
+
+            // NOTE: power-off this by clear clk_en & rstn
+            power-state = "default";
+        };
+
+        /* ETN */
+        pctrl_etn_gphy {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007088 0x4>;
+            shift      = <10>;
+            width      = <1>;
+            is-analog;
+            /* reference sources */
+            clocks = <&clk_enable_1 9>;
+            resets = <&rst1 16>;
+
+            /* pctrl_etn_gphy is requred by both
+               ETN and NAT. */
+            ref-status,by-compatible = 
+                "Realtek,r8168", 
+                "Realtek,rtd1295-hwnat";
+            power-state = "managed";
+        };        
+
+        /* SCPU: scpu_wrapper */
+        pctrl_l4_icg_scpu_wrapper {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9801d000 0x4>,
+                         <0x9801d100 0x4>;
+            shift      = <  24 31>;
+            width      = <   8  1>;
+            on-value   = <0x00  0>;
+            off-value  = <0xff  1>;
+            is-l4-icg;
+
+            power-state = "managed";
+        };        
+
+        /* acpu_sys_wrapper */
+    
+        /* AE: ae_sys_wrapper */
+        pctrl_l4_icg_ae {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980020f8 0x4>,
+                         <0x980020f8 0x4>,
+                         <0x980020f8 0x4>;
+            shift      = <4 2 0>;
+            width      = <1 1 1>;
+            on-value   = <0 0 0>;
+            off-value  = <1 1 1>;
+            is-l4-icg;
+            /* reference sources */
+            resets     = <&rst1 28>;
+
+            power-state = "managed";
+        };
+
+        /* SB2 */
+        pctrl_l4_icg_sb2 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9801a308 0x4>,
+                         <0x9801a30c 0x4>,
+                         <0x9801a310 0x4>;
+            shift      = < 0  0  0>;
+            width      = <32 32 32>;
+            on-value   = <0x00000000 0x0000 0x0>;
+            off-value  = <0xffffffff 0xffff 0xf>;
+            is-l4-icg;
+            /* reference sources */
+            resets     = <&rst3 0>;
+
+            power-state = "managed";
+        };
+
+        /* TP */
+        pctrl_l4_icg_tp {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98014664 0x4>;
+            shift      = <16>;
+            width      = <4>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 21>;
+            resets     = <&rst1 27>;
+
+            power-state = "managed";
+        };
+
+        /* MD */
+        pctrl_l4_icg_md {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9800b180 0x4>;
+            shift      = <0>;
+            width      = <4>;
+            on-value   = <0>;
+            off-value  = <0xf>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 20>;
+            resets     = <&rst1 26>;
+
+            power-state = "managed";
+        };
+
+        /* RSA */
+        pctrl_l4_icg_rsa {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9804cf2c 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 22>;
+            resets     = <&rst1 31>;
+
+            power-state = "managed";
+        };
+
+        /* SATA 2.0 2port (MAC) */ 
+        pctrl_l4_icg_sata {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9803ff14 0x4>;
+            shift      = <0>;
+            width      = <2>;
+            on-value   = <0>;
+            off-value  = <3>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 2>;
+            resets     = <&rst1 5>;
+
+            power-state = "managed";
+        };
+   
+        /* CP */
+        pctrl_l4_icg_cp {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980151e0 0x4>;
+            shift      = <20>;
+            width      = <6>;
+            on-value   = <0x00>;
+            off-value  = <0x3f>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 19>;
+            resets     = <&rst1 25>;
+
+            power-state = "managed";
+        };
+
+        /* NAND */
+        pctrl_l4_icg_nand {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98010168 0x4>,
+                         <0x98010314 0x4>,
+                         <0x9801f168 0x4>,
+                         <0x9801f314 0x4>,
+                         <0x9801013c 0x4>,
+                         <0x98010310 0x4>,
+                         <0x9801f13c 0x4>,
+                         <0x9801f310 0x4>;
+            shift      = <0 0 0 0 3 5 3 5>;
+            width      = <2 2 2 2 2 2 2 2>;
+            on-value   = <0 0 0 0 0 0 0 0>;
+            off-value  = <3 3 3 3 3 3 3 3>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 23>;
+            resets     = <&rst1 29>;
+
+            power-state = "off";
+        };
+
+        /*  
+         * USB power_control:
+         *
+         *   P0 mac/phy is used by all USB ports
+         *   P3 mac/phy is used only by P3
+         *
+         *   If power of analog should be keep, power on the related 
+         *   iso power before power off phy/mac.
+         */
+        /* USB: P0 */
+        pctrl_usb_p0_mac {
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0 0x0>, /* iso cell */
+                             <0x98007f7c 0x4>, /* sram_pwr3 */
+                             <0x98007f80 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <8>;
+            
+            power-state    = "on";
+        };
+
+        pctrl_usb_p0_phy: pctrl_usb_p0_phy {
+            #powerctrl-cells = <0>;
+            compatible = "realtek,powerctrl-simple";    
+            reg        = <0x98007fb0 0x4>,
+                         <0x98007fb0 0x4>;
+            shift      = <4 6>;
+            width      = <1 1>;
+
+            power-state    = "on";
+        };
+
+        pctrl_usb_p0_iso {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007fb0 0x4>;
+            shift      = <8>;
+            width      = <1>;
+        };
+
+        pctrl_l4_icg_usb_p0 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98013364 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 4>;
+            resets     = <&rst1 6>;
+            powerctrls = <&pctrl_usb_p0_phy>;
+        };
+
+        /* USB: P1 */
+        pctrl_l4_icg_usb_p1 {
+            compatible = "realtek,powerctrl-simple";
+            reg        =  <0x98013d60 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 4>;
+            resets     = <&rst1 6>;
+            powerctrls = <&pctrl_usb_p0_phy>;
+        };        
+
+        /* USB: P2 */
+        pctrl_l4_icg_usb_p2 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98013868 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks     = <&clk_enable_1 4>;
+            resets     = <&rst1 6>;
+            powerctrls = <&pctrl_usb_p0_phy>;
+
+            status     = "disabled"; /* HW BUG */
+        };
+
+        /* USB: P3 */
+        pctrl_usb_p3_mac_A {
+            compatible          = "realtek,powerctrl-sram";
+            reg                 = <0x0 0x0>,        /* iso cell */
+                                  <0x98007f9c 0x4>, /* sram_pwr3 */
+                                  <0x98007fa0 0x4>; /* sram_pwr4 */
+            sram-pwr4-on-value  = <0x00000f05>;
+            sram-pwr4-off-value = <0x00000f06>;
+            pctrl-name          = "pctrl_usb_p3_mac";
+            power-state         = "on";
+            rev,inclusive       = <0>; /* used only in A00 */
+        };
+
+        pctrl_usb_p3_mac_ECO_B {
+            compatible       = "realtek,powerctrl-sram";
+            reg              = <0x0 0x0>,        /* iso cell */
+                               <0x98007f9c 0x4>, /* sram_pwr3 */
+                               <0x98007fa0 0x4>; /* sram_pwr4 */
+            pctrl-name       = "pctrl_usb_p3_mac";
+            power-state      = "on";
+            rev,exclusive    = <0>; /* never used in A00 */
+        };
+
+        pctrl_usb_p3_phy: pctrl_usb_p3_phy {
+            #powerctrl-cells = <0>;
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007fb0 0x4>;
+            shift      = <5>;
+            width      = <1>;
+
+            power-state = "on";
+        };
+
+        pctrl_usb_p3_iso {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007fb0 0x4>;
+            shift      = <9>;
+            width      = <1>;
+        };
+
+        pctrl_l4_icg_usb_p3 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98013f60 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 4>;
+            resets = <&rst2 2>;
+            powerctrls = <&pctrl_usb_p3_phy>;
+        };
+        
+        /* PCIe 1.1(MAC) */
+        pctrl_l4_icg_pcie1 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9804ec00 0x4>;
+            shift      = <11>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 1>;
+            resets = <&rst2 8>;
+
+            power-state = "managed";
+            status = "disabled"; /* cause pcie device problem */
+
+        };
+
+        /* PCIE 2.0(MAC) */
+        pctrl_l4_icg_pcie2 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9803bc00 0x4>;
+            shift      = <11>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_2 5>;
+            resets = <&rst2 17>;
+
+            power-state = "managed";
+            status = "disabled"; /* cause pcie device problem */
+        };
+
+        /* MISC */     
+        pctrl_l4_icg_mis {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9801b0e0 0x4>;
+            shift      = <2>;
+            width      = <3>;
+            on-value   = <0x0>;
+            off-value  = <0x7>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 0>;
+            resets = <&rst1 0>;
+
+            power-state = "managed";
+        };
+
+        pctrl_l4_icg_gspi {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9801bd48 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 3>;
+            resets = <&rst1 3>;
+
+            power-state = "managed";
+        };
+
+        /* Card Reader: CR */
+        pctrl_cr {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980001ec 0x4>;
+            shift      = <0>;
+            width      = <3>;
+            is-analog;
+            /* reference sources */
+            clocks = <&clk_enable_1 25>;
+            resets = <&rst2 10>;
+
+            power-state = "off";
+        };
+
+        pctrl_l4_icg_cr {
+            compatible = "realtek,powerctrl-simple";
+            reg = <0x98010420 0x4>;
+            shift = <1>;
+            width = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 25>;
+            resets = <&rst2 10>;
+
+            status = "disabled"; /* HW BUG */
+        };
+
+        /* eMMC */
+        pctrl_l4_icg_emmc {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98012420 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_1 24>;
+            resets = <&rst2 11>;
+
+            power-state = "driver-controlled";
+        };
+
+        /* SDIO */
+        pctrl_l4_icg_sdio {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98010a10 0x4>;
+            shift      = <1>;
+            width      = <1>;          
+            is-l4-icg;
+
+            /* reference sources */
+            clocks     = <&clk_enable_1 26>;
+            resets     = <&rst2 12>;
+
+            status     = "disabled"; /* HW BUG */
+        };
+
+        pctrl_sdio {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980001ac 0x4>;
+            shift      = <0>;
+            width      = <3>;
+            is-analog;
+
+            /* reference sources */
+            clocks     = <&clk_enable_1 26>;
+            resets     = <&rst2 12>;
+
+            power-state = "off";
+        };
+
+        /* HW_NAT */
+        pctrl_nat {
+            compatible     = "realtek,powerctrl-sram";
+            reg            = <0x98000400 0x4>, /* iso cell */
+                             <0x9800042c 0x4>, /* sram_pwr3 */
+                             <0x98000430 0x4>; /* sram_pwr4 */
+            iso-cell-shift = <18>;
+            resets         = <&rst1 1>;
+            reset-names    = "rstn_nat";
+            
+            ref-status,by-compatible = "Realtek,rtd1295-hwnat";
+            power-state = "managed";
+        };
+
+        pctrl_l4_icg_nat_wrap {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x981c9118 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            on-value   = <0>;
+            off-value  = <1>;
+            is-l4-icg;
+            /* reference sources */
+            clocks = <&clk_enable_2 0>;
+            resets = <&rst1 1>;
+
+            power-state = "managed";
+        };
+
+        /* HDMI_RX wrap + MHL2 */
+        pctrl_hdmirx {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98034384 0x4>,
+                         <0x98034404 0x4>,
+                         <0x98034404 0x4>,
+                         <0x98034a00 0x4>,
+                         <0x98034a08 0x4>;
+            shift      = <0 12 0 1 0>;
+            width      = <1  1 1 1 1>;
+            //is-analog;
+            /* reference sources */
+            clocks     = <&clk_enable_2 24>;
+            resets     = <&rst4 12>;
+
+            // NOTE: power-off this by clear clk_en & rstn
+            power-state = "default";
+        };
+
+
+        /* dc_phy0 */        
+        pctrl_dcphy_0_pll {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9800e00c 0x4>,
+                         <0x9800e004 0x4>;
+            shift      = <29 16>;
+            width      = < 1 12>;
+            on-value   = < 0 0xfff>;
+            off-value  = < 1 0>;
+            is-analog;
+            /* reference sources */
+            clocks     = <&clk_enable_2 30>;
+            resets     = <&rst1 24>;
+            
+            status     = "disabled"; /* set in hw setting */
+        };
+
+        /* dc_phy1 */
+        pctrl_dcphy_1_pll {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007f08 0x4>,
+                         <0x9800f00c 0x4>,
+                         <0x9800f004 0x4>;
+            shift      = <1 29 16>;
+            width      = <1  1 12>;
+            is-analog;
+            /* reference sources */
+            clocks     = <&clk_enable_2 31>;
+            resets     = <&rst1 24>;
+
+            status     = "disabled"; /* set in hw setting */
+        };
+
+        /* ADC */
+        pctrl_adc {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98006610 0x4>, 
+                         <0x98006610 0x4>,
+                         <0x980066fc 0x4>;
+            shift      = <26 28 16>;
+            width      = < 1  1  2>;        
+        };
+
+        /* CEC RX */
+        pctrl_cecrx_aphy {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980372d0 0x4>,
+                         <0x98037204 0x4>;
+            shift      = <5 16>;
+            width      = <1  2>;
+            powerctrls = <&pctrl_cbus>;
+        };
+
+        /* CEC TX */
+        pctrl_cectx_aphy {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x980378d0 0x4>,
+                         <0x98037804 0x4>;
+            shift      = <5 16>;
+            width      = <1  2>;
+            powerctrls = <&pctrl_cbus>;
+        };
+
+        /* PLL_VE1 */
+        pctrl_pll_ve1 {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98000118 0x4>;
+            shift      = <0>;
+            width      = <3>;
+            on-value   = <3>;
+            off-value  = <4>;
+
+            power-state = "off";
+        };
+
+        /* RTC */
+        pctrl_rtc {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x9801b62c 0x4>;
+            shift      = <0>;
+            width      = <8>;
+            on-value   = <0x5a>;
+            off-value  = <0>;
+            is-analog;
+
+            ref-status,by-name = "rtc";
+            power-state = "managed";
+        };
+
+        /* JD_TOP */
+        pctrl_jd_top {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98012820 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            is-analog;
+
+            ref-status,by-name = "rtd1295-lsadc";
+            power-state = "managed";
+        };
+
+        /* LSADC_TOP */
+        pctrl_lsadc_top {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98012920 0x4>;
+            shift      = <0>;
+            width      = <1>;
+            is-analog;
+
+            ref-status,by-name = "rtd1295-lsadc";
+            power-state = "managed";
+        };
+        
+        /* ISO */
+        pctrl_l4_icg_iso_mis {
+            compatible = "realtek,powerctrl-simple";
+            reg        = <0x98007068 0x4>;
+            shift      = <0>;
+            width      = <5>;
+            on-value   = <0x00>;
+            off-value  = <0x17>;
+        };
+    };
+};

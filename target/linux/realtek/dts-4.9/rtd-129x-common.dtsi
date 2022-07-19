@@ -1,0 +1,361 @@
+#include <dt-bindings/clock/rtk,clock-rtd129x.h>
+#include <dt-bindings/reset/rtk,reset.h>
+#include <dt-bindings/reset/rtk,reset-rtd129x.h>
+#include <dt-bindings/power/rtk,power-rtd129x.h>
+#include <dt-bindings/thermal/thermal.h>
+
+/{
+	efuse@98017000 {
+		compatible = "realtek,efuse";
+		reg = <0x98017000 0x400>;
+		read-only;
+		status = "okay";
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		nvmem-cells =
+			<&efuse_uuid>,
+			<&efuse_etn_phy>,
+			<&efuse_etn_phy_rc>,
+			<&efuse_etn_phy_r>,
+			<&efuse_etn_phy_amp>,
+			<&efuse_etn_phy_adc>,
+			<&efuse_pwr_id>,
+			<&efuse_package_id>,
+			<&efuse_usb_cc_en>,
+			<&efuse_usb_cc1_4_7_k_cal>,
+			<&efuse_usb_cc1_12_k_cal>,
+			<&efuse_usb_cc2_4_7_k_cal>,
+			<&efuse_usb_cc2_12_k_cal>,
+			<&efuse_top_iddq>,
+			<&efuse_cpu_iddq>,
+			<&efuse_usb_dp_dm>,
+			<&efuse_cc_cal>,
+			<&efuse_chip_id>,
+			<&efuse_prog_rvd>;
+		nvmem-cell-names =
+			"uuid",
+			"etn_phy",
+			"etn_phy_rc",
+			"etn_phy_r",
+			"etn_phy_amp",
+			"etn_phy_adc",
+			"pwr_id",
+			"package_id",
+			"usb_cc_en",
+			"usb_cc1_4_7_k_cal",
+			"usb_cc1_12_k_cal",
+			"usb_cc2_4_7_k_cal",
+			"usb_cc2_12_k_cal",
+			"top_iddq",
+			"cpu_iddq",
+			"usb_dp_dm",
+			"cc_cal",
+			"chip_id",
+			"prog_rvd";
+		efuse_uuid: uuid@1A4 {
+			reg = <0x1A4 0xC>;
+			bits = <0 96>;
+		};
+		efuse_etn_phy: etn_phy@1B9 {
+			reg = <0x1B9 0x9>;
+			bits = <2 64>;
+		};
+		efuse_etn_phy_rc: etn_phy_rc@1BF {
+			reg = <0x1BF 0x2>;
+			bits = <5 4>;
+		};
+		efuse_etn_phy_r: etn_phy_r@1BF {
+			reg = <0x1BF 0x1>;
+			bits = <1 4>;
+		};
+		efuse_etn_phy_amp: etn_phy_amp@1B9 {
+			reg = <0x1B9 0x3>;
+			bits = <2 16>;
+		};
+		efuse_etn_phy_adc: etn_phy_adc@1BB {
+			reg = <0x1BB 0x3>;
+			bits = <2 16>;
+		};
+		efuse_pwr_id: pwr_id@1CC {
+			reg = <0x1CC 0x1>;
+			bits = <6 2>;
+		};
+		efuse_package_id: package_id@1D8 {
+			reg = <0x1D8 0x1>;
+			bits = <0 2>;
+		};
+		efuse_usb_cc_en: usb_cc_en@1D8 {
+			reg = <0x1D8 0x1>;
+			bits = <2 1>;
+		};
+		efuse_usb_cc1_4_7_k_cal: usb_cc1_4_7_k_cal@1D8 {
+			reg = <0x1D8 0x1>;
+			bits = <3 4>;
+		};
+		efuse_usb_cc1_12_k_cal: usb_cc1_12_k_cal@1D8 {
+			reg = <0x1D8 0x2>;
+			bits = <7 4>;
+		};
+		efuse_usb_cc2_4_7_k_cal: usb_cc2_4_7_k_cal@1D9 {
+			reg = <0x1D9 0x1>;
+			bits = <3 4>;
+		};
+		efuse_usb_cc2_12_k_cal: usb_cc2_12_k_cal@1D9 {
+			reg = <0x1D9 0x2>;
+			bits = <7 4>;
+		};
+		efuse_top_iddq: top_iddq@1DA {
+			reg = <0x1DA 0x2>;
+			bits = <3 6>;
+		};
+		efuse_cpu_iddq: cpu_iddq@1DB {
+			reg = <0x1DB 0x1>;
+			bits = <1 6>;
+		};
+		efuse_usb_dp_dm: usb_dp_dm@1DC {
+			reg = <0x1DC 0x1>;
+			bits = <0 4>;
+		};
+		efuse_cc_cal: cc_cal@1DC {
+			reg = <0x1DC 0x4>;
+			bits = <4 24>;
+		};
+		efuse_chip_id: chip_id@200 {
+			reg = <0x200 0x10>;
+			bits = <0 128>;
+		};
+		efuse_prog_rvd: prog_rvd@3FC {
+			reg = <0x3FC 0x4>;
+			bits = <0 32>;
+		};
+	};
+
+	sb2_lock0: sb2-lock@9801A000 {
+		compatible = "realtek,sb2-sem";
+		reg = <0x9801A000 0x4>;
+	};
+
+	/* fixed clock */
+	osc27M: osc27M {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <27000000>;
+		clock-output-names = "osc27M";
+	};
+
+	/* mmio */
+	crt_mmio: mmio@98000000 {
+		compatible = "realtek,mmio";
+		reg = <0x98000000 0x600>;
+		realtek,sb2-lock = <&sb2_lock0>;
+	};
+
+	iso_mmio: mmio@98007088 {
+		compatible = "realtek,mmio";
+		reg = <0x98007088 0x8>;
+		realtek,sb2-lock = <&sb2_lock0>;
+	};
+
+	/* clock-controller */
+	clk_en_1: clk-en@9800000c {
+		compatible = "realtek,clock-gate-controller";
+		reg = <0x9800000c 0x4>;
+		#clock-cells = <1>;
+		realtek,mmio = <&crt_mmio 0xc>;
+		clock-output-names =
+			"clk_en_misc",
+			"clk_en_pcie0",
+			"clk_en_sata_0",
+			"clk_en_gspi",
+			"clk_en_usb",
+			"",
+			"clk_en_iso_misc",
+			"clk_en_sata_alive_0",
+			"clk_en_hdmi",
+			"clk_en_etn",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"clk_en_lvds",
+			"clk_en_se",
+			"",
+			"clk_en_cp",
+			"clk_en_md",
+			"clk_en_tp",
+			"",
+			"clk_en_nf",
+			"clk_en_emmc",
+			"clk_en_cr",
+			"clk_en_sdio_ip",
+			"clk_en_mipi",
+			"clk_en_emmc_ip",
+			"",
+			"clk_en_sdio",
+			"clk_en_sd_ip";
+		ignore-unused-clocks =
+			"clk_en_misc",
+			"clk_en_iso_misc",
+			"clk_en_cp",
+			"clk_en_md",
+			"clk_en_tp",
+			"clk_en_hdmi";
+		ignore-pm-clocks =
+			"clk_en_hdmi";
+	};
+
+	clk_en_2: clk-en@98000010 {
+		compatible = "realtek,clock-gate-controller";
+		reg = <0x98000010 0x4>;
+		#clock-cells = <1>;
+		realtek,mmio = <&crt_mmio 0x10>;
+		clock-output-names =
+			"clk_en_nat",
+			"clk_en_misc_i2c_5",
+			"",
+			"clk_en_jpeg",
+			"",
+			"clk_en_pcie1",
+			"clk_en_misc_sc",
+			"clk_en_cbus_tx",
+			"",
+			"",
+			"clk_en_misc_rtc",
+			"",
+			"",
+			"clk_en_misc_i2c_4",
+			"clk_en_misc_i2c_3",
+			"clk_en_misc_i2c_2",
+			"clk_en_misc_i2c_1",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"",
+			"clk_en_hdmirx",
+			"clk_en_sata_1",
+			"clk_en_sata_alive_1",
+			"clk_en_ur2",
+			"clk_en_ur1",
+			"clk_en_fan",
+			"clk_en_dcphy_0",
+			"clk_en_dcphy_1";
+		ignore-unused-clocks =
+			"clk_en_dcphy_0",
+			"clk_en_dcphy_1";
+	};
+
+	clk_en_3: clk-en@98000450 {
+		compatible = "realtek,clock-gate-controller";
+		status = "disabled"; /* bpi, disable for lsadc */
+		reg = <0x98000450 0x4>;
+		#clock-cells = <1>;
+		clock-output-names =
+			"",
+			"",
+			"clk_en_lsadc";
+	};
+
+	iclk_en: clk-en@9800708c {
+		compatible = "realtek,clock-gate-controller";
+		reg = <0x9800708c 0x4>;
+		#clock-cells = <1>;
+		realtek,mmio = <&iso_mmio 0x4>;
+		clock-output-names =
+			"",
+			"",
+			"clk_en_misc_cec0",
+			"clk_en_cbusrx_sys",
+			"clk_en_cbustx_sys",
+			"clk_en_cbus_sys",
+			"clk_en_cbus_osc",
+			"clk_en_misc_ir",
+			"clk_en_misc_ur0",
+			"clk_en_i2c0",
+			"clk_en_i2c1",
+			"clk_en_etn_250m",
+			"clk_en_etn_sys";
+	};
+
+	cc: clock-controller@98000000 {
+		compatible   = "realtek,clock-controller";
+		reg = <0x98000000 0x600>;
+		#clock-cells = <1>;
+		realtek,mmio = <&crt_mmio 0x0>;
+	};
+
+	/* reset-controller */
+	rst1: soft-reset@98000000 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000000 0x4>;
+		realtek,mmio = <&crt_mmio 0x0>;
+		#reset-cells = <1>;
+		pm-ignore-bits = <0x00001000>;
+	};
+
+	srst1: shadow-soft-reset@98000000 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000000 0x4>;
+		realtek,mmio = <&crt_mmio 0x0>;
+		#reset-cells = <1>;
+		pm-ignore-bits = <0x00001000>;
+	};
+
+	rst2: soft-reset@98000004 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000004 0x4>;
+		realtek,mmio = <&crt_mmio 0x4>;
+		#reset-cells = <1>;
+	};
+
+	rst3: soft-reset@98000008 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000008 0x4>;
+		realtek,mmio = <&crt_mmio 0x8>;
+		#reset-cells = <1>;
+	};
+
+	rst4: soft-reset@98000050 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000050 0x4>;
+		realtek,mmio = <&crt_mmio 0x50>;
+		#reset-cells = <1>;
+	};
+
+	irst: soft-reset@98007088 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98007088 0x4>;
+		realtek,mmio = <&iso_mmio 0x0>;
+		#reset-cells = <1>;
+	};
+
+	asr1: async-soft-reset@98000000 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000000 0x4>;
+		realtek,mmio = <&crt_mmio 0x0>;
+		#reset-cells = <1>;
+		async-group = <0>;
+	};
+
+	asr2: async-soft-reset@98000004 {
+		compatible = "realtek,reset-controller";
+		reg = <0x98000004 0x4>;
+		realtek,mmio = <&crt_mmio 0x4>;
+		#reset-cells = <1>;
+		async-group = <0>;
+	};
+
+	pd0: power-controller@98000000 {
+		reg = <0x98000000 0x1000>;
+		compatible = "realtek,rtd129x-crt-power", "simple-bus";
+		resets = <&srst1 RSTN_VE1>, <&srst1 RSTN_VE2>, <&srst1 RSTN_VE3>,
+			<&srst1 RSTN_NAT>;
+		reset-names = "ve1", "ve2", "ve3", "nat";
+		#power-domain-cells = <1>;
+	};
+};

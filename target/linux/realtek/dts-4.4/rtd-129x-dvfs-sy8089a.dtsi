@@ -1,0 +1,53 @@
+&pwm {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm2_0_pins>;
+	pwm_2 {
+		enable = <1>;
+		clkout_div = <0x0>;
+		clksrc_div = <0x0>;
+		duty_rate = <0x0>;
+	};
+};
+
+/{
+	/* iso_gpio 23 is currently used by sdio */
+	sdio@98010A00 {
+		status = "disabled";
+	};
+
+	pwm_regulator {
+		compatible = "Silergy,sy8089a";
+		pwms = <&pwm 2 75>;
+		status = "okay";
+
+		pwm_reg: pwm_reg {
+			regulator-compatible = "pwm-reg-0";
+			regulator-name = "pwm-reg-0";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1100000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+		};
+	};
+};
+
+&dvfs {
+	voltage-table =
+		< 0   800000  800000>,
+		< 1   816000  816000>,
+		< 2   833000  833000>,
+		< 3   850000  850000>,
+		< 4   888000  888000>,
+		< 5   907000  907000>,
+		< 6   925000  925000>,
+		< 7   962000  962000>,
+		< 8   980000  980000>,
+		< 9   980000  980000>,
+		<10  1030000 1030000>,
+		<11  1050000 1050000>,
+		<12  1070000 1070000>,
+		<13  1100000 1100000>;
+	cpu-supply = <&pwm_reg>;
+};

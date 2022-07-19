@@ -1,0 +1,32 @@
+/include/ "rtd-129x-usb.dtsi"
+
+/ {
+	rtk_usb_power_manager {
+		compatible = "Realtek,rtd129x-usb-power-manager";
+
+		status = "okay";
+	};
+
+	ehci@98013000 {
+		compatible = "Realtek,rtd129x-ehci";
+
+		status = "okay";
+	};
+
+	ohci@98013400 {
+		compatible = "Realtek,rtd129x-ohci";
+
+		status = "okay";
+	};
+
+	dwc3_drd: rtk_dwc3_drd@98013200 {
+		compatible = "Realtek,rtd129x-dwc3-drd";
+		status = "okay";
+	};
+
+	dwc3_u2host: rtk_dwc3_u2host@98013E00 {
+		compatible = "Realtek,rtd129x-dwc3-u2h";
+
+		status = "okay";
+	};
+};

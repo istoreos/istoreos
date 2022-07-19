@@ -1,0 +1,235 @@
+/dts-v1/;
+#define CONFIG_ARCH_RTD129X
+#define CONFIG_FB_RTK
+#include "../../../../../include/soc/realtek/memory.h"
+
+/memreserve/ SYS_BOOTCODE_MEMBASE       SYS_BOOTCODE_MEMSIZE        ; /* 0x00000000 ~ 0x00030000 */
+/memreserve/ RPC_COMM_PHYS              RPC_COMM_SIZE               ; /* 0x0001f000 ~ 0x0001ffff */
+
+/memreserve/ ION_MEDIA_HEAP_PHYS1       ION_MEDIA_HEAP_SIZE1        ; /* 0x02900000 ~ 0x08cfffff */
+/memreserve/ ACPU_FIREWARE_PHYS         ACPU_FIREWARE_SIZE          ; /* 0x01b00000 ~ 0x01efffff */
+/memreserve/ ION_AUDIO_HEAP_PHYS        ION_AUDIO_HEAP_SIZE         ; /* 0x02600000 ~ 0x028fffff */
+/memreserve/ RPC_RINGBUF_PHYS           RPC_RINGBUF_SIZE            ; /* 0x01ffe000 ~ 0x02001fff */
+/memreserve/ ION_MEDIA_HEAP_PHYS2       ION_MEDIA_HEAP_HDMI_SIZE2        ; /* 0x10100000 ~ 0x132fffff */
+/memreserve/ ACPU_IDMEM_PHYS            ACPU_IDMEM_SIZE             ; /* 0x10000000 ~ 0x10013fff */
+
+
+
+#include "rtd-1296-MM.dtsi"
+#include "rtd-129x-dvfs.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model= "Realtek_RTD1296";
+	compatible = "Realtek,rtd-1296";
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=7";
+        compatible = "Realtek,rtk1295-cma_info";
+        /* NOTE ---------------------------------------------------------------------------------------------*/
+        /* <flag size base>                                                                                  */
+        /* flag: reserved                                                                                    */
+        /* size: unit is byte                                                                                */
+        /* base: unit is byte                                                                                */
+        /* --------------------------------------------------------------------------------------------------*/
+        /* Array size not over 8;                                                                            */
+        /* You may change the max array size in KConfig, max CMA array size is CONFIG_CMA_AREAS+1            */
+        /* If cma-region-enable is enabled<1>, kernel driver will use cma-region-info to initial CMA memory. */
+        /* If cma-region-enable is disabled<0>, kernel driver will use cma= to initial CMA memory.           */
+        /* if both setting is loaded, cma-region-info had higher priority.                                   */
+        /* --------------------------------------------------------------------------------------------------*/
+        cma-region-enable = <1>;
+        cma-region-info = <0x00000000 0x01000000 0x11000000>;
+        /*cma-region-info = <0x00000000 0x01000000 0x12c00000>, <0x00000000 0x12c00000 0x20000000>;*/
+        default-firewall = "nas";
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0 0x80000000>;	/* 2048 MB */
+	};
+	mem_remap {
+        compatible = "Realtek,rtk1295-mem_remap";
+        #address-cells = <1>;
+        #size-cells = <1>;
+        ranges;
+        rbus {
+            reg = <RBUS_BASE_PHYS RBUS_BASE_SIZE>;
+        };
+        common {
+            reg = <RPC_COMM_PHYS RPC_COMM_SIZE>;
+        };
+        ringbuf {
+            reg = <RPC_RINGBUF_PHYS RPC_RINGBUF_SIZE>;
+        };
+    };
+
+    rtk,ion {
+		compatible = "Realtek,rtk-ion";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		rtk,ion-heap@0 {    /* SYSTEM_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <0>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@1 {    /* System contig */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <1>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+		rtk,ion-heap@4 {    /* DMA_HEAP */
+		    compatible = "Realtek,rtk-ion-reserve";
+		    reg = <4>;
+		    rtk,memory-reservation-size = <0x0>;
+		};
+        rtk,ion-heap@8 {    /* Audio */
+            compatible = "Realtek,rtk-ion-reserve";
+            reg = <8>;
+            rtk,memory-reserve = <
+                ION_AUDIO_HEAP_PHYS ION_AUDIO_HEAP_SIZE ION_AUDIO_HEAP_FLAG
+                >;
+        };
+        rtk,ion-heap@7 {    /* TYPE_MEDIA */
+            compatible = "Realtek,rtk-ion-reserve";
+            reg = <7>;
+            rtk,memory-reserve = <
+                ION_MEDIA_HEAP_PHYS1 ION_MEDIA_HEAP_SIZE1 ION_MEDIA_HEAP_FLAG1
+                ION_MEDIA_HEAP_PHYS2 ION_MEDIA_HEAP_HDMI_SIZE2 ION_MEDIA_HEAP_FLAG2
+                >;
+        };
+    };
+
+    fb {
+        compatible = "Realtek,rtk-fb";
+        buffer-cnt = <2>;
+        resolution = <1920 1080>;
+        fps = <60>;
+        /*Pixel Format*/
+      	/*RGB565            = 4, */   /* 16-bit RGB    (565)  with constant alpha */
+      	/*ARGB1555          = 5, */   /* 16-bit ARGB   (1555) */
+      	/*ARGB8888          = 7, */   /* 32-bit ARGB   (8888) */
+      	/*RGBA5551          = 13,*/   /* 16-bit RGBA   (5551) */
+      	/*RGBA8888          = 15,*/   /* 32-bit RGBA   (8888) */
+		pixel_format = <7>;
+		status = "okay";
+    };
+    
+    vfb {
+        compatible = "Realtek,rtk-vfb";
+        buffer-cnt = <3>;
+        resolution = <3840 2160>;
+        fps = <60>;
+    };
+
+	hdmitx@9800D000 {
+		compatible = "Realtek,rtk119x-hdmitx";
+		reg = <0x9800d000 0x560>,<0x98007200 0x4>; /* HDMITX, I2C1_REQ_CTRL */
+		gpio-hpd-detect = <&rtk_iso_gpio 6 0 0>; /*HPD, input, default N/A */
+		status = "okay";
+	scdc_rr {
+			enable-scdc-rr = <0x0>;
+			interrupt-parent = <0x12>;
+			#interrupt-cells = <0x1>;
+			interrupt-controller;
+			interrupts = <0x1 0x1f>;
+		};		
+	};
+
+	hdcptx@1800D000 {
+		compatible = "Realtek,rtk129x-hdcptx";
+		reg = <0x9800d000 0x400>;
+		interrupts = <0 31 4>; /*gen Ri*/
+		status = "okay";
+	};
+
+	cec0@98037800 {
+		compatible = "Realtek,rtd1295-cec0";
+		reg = <0x98037800 0xe0 0x98007000 0x100 0x98037500 0x100>;
+		interrupts = <0x0 0x1a 0x4>;
+		module-enable = <0x1>;
+		clocks = <0x29 0x5 0x14 0x6 0x14 0x5 0x14 0x4 0x14 0x3>;
+		clock-names = "sys", "cbus_osc", "cbus_sys", "cbustx_sys", "cbusrx_sys";
+		resets = <0x13 0xd 0x13 0x5 0x13 0x6>;
+		reset-names = "cbus", "cbustx", "cbusrx";
+		status = "disabled";
+	};
+
+
+			  timer {
+				  clock-frequency = <27000000>;
+			  };
+
+			  timer0@9801b000 {
+				  clock-frequency = <27000000>;
+			  };
+
+uart0: serial0@98007800 {
+		   clock-frequency = <27000000>;
+	   };
+
+
+rfkill: rfkilligpio@0{
+			gpios = <&rtk_iso_gpio 24 1 0>;                         /*bt power , output, default low */
+			status = "okay";
+		};
+
+		power-management{
+			compatible = "Realtek,power-management";
+
+			/* GPIO Wakeup */
+			wakeup-gpio-enable = /* (0) disable (1) enable */
+				<0>, /* Wakeup from BT : disable */
+				<1>; /* Wakeup from WiFi : disable */
+			wakeup-gpio-list = /* <&rtk_iso_gpio {num} {force input (0) } {default N/A (0)] }> */
+				<&rtk_iso_gpio 14 0 0>, /* BT wakeup host pin */
+				<&rtk_iso_gpio 33 0 0>; /* WiFi wakeup host pin */
+			wakeup-gpio-activity = /* (0) active low (1) active high*/
+				<0>, /* BT : high activity */
+				<0>; /* Wifi : high activity */
+		};
+
+      nic: gmac@98016000 {
+              status = "disabled";
+       };
+
+      hwnat: gmac@0x98060000 {
+              offload_enable = <1>; /* 0:disable, 1:enable HW NAT offload */
+              mac0_enable = <1>; /* 0:disable, 1:enable */
+              status = "okay";
+      };
+
+	thermal@0x9801D100 {
+		/* trip points -----------------------  */
+		/*         | temp | hyst |   cdev    |  */
+		/*         |      |      | id | data |  */
+		trip-points = <
+		/* 0 */    85      3    2      0
+		/* 1 */   115      3    0      0
+		/* 2 */   125      3    0      1
+		/* 3 */   120      7    1      2
+		/* 4 */   130      0    3      0
+		>;
+		/* freq range (KHz) to each trip point */
+		cpufreq,freqs = <
+		1300000 800000 /* bind to trip-point 1 */
+		700000 300000 /* bind to trip-point 2 */
+		>;
+		/* cpu core list used by the cooling device */
+		cpu-core,cpu-list = <&A53_3>, <&A53_2>;
+	};
+
+	gpio_fan {
+		compatible = "gpio-fan";
+		gpios = <&rtk_misc_gpio 15 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		gpio-fan,speed-map = <0 0>,
+				<5000 1>;
+		#cooling-cells = <2>; /* min followed by max */
+	};
+};

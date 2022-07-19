@@ -1,0 +1,59 @@
+From de1f8d28a389ac028ca245c07cfb54e779660b8e Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 3 Jun 2021 14:39:52 +0800
+Subject: [PATCH] speed up TFTP
+
+---
+ include/configs/rtd1295_common.h | 11 ++++++++++-
+ net/tftp.c                       | 13 +++++++++++++
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/rtd1295_common.h b/include/configs/rtd1295_common.h
+index 35f00df847..2f56f80493 100644
+--- a/include/configs/rtd1295_common.h
++++ b/include/configs/rtd1295_common.h
+@@ -236,7 +236,16 @@
+ 	#define CONFIG_CMD_PING
+ 	/* #define CONFIG_CMD_TFTPPUT */
+ 	#define CONFIG_RTL8168
+-	#define CONFIG_TFTP_BLOCKSIZE		400
++	/* 
++	 * TFTP speed up, by enable ip fragment, and set default blksize to MTU.
++	 * Use `env set tftpblocksize 16384` to override blksize, max CONFIG_NET_MAXDEFRAG.
++	 * MUST: CONFIG_TFTP_BLOCKSIZE <= CONFIG_NET_MAXDEFRAG
++	 */
++	#define CONFIG_IP_DEFRAG
++	/* ip fragment, CONFIG_NET_MAXDEFRAG , default 16384, max 65536 */
++	/* #define CONFIG_NET_MAXDEFRAG		16384 */
++	#define CONFIG_TFTP_BLOCKSIZE		1468
++	#define CONFIG_UDP_CHECKSUM
+ 
+ 	/* Network setting */
+ 	#define CONFIG_ETH_PRIME			r8168#0
+diff --git a/net/tftp.c b/net/tftp.c
+index 3e99e73091..03a8c6342f 100644
+--- a/net/tftp.c
++++ b/net/tftp.c
+@@ -718,6 +718,19 @@ void tftp_start(enum proto_t protocol)
+ 	debug("TFTP blocksize = %i, timeout = %ld ms\n",
+ 	      tftp_block_size_option, timeout_ms);
+ 
++#ifdef CONFIG_IP_DEFRAG
++#ifndef CONFIG_NET_MAXDEFRAG
++#define CONFIG_NET_MAXDEFRAG 16384
++#endif
++	if (tftp_block_size_option > CONFIG_NET_MAXDEFRAG) {
++		printf("*** Warning: TFTP blksize > CONFIG_NET_MAXDEFRAG (%d), if transmission fail, run `env set tftpblocksize %d` to fix it\n", CONFIG_NET_MAXDEFRAG, CONFIG_NET_MAXDEFRAG);
++	}
++#else
++	if (tftp_block_size_option > 1468) {
++		printf("*** Warning: TFTP blksize > 1468 (MTU - header), if transmission fail, run `env set tftpblocksize 1468` to fix it\n");
++	}
++#endif
++
+ 	tftp_remote_ip = net_server_ip;
+ 	if (net_boot_file_name[0] == '\0') {
+ 		sprintf(default_filename, "%02X%02X%02X%02X.img",
+-- 
+2.23.0
+

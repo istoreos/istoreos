@@ -1,0 +1,40 @@
+#!/bin/sh
+
+CONFIRM=n
+REBOOT=n
+
+confirm()
+{
+  [ "$1" = "y" ] && return 0
+  echo "This will erase all settings and remove any installed packages. Are you sure? [N/y]"
+  read CONFIRM
+  [ "$CONFIRM" = "y" -o "$CONFIRM" = "Y" ] && return 0
+  return 1
+}
+
+do_reset()
+{
+  mount_root || ( echo "/overlay mount failed!" ; exit 1 )
+  if [ -f /.recovery_mode ]; then
+    rm -rf /overlay/upper
+    mkdir /overlay/upper
+    sync /overlay
+  else
+    touch /overlay/.reset
+    sync /overlay/.reset
+  fi
+  [ "$REBOOT" = "y" ] && reboot
+  exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    -y) CONFIRM=y ;;
+    -r) REBOOT=y ;;
+  esac
+  shift
+done
+
+confirm $CONFIRM && do_reset
+exit 0

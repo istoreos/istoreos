@@ -1,0 +1,35 @@
+/{
+	 rtk-gpio-regulator {
+		compatible = "rtkgpio-regulator";
+		gpios = <&rtk_iso_gpio 16 1 0>, <&rtk_iso_gpio 17 1 1>;
+		status = "okay";
+
+		vdd_reg: rtkgpio_regulator {
+			regulator-min-microvolt = <850000>;
+			regulator-max-microvolt = <1050000>;
+		};
+	};
+};
+
+&dvfs {
+	transition_latency = <500000>;
+	cpu-supply = <&vdd_reg>;
+        frequency-table =
+		<0   0   300000>,
+		<0   0   400000>,
+		<0   0   500000>,
+		<0   0   600000>,
+		<0   0   700000>,
+		<0   0   800000>,
+		<0   1   900000>,
+		<0   1  1000000>,
+		<0   1  1100000>,
+		<0   1  1200000>,
+		<0   2  1300000>,
+		<0   2  1400000>,
+		<0   2  1503000>;
+        voltage-table =
+		<0    850000  850000>,
+		<1    950000  950000>,
+		<2   1050000 1050000>;
+};

@@ -1,0 +1,68 @@
+From b343c1a3c89a5136fbd3ff8519f171843e6e8104 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Fri, 25 Jun 2021 17:28:55 +0800
+Subject: [PATCH] rescue mode
+
+---
+ common/cmd_boot.c                | 5 +++++
+ common/main.c                    | 7 ++++++-
+ include/configs/rtd1295_common.h | 2 +-
+ 3 files changed, 12 insertions(+), 2 deletions(-)
+
+diff --git a/common/cmd_boot.c b/common/cmd_boot.c
+index dff2747014..0e08f6619e 100644
+--- a/common/cmd_boot.c
++++ b/common/cmd_boot.c
+@@ -3827,6 +3827,11 @@ int rtk_plat_prepare_fw_image_from_eMMC(void)
+ 		printf("---------------LOAD  GOLD  FW  TABLE ---------------\n");
+ 		eMMC_fw_desc_table_start = eMMC_bootcode_area_size + CONFIG_FACTORY_SIZE + CONFIG_FW_TABLE_SIZE;
+ 	}
++	else if (boot_mode==BOOT_RESCUE_MODE)
++	{
++		printf("---------------LOAD  RESCUE  FW  TABLE ---------------\n");
++		eMMC_fw_desc_table_start = eMMC_bootcode_area_size + CONFIG_FACTORY_SIZE + (CONFIG_FW_TABLE_SIZE << 1);
++	}
+ 	else
+ 	{
+ 		printf("---------------LOAD  NORMAL FW  TABLE ---------------\n");
+diff --git a/common/main.c b/common/main.c
+index d98afd8980..11c2988c9f 100644
+--- a/common/main.c
++++ b/common/main.c
+@@ -77,6 +77,11 @@ DECLARE_GLOBAL_DATA_PTR;
+ #include <asm/arch/system.h>
+ #include <linux/input.h>
+ #endif
++
++#ifdef CONFIG_INSTALL_GPIO_NUM
++#include <asm-generic/gpio.h>
++#endif
++
+ /*
+  * Board-specific Platform code can reimplement show_boot_progress () if needed
+  */
+@@ -393,7 +398,7 @@ start = get_timer(0);
+ 				break;
+ 		}
+ #ifdef CONFIG_INSTALL_GPIO_NUM
+-		if(!getGPIO(CONFIG_INSTALL_GPIO_NUM)){		
++		if(!gpio_get_value(CONFIG_INSTALL_GPIO_NUM)){		
+ 			printf("\nPress Install Button\n");
+ 			setenv("rescue_cmd", "go r");
+ 			boot_mode = BOOT_RESCUE_MODE;
+diff --git a/include/configs/rtd1295_common.h b/include/configs/rtd1295_common.h
+index 727874b8de..1582f61735 100644
+--- a/include/configs/rtd1295_common.h
++++ b/include/configs/rtd1295_common.h
+@@ -325,7 +325,7 @@
+ /* GPIO */
+ #define CONFIG_CMD_GPIO
+ #define CONFIG_REALTEK_GPIO
+-#define CONFIG_INSTALL_GPIO_NUM    		8
++#define CONFIG_INSTALL_GPIO_NUM    		106
+ #define CONFIG_HDMITx_HPD_IGPIO_NUM		6
+ 
+ /* I2C */
+-- 
+2.23.0
+

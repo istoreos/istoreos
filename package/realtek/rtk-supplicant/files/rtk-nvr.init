@@ -1,0 +1,15 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2017 OpenWrt.org
+
+START=99
+STOP=00
+
+start() {
+	export GST_OMX_CONFIG_DIR=/usr/local/etc/xdg
+	start-stop-daemon -m -p /var/run/NVRDaemon.pid -b -S -x /usr/bin/NVRDaemon
+}
+
+stop() {
+	start-stop-daemon -p /var/run/NVRDaemon.pid -K -s SIGINT
+	sleep 5
+}

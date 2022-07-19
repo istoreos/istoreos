@@ -1,0 +1,53 @@
+/include/ "rtd-129x-usb.dtsi"
+
+/ {
+	rtk_usb_power_manager {
+		compatible = "Realtek,rtd129x-usb-power-manager";
+		realtek,u2host-power-gpio = <&rtk_iso_gpio 31 1 0>; /*ehci and u2host power, output, default low */
+		realtek,u3host-power-gpio = <&rtk_iso_gpio 32 1 0>; /*1296 u3host power, output, default low */
+
+		status = "okay";
+	};
+
+	ehci@98013000 {
+		compatible = "Realtek,rtd129x-ehci";
+
+		status = "okay";
+	};
+
+	ohci@98013400 {
+		compatible = "Realtek,rtd129x-ohci";
+
+		status = "okay";
+	};
+
+	dwc3_drd: rtk_dwc3_drd@98013200 {
+		compatible = "Realtek,rtd129x-dwc3-drd";
+
+		status = "okay";
+	};
+
+	dwc3_u2host: rtk_dwc3_u2host@98013E00 {
+		compatible = "Realtek,rtd129x-dwc3-u2h";
+
+		status = "okay";
+	};
+
+	dwc3_u3host_usb3phy: dwc3_u3host_usb3phy {
+		compatible = "Realtek,rtd129x-usb3phy";
+
+		status = "okay";
+	};
+
+	dwc3_u3host_usb2phy: dwc3_u3host_usb2phy {
+		compatible = "Realtek,rtd129x-usb2phy";
+
+		status = "okay";
+	};
+
+	dwc3_u3host: rtk_dwc3_u3host@98013E00 {
+		compatible = "Realtek,rtd129x-dwc3-u3h";
+
+		status = "okay";
+	};
+};

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+export TARGET_CONF_TAR=/overlay/upper/sysupgrade.tgz
+
+if [ -n "$1" ]; then
+	export CONF_RESTORE="$1"
+	if [ "$CONF_RESTORE" != "-" ] && [ ! -f "$CONF_RESTORE" ]; then
+		echo "Backup archive '$CONF_RESTORE' not found." >&2
+		exit 1
+	fi
+
+	echo "Restoring config files..."
+	cat $CONF_RESTORE > $TARGET_CONF_TAR && sync $TARGET_CONF_TAR
+	RET=$?
+	[ "$CONF_RESTORE" != "-" ] && rm -f $CONF_RESTORE
+	exit $RET
+fi

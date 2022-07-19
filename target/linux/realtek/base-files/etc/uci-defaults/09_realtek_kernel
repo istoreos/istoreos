@@ -1,0 +1,15 @@
+#!/bin/sh
+
+image_name="jjm2473/jellyfin-rtk:latest"
+if uname -r | grep -q '^4\.9\.'; then
+	image_name="jjm2473/jellyfin-rtk:4.9-latest"
+fi
+
+[ -e /etc/config/jellyfin ] || echo "config jellyfin" > /etc/config/jellyfin
+
+uci -q batch <<-EOF >/dev/null
+    set jellyfin.@jellyfin[0].image="${image_name}"
+    commit jellyfin
+EOF
+
+exit 0

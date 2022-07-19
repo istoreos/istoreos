@@ -1,0 +1,12 @@
+--- a/src/expr/xfrm.c
++++ b/src/expr/xfrm.c
+@@ -10,6 +10,9 @@
+ #include <stdint.h>
+ #include <arpa/inet.h>
+ #include <errno.h>
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <linux/netfilter/nf_tables.h>
+ #include <linux/xfrm.h>
+ 

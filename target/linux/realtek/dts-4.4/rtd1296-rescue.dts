@@ -1,0 +1,38 @@
+/dts-v1/;
+#define CONFIG_ARCH_RTD129X
+#include <soc/realtek/memory.h>
+
+/memreserve/ ROOTFS_RESCUE_START 0x00E00000 ; /* 0x02200000 ~ 0x03000000 */
+
+#include "rtd1296-base.dtsi"
+
+/ {
+	model= "RTD1296_RESCUE";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,115200 loglevel=7 rdinit=/rdinit";
+	};
+
+	aliases {
+		led-boot = &led_green;
+		led-failsafe = &led_red;
+		led-running = &led_green;
+		led-upgrade = &led_red;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_green: green {
+			label = "green:router";
+			gpios = <&rtk_misc_gpio 97 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+		led_red: red {
+			label = "red:router";
+			gpios = <&rtk_misc_gpio 98 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+			default-state = "on";
+		};
+	};
+};

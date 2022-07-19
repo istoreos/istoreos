@@ -1,0 +1,440 @@
+/*
+ * realtek,port0-power-gpio: port 0 power, output, default low
+ * realtek,port1-power-gpio: port 1 power, output, default low
+ * realtek,port2-power-gpio: port 2  power, output, default low
+ * realtek,port3-power-gpio: 1296 port 3 power, output, default low
+ *
+ * usb_iso_mode: ISO mode is only port suspend (Default disable)
+ * usb_power_cut: Non ISO mode and power cut (Default disable power cut)
+ * Note if enable ISO mode, then power_cut will not effective
+ */
+
+rtk_usb_power_manager@0 {
+	compatible = "Realtek,usb-manager";
+	reg = <0x98000000 0x10>;
+
+	//usb_iso_mode;
+	//en_usb_storage_reprobe; /* To enable usb storage re-probe*/
+	//rescue_usb; /* For rescue dtb use */
+
+	resets = <&asr1 0x100>,
+		<&asr1 8>,
+		<&asr1 9>,
+		<&asr2 3>,
+		<&asr2 2>,
+		<&asr1 2>,
+		<&asr2 4>,
+		<&rst1 4>,
+		<&rst2 5>,
+		<&rst1 6>;
+	reset-names = "apply",
+		"u2phy0",
+		"u2phy1",
+		"u2phy2",
+		"u2phy3",
+		"u3phy0",
+		"u3phy1",
+		"u3mdio0",
+		"u3mdio1",
+		"usb";
+
+	/* For port0 */
+	gpio0: gpio0 {
+		realtek,power-gpio = <&rtk_iso_gpio 1 1 0>;
+		//power_low_active; /* type c use high active */
+
+	};
+	/* For port1 and port2 */
+	gpio1: gpio1 {
+		realtek,power-gpio = <&rtk_misc_gpio 19 1 0>;
+		//power_low_active;
+
+	};
+	/* For port2 */
+	gpio2: gpio2 {
+		//realtek,power-gpio = <&rtk_iso_gpio 32 1 0>;
+		//power_low_active;
+	};
+	gpio3: gpio3 {
+		//realtek,power-gpio = <&rtk_iso_gpio 32 1 0>;
+		//power_low_active;
+	};
+
+	port0 {
+		usb = <&dwc3_drd>;
+		type_c = <&dwc3_type_c>; /* for port 0 type c driver */
+		gpio = <&gpio0>;
+	};
+	port1 {
+		usb = <&dwc3_u2host>;
+		gpio = <&gpio1>;
+	};
+	port2 {
+		usb = <&ehci &ohci>;
+		gpio = <&gpio1>;
+	};
+	port3 {
+		usb = <&dwc3_u3host>;
+		gpio = <&gpio2>;
+	};
+
+	rtk_usb {
+		power_ctrl_reg {
+			usb_ctrl = <0x98007fb0>;
+			/* Port 0~2 */
+			usb0_sram_pwr = <0x98007f7c>;
+			usb0_sram_pwr_ctrl = <0x98007f80>;
+			/* Port 3 */
+			usb1_sram_pwr = <0x98007f9c>;
+			usb1_sram_pwr_ctrl = <0x98007fa0>;
+
+			p0_l4_icg = <0x98013364>;
+			p1_l4_icg = <0x98013d60>;
+			/* Port 2 l4_icg have bug */
+			//p2_l4_icg = <0x98013868>;
+			p3_l4_icg = <0x98013f60>;
+
+			/* for power cut */
+			usb_phy_ctrl = <0x98013340>;
+
+			p0_utmi_reset = <0x98013208>;
+			p1_utmi_reset = <0x98013c08>;
+			p2_utmi_reset = <0x9801382c>;
+			p3_utmi_reset = <0x98013E08>;
+
+			p0_pipe_reset = <0x9801320c>;
+			p3_pipe_reset = <0x98013e0c>;
+
+			/* for suspend */
+			p0_gusb2phycfg = <0x98028200>;
+			p0_gusb3pipectl = <0x980282c0>;
+
+			p1_gusb2phycfg = <0x98031200>;
+
+			p3_gusb2phycfg = <0x981F8200>;
+			p3_gusb3pipectl = <0x981F82c0>;
+
+			//usb_power_cut;
+		};
+
+		type_c {
+			usb_typec_ctrl_cc1_0 = <0x9801334c>;
+		};
+	};
+};
+
+dwc3_drd_usb3phy: dwc3_drd_usb3phy@0 {
+	compatible = "Realtek,usb3phy";
+	reg = <0x98013210 0x4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	phyN = <1>;
+	phy0 {
+		phy_data_size = <0x30>;
+		phy_data_addr = /bits/ 8
+			<0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09
+			0x0A 0x0B 0x0C 0x0D 0x0E 0x0F 0x10 0x11 0x12 0x13
+			0x14 0x15 0x16 0x17 0x18 0x19 0x1A 0x1B 0x1C 0x1D
+			0x1E 0x1F 0x20 0x21 0x22 0x23 0x24 0x25 0x26 0x27
+			0x28 0x29 0x2A 0x2B 0x2C 0x2D 0x2E 0x2F>;
+		phy_data_revA = /bits/ 16
+			<0x4008 0xE046 0x6046 0x2779 0x72F5 0x2AD3 0x000E
+			0x2E00 0x3591 0x525C 0xA600 0xA904 0xC000 0xEF1C
+			0x2000 0x0000 0x000C 0x4C00 0xFC00 0x0C81 0xDE01
+			0x0000 0x0000 0x0000 0x0000 0x4004 0x1260 0xFF00
+			0xCB00 0xA03F 0xC2E0 0x2807 0x947A 0x88AA 0x0057
+			0xAB66 0x0800 0x0000 0x040A 0x01D6 0xF8C2 0x3080
+			0x3082 0x2078 0xFFFF 0xFFFF 0x0000 0x0040>;
+		do_toggle;
+	};
+};
+
+dwc3_drd_usb2phy: dwc3_drd_usb2phy@0 {
+	compatible = "Realtek,usb2phy";
+	reg = <0x98028280 0x4>, <0x98013214 0x4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	phyN = <1>;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_data = /bits/ 8
+			<0x90 0x30 0x3A 0x8D 0xA8 0x65 0x91 0x81 0xFC 0x8C
+			0x00 0x11 0x9B 0x81 0x00 0x02>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_data = /bits/ 8
+			<0x25 0xEF 0x60 0x00 0x00 0x0F 0x18 0xE3>;
+		do_toggle;
+		//check_efuse;
+	};
+};
+
+dwc3_drd: rtk_dwc3_drd@98013200 {
+	compatible = "Realtek,dwc3";
+	reg = <0x98013200 0x200>;
+	interrupts = <0 21 4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	dwc3_drd@98020000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x98020000 0x9000>;
+		interrupts = <0 21 4>;
+		usb-phy = <&dwc3_drd_usb2phy &dwc3_drd_usb3phy>;
+		dr_mode = "host"; /*otg, host, peripheral*/
+		//tx-fifo-resize;
+		snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
+	};
+
+	dwc3_type_c: rtk_dwc3_drd_type_c@0 {
+		//compatible = "Realtek,dwc3-type_c";
+		reg = <0x98013200 0x200>;
+		realtek,rd_ctrl-gpio = <&rtk_iso_gpio 34 1 0>; /*TypeC Rd control, output, default low */
+		interrupts = <0 60 4>;
+		//drd_mode;  /*depend on dwc3 dr_mode = "peripheral"*/
+		//debug; /*to enable debug log*/
+		delay_probe_work; //To delay probe work
+		ordered_probe; // ordered probe in delay work
+
+		default_revision = <0xA01>;
+		A00 {
+			cc_dfp_mode = "dfp_3_0"; /*dfp_3_0, dfp_1_5, dfp_usb*/
+			rd_config = "internal"; /*internal, extrenal*/
+			cc1_rp_4p7k_code = <0x9>;
+			cc1_rp_36k_code = <0x14>;
+			cc1_rp_12k_code = <0xf>;
+			cc1_rd_code = <0>; /*for internal rd*/
+			cc1_vref_ufp = /bits/ 8
+				<0x0 0x0 0x2>; /*<1p23v,0p66v,0p2v>*/
+			cc1_vref_dfp_usb = /bits/ 8
+				<0x0 0x2 0x0>; /*<0_1p6v,0p2v,unused>*/
+			cc1_vref_dfp_1_5 = /bits/ 8
+				<0x0 0x0 0x2>; /*<1_1p6v,0p4v,0p2v>*/
+			cc1_vref_dfp_3_0 = /bits/ 8
+				<0x0 0x1 0x2>; /*<2p6v,0p8v,0p2v>*/
+			cc2_rp_4p7k_code = <0x2>;
+			cc2_rp_36k_code = <0x15>;
+			cc2_rp_12k_code = <0xe>;
+			cc2_rd_code = <0>; /*for internal rd*/
+			cc2_vref_ufp = /bits/ 8
+				<0x0 0x0 0x3>; /*<1p23v,0p66v,0p2v>*/
+			cc2_vref_dfp_usb = /bits/ 8
+				<0x0 0x3 0x0>; /*<0_1p6v,0p2v,unused>*/
+			cc2_vref_dfp_1_5 = /bits/ 8
+				<0x0 0x0 0x3>; /*<1_1p6v,0p4v,0p2v>*/
+			cc2_vref_dfp_3_0 = /bits/ 8
+				<0x0 0x3 0x3>; /*<2p6v,0p8v,0p2v>*/
+		};
+
+		A01 {
+			cc_dfp_mode = "dfp_3_0"; /*dfp_3_0, dfp_1_5, dfp_usb*/
+			rd_config = "internal"; /*internal, extrenal*/
+			cc1_rp_4p7k_code = <0xb>;
+			cc1_rp_36k_code = <0x17>;
+			cc1_rp_12k_code = <0x10>;
+			cc1_rd_code = <0>; /*for internal rd*/
+			cc1_vref_ufp = /bits/ 8
+				<0x0 0x0 0x4>; /*<1p23v,0p66v,0p2v>*/
+			cc1_vref_dfp_usb = /bits/ 8
+				<0x0 0x4 0x0>; /*<0_1p6v,0p2v,unused>*/
+			cc1_vref_dfp_1_5 = /bits/ 8
+				<0x0 0x0 0x4>; /*<1_1p6v,0p4v,0p2v>*/
+			cc1_vref_dfp_3_0 = /bits/ 8
+				<0x0 0x3 0x4>; /*<2p6v,0p8v,0p2v>*/
+			cc2_rp_4p7k_code = <0xc>;
+			cc2_rp_36k_code = <0x17>;
+			cc2_rp_12k_code = <0x12>;
+			cc2_rd_code = <0>; /*for internal rd*/
+			cc2_vref_ufp = /bits/ 8
+				<0x0 0x0 0x5>; /*<1p23v,0p66v,0p2v>*/
+			cc2_vref_dfp_usb = /bits/ 8
+				<0x0 0x5 0x0>; /*<0_1p6v,0p2v,unused>*/
+			cc2_vref_dfp_1_5 = /bits/ 8
+				<0x0 0x0 0x5>; /*<1_1p6v,0p4v,0p2v>*/
+			cc2_vref_dfp_3_0 = /bits/ 8
+				<0x2 0x3 0x5>; /*<2p6v,0p8v,0p2v>*/
+		};
+	};
+};
+
+dwc3_u2host_usb2phy: dwc3_u2host_usb2phy@0 {
+	compatible = "Realtek,usb2phy";
+	reg = <0x98031280 0x4>, <0x98013C14 0x4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	phyN = <1>;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_data = /bits/ 8
+			<0x90 0x30 0x3A 0x8D 0xA6 0x65 0x91 0x81 0xFC 0x8C
+			0x00 0x11 0x9B 0x81 0x00 0x02>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_data = /bits/ 8
+			<0x25 0xEF 0x60 0x00 0x00 0x0F 0x18 0xE3>;
+		do_toggle;
+		//check_efuse;
+	};
+};
+
+dwc3_u2host: rtk_dwc3_u2host@98013E00 {
+	compatible = "Realtek,dwc3";
+	reg = <0x98013C00 0x200>;
+	interrupts = <0 21 4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	dwc3_u2host@98029000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x98029000 0x9000>;
+		interrupts = <0 21 4>;
+		usb-phy = <&dwc3_u2host_usb2phy>;
+		dr_mode = "host"; /*only host*/
+		//tx-fifo-resize;
+		snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
+	};
+};
+
+ehci_phy_rle0599: usb_phy_rle0599@0 {
+	compatible = "Realtek,rtd129x-usb_phy_rle0599";
+	reg = <0x98013824 0x4>, <0x980130A4 0x4>;
+	//Note reg addr: REG_WRAP_VStatusOut2, REG_EHCI_INSNREG05
+	phyN = <1>;
+	phy_data_page0_size = <16>;
+	phy_data_page0_addr = /bits/ 8
+		<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+		0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+	phy_data_page0_data = /bits/ 8
+		<0x90 0x30 0x3A 0x8D 0xA9 0x65 0x91 0x81 0xFC 0x8C
+		0x00 0x11 0x9B 0x81 0x00 0x02>;
+	phy_data_page1_size = <8>;
+	phy_data_page1_addr = /bits/ 8
+		<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+	phy_data_page1_data = /bits/ 8
+		<0x25 0xEF 0x60 0x00 0x00 0x0F 0x18 0xE3>;
+	do_toggle;
+	//check_efuse;
+};
+
+ehci: ehci@98013000 {
+	compatible = "Realtek,rtd129x-ehci";
+	reg = <0x98013000 0x100>;
+	interrupts = <0 21 4>;
+	usb-phy = <&ehci_phy_rle0599>;
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	fixed_async_list_addr_bug; // add to fixed async_list_addr bug
+};
+
+ohci: ohci@98013400 {
+	compatible = "Realtek,rtd129x-ohci";
+	reg = <0x98013400 0x100>;
+	interrupts = <0 21 4>;
+	usb-phy = <&ehci_phy_rle0599>;
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+
+	wrap_reg = <0x98013820>;
+};
+
+usb2_udc: usb2_udc@981E0000 {
+	compatible = "Realtek,rtd129x-usb2-udc";
+	reg = <0x981E0000 0x8000>, <0x98013800 0x80>;
+	interrupts = <0 21 4>;
+	usb-phy = <&ehci_phy_rle0599>;
+
+	status = "disable";
+};
+
+dwc3_u3host_usb3phy: dwc3_u3host_usb3phy@0 {
+	//compatible = "Realtek,rtd129x-usb3phy";
+	reg = <0x98013E10 0x4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	status = "disable";
+	phyN = <1>;
+	phy0 {
+		phy_data_size = <0x30>;
+		phy_data_addr = /bits/ 8
+			<0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x09
+			0x0A 0x0B 0x0C 0x0D 0x0E 0x0F 0x10 0x11 0x12 0x13
+			0x14 0x15 0x16 0x17 0x18 0x19 0x1A 0x1B 0x1C 0x1D
+			0x1E 0x1F 0x20 0x21 0x22 0x23 0x24 0x25 0x26 0x27
+			0x28 0x29 0x2A 0x2B 0x2C 0x2D 0x2E 0x2F>;
+		phy_data_revA = /bits/ 16
+			<0x4008 0xE046 0x6046 0x2779 0x72F5 0x2AD3 0x000E
+			0x2E00 0x3591 0x525C 0xA600 0xA904 0xC000 0xEF1C
+			0x2000 0x0000 0x000C 0x4C00 0xFC00 0x0C81 0xDE01
+			0x0000 0x0000 0x0000 0x0000 0x4004 0x1260 0xFF00
+			0xCB00 0xA03F 0xC2E0 0x2807 0x9424 0x284A 0x0057
+			0xAB66 0x0800 0x0000 0x040A 0x01D6 0xF8C2 0x3080
+			0x3082 0x2078 0xFFFF 0xFFFF 0x0000 0x0040>;
+		do_toggle;
+	};
+};
+
+dwc3_u3host_usb2phy: dwc3_u3host_usb2phy@0 {
+	//compatible = "Realtek,usb2phy";
+	reg = <0x981F8280 0x4>, <0x98013E14 0x4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	status = "disable";
+	phyN = <1>;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_data = /bits/ 8
+			<0x90 0x30 0x3A 0x8D 0xA6 0x65 0x91 0x81 0xFC 0x8C
+			0x00 0x11 0x9B 0x81 0x00 0x02>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_data = /bits/ 8
+			<0x25 0xEF 0x60 0x00 0x00 0x0F 0x18 0xE3>;
+		do_toggle;
+		//check_efuse;
+	};
+};
+
+dwc3_u3host: rtk_dwc3_u3host@98013E00 {
+	//compatible = "Realtek,dwc3";
+	reg = <0x98013E00 0x200>;
+	interrupts = <0 21 4>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+
+	status = "disable";
+
+	dwc3_u3host@981F0000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x981F0000 0x9000>;
+		interrupts = <0 21 4>;
+		usb-phy = <&dwc3_u3host_usb2phy &dwc3_u3host_usb3phy>;
+		dr_mode = "host"; /*only host*/
+		//tx-fifo-resize;
+		snps,dis_u2_susphy_quirk; // Add workaround for Usb3.0 hub suspend
+	};
+};
+

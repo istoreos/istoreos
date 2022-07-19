@@ -1,0 +1,120 @@
+#!/bin/sh
+
+FIRST_OFFSET=4352
+SECOND_OFFSET=8448
+
+OFFSETS="$FIRST_OFFSET $SECOND_OFFSET"
+
+DEVICE=/dev/mmcblk0
+
+exec 1000>/var/lock/rtk_tmp_factory.lock
+exec 1001>/var/lock/rtk_emmc_factory.lock
+
+lock_tmp()
+{
+    flock -$1 1000
+}
+
+unlock_tmp()
+{
+    flock -u 1000
+}
+
+lock_emmc()
+{
+    flock -$1 1001
+}
+
+unlock_emmc()
+{
+    flock -u 1001
+}
+
+factory_version()
+{
+    sh -c "dd if=$1 bs=512 count=1 skip=$2 | dd bs=500 skip=1 | dd bs=4 count=1 | hexdump -n4 -e \\\"%d\\\"" 2>/dev/null
+}
+
+load()
+{
+    lock_emmc s
+    lock_tmp x
+    local maxv=0
+    local cv
+    local active_offset=$FIRST_OFFSET
+    local ret=0
+    for offset in $OFFSETS;
+    do
+        cv=`factory_version $DEVICE $offset`
+        [ "$cv" -gt $maxv ] && (
+            maxv=$cv
+            active_offset=$offset
+        )
+    done
+
+    echo "active version:$maxv" >&2
+    echo "active offset:$active_offset" >&2
+    sh -c 'dd if=$0 of=/tmp/factory.tar bs=512 count=4096 skip=$1' $DEVICE $active_offset && (
+        rm -rf tmp/factory
+        tar -xf /tmp/factory.tar || ret=1
+        rm -f /tmp/factory.tar
+    )
+    unlock_tmp
+    unlock_emmc
+    return $ret
+}
+
+save()
+{
+    lock_emmc x
+    lock_tmp s
+    local ret=0
+    tar -cf /tmp/factory1.tar tmp/factory || ret=1
+    [ $ret -eq 0 ] && ( rtk_factory_sign /tmp/factory1.tar || ret=1 )
+
+    if [ $ret -eq 0 ]; then
+        for offset in $OFFSETS;
+        do
+            sh -c 'dd if=/tmp/factory1.tar of=$0 bs=512 seek=$1 conv=notrunc' $DEVICE $offset
+        done
+    fi
+    rm -f /tmp/factory1.tar
+    unlock_tmp
+    unlock_emmc
+    return $ret
+}
+
+prepare()
+{
+    lock_tmp s
+    local ret=0
+    [ -f tmp/factory/env.txt ] || load || ret=1
+    unlock_tmp
+    return $ret
+}
+
+env_cmd()
+{
+    local ret=0
+    case "$1" in
+        set) lock_tmp x ;;
+        list) lock_tmp s ;;
+    esac
+    rtd129x_env $1 "$2" "$3" || ret=1
+    unlock_tmp
+    return $ret
+}
+
+usage()
+{
+    echo "Usage: factory {load|save|list|set <key> <value>}"
+}
+
+cd /
+
+case "$1" in
+	load) load ;;
+	save) save ;;
+	set|list) prepare && env_cmd $1 "$2" "$3" ;;
+	*) usage; exit 1;;
+esac

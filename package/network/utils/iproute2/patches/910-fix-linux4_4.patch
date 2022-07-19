@@ -1,0 +1,32 @@
+--- a/configure
++++ b/configure
+@@ -53,6 +53,9 @@ check_xt()
+ {
+     #check if we have xtables from iptables >= 1.4.5.
+     cat >$TMPDIR/ipttest.c <<EOF
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <xtables.h>
+ #include <linux/netfilter.h>
+ static struct xtables_globals test_globals = {
+@@ -86,6 +89,9 @@ check_xt_old()
+ 
+     #check if we don't need our internal header ..
+     cat >$TMPDIR/ipttest.c <<EOF
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <xtables.h>
+ char *lib_dir;
+ unsigned int global_option_offset = 0;
+@@ -120,6 +126,9 @@ check_xt_old_internal_h()
+ 
+     #check if we need our own internal.h
+     cat >$TMPDIR/ipttest.c <<EOF
++#if !defined(__GLIBC__)
++#define _LIBC_COMPAT_H
++#endif
+ #include <xtables.h>
+ #include "xt-internal.h"
+ char *lib_dir;

@@ -1,0 +1,167 @@
+#include <dt-bindings/regulator/gmt,g2227.h>
+
+&i2c_0 {
+	gmt-g2227@12 {
+		compatible = "gmt-g2227";
+		reg = <0x12>;
+		status = "okay";
+//		system-power-controller;
+
+		dcdc1 {
+			regulator-name = "dcdc1";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3300000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_FORCE_PWM>;
+		};
+		cpu_supp: dcdc2 {
+			regulator-name = "dcdc2";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		gpu_supp: dcdc3 {
+			regulator-name = "dcdc3";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		dcdc4 {
+			regulator-name = "dcdc4";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_AUTO>;
+			regulator-state-coldboot {
+				regulator-off-in-suspend;
+			};
+
+		};
+		dcdc5 {
+			regulator-name = "dcdc5";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_AUTO>;
+		};
+		dcdc6 {
+			regulator-name = "dcdc6";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1187500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		ldo2 {
+			regulator-name = "ldo2";
+			regulator-min-microvolt = <1500000>;
+			regulator-max-microvolt = <1900000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_LDO_MODE_NORMAL>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+		l2_supp: ldo3 {
+			regulator-name = "ldo3";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <1200000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <G2227_LDO_MODE_NORMAL>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+	};
+}; /* i2c0 */
+
+&dvfs {
+	cpu-supply  = <&cpu_supp>;
+	l2-supply   = <&l2_supp>;
+	transition_latency = <200000>; /* nano sec */
+	regulator_latency  = <40000>; /* nano sec */
+        frequency-table =
+		<0    1   300000>,
+		<0    1   400000>,
+		<0    1   500000>,
+		<0    1   600000>,
+		<0    1   700000>,
+		<0    3   800000>,
+		<0    4   900000>,
+		<0    5  1000000>,
+		<0    6  1100000>,
+		<2    7  1200000>,
+		<2    9  1300000>,
+		<2   11  1400000>;
+
+        frequency-table,rev1 =
+		<0    0   300000>,
+		<0    0   400000>,
+		<0    0   500000>,
+		<0    2   600000>,
+		<0    3   700000>,
+		<0    4   800000>,
+		<0    5   900000>,
+		<0    6  1000000>,
+		<0    8  1100000>,
+		<2   10  1200000>,
+		<2   12  1300000>,
+		<2   13  1400000>;
+
+        voltage-table =
+		< 0   800000  800000>,
+		< 1   812500  812500>,
+		< 2   825000  825000>,
+		< 3   850000  850000>,
+		< 4   875000  875000>,
+		< 5   900000  900000>,
+		< 6   925000  925000>,
+		< 7   950000  950000>,
+		< 8   962500  962500>,
+		< 9   975000  975000>,
+		<10  1012500 1012500>,
+		<11  1025000 1025000>,
+		<12  1062500 1062500>,
+		<13  1100000 1100000>;
+
+        l2-voltage-table =
+		< 0   900000  900000>,
+		< 1   900000  900000>,
+		< 2   900000  900000>,
+		< 3   900000  900000>,
+		< 4   900000  900000>,
+		< 5   900000  900000>,
+		< 6   900000  900000>,
+		< 7   900000  900000>,
+		< 8   900000  900000>,
+		< 9   900000  900000>,
+		<10   950000  950000>,
+		<11   950000  950000>,
+		<12  1000000 1000000>,
+		<13  1000000 1000000>;
+}; /* &dvfs */

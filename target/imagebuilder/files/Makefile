@@ -178,6 +178,7 @@ prepare_rootfs: FORCE
 		) \
 	)
 	$(call prepare_rootfs,$(TARGET_DIR),$(USER_FILES),$(DISABLED_SERVICES))
+	$(ESED) "s/(DISTRIB_DESCRIPTION='.+)'\$$/\\1 unofficial'/" $(TARGET_DIR)/etc/openwrt_release
 
 build_image: FORCE
 	@echo
