@@ -1,4 +1,4 @@
-src-git packages https://github.com/jjm2473/packages.git;openwrt-21.02-cn
-src-git luci https://github.com/jjm2473/luci.git;openwrt-21.02-cn
+src-git packages https://github.com/jjm2473/packages.git;istoreos-21.02
+src-git luci https://github.com/jjm2473/luci.git;istoreos-21.02
 src-git routing https://git.openwrt.org/feed/routing.git;openwrt-21.02
 src-git telephony https://git.openwrt.org/feed/telephony.git;openwrt-21.02
