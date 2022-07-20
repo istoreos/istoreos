@@ -2,3 +2,7 @@ src-git packages https://github.com/jjm2473/packages.git;istoreos-21.02
 src-git luci https://github.com/jjm2473/luci.git;istoreos-21.02
 src-git routing https://git.openwrt.org/feed/routing.git;openwrt-21.02
 src-git telephony https://git.openwrt.org/feed/telephony.git;openwrt-21.02
+# istore
+src-git store https://github.com/linkease/istore.git;main
+# argon, etc.
+src-git third https://github.com/jjm2473/openwrt-third.git;main
