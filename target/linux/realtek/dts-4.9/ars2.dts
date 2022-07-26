@@ -25,6 +25,32 @@
 			/delete-property/ gpios; // ars2 SATA power is not assignd to gpio, (original igpio15)
 		};
 	};
+	ehci@98013000 {
+		status = "disabled";
+	};
+	ohci@98013400 {
+		status = "disabled";
+	};
+	rtk_dwc3_drd@98013200 {
+		dwc3_drd@98020000 {
+			dr_mode = "host";
+		};
+		rtk_dwc3_drd_type_c@0 {
+			/delete-property/ drd_mode;
+		};
+	};
+	rtk_dwc3_u2host@98013E00 {
+		status = "disabled";
+		dwc3_u2host@98029000 {
+			status = "disabled";
+		};
+	};
+	dwc3_u2host_usb2phy@0 {
+		status = "disabled";
+	};
+	usb_phy_rle0599@0 {
+		status = "disabled";
+	};
 
 	leds {
 		compatible = "gpio-leds";
