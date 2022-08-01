@@ -51,6 +51,16 @@
 	usb_phy_rle0599@0 {
 		status = "disabled";
 	};
+	rtk_usb_power_manager@0 {
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio;
+		};
+	};
 
 	leds {
 		compatible = "gpio-leds";

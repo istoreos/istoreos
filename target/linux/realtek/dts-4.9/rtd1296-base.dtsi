@@ -191,8 +191,27 @@
 	};
 
 	rtk_iso_gpio: rtk_iso_gpio@98007100 {
-		/* WAN led */
-		gpios = <&rtk_iso_gpio 31 RTK_GPIO_DIROUT 1>;
+		/* WAN led, USB power */
+		gpios = <&rtk_iso_gpio 31 RTK_GPIO_DIROUT 1>, <&rtk_iso_gpio 2 RTK_GPIO_DIROUT 0>;
+	};
+
+	rtk_usb_power_manager@0 {
+		/* For port0 */
+		gpio0: gpio0 {
+			realtek,power-gpio = <&rtk_iso_gpio 2 RTK_GPIO_DIROUT 0>;
+		};
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio = <&rtk_iso_gpio 2 RTK_GPIO_DIROUT 0>;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio = <&rtk_iso_gpio 2 RTK_GPIO_DIROUT 0>;
+		};
+		/* For port3 */
+		gpio3: gpio3 {
+			realtek,power-gpio = <&rtk_iso_gpio 2 RTK_GPIO_DIROUT 0>;
+		};
 	};
 
 	power-management@0 {
@@ -226,6 +245,7 @@
 			linux,code = <KEY_POWER>;
 		};
 	};
+
 };
 
 &g2227 {
