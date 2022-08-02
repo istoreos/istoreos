@@ -31,6 +31,7 @@
 
 		dwc3_drd@98020000 {
 			dr_mode = "peripheral"; /*host, peripheral*/
+			snps,dis_ss_park_mode;
 		};
 
 		rtk_dwc3_drd_type_c@0 {
@@ -74,5 +75,9 @@
 		compatible = "Realtek,dwc3";
 
 		status = "okay";
+
+		dwc3_u3host@981F0000 {
+			snps,dis_ss_park_mode;
+		};
 	};
 };
