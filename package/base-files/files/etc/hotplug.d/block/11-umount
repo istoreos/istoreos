@@ -1,0 +1,3 @@
+if [ "$ACTION" = "remove" ]; then
+    umount "/dev/$DEVNAME"
+fi
