@@ -12,7 +12,7 @@ start() {
 }
 
 restart() {
-	/sbin/block mount
+	return 0
 }
 
 stop() {
