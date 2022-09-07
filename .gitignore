@@ -17,6 +17,7 @@
 /package/feeds
 /package/openwrt-packages
 /*.patch
+/.vermagic
 key-build*
 *.orig
 *.rej
