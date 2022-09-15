@@ -1,6 +1,10 @@
 #!/bin/sh
 # Copyright (C) 2022 jjm2473
 
+if [ ! -f /etc/config/fstab ]; then
+    /usr/libexec/blockmount.sh detect 2>/dev/null
+fi
+
 uci -q batch <<-EOF >/dev/null
     set system.@system[-1].zonename='Asia/Shanghai'
     set system.@system[-1].timezone='CST-8'
