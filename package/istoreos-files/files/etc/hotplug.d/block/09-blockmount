@@ -1,3 +1,3 @@
 if [ "$ACTION" = "add" ]; then
-    [ "`uci -q get fstab.@global[0].anon_mount`" = "1" ] && /usr/libexec/blockmount.sh
+    [ "`uci -q get fstab.@global[0].port_mount`" = "1" ] && /usr/libexec/blockmount.sh
 fi

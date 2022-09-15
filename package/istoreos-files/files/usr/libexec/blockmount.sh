@@ -88,6 +88,7 @@ if [ "$1" = "detect" ]; then
 config global
 	option anon_swap '0'
 	option anon_mount '0'
+    option port_mount '0'
 	option auto_swap '1'
 	option auto_mount '1'
 	option delay_root '5'
@@ -103,10 +104,8 @@ config_load fstab
 scan_all
 
 if [ "$DETECT" = "1" ]; then
-    uci commit fstab
-    sleep 2
     uci -q batch <<-EOF >/dev/null
-        set fstab.@global[0].anon_mount=1
+        set fstab.@global[0].port_mount=1
         commit fstab
 EOF
 fi

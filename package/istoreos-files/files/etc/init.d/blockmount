@@ -5,7 +5,7 @@ START=39
 USE_PROCD=1
 
 auto_mount() {
-	[ "`uci -q get fstab.@global[0].anon_mount`" = "1" ] && /usr/libexec/blockmount.sh
+	[ "`uci -q get fstab.@global[0].port_mount`" = "1" ] && /usr/libexec/blockmount.sh
 	return 0
 }
 
