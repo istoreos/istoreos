@@ -1,8 +1,0 @@
-#!/bin/sh
-
-if [ ! -f /.recovery_mode ]; then
-    uci set fstab.@global[0].anon_mount=1
-    uci commit fstab
-fi
-
-exit 0
