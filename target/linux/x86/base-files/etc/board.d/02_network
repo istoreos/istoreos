@@ -22,6 +22,9 @@ traverse-technologies-geos)
 	macaddr="$(cat /sys/class/net/eth0/address)" 2>/dev/null
 	[ -n "$macaddr" ] && ucidef_set_interface_macaddr "wan" "$macaddr"
 	;;
+tencent-cloud-cvm)
+	ucidef_set_interface_lan "eth0" "dhcp"
+	;;
 esac
 board_config_flush
 
