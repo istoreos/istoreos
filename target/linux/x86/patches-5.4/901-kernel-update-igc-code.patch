@@ -20,13 +20,23 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_base.c
  		goto out;
  	}
  
-@@ -212,6 +212,15 @@ static s32 igc_get_invariants_base(struc
+@@ -190,6 +190,7 @@ static s32 igc_init_phy_params_base(stru
+ 	/* Verify phy id and set remaining function pointers */
+ 	switch (phy->id) {
+ 	case I225_I_PHY_ID:
++	case I226_LM_PHY_ID:
+ 		phy->type	= igc_phy_i225;
+ 		break;
+ 	default:
+@@ -212,6 +213,17 @@ static s32 igc_get_invariants_base(struc
  	case IGC_DEV_ID_I225_I:
  	case IGC_DEV_ID_I220_V:
  	case IGC_DEV_ID_I225_K:
 +	case IGC_DEV_ID_I225_K2:
 +	case IGC_DEV_ID_I225_LMVP:
 +	case IGC_DEV_ID_I225_IT:
++	case IGC_DEV_ID_I226_K:
++	case IGC_DEV_ID_I226_LMVP:
 +	case IGC_DEV_ID_I226_LM:
 +	case IGC_DEV_ID_I226_V:
 +	case IGC_DEV_ID_I226_IT:
@@ -36,7 +46,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_base.c
  		mac->type = igc_i225;
  		break;
  	default:
-@@ -363,7 +372,7 @@ void igc_rx_fifo_flush_base(struct igc_h
+@@ -363,7 +375,7 @@ void igc_rx_fifo_flush_base(struct igc_h
  	}
  
  	if (ms_wait == 10)
@@ -312,7 +322,15 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_defines.h
  
  /* PHY 1000 MII Register/Bit Definitions */
  /* PHY Registers defined by IEEE */
-@@ -386,20 +479,59 @@
+@@ -374,6 +467,7 @@
+ 
+ /* Bit definitions for valid PHY IDs. I = Integrated E = External */
+ #define I225_I_PHY_ID		0x67C9DC00
++#define I226_LM_PHY_ID		0x67C9DC10
+ 
+ /* MDI Control */
+ #define IGC_MDIC_DATA_MASK	0x0000FFFF
+@@ -386,20 +480,59 @@
  #define IGC_MDIC_READY		0x10000000
  #define IGC_MDIC_INT_EN		0x20000000
  #define IGC_MDIC_ERROR		0x40000000
@@ -2955,7 +2973,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
 ===================================================================
 --- linux-5.4.188.orig/drivers/net/ethernet/intel/igc/igc_hw.h
 +++ linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
-@@ -21,8 +21,15 @@
+@@ -21,8 +21,17 @@
  #define IGC_DEV_ID_I225_I			0x15F8
  #define IGC_DEV_ID_I220_V			0x15F7
  #define IGC_DEV_ID_I225_K			0x3100
@@ -2964,6 +2982,8 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
 +#define IGC_DEV_ID_I225_K2			0x3101
 +#define IGC_DEV_ID_I225_LMVP			0x5502
 +#define IGC_DEV_ID_I225_IT			0x0D9F
++#define IGC_DEV_ID_I226_K			0x3102
++#define IGC_DEV_ID_I226_LMVP			0x5503
 +#define IGC_DEV_ID_I226_LM			0x125B
 +#define IGC_DEV_ID_I226_V			0x125C
 +#define IGC_DEV_ID_I226_IT			0x125D
@@ -2973,7 +2993,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  
  /* Function pointers for the MAC. */
  struct igc_mac_operations {
-@@ -80,23 +87,16 @@ struct igc_mac_info {
+@@ -80,23 +89,16 @@ struct igc_mac_info {
  
  	enum igc_mac_type type;
  
@@ -2998,7 +3018,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  	bool asf_firmware_present;
  	bool arc_subsystem_valid;
  
-@@ -130,9 +130,6 @@ struct igc_nvm_info {
+@@ -130,9 +132,6 @@ struct igc_nvm_info {
  	struct igc_nvm_operations ops;
  	enum igc_nvm_type type;
  
@@ -3008,7 +3028,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  	u16 word_size;
  	u16 delay_usec;
  	u16 address_bits;
-@@ -158,7 +155,6 @@ struct igc_phy_info {
+@@ -158,7 +157,6 @@ struct igc_phy_info {
  	u8 mdix;
  
  	bool is_mdix;
@@ -3016,7 +3036,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  	bool speed_downgraded;
  	bool autoneg_wait_to_complete;
  };
-@@ -188,6 +184,7 @@ struct igc_fc_info {
+@@ -188,6 +186,7 @@ struct igc_fc_info {
  
  struct igc_dev_spec_base {
  	bool clear_semaphore_once;
@@ -3024,7 +3044,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  };
  
  struct igc_hw {
-@@ -243,6 +240,8 @@ struct igc_hw_stats {
+@@ -243,6 +242,8 @@ struct igc_hw_stats {
  	u64 prc511;
  	u64 prc1023;
  	u64 prc1522;
@@ -3033,7 +3053,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_hw.h
  	u64 gprc;
  	u64 bprc;
  	u64 mprc;
-@@ -272,21 +271,9 @@ struct igc_hw_stats {
+@@ -272,21 +273,9 @@ struct igc_hw_stats {
  	u64 tsctc;
  	u64 tsctfc;
  	u64 iac;
@@ -3499,13 +3519,15 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static const char igc_driver_string[] = DRV_SUMMARY;
  static const char igc_copyright[] =
  	"Copyright(c) 2018 Intel Corporation.";
-@@ -44,31 +44,21 @@ static const struct pci_device_id igc_pc
+@@ -44,31 +44,23 @@ static const struct pci_device_id igc_pc
  	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_I), board_base },
  	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I220_V), board_base },
  	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_K), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_K2), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_LMVP), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_IT), board_base },
++	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_K), board_base },
++	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_LMVP), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_LM), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_V), board_base },
 +	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_IT), board_base },
@@ -3540,7 +3562,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  enum latency_range {
  	lowest_latency = 0,
  	low_latency = 1,
-@@ -78,7 +68,7 @@ enum latency_range {
+@@ -78,7 +70,7 @@ enum latency_range {
  
  void igc_reset(struct igc_adapter *adapter)
  {
@@ -3549,7 +3571,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	struct igc_hw *hw = &adapter->hw;
  	struct igc_fc_info *fc = &hw->fc;
  	u32 pba, hwm;
-@@ -105,39 +95,37 @@ void igc_reset(struct igc_adapter *adapt
+@@ -105,39 +97,37 @@ void igc_reset(struct igc_adapter *adapt
  	hw->mac.ops.reset_hw(hw);
  
  	if (hw->mac.ops.init_hw(hw))
@@ -3602,7 +3624,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_release_hw_control - release control of the h/w to f/w
   * @adapter: address of board private structure
   *
-@@ -150,6 +138,9 @@ static void igc_release_hw_control(struc
+@@ -150,6 +140,9 @@ static void igc_release_hw_control(struc
  	struct igc_hw *hw = &adapter->hw;
  	u32 ctrl_ext;
  
@@ -3612,7 +3634,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	/* Let firmware take over control of h/w */
  	ctrl_ext = rd32(IGC_CTRL_EXT);
  	wr32(IGC_CTRL_EXT,
-@@ -176,43 +167,6 @@ static void igc_get_hw_control(struct ig
+@@ -176,43 +169,6 @@ static void igc_get_hw_control(struct ig
  }
  
  /**
@@ -3656,7 +3678,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_clean_tx_ring - Free Tx Buffers
   * @tx_ring: ring to be cleaned
   */
-@@ -276,6 +230,43 @@ static void igc_clean_tx_ring(struct igc
+@@ -276,6 +232,43 @@ static void igc_clean_tx_ring(struct igc
  }
  
  /**
@@ -3700,7 +3722,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_clean_all_tx_rings - Free Tx Buffers for all queues
   * @adapter: board private structure
   */
-@@ -296,6 +287,7 @@ static void igc_clean_all_tx_rings(struc
+@@ -296,6 +289,7 @@ static void igc_clean_all_tx_rings(struc
   */
  int igc_setup_tx_resources(struct igc_ring *tx_ring)
  {
@@ -3708,7 +3730,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	struct device *dev = tx_ring->dev;
  	int size = 0;
  
-@@ -321,8 +313,7 @@ int igc_setup_tx_resources(struct igc_ri
+@@ -321,8 +315,7 @@ int igc_setup_tx_resources(struct igc_ri
  
  err:
  	vfree(tx_ring->tx_buffer_info);
@@ -3718,7 +3740,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	return -ENOMEM;
  }
  
-@@ -334,14 +325,13 @@ err:
+@@ -334,14 +327,13 @@ err:
   */
  static int igc_setup_all_tx_resources(struct igc_adapter *adapter)
  {
@@ -3735,7 +3757,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			for (i--; i >= 0; i--)
  				igc_free_tx_resources(adapter->tx_ring[i]);
  			break;
-@@ -452,6 +442,7 @@ static void igc_free_all_rx_resources(st
+@@ -452,6 +444,7 @@ static void igc_free_all_rx_resources(st
   */
  int igc_setup_rx_resources(struct igc_ring *rx_ring)
  {
@@ -3743,7 +3765,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	struct device *dev = rx_ring->dev;
  	int size, desc_len;
  
-@@ -481,8 +472,7 @@ int igc_setup_rx_resources(struct igc_ri
+@@ -481,8 +474,7 @@ int igc_setup_rx_resources(struct igc_ri
  err:
  	vfree(rx_ring->rx_buffer_info);
  	rx_ring->rx_buffer_info = NULL;
@@ -3753,7 +3775,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	return -ENOMEM;
  }
  
-@@ -495,14 +485,13 @@ err:
+@@ -495,14 +487,13 @@ err:
   */
  static int igc_setup_all_rx_resources(struct igc_adapter *adapter)
  {
@@ -3770,7 +3792,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			for (i--; i >= 0; i--)
  				igc_free_rx_resources(adapter->rx_ring[i]);
  			break;
-@@ -773,6 +762,79 @@ static void igc_setup_tctl(struct igc_ad
+@@ -773,6 +764,79 @@ static void igc_setup_tctl(struct igc_ad
  }
  
  /**
@@ -3850,7 +3872,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_set_mac - Change the Ethernet Address of the NIC
   * @netdev: network interface device structure
   * @p: pointer to an address structure
-@@ -797,6 +859,61 @@ static int igc_set_mac(struct net_device
+@@ -797,6 +861,61 @@ static int igc_set_mac(struct net_device
  	return 0;
  }
  
@@ -3912,7 +3934,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static void igc_tx_ctxtdesc(struct igc_ring *tx_ring,
  			    struct igc_tx_buffer *first,
  			    u32 vlan_macip_lens, u32 type_tucmd,
-@@ -804,7 +921,6 @@ static void igc_tx_ctxtdesc(struct igc_r
+@@ -804,7 +923,6 @@ static void igc_tx_ctxtdesc(struct igc_r
  {
  	struct igc_adv_tx_context_desc *context_desc;
  	u16 i = tx_ring->next_to_use;
@@ -3920,7 +3942,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	context_desc = IGC_TX_CTXTDESC(tx_ring, i);
  
-@@ -814,7 +930,7 @@ static void igc_tx_ctxtdesc(struct igc_r
+@@ -814,7 +932,7 @@ static void igc_tx_ctxtdesc(struct igc_r
  	/* set bits to identify this as an advanced context descriptor */
  	type_tucmd |= IGC_TXD_CMD_DEXT | IGC_ADVTXD_DTYP_CTXT;
  
@@ -3929,7 +3951,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	if (test_bit(IGC_RING_FLAG_TX_CTX_IDX, &tx_ring->flags))
  		mss_l4len_idx |= tx_ring->reg_idx << 4;
  
-@@ -826,9 +942,12 @@ static void igc_tx_ctxtdesc(struct igc_r
+@@ -826,9 +944,12 @@ static void igc_tx_ctxtdesc(struct igc_r
  	 * should have been handled by the upper layers.
  	 */
  	if (tx_ring->launchtime_enable) {
@@ -3944,7 +3966,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	} else {
  		context_desc->launch_time = 0;
  	}
-@@ -860,7 +979,7 @@ csum_failed:
+@@ -860,7 +981,7 @@ csum_failed:
  	switch (skb->csum_offset) {
  	case offsetof(struct tcphdr, check):
  		type_tucmd = IGC_ADVTXD_TUCMD_L4T_TCP;
@@ -3953,7 +3975,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	case offsetof(struct udphdr, check):
  		break;
  	case offsetof(struct sctphdr, checksum):
-@@ -872,7 +991,7 @@ csum_failed:
+@@ -872,7 +993,7 @@ csum_failed:
  			type_tucmd = IGC_ADVTXD_TUCMD_L4T_SCTP;
  			break;
  		}
@@ -3962,7 +3984,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	default:
  		skb_checksum_help(skb);
  		goto csum_failed;
-@@ -921,6 +1040,11 @@ static inline int igc_maybe_stop_tx(stru
+@@ -921,6 +1042,11 @@ static inline int igc_maybe_stop_tx(stru
  	return __igc_maybe_stop_tx(tx_ring, size);
  }
  
@@ -3974,7 +3996,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static u32 igc_tx_cmd_type(struct sk_buff *skb, u32 tx_flags)
  {
  	/* set type for advanced descriptor with frame checksum insertion */
-@@ -928,6 +1052,14 @@ static u32 igc_tx_cmd_type(struct sk_buf
+@@ -928,6 +1054,14 @@ static u32 igc_tx_cmd_type(struct sk_buf
  		       IGC_ADVTXD_DCMD_DEXT |
  		       IGC_ADVTXD_DCMD_IFCS;
  
@@ -3989,7 +4011,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	return cmd_type;
  }
  
-@@ -1063,7 +1195,7 @@ static int igc_tx_map(struct igc_ring *t
+@@ -1063,7 +1197,7 @@ static int igc_tx_map(struct igc_ring *t
  
  	return 0;
  dma_error:
@@ -3998,7 +4020,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	tx_buffer = &tx_ring->tx_buffer_info[i];
  
  	/* clear dma mappings for failed tx_buffer_info map */
-@@ -1095,6 +1227,100 @@ dma_error:
+@@ -1095,6 +1229,100 @@ dma_error:
  	return -1;
  }
  
@@ -4099,7 +4121,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static netdev_tx_t igc_xmit_frame_ring(struct sk_buff *skb,
  				       struct igc_ring *tx_ring)
  {
-@@ -1104,6 +1330,7 @@ static netdev_tx_t igc_xmit_frame_ring(s
+@@ -1104,6 +1332,7 @@ static netdev_tx_t igc_xmit_frame_ring(s
  	u32 tx_flags = 0;
  	unsigned short f;
  	u8 hdr_len = 0;
@@ -4107,7 +4129,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	/* need: 1 descriptor per page * PAGE_SIZE/IGC_MAX_DATA_PER_TXD,
  	 *	+ 1 desc for skb_headlen/IGC_MAX_DATA_PER_TXD,
-@@ -1126,15 +1353,45 @@ static netdev_tx_t igc_xmit_frame_ring(s
+@@ -1126,15 +1355,45 @@ static netdev_tx_t igc_xmit_frame_ring(s
  	first->bytecount = skb->len;
  	first->gso_segs = 1;
  
@@ -4154,7 +4176,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  }
  
  static inline struct igc_ring *igc_tx_queue_mapping(struct igc_adapter *adapter,
-@@ -1165,6 +1422,46 @@ static netdev_tx_t igc_xmit_frame(struct
+@@ -1165,6 +1424,46 @@ static netdev_tx_t igc_xmit_frame(struct
  	return igc_xmit_frame_ring(skb, igc_tx_queue_mapping(adapter, skb));
  }
  
@@ -4201,7 +4223,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static inline void igc_rx_hash(struct igc_ring *ring,
  			       union igc_adv_rx_desc *rx_desc,
  			       struct sk_buff *skb)
-@@ -1181,9 +1478,9 @@ static inline void igc_rx_hash(struct ig
+@@ -1181,9 +1480,9 @@ static inline void igc_rx_hash(struct ig
   * @rx_desc: pointer to the EOP Rx descriptor
   * @skb: pointer to current skb being populated
   *
@@ -4214,7 +4236,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   */
  static void igc_process_skb_fields(struct igc_ring *rx_ring,
  				   union igc_adv_rx_desc *rx_desc,
-@@ -1191,6 +1488,8 @@ static void igc_process_skb_fields(struc
+@@ -1191,6 +1490,8 @@ static void igc_process_skb_fields(struc
  {
  	igc_rx_hash(rx_ring, rx_desc, skb);
  
@@ -4223,7 +4245,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	skb_record_rx_queue(skb, rx_ring->queue_index);
  
  	skb->protocol = eth_type_trans(skb, rx_ring->netdev);
-@@ -1310,6 +1609,12 @@ static struct sk_buff *igc_construct_skb
+@@ -1310,6 +1611,12 @@ static struct sk_buff *igc_construct_skb
  	if (unlikely(!skb))
  		return NULL;
  
@@ -4236,7 +4258,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	/* Determine available headroom for copy */
  	headlen = size;
  	if (headlen > IGC_RX_HDR_LEN)
-@@ -1407,7 +1712,6 @@ static bool igc_can_reuse_rx_page(struct
+@@ -1407,7 +1714,6 @@ static bool igc_can_reuse_rx_page(struct
   * igc_is_non_eop - process handling of non-EOP buffers
   * @rx_ring: Rx ring being processed
   * @rx_desc: Rx descriptor for current buffer
@@ -4244,7 +4266,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   *
   * This function updates next to clean.  If the buffer is an EOP buffer
   * this function exits returning false, otherwise it will place the
-@@ -1449,8 +1753,7 @@ static bool igc_cleanup_headers(struct i
+@@ -1449,8 +1755,7 @@ static bool igc_cleanup_headers(struct i
  				union igc_adv_rx_desc *rx_desc,
  				struct sk_buff *skb)
  {
@@ -4254,7 +4276,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  		struct net_device *netdev = rx_ring->netdev;
  
  		if (!(netdev->features & NETIF_F_RXALL)) {
-@@ -1487,9 +1790,56 @@ static void igc_put_rx_buffer(struct igc
+@@ -1487,9 +1792,56 @@ static void igc_put_rx_buffer(struct igc
  	rx_buffer->page = NULL;
  }
  
@@ -4312,7 +4334,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   */
  static void igc_alloc_rx_buffers(struct igc_ring *rx_ring, u16 cleaned_count)
  {
-@@ -1619,7 +1969,7 @@ static int igc_clean_rx_irq(struct igc_q
+@@ -1619,7 +1971,7 @@ static int igc_clean_rx_irq(struct igc_q
  		/* probably a little skewed due to removing CRC */
  		total_bytes += skb->len;
  
@@ -4321,7 +4343,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  		igc_process_skb_fields(rx_ring, rx_desc, skb);
  
  		napi_gro_receive(&q_vector->napi, skb);
-@@ -1647,52 +1997,6 @@ static int igc_clean_rx_irq(struct igc_q
+@@ -1647,52 +1999,6 @@ static int igc_clean_rx_irq(struct igc_q
  	return total_packets;
  }
  
@@ -4374,7 +4396,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  /**
   * igc_clean_tx_irq - Reclaim resources after transmit completes
   * @q_vector: pointer to q_vector containing needed info
-@@ -1812,27 +2116,27 @@ static bool igc_clean_tx_irq(struct igc_
+@@ -1812,27 +2118,27 @@ static bool igc_clean_tx_irq(struct igc_
  		    (adapter->tx_timeout_factor * HZ)) &&
  		    !(rd32(IGC_STATUS) & IGC_STATUS_TXOFF)) {
  			/* detected Tx unit hang */
@@ -4423,7 +4445,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			netif_stop_subqueue(tx_ring->netdev,
  					    tx_ring->queue_index);
  
-@@ -1864,6 +2168,1416 @@ static bool igc_clean_tx_irq(struct igc_
+@@ -1864,6 +2170,1416 @@ static bool igc_clean_tx_irq(struct igc_
  	return !!budget;
  }
  
@@ -5840,7 +5862,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  /**
   * igc_up - Open the interface and prepare it to handle traffic
   * @adapter: board private structure
-@@ -1980,8 +3694,8 @@ void igc_update_stats(struct igc_adapter
+@@ -1980,8 +3696,8 @@ void igc_update_stats(struct igc_adapter
  	adapter->stats.prc511 += rd32(IGC_PRC511);
  	adapter->stats.prc1023 += rd32(IGC_PRC1023);
  	adapter->stats.prc1522 += rd32(IGC_PRC1522);
@@ -5851,7 +5873,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	mpc = rd32(IGC_MPC);
  	adapter->stats.mpc += mpc;
-@@ -2020,21 +3734,13 @@ void igc_update_stats(struct igc_adapter
+@@ -2020,21 +3736,13 @@ void igc_update_stats(struct igc_adapter
  
  	adapter->stats.tpt += rd32(IGC_TPT);
  	adapter->stats.colc += rd32(IGC_COLC);
@@ -5874,7 +5896,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	/* Fill out the OS statistics structure */
  	net_stats->multicast = adapter->stats.mprc;
-@@ -2070,33 +3776,6 @@ void igc_update_stats(struct igc_adapter
+@@ -2070,33 +3778,6 @@ void igc_update_stats(struct igc_adapter
  	adapter->stats.mgpdc += rd32(IGC_MGTPDC);
  }
  
@@ -5908,7 +5930,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  /**
   * igc_down - Close the interface
   * @adapter: board private structure
-@@ -2110,28 +3789,31 @@ void igc_down(struct igc_adapter *adapte
+@@ -2110,28 +3791,31 @@ void igc_down(struct igc_adapter *adapte
  
  	set_bit(__IGC_DOWN, &adapter->state);
  
@@ -5954,7 +5976,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	adapter->flags &= ~IGC_FLAG_NEED_LINK_UPDATE;
  
-@@ -2165,7 +3847,6 @@ void igc_down(struct igc_adapter *adapte
+@@ -2165,7 +3849,6 @@ void igc_down(struct igc_adapter *adapte
  
  void igc_reinit_locked(struct igc_adapter *adapter)
  {
@@ -5962,7 +5984,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	while (test_and_set_bit(__IGC_RESETTING, &adapter->state))
  		usleep_range(1000, 2000);
  	igc_down(adapter);
-@@ -2179,8 +3860,19 @@ static void igc_reset_task(struct work_s
+@@ -2179,8 +3862,19 @@ static void igc_reset_task(struct work_s
  
  	adapter = container_of(work, struct igc_adapter, reset_task);
  
@@ -5982,7 +6004,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  }
  
  /**
-@@ -2194,7 +3886,6 @@ static int igc_change_mtu(struct net_dev
+@@ -2194,7 +3888,6 @@ static int igc_change_mtu(struct net_dev
  {
  	int max_frame = new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN;
  	struct igc_adapter *adapter = netdev_priv(netdev);
@@ -5990,7 +6012,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	/* adjust max frame to be at least the size of a standard frame */
  	if (max_frame < (ETH_FRAME_LEN + ETH_FCS_LEN))
-@@ -2209,8 +3900,7 @@ static int igc_change_mtu(struct net_dev
+@@ -2209,8 +3902,7 @@ static int igc_change_mtu(struct net_dev
  	if (netif_running(netdev))
  		igc_down(adapter);
  
@@ -6000,7 +6022,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	netdev->mtu = new_mtu;
  
  	if (netif_running(netdev))
-@@ -2267,20 +3957,8 @@ static int igc_set_features(struct net_d
+@@ -2267,20 +3959,8 @@ static int igc_set_features(struct net_d
  	if (!(changed & (NETIF_F_RXALL | NETIF_F_NTUPLE)))
  		return 0;
  
@@ -6023,7 +6045,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	netdev->features = features;
  
-@@ -2323,216 +4001,20 @@ igc_features_check(struct sk_buff *skb,
+@@ -2323,216 +4003,20 @@ igc_features_check(struct sk_buff *skb,
  	return features;
  }
  
@@ -6249,7 +6271,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  }
  
  /**
-@@ -2562,114 +4044,28 @@ static irqreturn_t igc_msix_other(int ir
+@@ -2562,114 +4046,28 @@ static irqreturn_t igc_msix_other(int ir
  			mod_timer(&adapter->watchdog_timer, jiffies + 1);
  	}
  
@@ -6376,7 +6398,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  }
  
  static irqreturn_t igc_msix_ring(int irq, void *data)
-@@ -2751,49 +4147,6 @@ err_out:
+@@ -2751,49 +4149,6 @@ err_out:
  }
  
  /**
@@ -6426,7 +6448,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_clear_interrupt_scheme - reset the device to a state of no interrupts
   * @adapter: Pointer to adapter structure
   *
-@@ -2806,48 +4159,6 @@ static void igc_clear_interrupt_scheme(s
+@@ -2806,48 +4161,6 @@ static void igc_clear_interrupt_scheme(s
  	igc_reset_interrupt_capability(adapter);
  }
  
@@ -6475,7 +6497,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  /* Need to wait a few seconds after link up to get diagnostic information from
   * the phy
   */
-@@ -2899,7 +4210,7 @@ bool igc_has_link(struct igc_adapter *ad
+@@ -2899,7 +4212,7 @@ bool igc_has_link(struct igc_adapter *ad
  
  /**
   * igc_watchdog - Timer Call-back
@@ -6484,7 +6506,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   */
  static void igc_watchdog(struct timer_list *t)
  {
-@@ -2917,7 +4228,6 @@ static void igc_watchdog_task(struct wor
+@@ -2917,7 +4230,6 @@ static void igc_watchdog_task(struct wor
  	struct igc_hw *hw = &adapter->hw;
  	struct igc_phy_info *phy = &hw->phy;
  	u16 phy_data, retry_count = 20;
@@ -6492,7 +6514,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	u32 link;
  	int i;
  
-@@ -2930,15 +4240,10 @@ static void igc_watchdog_task(struct wor
+@@ -2930,15 +4242,10 @@ static void igc_watchdog_task(struct wor
  			link = false;
  	}
  
@@ -6511,7 +6533,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  		if (!netif_carrier_ok(netdev)) {
  			u32 ctrl;
  
-@@ -2949,8 +4254,7 @@ static void igc_watchdog_task(struct wor
+@@ -2949,8 +4256,7 @@ static void igc_watchdog_task(struct wor
  			ctrl = rd32(IGC_CTRL);
  			/* Link status message must follow this format */
  			netdev_info(netdev,
@@ -6521,7 +6543,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  				    adapter->link_speed,
  				    adapter->link_duplex == FULL_DUPLEX ?
  				    "Full" : "Half",
-@@ -2959,6 +4263,15 @@ static void igc_watchdog_task(struct wor
+@@ -2959,6 +4265,15 @@ static void igc_watchdog_task(struct wor
  				    (ctrl & IGC_CTRL_RFCE) ?  "RX" :
  				    (ctrl & IGC_CTRL_TFCE) ?  "TX" : "None");
  
@@ -6537,7 +6559,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			/* check if SmartSpeed worked */
  			igc_check_downshift(hw);
  			if (phy->speed_downgraded)
-@@ -2988,10 +4301,10 @@ retry_read_status:
+@@ -2988,10 +4303,10 @@ retry_read_status:
  					retry_count--;
  					goto retry_read_status;
  				} else if (!retry_count) {
@@ -6550,7 +6572,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			}
  no_wait:
  			netif_carrier_on(netdev);
-@@ -3007,8 +4320,7 @@ no_wait:
+@@ -3007,8 +4322,7 @@ no_wait:
  			adapter->link_duplex = 0;
  
  			/* Links status message must follow this format */
@@ -6560,7 +6582,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			netif_carrier_off(netdev);
  
  			/* link state has changed, schedule phy info update */
-@@ -3024,6 +4336,8 @@ no_wait:
+@@ -3024,6 +4338,8 @@ no_wait:
  					return;
  				}
  			}
@@ -6569,7 +6591,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  		/* also check for alternate media here */
  		} else if (!netif_carrier_ok(netdev) &&
-@@ -3072,6 +4386,8 @@ no_wait:
+@@ -3072,6 +4388,8 @@ no_wait:
  		wr32(IGC_ICS, IGC_ICS_RXDMT0);
  	}
  
@@ -6578,7 +6600,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	/* Reset the timer */
  	if (!test_bit(__IGC_DOWN, &adapter->state)) {
  		if (adapter->flags & IGC_FLAG_NEED_LINK_UPDATE)
-@@ -3084,149 +4400,6 @@ no_wait:
+@@ -3084,149 +4402,6 @@ no_wait:
  }
  
  /**
@@ -6728,7 +6750,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_intr_msi - Interrupt Handler
   * @irq: interrupt number
   * @data: pointer to a network interface device structure
-@@ -3255,6 +4428,9 @@ static irqreturn_t igc_intr_msi(int irq,
+@@ -3255,6 +4430,9 @@ static irqreturn_t igc_intr_msi(int irq,
  			mod_timer(&adapter->watchdog_timer, jiffies + 1);
  	}
  
@@ -6738,7 +6760,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	napi_schedule(&q_vector->napi);
  
  	return IRQ_HANDLED;
-@@ -3298,429 +4474,14 @@ static irqreturn_t igc_intr(int irq, voi
+@@ -3298,429 +4476,14 @@ static irqreturn_t igc_intr(int irq, voi
  			mod_timer(&adapter->watchdog_timer, jiffies + 1);
  	}
  
@@ -7171,7 +7193,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  static void igc_free_irq(struct igc_adapter *adapter)
  {
  	if (adapter->msix_entries) {
-@@ -3737,62 +4498,6 @@ static void igc_free_irq(struct igc_adap
+@@ -3737,62 +4500,6 @@ static void igc_free_irq(struct igc_adap
  }
  
  /**
@@ -7234,7 +7256,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   * igc_request_irq - initialize interrupts
   * @adapter: Pointer to adapter structure
   *
-@@ -3839,32 +4544,16 @@ static int igc_request_irq(struct igc_ad
+@@ -3839,32 +4546,16 @@ static int igc_request_irq(struct igc_ad
  			  netdev->name, adapter);
  
  	if (err)
@@ -7270,7 +7292,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   *
   * Returns 0 on success, negative value on failure
   *
-@@ -3877,6 +4566,7 @@ static void igc_write_itr(struct igc_q_v
+@@ -3877,6 +4568,7 @@ static void igc_write_itr(struct igc_q_v
  static int __igc_open(struct net_device *netdev, bool resuming)
  {
  	struct igc_adapter *adapter = netdev_priv(netdev);
@@ -7278,7 +7300,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	struct igc_hw *hw = &adapter->hw;
  	int err = 0;
  	int i = 0;
-@@ -3888,6 +4578,9 @@ static int __igc_open(struct net_device
+@@ -3888,6 +4580,9 @@ static int __igc_open(struct net_device
  		return -EBUSY;
  	}
  
@@ -7288,7 +7310,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	netif_carrier_off(netdev);
  
  	/* allocate transmit descriptors */
-@@ -3926,6 +4619,9 @@ static int __igc_open(struct net_device
+@@ -3926,6 +4621,9 @@ static int __igc_open(struct net_device
  	rd32(IGC_ICR);
  	igc_irq_enable(adapter);
  
@@ -7298,7 +7320,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	netif_tx_start_all_queues(netdev);
  
  	/* start the watchdog. */
-@@ -3938,24 +4634,27 @@ err_set_queues:
+@@ -3938,24 +4636,27 @@ err_set_queues:
  	igc_free_irq(adapter);
  err_req_irq:
  	igc_release_hw_control(adapter);
@@ -7329,7 +7351,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
   *
   * Returns 0, this is not allowed to fail
   *
-@@ -3967,9 +4666,13 @@ static int igc_open(struct net_device *n
+@@ -3967,9 +4668,13 @@ static int igc_open(struct net_device *n
  static int __igc_close(struct net_device *netdev, bool suspending)
  {
  	struct igc_adapter *adapter = netdev_priv(netdev);
@@ -7343,7 +7365,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	igc_down(adapter);
  
  	igc_release_hw_control(adapter);
-@@ -3979,26 +4682,223 @@ static int __igc_close(struct net_device
+@@ -3979,26 +4684,223 @@ static int __igc_close(struct net_device
  	igc_free_all_tx_resources(adapter);
  	igc_free_all_rx_resources(adapter);
  
@@ -7568,7 +7590,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  };
  
  /* PCIe configuration access */
-@@ -4046,9 +4946,6 @@ u32 igc_rd32(struct igc_hw *hw, u32 reg)
+@@ -4046,9 +4948,6 @@ u32 igc_rd32(struct igc_hw *hw, u32 reg)
  	u8 __iomem *hw_addr = READ_ONCE(hw->hw_addr);
  	u32 value = 0;
  
@@ -7578,7 +7600,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	value = readl(&hw_addr[reg]);
  
  	/* reads should not return all F's */
-@@ -4067,7 +4964,6 @@ u32 igc_rd32(struct igc_hw *hw, u32 reg)
+@@ -4067,7 +4966,6 @@ u32 igc_rd32(struct igc_hw *hw, u32 reg)
  
  int igc_set_spd_dplx(struct igc_adapter *adapter, u32 spd, u8 dplx)
  {
@@ -7586,7 +7608,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	struct igc_mac_info *mac = &adapter->hw.mac;
  
  	mac->autoneg = 0;
-@@ -4112,7 +5008,7 @@ int igc_set_spd_dplx(struct igc_adapter
+@@ -4112,7 +5010,7 @@ int igc_set_spd_dplx(struct igc_adapter
  	return 0;
  
  err_inval:
@@ -7595,7 +7617,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	return -EINVAL;
  }
  
-@@ -4134,32 +5030,26 @@ static int igc_probe(struct pci_dev *pde
+@@ -4134,32 +5032,26 @@ static int igc_probe(struct pci_dev *pde
  	struct net_device *netdev;
  	struct igc_hw *hw;
  	const struct igc_info *ei = igc_info_tbl[ent->driver_data];
@@ -7637,7 +7659,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	if (err)
  		goto err_pci_reg;
  
-@@ -4199,7 +5089,7 @@ static int igc_probe(struct pci_dev *pde
+@@ -4199,7 +5091,7 @@ static int igc_probe(struct pci_dev *pde
  	hw->hw_addr = adapter->io_addr;
  
  	netdev->netdev_ops = &igc_netdev_ops;
@@ -7646,7 +7668,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	netdev->watchdog_timeo = 5 * HZ;
  
  	netdev->mem_start = pci_resource_start(pdev, 0);
-@@ -4222,7 +5112,24 @@ static int igc_probe(struct pci_dev *pde
+@@ -4222,7 +5114,24 @@ static int igc_probe(struct pci_dev *pde
  		goto err_sw_init;
  
  	/* Add supported features to the features list*/
@@ -7671,7 +7693,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  
  	/* setup the private structure */
  	err = igc_sw_init(adapter);
-@@ -4233,6 +5140,9 @@ static int igc_probe(struct pci_dev *pde
+@@ -4233,6 +5142,9 @@ static int igc_probe(struct pci_dev *pde
  	netdev->hw_features |= NETIF_F_NTUPLE;
  	netdev->hw_features |= netdev->features;
  
@@ -7681,7 +7703,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	/* MTU range: 68 - 9216 */
  	netdev->min_mtu = ETH_MIN_MTU;
  	netdev->max_mtu = MAX_STD_JUMBO_FRAME_SIZE;
-@@ -4244,8 +5154,7 @@ static int igc_probe(struct pci_dev *pde
+@@ -4244,8 +5156,7 @@ static int igc_probe(struct pci_dev *pde
  
  	if (igc_get_flash_presence_i225(hw)) {
  		if (hw->nvm.ops.validate(hw) < 0) {
@@ -7691,7 +7713,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  			err = -EIO;
  			goto err_eeprom;
  		}
-@@ -4283,6 +5192,18 @@ static int igc_probe(struct pci_dev *pde
+@@ -4283,6 +5194,18 @@ static int igc_probe(struct pci_dev *pde
  	hw->fc.requested_mode = igc_fc_default;
  	hw->fc.current_mode = igc_fc_default;
  
@@ -7710,7 +7732,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	/* reset the hardware with the new settings */
  	igc_reset(adapter);
  
-@@ -4306,6 +5227,14 @@ static int igc_probe(struct pci_dev *pde
+@@ -4306,6 +5229,14 @@ static int igc_probe(struct pci_dev *pde
  	pcie_print_link_status(pdev);
  	netdev_info(netdev, "MAC: %pM\n", netdev->dev_addr);
  
@@ -7725,7 +7747,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	return 0;
  
  err_register:
-@@ -4341,6 +5270,12 @@ static void igc_remove(struct pci_dev *p
+@@ -4341,6 +5272,12 @@ static void igc_remove(struct pci_dev *p
  	struct net_device *netdev = pci_get_drvdata(pdev);
  	struct igc_adapter *adapter = netdev_priv(netdev);
  
@@ -7738,7 +7760,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	set_bit(__IGC_DOWN, &adapter->state);
  
  	del_timer_sync(&adapter->watchdog_timer);
-@@ -4359,8 +5294,6 @@ static void igc_remove(struct pci_dev *p
+@@ -4359,8 +5296,6 @@ static void igc_remove(struct pci_dev *p
  	pci_iounmap(pdev, adapter->io_addr);
  	pci_release_mem_regions(pdev);
  
@@ -7747,7 +7769,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	free_netdev(netdev);
  
  	pci_disable_pcie_error_reporting(pdev);
-@@ -4368,105 +5301,319 @@ static void igc_remove(struct pci_dev *p
+@@ -4368,105 +5303,319 @@ static void igc_remove(struct pci_dev *p
  	pci_disable_device(pdev);
  }
  
@@ -8133,7 +8155,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  /**
   * igc_reinit_queues - return error
   * @adapter: pointer to adapter structure
-@@ -4474,7 +5621,6 @@ static int igc_sw_init(struct igc_adapte
+@@ -4474,7 +5623,6 @@ static int igc_sw_init(struct igc_adapte
  int igc_reinit_queues(struct igc_adapter *adapter)
  {
  	struct net_device *netdev = adapter->netdev;
@@ -8141,7 +8163,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  	int err = 0;
  
  	if (netif_running(netdev))
-@@ -4483,7 +5629,7 @@ int igc_reinit_queues(struct igc_adapter
+@@ -4483,7 +5631,7 @@ int igc_reinit_queues(struct igc_adapter
  	igc_reset_interrupt_capability(adapter);
  
  	if (igc_init_interrupt_scheme(adapter, true)) {
@@ -8150,7 +8172,7 @@ Index: linux-5.4.188/drivers/net/ethernet/intel/igc/igc_main.c
  		return -ENOMEM;
  	}
  
-@@ -4516,9 +5662,7 @@ static int __init igc_init_module(void)
+@@ -4516,9 +5664,7 @@ static int __init igc_init_module(void)
  {
  	int ret;
  
