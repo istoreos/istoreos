@@ -944,8 +944,8 @@
 	rtk-gpio-regulator {
 		compatible = "rtkgpio-regulator";
 		gpios = <&rtk_iso_gpio 16 1 0>, <&rtk_iso_gpio 17 1 1>;
-		//status = "disabled";
-		status = "okay";
+		status = "disabled";
+		//status = "okay";
 		vdd: rtkgpio_regulator {
 			regulator-min-microvolt = <850000>;
 			regulator-max-microvolt = <1050000>;

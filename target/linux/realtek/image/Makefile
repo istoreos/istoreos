@@ -40,7 +40,7 @@ define Build/install.img
 
 	echo "RESET000" | dd bs=512 count=1 conv=sync > "$@.install/etc.bin"
 
-	rtd129x_img_gen ./config/emmc_8gb.json "$@.install"
+	rtd129x_img_gen ./config/$(STORAGE_LAYOUT).json "$@.install"
 
 	rm -f "$@"
 	cd "$@.install"; $(TAR) -cf "$@" `ls`
@@ -66,7 +66,7 @@ define Device/Default
 	IMAGE_NAME = $$(IMAGE_PREFIX)-$$(1).$$(2)
 endef
 
-DEVICE_VARS += HWSETTING UBOOT_DTS
+DEVICE_VARS += HWSETTING UBOOT_DTS STORAGE_LAYOUT
 
 include rtd129x.mk
 

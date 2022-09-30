@@ -161,6 +161,12 @@
 			log_check_period = <500>; /* ms */
 		};
 	};
+	irda@98007400 {
+		status = "disabled";
+	};
+	sdio@98010A00 {
+		status = "disabled";
+	};
 	sdmmc@98010400 {
 		status = "disabled";
 	};

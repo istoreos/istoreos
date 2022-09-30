@@ -28,6 +28,7 @@ define Device/rtd129x
 	DEVICE_PACKAGES += libustream-openssl ca-bundle ca-certificates
 	DEVICE_PACKAGES += luci-lib-ipkg ipset
 	UBOOT_DTS := ars2
+	STORAGE_LAYOUT := emmc_8gb
 endef
 
 define Device/ars2
