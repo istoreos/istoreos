@@ -13,7 +13,7 @@ lan_if="eth0"
 
 case "$board" in
 Realtek,rtd-129*)
-	if [ -d "/sys/class/net/eth1" ]; then
+	if readlink /sys/class/net/eth1 | grep -qFw platform; then
 		lan_if="eth1"
 		ucidef_set_interface_wan "eth0" "dhcp"
 	fi
@@ -25,9 +25,12 @@ Realtek,rtd-129*)
 	;;
 esac
 
-ucidef_set_interface_lan "$lan_if" "static" "$ipaddr"
-
-ucidef_set_interface "lan" ipaddr "$ipaddr"
+if [[ "$lan_if" = "eth0" ]]; then
+	ucidef_set_interface_lan "eth0" "dhcp"
+else
+	ucidef_set_interface_lan "eth1" "static"
+	ucidef_set_interface "lan" ipaddr "$ipaddr"
+fi
 
 board_config_flush
 

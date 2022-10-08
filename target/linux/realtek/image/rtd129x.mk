@@ -61,6 +61,15 @@ define Device/bpi-w2
 endef
 TARGET_DEVICES += bpi-w2
 
+define Device/gb081
+	$(call Device/ars2)
+	DEVICE_TITLE := GB081
+	DEVICE_DTS := gb081
+	UBOOT_DTS := gb081
+	STORAGE_LAYOUT := emmc_32gb
+endef
+TARGET_DEVICES += gb081
+
 include rescue.mk
 
 endif

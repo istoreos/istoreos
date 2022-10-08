@@ -1,0 +1,26 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "GB081";
+	leds {
+		red {
+			gpio = <131 GPIO_ACTIVE_HIGH>;
+		};
+		green {
+			gpio = <122 GPIO_ACTIVE_HIGH>;
+		};
+	};
+	keys {
+		power {
+			gpio = <106 GPIO_ACTIVE_LOW>;
+		};
+		reboot {
+			gpio = <100 GPIO_ACTIVE_LOW>;
+		};
+	};
+	gpio {
+		gpios = <130 0>;
+	};
+};

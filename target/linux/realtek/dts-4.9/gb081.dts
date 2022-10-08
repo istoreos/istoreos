@@ -1,0 +1,122 @@
+/dts-v1/;
+
+#include "rtd1296-4GB.dtsi"
+
+/ {
+	model= "GB081";
+	chosen {
+		default-hostname = "iStoreOS";
+	};
+
+	aliases {
+		led-boot = &led_green;
+		led-failsafe = &led_red;
+		led-running = &led_green;
+		led-upgrade = &led_red;
+	};
+
+	sata@9803F000 {
+		sata0: sata-port@0 {
+			led-io = <&rtk_iso_gpio 29 RTK_GPIO_DIROUT 0>;
+		};
+		sata1: sata-port@1 {
+			led-io = <&rtk_iso_gpio 29 RTK_GPIO_DIROUT 0>;
+			/delete-property/ gpios; // SATA power is not assignd to gpio, (original igpio15)
+		};
+	};
+
+	sdmmc@98010400 {
+		status = "okay";
+	};
+
+	nic: gmac@98016000 {
+		status = "okay";
+	};
+
+	hwnat: gmac@98060000 {
+		status = "disabled";
+	};
+
+	rtk_misc_gpio: rtk_misc_gpio@9801b100 {
+		gpios = <&rtk_misc_gpio 8 RTK_GPIO_DIRIN 0>;
+	};
+
+	rtk_iso_gpio: rtk_iso_gpio@98007100 {
+		/* WAN led, USB power */
+		gpios = <&rtk_iso_gpio 27 RTK_GPIO_DIROUT 1>, <&rtk_iso_gpio 28 RTK_GPIO_DIROUT 1>, <&rtk_iso_gpio 32 RTK_GPIO_DIROUT 0>;
+	};
+
+	ehci@98013000 {
+		status = "disabled";
+	};
+	ohci@98013400 {
+		status = "disabled";
+	};
+	rtk_dwc3_drd@98013200 {
+		dwc3_drd@98020000 {
+			dr_mode = "host";
+		};
+		rtk_dwc3_drd_type_c@0 {
+			/delete-property/ drd_mode;
+		};
+	};
+	rtk_dwc3_u2host@98013E00 {
+		status = "disabled";
+		dwc3_u2host@98029000 {
+			status = "disabled";
+		};
+	};
+	dwc3_u2host_usb2phy@0 {
+		status = "disabled";
+	};
+	usb_phy_rle0599@0 {
+		status = "disabled";
+	};
+	rtk_usb_power_manager@0 {
+		/* For port0 */
+		gpio0: gpio0 {
+			realtek,power-gpio = <&rtk_iso_gpio 32 RTK_GPIO_DIROUT 0>;
+		};
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio;
+		};
+		/* For port3 */
+		gpio3: gpio3 {
+			realtek,power-gpio;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_green: green {
+			label = "green:router";
+			gpios = <&rtk_iso_gpio 21 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+		led_red: red {
+			label = "red:router";
+			gpios = <&rtk_iso_gpio 30 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		/*
+		eth0_link {
+			label = "eth0:link";
+			gpios = <&rtk_iso_gpio 27 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		eth0_txrx {
+			label = "eth0:txrx";
+			gpios = <&rtk_iso_gpio 28 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		*/
+	};
+	keys {
+		reset {
+			gpios = <&rtk_misc_gpio 100 RTK_GPIO_DIRIN GPIO_ACTIVE_LOW>;
+		};
+	};
+};
