@@ -572,7 +572,7 @@
 
 	sdmmc@98010400 {
 		compatible = "Realtek,rtk1295-sdmmc";
-		gpios = <&rtk_misc_gpio 99 1 0>; /*sd power , output, default high  (poweroff) */
+		gpios = <&rtk_misc_gpio 99 1 1>; /*sd power , output, default high  (poweroff) */
 		reg = <0x98000000 0x400>, /* CRT */
 			<0x98010400 0x200>, /* SDMMC */
 			<0x9801A000 0x400>, /* BS2 */
