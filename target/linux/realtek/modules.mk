@@ -137,7 +137,6 @@ define KernelPackage/rtl8169soc
   FILES:=
   AUTOLOAD:=
   DEPENDS:=@TARGET_realtek
-  CONFLICTS:=kmod-rtd1295hwnat
 endef
 
 define KernelPackage/rtl8169soc/description
