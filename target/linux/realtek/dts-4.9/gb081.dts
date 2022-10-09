@@ -29,11 +29,17 @@
 		status = "okay";
 	};
 
+	clk-en@9800708c {
+		ignore-unused-clocks = "clk_en_etn_250m", "clk_en_etn_sys";
+	};
+
 	nic: gmac@98016000 {
 		status = "okay";
 	};
 
 	hwnat: gmac@98060000 {
+		led-gpios = <&rtk_iso_gpio 27 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>, <&rtk_iso_gpio 28 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		gpio_link_led_pattern = <0 2 2 1>;
 		status = "disabled";
 	};
 
@@ -43,7 +49,7 @@
 
 	rtk_iso_gpio: rtk_iso_gpio@98007100 {
 		/* WAN led, USB power */
-		gpios = <&rtk_iso_gpio 27 RTK_GPIO_DIROUT 1>, <&rtk_iso_gpio 28 RTK_GPIO_DIROUT 1>, <&rtk_iso_gpio 32 RTK_GPIO_DIROUT 0>;
+		gpios = <&rtk_iso_gpio 32 RTK_GPIO_DIROUT 0>;
 	};
 
 	ehci@98013000 {
@@ -115,8 +121,11 @@
 		*/
 	};
 	keys {
+		/delete-node/ reset;
+		/*
 		reset {
 			gpios = <&rtk_misc_gpio 100 RTK_GPIO_DIRIN GPIO_ACTIVE_LOW>;
 		};
+		*/
 	};
 };
