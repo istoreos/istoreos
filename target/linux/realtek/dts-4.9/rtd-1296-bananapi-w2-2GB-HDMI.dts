@@ -185,12 +185,12 @@
 	};
 
 	nic: gmac@98016000 {
-		status = "okay";
+		status = "disabled";
 	};
 
-  hwnat: gmac@98060000 {
+	hwnat: gmac@98060000 {
 		status = "okay";
-  };
+	};
 
 	pcie@9804E000 {
 		status = "okay";
