@@ -180,6 +180,11 @@
 
 	thermal-zones {
 		cpu_thermal: cpu-thermal {
+			trips {
+				fan_alert0: fan-alert0 {
+					type = "active";
+				};
+			};
 			cooling-maps {
 				map_fan {
 					trip = <&fan_alert0>;
