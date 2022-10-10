@@ -15,6 +15,14 @@
 		led-upgrade = &led_red;
 	};
 
+	hw_watchdog {
+		compatible = "linux,wdt-gpio";
+		gpios = <&rtk_iso_gpio 31 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		hw_algo = "toggle";
+		hw_margin_ms = <2000>;
+		always-running;
+	};
+
 	sata@9803F000 {
 		sata0: sata-port@0 {
 			led-io = <&rtk_iso_gpio 29 RTK_GPIO_DIROUT 0>;
