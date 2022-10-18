@@ -1,0 +1,32 @@
+#!/bin/sh /etc/rc.common
+
+START=97
+
+check_kernel() {
+	local major=$1
+	local minor=$2
+	[ "$major" -gt 5 -o \( "$major" -eq 5 -a "$minor" -ge 4 \) ]
+}
+
+boot() {
+	if check_kernel `uname -r | grep -Eo '\d+\.\d+' | sed 's/\./ /g'`; then
+		if [ ! -f /usr/lib/samba/vfs/io_uring.so ]; then
+			if [ -f /usr/lib/samba/vfs/io_uring.so.bak ]; then
+				mv /usr/lib/samba/vfs/io_uring.so.bak /usr/lib/samba/vfs/io_uring.so
+			elif [ -f /rom/usr/lib/samba/vfs/io_uring.so ]; then
+				mkdir -p /usr/lib/samba/vfs
+				cp -a /rom/usr/lib/samba/vfs/io_uring.so /usr/lib/samba/vfs/io_uring.so
+				cat /usr/lib/samba/vfs/io_uring.so >/dev/null
+				rm -f /overlay/upper/usr/lib/samba/vfs/io_uring.so
+			fi
+		fi
+		rm -f /usr/lib/samba/vfs/io_uring.so.bak
+	elif [ -f /usr/lib/samba/vfs/io_uring.so ]; then
+		rm -f /usr/lib/samba/vfs/io_uring.so.bak
+		if [ ! -d /overlay/upper -o -f /overlay/upper/usr/lib/samba/vfs/io_uring.so ]; then
+			mv /usr/lib/samba/vfs/io_uring.so /usr/lib/samba/vfs/io_uring.so.bak
+		else
+			rm -f /usr/lib/samba/vfs/io_uring.so
+		fi
+	fi
+}
