@@ -4,8 +4,13 @@
 
 get_device_irq() {
 	local device="$1"
+	local line
+	local seconds
 
-	local line=$(grep -m 1 "${device}\$" /proc/interrupts)
+	for seconds in $(seq 0 9); do
+		line=$(grep -m 1 "${device}\$" /proc/interrupts) && break
+		sleep 1
+	done
 	echo ${line} | sed 's/:.*//'
 }
 
@@ -26,9 +31,9 @@ friendlyarm,nanopi-r2s)
 	set_interface_core 2 "eth0"
 	set_interface_core 4 "eth1" "xhci-hcd:usb3"
 	;;
+friendlyarm,nanopi-r4se|\
 friendlyarm,nanopi-r4s)
 	set_interface_core 10 "eth0"
 	set_interface_core 20 "eth1"
 	;;
 esac
-
