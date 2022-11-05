@@ -50,7 +50,7 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 	$${HOST_SED} 's/"192.168.1.1"/"192.168.100.1"/' \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/controller/admin/system.lua" \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/controller/admin/ota.lua" \
-		"$${IPKG_INSTROOT}/etc/board.d/99-default_network"
+		"$${IPKG_INSTROOT}/bin/config_generate"
 
 	$${HOST_SED} "s/'192\\.168\\.1\\.1'/'192.168.100.1'/; s/'openwrt\\.lan'/window.location.host/" "$${IPKG_INSTROOT}/www/luci-static/resources/view/system/flash.js"
 

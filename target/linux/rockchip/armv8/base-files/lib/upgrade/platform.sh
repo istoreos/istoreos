@@ -8,7 +8,7 @@ platform_check_image() {
 		echo "Unable to determine upgrade device"
 		return 1
 	}
-        [ "$SAVE_CONFIG" -eq 1 ] && return 0
+	[ "$SAVE_CONFIG" -eq 1 ] && return 0
 
 	get_partitions "/dev/$diskdev" bootdisk
 
