@@ -1,6 +1,6 @@
 # modified by jjm2473
 # 1. keep overlay partition when upgrade
-# 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade
+# 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade (stage2:istoreos_pre_upgrade)
 
 RAMFS_COPY_BIN='grub-bios-setup'
 
@@ -39,17 +39,6 @@ platform_check_image() {
 		v "Partition layout has changed. Full image will be written."
 		ask_bool 0 "Abort" && exit 1
 		return 0
-	fi
-}
-
-platform_copy_config() {
-	local partdev parttype=ext4
-
-	if export_partdevice partdev 1; then
-		part_magic_fat "/dev/$partdev" && parttype=vfat
-		mount -t $parttype -o rw,noatime "/dev/$partdev" /mnt
-		rm -f "/mnt/$BACKUP_FILE"
-		umount /mnt
 	fi
 }
 

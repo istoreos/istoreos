@@ -1,6 +1,7 @@
 # modified by jjm2473
 # 1. keep overlay partition when upgrade
-# 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade
+# 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade (stage2:istoreos_pre_upgrade)
+
 platform_check_image() {
 	local diskdev partdev diff
 
