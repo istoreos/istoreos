@@ -70,7 +70,8 @@ define Device/Default
   PROFILES := Default
   KERNEL := kernel-bin
   IMAGES := sysupgrade.img.gz
-  DEVICE_DTS = rockchip/$$(SOC)-$(lastword $(subst _, ,$(1)))
+  DEVICE_DTS_DIR := $(DTS_DIR)/rockchip
+  DEVICE_DTS = $$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
 include $(SUBTARGET).mk
