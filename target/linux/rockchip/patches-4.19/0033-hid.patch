@@ -1,0 +1,77 @@
+From 8cc0feb40801a2e626079a2f20ae99d3281599be Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:41:02 +0800
+Subject: [PATCH 33/46] hid
+
+---
+ drivers/hid/Kconfig           | 11 +++++++++++
+ drivers/hid/Makefile          |  1 +
+ drivers/hid/hid-ids.h         |  3 +++
+ drivers/hid/usbhid/hid-core.c |  3 +++
+ 4 files changed, 18 insertions(+)
+
+diff --git a/drivers/hid/Kconfig b/drivers/hid/Kconfig
+index 88bb59ba5..9464af321 100644
+--- a/drivers/hid/Kconfig
++++ b/drivers/hid/Kconfig
+@@ -653,6 +653,17 @@ config HID_MULTITOUCH
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called hid-multitouch.
+ 
++config HID_NINTENDO
++	tristate "Nintendo Joy-Con and Pro Controller support"
++	depends on HID
++	help
++	Adds support for the Nintendo Switch Joy-Cons and Pro Controller.
++	All controllers support bluetooth, and the Pro Controller also supports
++	its USB mode.
++
++	To compile this driver as a module, choose M here: the
++	module will be called hid-nintendo.
++
+ config HID_NTI
+ 	tristate "NTI keyboard adapters"
+ 	---help---
+diff --git a/drivers/hid/Makefile b/drivers/hid/Makefile
+index bd7ac53b7..487a78422 100644
+--- a/drivers/hid/Makefile
++++ b/drivers/hid/Makefile
+@@ -69,6 +69,7 @@ obj-$(CONFIG_HID_MAYFLASH)	+= hid-mf.o
+ obj-$(CONFIG_HID_MICROSOFT)	+= hid-microsoft.o
+ obj-$(CONFIG_HID_MONTEREY)	+= hid-monterey.o
+ obj-$(CONFIG_HID_MULTITOUCH)	+= hid-multitouch.o
++obj-$(CONFIG_HID_NINTENDO)	+= hid-nintendo.o
+ obj-$(CONFIG_HID_NTI)			+= hid-nti.o
+ obj-$(CONFIG_HID_NTRIG)		+= hid-ntrig.o
+ obj-$(CONFIG_HID_ORTEK)		+= hid-ortek.o
+diff --git a/drivers/hid/hid-ids.h b/drivers/hid/hid-ids.h
+index 8d4153c73..0abcaa753 100644
+--- a/drivers/hid/hid-ids.h
++++ b/drivers/hid/hid-ids.h
+@@ -866,6 +866,9 @@
+ #define USB_VENDOR_ID_NINTENDO		0x057e
+ #define USB_DEVICE_ID_NINTENDO_WIIMOTE	0x0306
+ #define USB_DEVICE_ID_NINTENDO_WIIMOTE2	0x0330
++#define USB_DEVICE_ID_NINTENDO_JOYCONL	0x2006
++#define USB_DEVICE_ID_NINTENDO_JOYCONR	0x2007
++#define USB_DEVICE_ID_NINTENDO_PROCON	0x2009
+ 
+ #define USB_VENDOR_ID_NOVATEK		0x0603
+ #define USB_DEVICE_ID_NOVATEK_PCT	0x0600
+diff --git a/drivers/hid/usbhid/hid-core.c b/drivers/hid/usbhid/hid-core.c
+index e28227040..7d1060e4c 100644
+--- a/drivers/hid/usbhid/hid-core.c
++++ b/drivers/hid/usbhid/hid-core.c
+@@ -1194,6 +1194,9 @@ static int usbhid_start(struct hid_device *hid)
+ 		device_set_wakeup_enable(&dev->dev, 1);
+ 	}
+ 
++	if (dev->actconfig->desc.bmAttributes & USB_CONFIG_ATT_WAKEUP)
++		device_set_wakeup_enable(&dev->dev, 1);
++
+ 	mutex_unlock(&usbhid->mutex);
+ 	return 0;
+ 
+-- 
+2.37.0 (Apple Git-136)
+

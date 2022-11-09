@@ -1,0 +1,7 @@
+config IRQ
+	bool "IRQ support"
+	depends on GICV2 || GICV3
+	default y
+	help
+	  Provide IRQ support for platforms
+

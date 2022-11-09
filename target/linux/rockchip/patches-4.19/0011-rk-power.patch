@@ -1,0 +1,4112 @@
+From 98b1d1584acdf1bc898166dc890404d2b660f1c7 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:01:52 +0800
+Subject: [PATCH 11/46] rk power
+
+---
+ drivers/mfd/Kconfig                 |    6 +-
+ drivers/mfd/rk808.c                 | 1117 +++++++++++++++++++++++++--
+ drivers/mfd/syscon.c                |   19 +
+ drivers/opp/core.c                  |  147 ++++
+ drivers/opp/of.c                    |   60 ++
+ drivers/pwm/Kconfig                 |   21 +
+ drivers/pwm/Makefile                |    1 +
+ drivers/pwm/core.c                  |   46 +-
+ drivers/pwm/pwm-rockchip.c          |  111 ++-
+ drivers/pwm/sysfs.c                 |   49 +-
+ drivers/soc/rockchip/Kconfig        |  141 +++-
+ drivers/soc/rockchip/Makefile       |   18 +
+ drivers/soc/rockchip/grf.c          |  161 ++++
+ drivers/soc/rockchip/pm_domains.c   |  901 ++++++++++++---------
+ include/linux/pwm.h                 |  148 +++-
+ include/soc/rockchip/rockchip_sip.h |    6 +
+ include/uapi/linux/magic.h          |    1 +
+ 17 files changed, 2506 insertions(+), 447 deletions(-)
+
+diff --git a/drivers/mfd/Kconfig b/drivers/mfd/Kconfig
+index dd938a5d0..5249d729f 100644
+--- a/drivers/mfd/Kconfig
++++ b/drivers/mfd/Kconfig
+@@ -997,14 +997,14 @@ config MFD_RC5T583
+ 	  different functionality of the device.
+ 
+ config MFD_RK808
+-	tristate "Rockchip RK805/RK808/RK818 Power Management Chip"
++	tristate "Rockchip RK805/RK808/RK809/RK816/RK817/RK818 Power Management Chip"
+ 	depends on I2C && OF
+ 	select MFD_CORE
+ 	select REGMAP_I2C
+ 	select REGMAP_IRQ
+ 	help
+-	  If you say yes here you get support for the RK805, RK808 and RK818
+-	  Power Management chips.
++	  If you say yes here you get support for the RK805, RK808 , RK809,
++	  RK816, RK817 and RK818 Power Management chips.
+ 	  This driver provides common support for accessing the device
+ 	  through I2C interface. The device supports multiple sub-devices
+ 	  including interrupts, RTC, LDO & DCDC regulators, and onkey.
+diff --git a/drivers/mfd/rk808.c b/drivers/mfd/rk808.c
+index 216fbf6ad..d4351702e 100644
+--- a/drivers/mfd/rk808.c
++++ b/drivers/mfd/rk808.c
+@@ -1,7 +1,7 @@
+ /*
+  * MFD core driver for Rockchip RK808/RK818
+  *
+- * Copyright (c) 2014, Fuzhou Rockchip Electronics Co., Ltd
++ * Copyright (c) 2014-2018, Fuzhou Rockchip Electronics Co., Ltd
+  *
+  * Author: Chris Zhong <zyw@rock-chips.com>
+  * Author: Zhang Qing <zhangqing@rock-chips.com>
+@@ -26,7 +26,11 @@
+ #include <linux/mfd/core.h>
+ #include <linux/module.h>
+ #include <linux/of_device.h>
++#include <linux/reboot.h>
+ #include <linux/regmap.h>
++#include <linux/syscore_ops.h>
++#include <linux/pinctrl/consumer.h>
++#include <linux/pinctrl/devinfo.h>
+ 
+ struct rk808_reg_data {
+ 	int addr;
+@@ -62,12 +66,72 @@ static bool rk808_is_volatile_reg(struct device *dev, unsigned int reg)
+ 	return false;
+ }
+ 
++static bool rk817_is_volatile_reg(struct device *dev, unsigned int reg)
++{
++	/*
++	 * Notes:
++	 * - Technically the ROUND_30s bit makes RTC_CTRL_REG volatile, but
++	 *   we don't use that feature.  It's better to cache.
++	 */
++
++	switch (reg) {
++	case RK817_SECONDS_REG ... RK817_WEEKS_REG:
++	case RK817_RTC_STATUS_REG:
++	case RK817_ADC_CONFIG0 ... RK817_CURE_ADC_K0:
++	case RK817_CHRG_STS:
++	case RK817_CHRG_OUT:
++	case RK817_CHRG_IN:
++	case RK817_SYS_STS:
++	case RK817_INT_STS_REG0:
++	case RK817_INT_STS_REG1:
++	case RK817_INT_STS_REG2:
++		return true;
++	}
++
++	return false;
++}
++
++static bool rk818_is_volatile_reg(struct device *dev, unsigned int reg)
++{
++	/*
++	 * Notes:
++	 * - Technically the ROUND_30s bit makes RTC_CTRL_REG volatile, but
++	 *   we don't use that feature.  It's better to cache.
++	 * - It's unlikely we care that RK808_DEVCTRL_REG is volatile since
++	 *   bits are cleared in case when we shutoff anyway, but better safe.
++	 */
++
++	switch (reg) {
++	case RK808_SECONDS_REG ... RK808_WEEKS_REG:
++	case RK808_RTC_STATUS_REG:
++	case RK808_VB_MON_REG:
++	case RK808_THERMAL_REG:
++	case RK808_DCDC_EN_REG:
++	case RK808_LDO_EN_REG:
++	case RK808_DCDC_UV_STS_REG:
++	case RK808_LDO_UV_STS_REG:
++	case RK808_DCDC_PG_REG:
++	case RK808_LDO_PG_REG:
++	case RK808_DEVCTRL_REG:
++	case RK808_INT_STS_REG1:
++	case RK808_INT_STS_REG2:
++	case RK808_INT_STS_MSK_REG1:
++	case RK808_INT_STS_MSK_REG2:
++	case RK816_INT_STS_REG1:
++	case RK816_INT_STS_MSK_REG1:
++	case RK818_SUP_STS_REG ... RK818_SAVE_DATA19:
++		return true;
++	}
++
++	return false;
++}
++
+ static const struct regmap_config rk818_regmap_config = {
+ 	.reg_bits = 8,
+ 	.val_bits = 8,
+-	.max_register = RK818_USB_CTRL_REG,
++	.max_register = RK818_SAVE_DATA19,
+ 	.cache_type = REGCACHE_RBTREE,
+-	.volatile_reg = rk808_is_volatile_reg,
++	.volatile_reg = rk818_is_volatile_reg,
+ };
+ 
+ static const struct regmap_config rk805_regmap_config = {
+@@ -86,6 +150,23 @@ static const struct regmap_config rk808_regmap_config = {
+ 	.volatile_reg = rk808_is_volatile_reg,
+ };
+ 
++static const struct regmap_config rk816_regmap_config = {
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = RK816_DATA18_REG,
++	.cache_type = REGCACHE_RBTREE,
++	.volatile_reg = rk818_is_volatile_reg,
++};
++
++static const struct regmap_config rk817_regmap_config = {
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = RK817_GPIO_INT_CFG,
++	.num_reg_defaults_raw = RK817_GPIO_INT_CFG + 1,
++	.cache_type = REGCACHE_RBTREE,
++	.volatile_reg = rk817_is_volatile_reg,
++};
++
+ static struct resource rtc_resources[] = {
+ 	{
+ 		.start  = RK808_IRQ_RTC_ALARM,
+@@ -94,6 +175,18 @@ static struct resource rtc_resources[] = {
+ 	}
+ };
+ 
++static struct resource rk816_rtc_resources[] = {
++	{
++		.start  = RK816_IRQ_RTC_ALARM,
++		.end    = RK816_IRQ_RTC_ALARM,
++		.flags  = IORESOURCE_IRQ,
++	}
++};
++
++static struct resource rk817_rtc_resources[] = {
++	DEFINE_RES_IRQ(RK817_IRQ_RTC_ALARM),
++};
++
+ static struct resource rk805_key_resources[] = {
+ 	{
+ 		.start  = RK805_IRQ_PWRON_FALL,
+@@ -107,6 +200,24 @@ static struct resource rk805_key_resources[] = {
+ 	}
+ };
+ 
++static struct resource rk816_pwrkey_resources[] = {
++	{
++		.start  = RK816_IRQ_PWRON_FALL,
++		.end    = RK816_IRQ_PWRON_FALL,
++		.flags  = IORESOURCE_IRQ,
++	},
++	{
++		.start  = RK816_IRQ_PWRON_RISE,
++		.end    = RK816_IRQ_PWRON_RISE,
++		.flags  = IORESOURCE_IRQ,
++	},
++};
++
++static struct resource rk817_pwrkey_resources[] = {
++	DEFINE_RES_IRQ(RK817_IRQ_PWRON_FALL),
++	DEFINE_RES_IRQ(RK817_IRQ_PWRON_RISE),
++};
++
+ static const struct mfd_cell rk805s[] = {
+ 	{ .name = "rk808-clkout", },
+ 	{ .name = "rk808-regulator", },
+@@ -132,9 +243,49 @@ static const struct mfd_cell rk808s[] = {
+ 	},
+ };
+ 
++static const struct mfd_cell rk816s[] = {
++	{ .name = "rk808-clkout", },
++	{ .name = "rk808-regulator", },
++	{ .name = "rk805-pinctrl", },
++	{ .name = "rk816-battery", .of_compatible = "rk816-battery", },
++	{
++		.name = "rk805-pwrkey",
++		.num_resources = ARRAY_SIZE(rk816_pwrkey_resources),
++		.resources = &rk816_pwrkey_resources[0],
++	},
++	{
++		.name = "rk808-rtc",
++		.num_resources = ARRAY_SIZE(rk816_rtc_resources),
++		.resources = &rk816_rtc_resources[0],
++	},
++};
++
++static const struct mfd_cell rk817s[] = {
++	{ .name = "rk808-clkout",},
++	{ .name = "rk808-regulator",},
++	{ .name = "rk817-battery", .of_compatible = "rk817,battery", },
++	{ .name = "rk817-charger", .of_compatible = "rk817,charger", },
++	{
++		.name = "rk805-pwrkey",
++		.num_resources = ARRAY_SIZE(rk817_pwrkey_resources),
++		.resources = &rk817_pwrkey_resources[0],
++	},
++	{
++		.name = "rk808-rtc",
++		.num_resources = ARRAY_SIZE(rk817_rtc_resources),
++		.resources = &rk817_rtc_resources[0],
++	},
++	{
++		.name = "rk817-codec",
++		.of_compatible = "rockchip,rk817-codec",
++	},
++};
++
+ static const struct mfd_cell rk818s[] = {
+ 	{ .name = "rk808-clkout", },
+ 	{ .name = "rk808-regulator", },
++	{ .name = "rk818-battery", .of_compatible = "rk818-battery", },
++	{ .name = "rk818-charger", },
+ 	{
+ 		.name = "rk808-rtc",
+ 		.num_resources = ARRAY_SIZE(rtc_resources),
+@@ -143,17 +294,18 @@ static const struct mfd_cell rk818s[] = {
+ };
+ 
+ static const struct rk808_reg_data rk805_pre_init_reg[] = {
+-	{RK805_BUCK1_CONFIG_REG, RK805_BUCK1_2_ILMAX_MASK,
+-				 RK805_BUCK1_2_ILMAX_4000MA},
+-	{RK805_BUCK2_CONFIG_REG, RK805_BUCK1_2_ILMAX_MASK,
+-				 RK805_BUCK1_2_ILMAX_4000MA},
+-	{RK805_BUCK3_CONFIG_REG, RK805_BUCK3_4_ILMAX_MASK,
+-				 RK805_BUCK3_ILMAX_3000MA},
+-	{RK805_BUCK4_CONFIG_REG, RK805_BUCK3_4_ILMAX_MASK,
+-				 RK805_BUCK4_ILMAX_3500MA},
+ 	{RK805_BUCK4_CONFIG_REG, BUCK_ILMIN_MASK, BUCK_ILMIN_400MA},
+ 	{RK805_GPIO_IO_POL_REG, SLP_SD_MSK, SLEEP_FUN},
+ 	{RK805_THERMAL_REG, TEMP_HOTDIE_MSK, TEMP115C},
++	{RK808_RTC_CTRL_REG, RTC_STOP, RTC_STOP},
++};
++
++static struct rk808_reg_data rk805_suspend_reg[] = {
++	{RK805_BUCK3_CONFIG_REG, PWM_MODE_MSK, AUTO_PWM_MODE},
++};
++
++static struct rk808_reg_data rk805_resume_reg[] = {
++	{RK805_BUCK3_CONFIG_REG, PWM_MODE_MSK, FPWM_MODE},
+ };
+ 
+ static const struct rk808_reg_data rk808_pre_init_reg[] = {
+@@ -163,10 +315,46 @@ static const struct rk808_reg_data rk808_pre_init_reg[] = {
+ 	{ RK808_BUCK1_CONFIG_REG, BUCK1_RATE_MASK,  BUCK_ILMIN_200MA },
+ 	{ RK808_BUCK2_CONFIG_REG, BUCK2_RATE_MASK,  BUCK_ILMIN_200MA },
+ 	{ RK808_DCDC_UV_ACT_REG,  BUCK_UV_ACT_MASK, BUCK_UV_ACT_DISABLE},
++	{ RK808_RTC_CTRL_REG, RTC_STOP, RTC_STOP},
+ 	{ RK808_VB_MON_REG,       MASK_ALL,         VB_LO_ACT |
+ 						    VB_LO_SEL_3500MV },
+ };
+ 
++static const struct rk808_reg_data rk816_pre_init_reg[] = {
++	/* buck4 Max ILMIT*/
++	{ RK816_BUCK4_CONFIG_REG, REG_WRITE_MSK, BUCK4_MAX_ILIMIT },
++	/* hotdie temperature: 105c*/
++	{ RK816_THERMAL_REG, REG_WRITE_MSK, TEMP105C },
++	/* set buck 12.5mv/us */
++	{ RK816_BUCK1_CONFIG_REG, BUCK_RATE_MSK, BUCK_RATE_12_5MV_US },
++	{ RK816_BUCK2_CONFIG_REG, BUCK_RATE_MSK, BUCK_RATE_12_5MV_US },
++	/* enable RTC_PERIOD & RTC_ALARM int */
++	{ RK816_INT_STS_MSK_REG2, REG_WRITE_MSK, RTC_PERIOD_ALARM_INT_EN },
++	/* set bat 3.0 low and act shutdown */
++	{ RK816_VB_MON_REG, VBAT_LOW_VOL_MASK | VBAT_LOW_ACT_MASK,
++	  RK816_VBAT_LOW_3V0 | EN_VABT_LOW_SHUT_DOWN },
++	/* enable PWRON rising/faling int */
++	{ RK816_INT_STS_MSK_REG1, REG_WRITE_MSK, RK816_PWRON_FALL_RISE_INT_EN },
++	/* enable PLUG IN/OUT int */
++	{ RK816_INT_STS_MSK_REG3, REG_WRITE_MSK, PLUGIN_OUT_INT_EN },
++	/* clear int flags */
++	{ RK816_INT_STS_REG1, REG_WRITE_MSK, ALL_INT_FLAGS_ST },
++	{ RK816_INT_STS_REG2, REG_WRITE_MSK, ALL_INT_FLAGS_ST },
++	{ RK816_INT_STS_REG3, REG_WRITE_MSK, ALL_INT_FLAGS_ST },
++	{ RK816_DCDC_EN_REG2, BOOST_EN_MASK, BOOST_DISABLE },
++	/* set write mask bit 1, otherwise 'is_enabled()' get wrong status */
++	{ RK816_LDO_EN_REG1, REGS_WMSK, REGS_WMSK },
++	{ RK816_LDO_EN_REG2, REGS_WMSK, REGS_WMSK },
++};
++
++static const struct rk808_reg_data rk817_pre_init_reg[] = {
++	{RK817_SYS_CFG(3), RK817_SLPPOL_MSK, RK817_SLPPOL_L},
++	{RK817_RTC_CTRL_REG, RTC_STOP, RTC_STOP},
++	{RK817_GPIO_INT_CFG, RK817_INT_POL_MSK, RK817_INT_POL_L},
++	{RK817_SYS_CFG(1), RK817_HOTDIE_TEMP_MSK | RK817_TSD_TEMP_MSK,
++					   RK817_HOTDIE_105 | RK817_TSD_140},
++};
++
+ static const struct rk808_reg_data rk818_pre_init_reg[] = {
+ 	/* improve efficiency */
+ 	{ RK818_BUCK2_CONFIG_REG, BUCK2_RATE_MASK,  BUCK_ILMIN_250MA },
+@@ -181,8 +369,10 @@ static const struct rk808_reg_data rk818_pre_init_reg[] = {
+ 	{ RK818_H5V_EN_REG,	  BIT(1),	    RK818_REF_RDY_CTRL },
+ 	/* enable HDMI 5V */
+ 	{ RK818_H5V_EN_REG,	  BIT(0),	    RK818_H5V_EN },
++	{ RK808_RTC_CTRL_REG, RTC_STOP, RTC_STOP},
+ 	{ RK808_VB_MON_REG,	  MASK_ALL,	    VB_LO_ACT |
+ 						    VB_LO_SEL_3500MV },
++	{RK808_CLK32OUT_REG, CLK32KOUT2_FUNC_MASK, CLK32KOUT2_FUNC},
+ };
+ 
+ static const struct regmap_irq rk805_irqs[] = {
+@@ -262,6 +452,70 @@ static const struct regmap_irq rk808_irqs[] = {
+ 	},
+ };
+ 
++static struct rk808_reg_data rk816_suspend_reg[] = {
++	/* set bat 3.4v low and act irq */
++	{ RK816_VB_MON_REG, VBAT_LOW_VOL_MASK | VBAT_LOW_ACT_MASK,
++	  RK816_VBAT_LOW_3V4 | EN_VBAT_LOW_IRQ },
++};
++
++static struct rk808_reg_data rk816_resume_reg[] = {
++	/* set bat 3.0v low and act shutdown */
++	{ RK816_VB_MON_REG, VBAT_LOW_VOL_MASK | VBAT_LOW_ACT_MASK,
++	  RK816_VBAT_LOW_3V0 | EN_VABT_LOW_SHUT_DOWN },
++};
++
++static const struct regmap_irq rk816_irqs[] = {
++	/* INT_STS */
++	[RK816_IRQ_PWRON_FALL] = {
++		.mask = RK816_IRQ_PWRON_FALL_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_PWRON_RISE] = {
++		.mask = RK816_IRQ_PWRON_RISE_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_VB_LOW] = {
++		.mask = RK816_IRQ_VB_LOW_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_PWRON] = {
++		.mask = RK816_IRQ_PWRON_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_PWRON_LP] = {
++		.mask = RK816_IRQ_PWRON_LP_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_HOTDIE] = {
++		.mask = RK816_IRQ_HOTDIE_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_RTC_ALARM] = {
++		.mask = RK816_IRQ_RTC_ALARM_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_RTC_PERIOD] = {
++		.mask = RK816_IRQ_RTC_PERIOD_MSK,
++		.reg_offset = 1,
++	},
++	[RK816_IRQ_USB_OV] = {
++		.mask = RK816_IRQ_USB_OV_MSK,
++		.reg_offset = 1,
++	},
++};
++
++static struct rk808_reg_data rk818_suspend_reg[] = {
++	/* set bat 3.4v low and act irq */
++	{ RK808_VB_MON_REG, VBAT_LOW_VOL_MASK | VBAT_LOW_ACT_MASK,
++	  RK808_VBAT_LOW_3V4 | EN_VBAT_LOW_IRQ },
++};
++
++static struct rk808_reg_data rk818_resume_reg[] = {
++	/* set bat 3.0v low and act shutdown */
++	{ RK808_VB_MON_REG, VBAT_LOW_VOL_MASK | VBAT_LOW_ACT_MASK,
++	  RK808_VBAT_LOW_3V0 | EN_VABT_LOW_SHUT_DOWN },
++};
++
+ static const struct regmap_irq rk818_irqs[] = {
+ 	/* INT_STS */
+ 	[RK818_IRQ_VOUT_LO] = {
+@@ -332,6 +586,33 @@ static const struct regmap_irq rk818_irqs[] = {
+ 	},
+ };
+ 
++static const struct regmap_irq rk817_irqs[RK817_IRQ_END] = {
++	REGMAP_IRQ_REG_LINE(0, 8),
++	REGMAP_IRQ_REG_LINE(1, 8),
++	REGMAP_IRQ_REG_LINE(2, 8),
++	REGMAP_IRQ_REG_LINE(3, 8),
++	REGMAP_IRQ_REG_LINE(4, 8),
++	REGMAP_IRQ_REG_LINE(5, 8),
++	REGMAP_IRQ_REG_LINE(6, 8),
++	REGMAP_IRQ_REG_LINE(7, 8),
++	REGMAP_IRQ_REG_LINE(8, 8),
++	REGMAP_IRQ_REG_LINE(9, 8),
++	REGMAP_IRQ_REG_LINE(10, 8),
++	REGMAP_IRQ_REG_LINE(11, 8),
++	REGMAP_IRQ_REG_LINE(12, 8),
++	REGMAP_IRQ_REG_LINE(13, 8),
++	REGMAP_IRQ_REG_LINE(14, 8),
++	REGMAP_IRQ_REG_LINE(15, 8),
++	REGMAP_IRQ_REG_LINE(16, 8),
++	REGMAP_IRQ_REG_LINE(17, 8),
++	REGMAP_IRQ_REG_LINE(18, 8),
++	REGMAP_IRQ_REG_LINE(19, 8),
++	REGMAP_IRQ_REG_LINE(20, 8),
++	REGMAP_IRQ_REG_LINE(21, 8),
++	REGMAP_IRQ_REG_LINE(22, 8),
++	REGMAP_IRQ_REG_LINE(23, 8)
++};
++
+ static struct regmap_irq_chip rk805_irq_chip = {
+ 	.name = "rk805",
+ 	.irqs = rk805_irqs,
+@@ -355,6 +636,73 @@ static const struct regmap_irq_chip rk808_irq_chip = {
+ 	.init_ack_masked = true,
+ };
+ 
++static const struct regmap_irq rk816_battery_irqs[] = {
++	/* INT_STS */
++	[RK816_IRQ_PLUG_IN] = {
++		.mask = RK816_IRQ_PLUG_IN_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_PLUG_OUT] = {
++		.mask = RK816_IRQ_PLUG_OUT_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_CHG_OK] = {
++		.mask = RK816_IRQ_CHG_OK_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_CHG_TE] = {
++		.mask = RK816_IRQ_CHG_TE_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_CHG_TS] = {
++		.mask = RK816_IRQ_CHG_TS_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_CHG_CVTLIM] = {
++		.mask = RK816_IRQ_CHG_CVTLIM_MSK,
++		.reg_offset = 0,
++	},
++	[RK816_IRQ_DISCHG_ILIM] = {
++		.mask = RK816_IRQ_DISCHG_ILIM_MSK,
++		.reg_offset = 0,
++	},
++};
++
++static struct regmap_irq_chip rk816_irq_chip = {
++	.name = "rk816",
++	.irqs = rk816_irqs,
++	.num_irqs = ARRAY_SIZE(rk816_irqs),
++	.num_regs = 2,
++	.irq_reg_stride = 3,
++	.status_base = RK816_INT_STS_REG1,
++	.mask_base = RK816_INT_STS_MSK_REG1,
++	.ack_base = RK816_INT_STS_REG1,
++	.init_ack_masked = true,
++};
++
++static struct regmap_irq_chip rk816_battery_irq_chip = {
++	.name = "rk816_battery",
++	.irqs = rk816_battery_irqs,
++	.num_irqs = ARRAY_SIZE(rk816_battery_irqs),
++	.num_regs = 1,
++	.status_base = RK816_INT_STS_REG3,
++	.mask_base = RK816_INT_STS_MSK_REG3,
++	.ack_base = RK816_INT_STS_REG3,
++	.init_ack_masked = true,
++};
++
++static struct regmap_irq_chip rk817_irq_chip = {
++	.name = "rk817",
++	.irqs = rk817_irqs,
++	.num_irqs = ARRAY_SIZE(rk817_irqs),
++	.num_regs = 3,
++	.irq_reg_stride = 2,
++	.status_base = RK817_INT_STS_REG0,
++	.mask_base = RK817_INT_STS_MSK_REG0,
++	.ack_base = RK817_INT_STS_REG0,
++	.init_ack_masked = true,
++};
++
+ static const struct regmap_irq_chip rk818_irq_chip = {
+ 	.name = "rk818",
+ 	.irqs = rk818_irqs,
+@@ -368,23 +716,37 @@ static const struct regmap_irq_chip rk818_irq_chip = {
+ };
+ 
+ static struct i2c_client *rk808_i2c_client;
++static struct rk808_reg_data *suspend_reg, *resume_reg;
++static int suspend_reg_num, resume_reg_num;
+ 
+ static void rk805_device_shutdown(void)
+ {
+ 	int ret;
+ 	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
+ 
+-	if (!rk808) {
+-		dev_warn(&rk808_i2c_client->dev,
+-			 "have no rk805, so do nothing here\n");
++	if (!rk808)
+ 		return;
+-	}
+ 
+ 	ret = regmap_update_bits(rk808->regmap,
+ 				 RK805_DEV_CTRL_REG,
+ 				 DEV_OFF, DEV_OFF);
+ 	if (ret)
+-		dev_err(&rk808_i2c_client->dev, "power off error!\n");
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
++}
++
++static void rk805_device_shutdown_prepare(void)
++{
++	int ret;
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++
++	if (!rk808)
++		return;
++
++	ret = regmap_update_bits(rk808->regmap,
++				 RK805_GPIO_IO_POL_REG,
++				 SLP_SD_MSK, SHUTDOWN_FUN);
++	if (ret)
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
+ }
+ 
+ static void rk808_device_shutdown(void)
+@@ -392,40 +754,434 @@ static void rk808_device_shutdown(void)
+ 	int ret;
+ 	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
+ 
+-	if (!rk808) {
+-		dev_warn(&rk808_i2c_client->dev,
+-			 "have no rk808, so do nothing here\n");
++	if (!rk808)
+ 		return;
+-	}
+ 
+ 	ret = regmap_update_bits(rk808->regmap,
+ 				 RK808_DEVCTRL_REG,
+ 				 DEV_OFF_RST, DEV_OFF_RST);
+ 	if (ret)
+-		dev_err(&rk808_i2c_client->dev, "power off error!\n");
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
+ }
+ 
+-static void rk818_device_shutdown(void)
++static void rk816_device_shutdown(void)
+ {
+ 	int ret;
+ 	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
+ 
+-	if (!rk808) {
+-		dev_warn(&rk808_i2c_client->dev,
+-			 "have no rk818, so do nothing here\n");
++	if (!rk808)
+ 		return;
++
++	ret = regmap_update_bits(rk808->regmap,
++				 RK816_DEV_CTRL_REG,
++				 DEV_OFF, DEV_OFF);
++	if (ret)
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
++}
++
++static void rk817_shutdown_prepare(void)
++{
++	int ret;
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++#if 0
++	/* close int when power off */
++	regmap_update_bits(rk808->regmap,
++			   RK817_INT_STS_MSK_REG0,
++			   0xff, 0xff);
++	regmap_update_bits(rk808->regmap,
++			   RK817_INT_STS_MSK_REG1,
++			   0xff, 0xff);
++	regmap_update_bits(rk808->regmap,
++			   RK817_INT_STS_MSK_REG2,
++			   0xff, 0xff);
++	regmap_update_bits(rk808->regmap,
++			   RK817_RTC_INT_REG,
++			   (0x3 << 2), (0x0 << 2));
++
++	dev_info(&rk808_i2c_client->dev, "disabled int when device shutdown!\n");
++#endif
++
++	if (rk808->pins && rk808->pins->p && rk808->pins->power_off) {
++		ret = regmap_update_bits(rk808->regmap,
++					 RK817_SYS_CFG(3),
++					 RK817_SLPPIN_FUNC_MSK,
++					 SLPPIN_NULL_FUN);
++		if (ret)
++			pr_err("shutdown: config SLPPIN_NULL_FUN error!\n");
++
++		ret = regmap_update_bits(rk808->regmap,
++					 RK817_SYS_CFG(3),
++					 RK817_SLPPOL_MSK,
++					 RK817_SLPPOL_H);
++		if (ret)
++			pr_err("shutdown: config RK817_SLPPOL_H error!\n");
++
++		ret = pinctrl_select_state(rk808->pins->p,
++					   rk808->pins->power_off);
++		if (ret)
++			pr_info("%s:failed to activate pwroff state\n",
++				__func__);
+ 	}
+ 
++	/* pmic sleep shutdown function */
++	ret = regmap_update_bits(rk808->regmap,
++				 RK817_SYS_CFG(3),
++				 RK817_SLPPIN_FUNC_MSK, SLPPIN_DN_FUN);
++	if (ret)
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
++	/* pmic need the SCL clock to synchronize register */
++	mdelay(2);
++}
++
++static void rk818_device_shutdown(void)
++{
++	int ret;
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++
++	if (!rk808)
++		return;
++
+ 	ret = regmap_update_bits(rk808->regmap,
+ 				 RK818_DEVCTRL_REG,
+ 				 DEV_OFF, DEV_OFF);
+ 	if (ret)
+-		dev_err(&rk808_i2c_client->dev, "power off error!\n");
++		dev_err(&rk808_i2c_client->dev, "Failed to shutdown device!\n");
++}
++
++/* Called in syscore shutdown */
++static void (*pm_shutdown)(void);
++
++static void rk8xx_syscore_shutdown(void)
++{
++	int ret;
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++
++	if (!rk808) {
++		dev_warn(&rk808_i2c_client->dev,
++			 "have no rk808, so do nothing here\n");
++		return;
++	}
++
++	/* close rtc int when power off */
++	regmap_update_bits(rk808->regmap,
++			   RK808_INT_STS_MSK_REG1,
++			   (0x3 << 5), (0x3 << 5));
++	regmap_update_bits(rk808->regmap,
++			   RK808_RTC_INT_REG,
++			   (0x3 << 2), (0x0 << 2));
++	/*
++	 * For PMIC that power off supplies by write register via i2c bus,
++	 * it's better to do power off at syscore shutdown here.
++	 *
++	 * Because when run to kernel's "pm_power_off" call, i2c may has
++	 * been stopped or PMIC may not be able to get i2c transfer while
++	 * there are too many devices are competiting.
++	 */
++	if (system_state == SYSTEM_POWER_OFF) {
++		if (rk808->variant == RK809_ID || rk808->variant == RK817_ID) {
++			ret = regmap_update_bits(rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_SLPPIN_FUNC_MSK,
++						 SLPPIN_DN_FUN);
++			if (ret) {
++				dev_warn(&rk808_i2c_client->dev,
++					 "Cannot switch to power down function\n");
++			}
++		}
++
++		if (pm_shutdown) {
++			dev_info(&rk808_i2c_client->dev, "System power off\n");
++			pm_shutdown();
++			mdelay(10);
++			dev_info(&rk808_i2c_client->dev,
++				 "Power off failed !\n");
++			while (1)
++				;
++		}
++	}
++}
++
++static struct syscore_ops rk808_syscore_ops = {
++	.shutdown = rk8xx_syscore_shutdown,
++};
++
++/*
++ * RK8xx PMICs would do real power off in syscore shutdown, if "pm_power_off"
++ * is not assigned(e.g. PSCI is not enabled), we have to provide a dummy
++ * callback for it, otherwise there comes a halt in Reboot system call:
++ *
++ * if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !pm_power_off)
++ *		cmd = LINUX_REBOOT_CMD_HALT;
++ */
++static void rk808_pm_power_off_dummy(void)
++{
++	pr_info("Dummy power off for RK8xx PMICs, should never reach here!\n");
++
++	while (1)
++		;
++}
++
++static ssize_t rk8xx_dbg_store(struct device *dev,
++			       struct device_attribute *attr,
++			       const char *buf, size_t count)
++{
++	int ret;
++	char cmd;
++	u32 input[2], addr, data;
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++
++	ret = sscanf(buf, "%c ", &cmd);
++	if (ret != 1) {
++		pr_err("Unknown command\n");
++		goto out;
++	}
++	switch (cmd) {
++	case 'w':
++		ret = sscanf(buf, "%c %x %x ", &cmd, &input[0], &input[1]);
++		if (ret != 3) {
++			pr_err("error! cmd format: echo w [addr] [value]\n");
++			goto out;
++		};
++		addr = input[0] & 0xff;
++		data = input[1] & 0xff;
++		pr_info("cmd : %c %x %x\n\n", cmd, input[0], input[1]);
++		regmap_write(rk808->regmap, addr, data);
++		regmap_read(rk808->regmap, addr, &data);
++		pr_info("new: %x %x\n", addr, data);
++		break;
++	case 'r':
++		ret = sscanf(buf, "%c %x ", &cmd, &input[0]);
++		if (ret != 2) {
++			pr_err("error! cmd format: echo r [addr]\n");
++			goto out;
++		};
++		pr_info("cmd : %c %x\n\n", cmd, input[0]);
++		addr = input[0] & 0xff;
++		regmap_read(rk808->regmap, addr, &data);
++		pr_info("%x %x\n", input[0], data);
++		break;
++	default:
++		pr_err("Unknown command\n");
++		break;
++	}
++
++out:
++	return count;
++}
++
++static int rk817_pinctrl_init(struct device *dev, struct rk808 *rk808)
++{
++	int ret;
++	struct platform_device	*pinctrl_dev;
++	struct pinctrl_state *default_st;
++
++	pinctrl_dev = platform_device_alloc("rk805-pinctrl", -1);
++	if (!pinctrl_dev) {
++		dev_err(dev, "Alloc pinctrl dev failed!\n");
++		return -ENOMEM;
++	}
++
++	pinctrl_dev->dev.parent = dev;
++
++	ret = platform_device_add(pinctrl_dev);
++
++	if (ret) {
++		platform_device_put(pinctrl_dev);
++		dev_err(dev, "Add rk805-pinctrl dev failed!\n");
++		return ret;
++	}
++	if (dev->pins && !IS_ERR(dev->pins->p)) {
++		dev_info(dev, "had get a pinctrl!\n");
++		return 0;
++	}
++
++	rk808->pins = devm_kzalloc(dev, sizeof(struct rk808_pin_info),
++				   GFP_KERNEL);
++	if (!rk808->pins)
++		return -ENOMEM;
++
++	rk808->pins->p = devm_pinctrl_get(dev);
++	if (IS_ERR(rk808->pins->p)) {
++		rk808->pins->p = NULL;
++		dev_err(dev, "no pinctrl handle\n");
++		return 0;
++	}
++
++	default_st = pinctrl_lookup_state(rk808->pins->p,
++					  PINCTRL_STATE_DEFAULT);
++
++	if (IS_ERR(default_st)) {
++		dev_dbg(dev, "no default pinctrl state\n");
++			return -EINVAL;
++	}
++
++	ret = pinctrl_select_state(rk808->pins->p, default_st);
++	if (ret) {
++		dev_dbg(dev, "failed to activate default pinctrl state\n");
++		return -EINVAL;
++	}
++
++	rk808->pins->power_off = pinctrl_lookup_state(rk808->pins->p,
++						      "pmic-power-off");
++	if (IS_ERR(rk808->pins->power_off)) {
++		rk808->pins->power_off = NULL;
++		dev_dbg(dev, "no power-off pinctrl state\n");
++	}
++
++	rk808->pins->sleep = pinctrl_lookup_state(rk808->pins->p,
++						  "pmic-sleep");
++	if (IS_ERR(rk808->pins->sleep)) {
++		rk808->pins->sleep = NULL;
++		dev_dbg(dev, "no sleep-setting state\n");
++	}
++
++	rk808->pins->reset = pinctrl_lookup_state(rk808->pins->p,
++						  "pmic-reset");
++	if (IS_ERR(rk808->pins->reset)) {
++		rk808->pins->reset = NULL;
++		dev_dbg(dev, "no reset-setting pinctrl state\n");
++		return 0;
++	}
++
++	ret = pinctrl_select_state(rk808->pins->p, rk808->pins->reset);
++
++	if (ret)
++		dev_dbg(dev, "failed to activate reset-setting pinctrl state\n");
++
++	return 0;
++}
++
++struct rk817_reboot_data_t {
++	struct rk808 *rk808;
++	struct notifier_block reboot_notifier;
++};
++
++static struct rk817_reboot_data_t rk817_reboot_data;
++
++static int rk817_reboot_notifier_handler(struct notifier_block *nb,
++					 unsigned long action, void *cmd)
++{
++	struct rk817_reboot_data_t *data;
++	struct device *dev;
++	int value, power_en_active0, power_en_active1;
++	int ret, i;
++	static const char * const pmic_rst_reg_only_cmd[] = {
++		"loader", "bootloader", "fastboot", "recovery",
++		"ums", "panic", "watchdog", "charge",
++	};
++
++	data = container_of(nb, struct rk817_reboot_data_t, reboot_notifier);
++	dev = &data->rk808->i2c->dev;
++
++	regmap_read(data->rk808->regmap, RK817_POWER_EN_SAVE0,
++		    &power_en_active0);
++	if (power_en_active0 != 0) {
++		regmap_read(data->rk808->regmap, RK817_POWER_EN_SAVE1,
++			    &power_en_active1);
++		value = power_en_active0 & 0x0f;
++		regmap_write(data->rk808->regmap,
++			     RK817_POWER_EN_REG(0),
++			     value | 0xf0);
++		value = (power_en_active0 & 0xf0) >> 4;
++		regmap_write(data->rk808->regmap,
++			     RK817_POWER_EN_REG(1),
++			     value | 0xf0);
++		value = power_en_active1 & 0x0f;
++		regmap_write(data->rk808->regmap,
++			     RK817_POWER_EN_REG(2),
++			     value | 0xf0);
++		value = (power_en_active1 & 0xf0) >> 4;
++		regmap_write(data->rk808->regmap,
++			     RK817_POWER_EN_REG(3),
++			     value | 0xf0);
++	} else {
++		dev_info(dev, "reboot: not restore POWER_EN\n");
++	}
++
++	if (action != SYS_RESTART || !cmd)
++		return NOTIFY_OK;
++
++	/*
++	 * When system restart, there are two rst actions of PMIC sleep if
++	 * board hardware support:
++	 *
++	 *	0b'00: reset the PMIC itself completely.
++	 *	0b'01: reset the 'RST' related register only.
++	 *
++	 * In the case of 0b'00, PMIC reset itself which triggers SoC NPOR-reset
++	 * at the same time, so the command: reboot load/bootload/recovery, etc
++	 * is not effect any more.
++	 *
++	 * Here we check if this reboot cmd is what we expect for 0b'01.
++	 */
++	for (i = 0; i < ARRAY_SIZE(pmic_rst_reg_only_cmd); i++) {
++		if (!strcmp(cmd, pmic_rst_reg_only_cmd[i])) {
++			ret = regmap_update_bits(data->rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_RST_FUNC_MSK,
++						 RK817_RST_FUNC_REG);
++			if (ret)
++				dev_err(dev, "reboot: force RK817_RST_FUNC_REG error!\n");
++			else
++				dev_info(dev, "reboot: force RK817_RST_FUNC_REG ok!\n");
++			break;
++		}
++	}
++
++	return NOTIFY_OK;
++}
++
++static void rk817_of_property_prepare(struct rk808 *rk808, struct device *dev)
++{
++	u32 inner;
++	int ret, func, msk, val;
++	struct device_node *np = dev->of_node;
++
++	ret = of_property_read_u32_index(np, "fb-inner-reg-idxs", 0, &inner);
++	if (!ret && inner == RK817_ID_DCDC3)
++		regmap_update_bits(rk808->regmap, RK817_POWER_CONFIG,
++				   RK817_BUCK3_FB_RES_MSK,
++				   RK817_BUCK3_FB_RES_INTER);
++	else
++		regmap_update_bits(rk808->regmap, RK817_POWER_CONFIG,
++				   RK817_BUCK3_FB_RES_MSK,
++				   RK817_BUCK3_FB_RES_EXT);
++	dev_info(dev, "support dcdc3 fb mode:%d, %d\n", ret, inner);
++
++	ret = of_property_read_u32(np, "pmic-reset-func", &func);
++
++	msk = RK817_SLPPIN_FUNC_MSK | RK817_RST_FUNC_MSK;
++	val = SLPPIN_NULL_FUN;
++
++	if (!ret && func < RK817_RST_FUNC_CNT) {
++		val |= RK817_RST_FUNC_MSK &
++		       (func << RK817_RST_FUNC_SFT);
++	} else {
++		val |= RK817_RST_FUNC_REG;
++	}
++
++	regmap_update_bits(rk808->regmap, RK817_SYS_CFG(3), msk, val);
++
++	dev_info(dev, "support pmic reset mode:%d,%d\n", ret, func);
++
++	rk817_reboot_data.rk808 = rk808;
++	rk817_reboot_data.reboot_notifier.notifier_call =
++		rk817_reboot_notifier_handler;
++	ret = register_reboot_notifier(&rk817_reboot_data.reboot_notifier);
++	if (ret)
++		dev_err(dev, "failed to register reboot nb\n");
+ }
+ 
++static struct kobject *rk8xx_kobj;
++static struct device_attribute rk8xx_attrs =
++		__ATTR(rk8xx_dbg, 0200, NULL, rk8xx_dbg_store);
++
+ static const struct of_device_id rk808_of_match[] = {
+ 	{ .compatible = "rockchip,rk805" },
+ 	{ .compatible = "rockchip,rk808" },
++	{ .compatible = "rockchip,rk809" },
++	{ .compatible = "rockchip,rk816" },
++	{ .compatible = "rockchip,rk817" },
+ 	{ .compatible = "rockchip,rk818" },
+ 	{ },
+ };
+@@ -437,27 +1193,42 @@ static int rk808_probe(struct i2c_client *client,
+ 	struct device_node *np = client->dev.of_node;
+ 	struct rk808 *rk808;
+ 	const struct rk808_reg_data *pre_init_reg;
++	const struct regmap_irq_chip *battery_irq_chip = NULL;
+ 	const struct mfd_cell *cells;
+-	void (*pm_pwroff_fn)(void);
++	unsigned char pmic_id_msb, pmic_id_lsb;
++	u8 on_source = 0, off_source = 0;
++	unsigned int on, off;
++	int pm_off = 0, msb, lsb;
+ 	int nr_pre_init_regs;
+ 	int nr_cells;
+-	int pm_off = 0, msb, lsb;
+ 	int ret;
+ 	int i;
++	void (*of_property_prepare_fn)(struct rk808 *rk808,
++				       struct device *dev) = NULL;
++	int (*pinctrl_init)(struct device *dev, struct rk808 *rk808) = NULL;
+ 
+ 	rk808 = devm_kzalloc(&client->dev, sizeof(*rk808), GFP_KERNEL);
+ 	if (!rk808)
+ 		return -ENOMEM;
+ 
++	if (of_device_is_compatible(np, "rockchip,rk817") ||
++	    of_device_is_compatible(np, "rockchip,rk809")) {
++		pmic_id_msb = RK817_ID_MSB;
++		pmic_id_lsb = RK817_ID_LSB;
++	} else {
++		pmic_id_msb = RK808_ID_MSB;
++		pmic_id_lsb = RK808_ID_LSB;
++	}
++
+ 	/* Read chip variant */
+-	msb = i2c_smbus_read_byte_data(client, RK808_ID_MSB);
++	msb = i2c_smbus_read_byte_data(client, pmic_id_msb);
+ 	if (msb < 0) {
+ 		dev_err(&client->dev, "failed to read the chip id at 0x%x\n",
+ 			RK808_ID_MSB);
+ 		return msb;
+ 	}
+ 
+-	lsb = i2c_smbus_read_byte_data(client, RK808_ID_LSB);
++	lsb = i2c_smbus_read_byte_data(client, pmic_id_lsb);
+ 	if (lsb < 0) {
+ 		dev_err(&client->dev, "failed to read the chip id at 0x%x\n",
+ 			RK808_ID_LSB);
+@@ -475,7 +1246,14 @@ static int rk808_probe(struct i2c_client *client,
+ 		nr_pre_init_regs = ARRAY_SIZE(rk805_pre_init_reg);
+ 		cells = rk805s;
+ 		nr_cells = ARRAY_SIZE(rk805s);
+-		pm_pwroff_fn = rk805_device_shutdown;
++		on_source = RK805_ON_SOURCE_REG;
++		off_source = RK805_OFF_SOURCE_REG;
++		suspend_reg = rk805_suspend_reg;
++		suspend_reg_num = ARRAY_SIZE(rk805_suspend_reg);
++		resume_reg = rk805_resume_reg;
++		resume_reg_num = ARRAY_SIZE(rk805_resume_reg);
++		rk808->pm_pwroff_fn = rk805_device_shutdown;
++		rk808->pm_pwroff_prep_fn = rk805_device_shutdown_prepare;
+ 		break;
+ 	case RK808_ID:
+ 		rk808->regmap_cfg = &rk808_regmap_config;
+@@ -484,7 +1262,23 @@ static int rk808_probe(struct i2c_client *client,
+ 		nr_pre_init_regs = ARRAY_SIZE(rk808_pre_init_reg);
+ 		cells = rk808s;
+ 		nr_cells = ARRAY_SIZE(rk808s);
+-		pm_pwroff_fn = rk808_device_shutdown;
++		rk808->pm_pwroff_fn = rk808_device_shutdown;
++		break;
++	case RK816_ID:
++		rk808->regmap_cfg = &rk816_regmap_config;
++		rk808->regmap_irq_chip = &rk816_irq_chip;
++		battery_irq_chip = &rk816_battery_irq_chip;
++		pre_init_reg = rk816_pre_init_reg;
++		nr_pre_init_regs = ARRAY_SIZE(rk816_pre_init_reg);
++		cells = rk816s;
++		nr_cells = ARRAY_SIZE(rk816s);
++		on_source = RK816_ON_SOURCE_REG;
++		off_source = RK816_OFF_SOURCE_REG;
++		suspend_reg = rk816_suspend_reg;
++		suspend_reg_num = ARRAY_SIZE(rk816_suspend_reg);
++		resume_reg = rk816_resume_reg;
++		resume_reg_num = ARRAY_SIZE(rk816_resume_reg);
++		rk808->pm_pwroff_fn = rk816_device_shutdown;
+ 		break;
+ 	case RK818_ID:
+ 		rk808->regmap_cfg = &rk818_regmap_config;
+@@ -493,7 +1287,27 @@ static int rk808_probe(struct i2c_client *client,
+ 		nr_pre_init_regs = ARRAY_SIZE(rk818_pre_init_reg);
+ 		cells = rk818s;
+ 		nr_cells = ARRAY_SIZE(rk818s);
+-		pm_pwroff_fn = rk818_device_shutdown;
++		on_source = RK818_ON_SOURCE_REG;
++		off_source = RK818_OFF_SOURCE_REG;
++		suspend_reg = rk818_suspend_reg;
++		suspend_reg_num = ARRAY_SIZE(rk818_suspend_reg);
++		resume_reg = rk818_resume_reg;
++		resume_reg_num = ARRAY_SIZE(rk818_resume_reg);
++		rk808->pm_pwroff_fn = rk818_device_shutdown;
++		break;
++	case RK809_ID:
++	case RK817_ID:
++		rk808->regmap_cfg = &rk817_regmap_config;
++		rk808->regmap_irq_chip = &rk817_irq_chip;
++		pre_init_reg = rk817_pre_init_reg;
++		nr_pre_init_regs = ARRAY_SIZE(rk817_pre_init_reg);
++		cells = rk817s;
++		nr_cells = ARRAY_SIZE(rk817s);
++		on_source = RK817_ON_SOURCE_REG;
++		off_source = RK817_OFF_SOURCE_REG;
++		rk808->pm_pwroff_prep_fn = rk817_shutdown_prepare;
++		of_property_prepare_fn = rk817_of_property_prepare;
++		pinctrl_init = rk817_pinctrl_init;
+ 		break;
+ 	default:
+ 		dev_err(&client->dev, "Unsupported RK8XX ID %lu\n",
+@@ -502,6 +1316,7 @@ static int rk808_probe(struct i2c_client *client,
+ 	}
+ 
+ 	rk808->i2c = client;
++	rk808_i2c_client = client;
+ 	i2c_set_clientdata(client, rk808);
+ 
+ 	rk808->regmap = devm_regmap_init_i2c(client, rk808->regmap_cfg);
+@@ -510,28 +1325,67 @@ static int rk808_probe(struct i2c_client *client,
+ 		return PTR_ERR(rk808->regmap);
+ 	}
+ 
++	if (on_source && off_source) {
++		ret = regmap_read(rk808->regmap, on_source, &on);
++		if (ret) {
++			dev_err(&client->dev, "read 0x%x failed\n", on_source);
++			return ret;
++		}
++
++		ret = regmap_read(rk808->regmap, off_source, &off);
++		if (ret) {
++			dev_err(&client->dev, "read 0x%x failed\n", off_source);
++			return ret;
++		}
++
++		dev_info(&client->dev, "source: on=0x%02x, off=0x%02x\n",
++			 on, off);
++	}
++
+ 	if (!client->irq) {
+ 		dev_err(&client->dev, "No interrupt support, no core IRQ\n");
+ 		return -EINVAL;
+ 	}
+ 
++	if (of_property_prepare_fn)
++		of_property_prepare_fn(rk808, &client->dev);
++
++	for (i = 0; i < nr_pre_init_regs; i++) {
++		ret = regmap_update_bits(rk808->regmap,
++					 pre_init_reg[i].addr,
++					 pre_init_reg[i].mask,
++					 pre_init_reg[i].value);
++		if (ret) {
++			dev_err(&client->dev,
++				"0x%x write err\n",
++				pre_init_reg[i].addr);
++			return ret;
++		}
++	}
++
++	if (pinctrl_init) {
++		ret = pinctrl_init(&client->dev, rk808);
++		if (ret)
++			return ret;
++	}
++
+ 	ret = regmap_add_irq_chip(rk808->regmap, client->irq,
+-				  IRQF_ONESHOT, -1,
++				  IRQF_ONESHOT | IRQF_SHARED, -1,
+ 				  rk808->regmap_irq_chip, &rk808->irq_data);
+ 	if (ret) {
+ 		dev_err(&client->dev, "Failed to add irq_chip %d\n", ret);
+ 		return ret;
+ 	}
+ 
+-	for (i = 0; i < nr_pre_init_regs; i++) {
+-		ret = regmap_update_bits(rk808->regmap,
+-					pre_init_reg[i].addr,
+-					pre_init_reg[i].mask,
+-					pre_init_reg[i].value);
++	if (battery_irq_chip) {
++		ret = regmap_add_irq_chip(rk808->regmap, client->irq,
++					  IRQF_ONESHOT | IRQF_SHARED, -1,
++					  battery_irq_chip,
++					  &rk808->battery_irq_data);
+ 		if (ret) {
+ 			dev_err(&client->dev,
+-				"0x%x write err\n",
+-				pre_init_reg[i].addr);
++				"Failed to add batterry irq_chip %d\n", ret);
++			regmap_del_irq_chip(client->irq, rk808->irq_data);
+ 			return ret;
+ 		}
+ 	}
+@@ -544,17 +1398,34 @@ static int rk808_probe(struct i2c_client *client,
+ 		goto err_irq;
+ 	}
+ 
+-	pm_off = of_property_read_bool(np,
+-				"rockchip,system-power-controller");
+-	if (pm_off && !pm_power_off) {
+-		rk808_i2c_client = client;
+-		pm_power_off = pm_pwroff_fn;
++	pm_off = of_property_read_bool(np, "rockchip,system-power-controller");
++	if (pm_off) {
++		if (!pm_power_off_prepare)
++			pm_power_off_prepare = rk808->pm_pwroff_prep_fn;
++
++		if (rk808->pm_pwroff_fn) {
++			register_syscore_ops(&rk808_syscore_ops);
++			/* power off system in the syscore shutdown ! */
++			pm_shutdown = rk808->pm_pwroff_fn;
++		}
++	}
++
++	rk8xx_kobj = kobject_create_and_add("rk8xx", NULL);
++	if (rk8xx_kobj) {
++		ret = sysfs_create_file(rk8xx_kobj, &rk8xx_attrs.attr);
++		if (ret)
++			dev_err(&client->dev, "create rk8xx sysfs error\n");
+ 	}
+ 
++	if (!pm_power_off)
++		pm_power_off = rk808_pm_power_off_dummy;
++
+ 	return 0;
+ 
+ err_irq:
+ 	regmap_del_irq_chip(client->irq, rk808->irq_data);
++	if (battery_irq_chip)
++		regmap_del_irq_chip(client->irq, rk808->battery_irq_data);
+ 	return ret;
+ }
+ 
+@@ -563,30 +1434,166 @@ static int rk808_remove(struct i2c_client *client)
+ 	struct rk808 *rk808 = i2c_get_clientdata(client);
+ 
+ 	regmap_del_irq_chip(client->irq, rk808->irq_data);
+-	pm_power_off = NULL;
++	mfd_remove_devices(&client->dev);
++
++	/**
++	 * pm_power_off may points to a function from another module.
++	 * Check if the pointer is set by us and only then overwrite it.
++	 */
++	if (pm_power_off == rk808_pm_power_off_dummy)
++		pm_power_off = NULL;
++
++	/**
++	 * As above, check if the pointer is set by us before overwrite.
++	 */
++	if (rk808->pm_pwroff_prep_fn &&
++	    pm_power_off_prepare == rk808->pm_pwroff_prep_fn)
++		pm_power_off_prepare = NULL;
++
++	if (pm_shutdown)
++		unregister_syscore_ops(&rk808_syscore_ops);
+ 
+ 	return 0;
+ }
+ 
+-static const struct i2c_device_id rk808_ids[] = {
+-	{ "rk805" },
+-	{ "rk808" },
+-	{ "rk818" },
+-	{ },
+-};
+-MODULE_DEVICE_TABLE(i2c, rk808_ids);
++static int __maybe_unused rk8xx_suspend(struct device *dev)
++{
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++	int i, ret = 0;
++	int value;
++
++	for (i = 0; i < suspend_reg_num; i++) {
++		ret = regmap_update_bits(rk808->regmap,
++					 suspend_reg[i].addr,
++					 suspend_reg[i].mask,
++					 suspend_reg[i].value);
++		if (ret) {
++			dev_err(dev, "0x%x write err\n",
++				suspend_reg[i].addr);
++			return ret;
++		}
++	}
++
++	switch (rk808->variant) {
++	case RK809_ID:
++	case RK817_ID:
++		if (rk808->pins && rk808->pins->p && rk808->pins->sleep) {
++			ret = regmap_update_bits(rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_SLPPIN_FUNC_MSK,
++						 SLPPIN_NULL_FUN);
++			if (ret) {
++				dev_err(dev, "suspend: config SLPPIN_NULL_FUN error!\n");
++				return ret;
++			}
++
++			ret = regmap_update_bits(rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_SLPPOL_MSK,
++						 RK817_SLPPOL_H);
++			if (ret) {
++				dev_err(dev, "suspend: config RK817_SLPPOL_H error!\n");
++				return ret;
++			}
++
++			/* pmic need the SCL clock to synchronize register */
++			regmap_read(rk808->regmap, RK817_SYS_STS, &value);
++			mdelay(2);
++			ret = pinctrl_select_state(rk808->pins->p, rk808->pins->sleep);
++			if (ret) {
++				dev_err(dev, "failed to act slp pinctrl state\n");
++				return ret;
++			}
++		}
++		break;
++	default:
++		break;
++	}
++
++	return ret;
++}
++
++static int __maybe_unused rk8xx_resume(struct device *dev)
++{
++	struct rk808 *rk808 = i2c_get_clientdata(rk808_i2c_client);
++	int i, ret = 0;
++	int value;
++
++	for (i = 0; i < resume_reg_num; i++) {
++		ret = regmap_update_bits(rk808->regmap,
++					 resume_reg[i].addr,
++					 resume_reg[i].mask,
++					 resume_reg[i].value);
++		if (ret) {
++			dev_err(dev, "0x%x write err\n",
++				resume_reg[i].addr);
++			return ret;
++		}
++	}
++
++	switch (rk808->variant) {
++	case RK809_ID:
++	case RK817_ID:
++		if (rk808->pins && rk808->pins->p && rk808->pins->reset) {
++			ret = regmap_update_bits(rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_SLPPIN_FUNC_MSK,
++						 SLPPIN_NULL_FUN);
++			if (ret) {
++				dev_err(dev, "resume: config SLPPIN_NULL_FUN error!\n");
++				return ret;
++			}
++
++			ret = regmap_update_bits(rk808->regmap,
++						 RK817_SYS_CFG(3),
++						 RK817_SLPPOL_MSK,
++						 RK817_SLPPOL_L);
++			if (ret) {
++				dev_err(dev, "resume: config RK817_SLPPOL_L error!\n");
++				return ret;
++			}
++
++			/* pmic need the SCL clock to synchronize register */
++			regmap_read(rk808->regmap, RK817_SYS_STS, &value);
++			mdelay(2);
++			ret = pinctrl_select_state(rk808->pins->p, rk808->pins->reset);
++			if (ret)
++				dev_dbg(dev, "failed to act reset pinctrl state\n");
++		}
++		break;
++	default:
++		break;
++	}
++
++	return ret;
++}
++SIMPLE_DEV_PM_OPS(rk8xx_pm_ops, rk8xx_suspend, rk8xx_resume);
+ 
+ static struct i2c_driver rk808_i2c_driver = {
+ 	.driver = {
+ 		.name = "rk808",
+ 		.of_match_table = rk808_of_match,
++		.pm = &rk8xx_pm_ops,
+ 	},
+ 	.probe    = rk808_probe,
+ 	.remove   = rk808_remove,
+-	.id_table = rk808_ids,
+ };
+ 
++#ifdef CONFIG_ROCKCHIP_THUNDER_BOOT
++static int __init rk808_i2c_driver_init(void)
++{
++	return i2c_add_driver(&rk808_i2c_driver);
++}
++subsys_initcall(rk808_i2c_driver_init);
++
++static void __exit rk808_i2c_driver_exit(void)
++{
++	i2c_del_driver(&rk808_i2c_driver);
++}
++module_exit(rk808_i2c_driver_exit);
++#else
+ module_i2c_driver(rk808_i2c_driver);
++#endif
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_AUTHOR("Chris Zhong <zyw@rock-chips.com>");
+diff --git a/drivers/mfd/syscon.c b/drivers/mfd/syscon.c
+index b6d05cd93..a0ba4ff89 100644
+--- a/drivers/mfd/syscon.c
++++ b/drivers/mfd/syscon.c
+@@ -12,6 +12,7 @@
+  * (at your option) any later version.
+  */
+ 
++#include <linux/clk.h>
+ #include <linux/err.h>
+ #include <linux/hwspinlock.h>
+ #include <linux/io.h>
+@@ -45,6 +46,7 @@ static const struct regmap_config syscon_regmap_config = {
+ 
+ static struct syscon *of_syscon_register(struct device_node *np)
+ {
++	struct clk *clk;
+ 	struct syscon *syscon;
+ 	struct regmap *regmap;
+ 	void __iomem *base;
+@@ -119,6 +121,18 @@ static struct syscon *of_syscon_register(struct device_node *np)
+ 		goto err_regmap;
+ 	}
+ 
++	clk = of_clk_get(np, 0);
++	if (IS_ERR(clk)) {
++		ret = PTR_ERR(clk);
++		/* clock is optional */
++		if (ret != -ENOENT)
++			goto err_clk;
++	} else {
++		ret = regmap_mmio_attach_clk(regmap, clk);
++		if (ret)
++			goto err_attach;
++	}
++
+ 	syscon->regmap = regmap;
+ 	syscon->np = np;
+ 
+@@ -128,6 +142,11 @@ static struct syscon *of_syscon_register(struct device_node *np)
+ 
+ 	return syscon;
+ 
++err_attach:
++	if (!IS_ERR(clk))
++		clk_put(clk);
++err_clk:
++	regmap_exit(regmap);
+ err_regmap:
+ 	iounmap(base);
+ err_map:
+diff --git a/drivers/opp/core.c b/drivers/opp/core.c
+index 34515f432..13650316c 100644
+--- a/drivers/opp/core.c
++++ b/drivers/opp/core.c
+@@ -745,6 +745,91 @@ int dev_pm_opp_set_rate(struct device *dev, unsigned long target_freq)
+ }
+ EXPORT_SYMBOL_GPL(dev_pm_opp_set_rate);
+ 
++/**
++ * dev_pm_opp_check_rate_volt() - Configure new OPP based on current rate
++ * @dev:	device for which we do this operation
++ * @force:	when true force to set voltage
++ *
++ * This configures the power-supplies and clock source to the levels specified
++ * by the OPP corresponding to current rate.
++ *
++ */
++int dev_pm_opp_check_rate_volt(struct device *dev, bool force)
++{
++	struct opp_table *opp_table;
++	struct dev_pm_opp *opp;
++	struct regulator *reg;
++	struct clk *clk;
++	unsigned long old_freq, target_freq, target_volt;
++	int old_volt;
++	int ret = 0;
++
++	opp_table = _find_opp_table(dev);
++	if (IS_ERR(opp_table)) {
++		dev_err(dev, "%s: device opp doesn't exist\n", __func__);
++		return PTR_ERR(opp_table);
++	}
++
++	clk = opp_table->clk;
++	if (!opp_table->regulators) {
++		dev_err(dev, "opp_table regulators is null\n");
++		goto put_opp_table;
++	}
++	reg = opp_table->regulators[0];
++	if (IS_ERR_OR_NULL(clk) || IS_ERR_OR_NULL(reg)) {
++		dev_err(dev, "clk or regulater is unavailable\n");
++		ret = -EINVAL;
++		goto put_opp_table;
++	}
++	old_freq = clk_get_rate(clk);
++	old_volt = regulator_get_voltage(reg);
++	if (old_volt <= 0) {
++		dev_err(dev, "failed to get volt %d\n", old_volt);
++		ret = -EINVAL;
++		goto put_opp_table;
++	}
++
++	target_freq = old_freq;
++	/* If not available, use the closest opp */
++	opp = dev_pm_opp_find_freq_ceil(dev, &target_freq);
++	if (IS_ERR(opp)) {
++		/* The freq is an upper bound. opp should be lower */
++		opp = dev_pm_opp_find_freq_floor(dev, &target_freq);
++		if (IS_ERR(opp)) {
++			dev_err(dev, "failed to find OPP for freq %lu\n",
++				target_freq);
++			ret = PTR_ERR(opp);
++			goto put_opp_table;
++		}
++	}
++	target_volt = opp->supplies->u_volt;
++	target_freq = clk_round_rate(clk, target_freq);
++
++	dev_dbg(dev, "%lu Hz %d uV --> %lu Hz %lu uV\n", old_freq, old_volt,
++		target_freq, target_volt);
++
++	if (old_freq == target_freq) {
++		if (old_volt != target_volt || force) {
++			ret = _set_opp_voltage(dev, reg, opp->supplies);
++			if (ret) {
++				dev_err(dev, "failed to set volt %lu\n",
++					target_volt);
++				goto put_opp;
++			}
++		}
++		goto put_opp;
++	}
++
++	ret = _generic_set_opp_regulator(opp_table, dev, old_freq, target_freq,
++					  NULL, opp->supplies);
++put_opp:
++	dev_pm_opp_put(opp);
++put_opp_table:
++	dev_pm_opp_put_opp_table(opp_table);
++	return ret;
++}
++EXPORT_SYMBOL_GPL(dev_pm_opp_check_rate_volt);
++
+ /* OPP-dev Helpers */
+ static void _remove_opp_dev(struct opp_device *opp_dev,
+ 			    struct opp_table *opp_table)
+@@ -1778,3 +1863,65 @@ void dev_pm_opp_remove_table(struct device *dev)
+ 	_dev_pm_opp_find_and_remove_table(dev, true);
+ }
+ EXPORT_SYMBOL_GPL(dev_pm_opp_remove_table);
++
++#ifdef CONFIG_DEBUG_FS
++#include <linux/debugfs.h>
++
++static int opp_summary_show(struct seq_file *s, void *data)
++{
++	struct list_head *lists = (struct list_head *)s->private;
++	struct opp_table *opp_table;
++	struct dev_pm_opp *opp;
++
++	mutex_lock(&opp_table_lock);
++
++	seq_puts(s, " device                rate(Hz)    target(uV)    min(uV)    max(uV)\n");
++	seq_puts(s, "-------------------------------------------------------------------\n");
++
++	list_for_each_entry(opp_table, lists, node) {
++		seq_printf(s, " %s\n", opp_table->dentry_name);
++		mutex_lock(&opp_table->lock);
++		list_for_each_entry(opp, &opp_table->opp_list, node) {
++			seq_printf(s, "%31lu %12lu %11lu %11lu\n",
++				   opp->rate,
++				   opp->supplies[0].u_volt,
++				   opp->supplies[0].u_volt_min,
++				   opp->supplies[0].u_volt_max);
++		}
++		mutex_unlock(&opp_table->lock);
++	}
++
++	mutex_unlock(&opp_table_lock);
++
++	return 0;
++}
++
++static int opp_summary_open(struct inode *inode, struct file *file)
++{
++	return single_open(file, opp_summary_show, inode->i_private);
++}
++
++static const struct file_operations opp_summary_fops = {
++	.open		= opp_summary_open,
++	.read		= seq_read,
++	.llseek		= seq_lseek,
++	.release	= single_release,
++};
++
++static int __init opp_debug_init(void)
++{
++	struct dentry *parent, *d;
++
++	parent = debugfs_lookup("opp", NULL);
++	if (!parent)
++		return -ENOMEM;
++
++	d = debugfs_create_file("opp_summary", 0444, parent, &opp_tables,
++				&opp_summary_fops);
++	if (!d)
++		return -ENOMEM;
++
++	return 0;
++}
++late_initcall(opp_debug_init);
++#endif
+diff --git a/drivers/opp/of.c b/drivers/opp/of.c
+index a53123356..c672cddfa 100644
+--- a/drivers/opp/of.c
++++ b/drivers/opp/of.c
+@@ -791,3 +791,63 @@ struct device_node *dev_pm_opp_get_of_node(struct dev_pm_opp *opp)
+ 	return of_node_get(opp->np);
+ }
+ EXPORT_SYMBOL_GPL(dev_pm_opp_get_of_node);
++
++/**
++ * of_dev_pm_opp_get_cpu_power() - Estimates the power of a CPU
++ * @mW:		pointer to the power estimate in milli-watts
++ * @KHz:	pointer to the OPP's frequency, in kilo-hertz
++ * @cpu:	CPU for which power needs to be estimated
++ *
++ * Computes the power estimated by @CPU at the first OPP above @KHz (ceil),
++ * and updates @KHz and @mW accordingly.
++ *
++ * The power is estimated as P = C * V^2 * f, with C the CPU's capacitance
++ * (read from the 'dynamic-power-coefficient' devicetree binding) and V and f
++ * respectively the voltage and frequency of the OPP.
++ *
++ * Return: -ENODEV if the CPU device cannot be found, -EINVAL if the power
++ * calculation failed because of missing parameters, 0 otherwise.
++ */
++int of_dev_pm_opp_get_cpu_power(unsigned long *mW, unsigned long *KHz, int cpu)
++{
++	unsigned long mV, Hz, MHz;
++	struct device *cpu_dev;
++	struct dev_pm_opp *opp;
++	struct device_node *np;
++	u32 cap;
++	u64 tmp;
++	int ret;
++
++	cpu_dev = get_cpu_device(cpu);
++	if (!cpu_dev)
++		return -ENODEV;
++
++	np = of_node_get(cpu_dev->of_node);
++	if (!np)
++		return -EINVAL;
++
++	ret = of_property_read_u32(np, "dynamic-power-coefficient", &cap);
++	of_node_put(np);
++	if (ret)
++		return -EINVAL;
++
++	Hz = *KHz * 1000;
++	opp = dev_pm_opp_find_freq_ceil(cpu_dev, &Hz);
++	if (IS_ERR(opp))
++		return -EINVAL;
++
++	mV = dev_pm_opp_get_voltage(opp) / 1000;
++	dev_pm_opp_put(opp);
++	if (!mV)
++		return -EINVAL;
++
++	MHz = Hz / 1000000;
++	tmp = (u64)cap * mV * mV * MHz;
++	do_div(tmp, 1000000000);
++
++	*mW = (unsigned long)tmp;
++	*KHz = Hz / 1000;
++
++	return 0;
++}
++EXPORT_SYMBOL_GPL(of_dev_pm_opp_get_cpu_power);
+diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index 504d25271..ca1363544 100644
+--- a/drivers/pwm/Kconfig
++++ b/drivers/pwm/Kconfig
+@@ -168,6 +168,21 @@ config PWM_FSL_FTM
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called pwm-fsl-ftm.
+ 
++config PWM_GPIO
++	tristate "Generic GPIO bit-banged PWM driver"
++	depends on OF
++	depends on GPIOLIB
++	help
++	  Some platforms do not offer any hardware PWM capabilities but do have
++	  General Purpose Input Output (GPIO) pins available. Using the kernels
++	  High-Resolution Timer API this driver tries to toggle GPIO using the
++	  generic kernel PWM framework. The maximum frequency and/or accuracy
++	  is dependent on several factors such as system load and the maximum
++	  speed a pin can be toggled at the hardware.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called pwm-gpio.
++
+ config PWM_HIBVT
+ 	tristate "HiSilicon BVT PWM support"
+ 	depends on ARCH_HISI || COMPILE_TEST
+@@ -369,6 +384,12 @@ config PWM_ROCKCHIP
+ 	  Generic PWM framework driver for the PWM controller found on
+ 	  Rockchip SoCs.
+ 
++config PWM_ROCKCHIP_ONESHOT
++	bool "Rockchip PWM oneshot mode support"
++	depends on PWM_ROCKCHIP
++	help
++	  Support Rockchip pwm oneshot mode for specified number of cycles.
++
+ config PWM_SAMSUNG
+ 	tristate "Samsung PWM support"
+ 	depends on PLAT_SAMSUNG || ARCH_EXYNOS
+diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index 9c676a0da..1745933f1 100644
+--- a/drivers/pwm/Makefile
++++ b/drivers/pwm/Makefile
+@@ -15,6 +15,7 @@ obj-$(CONFIG_PWM_CRC)		+= pwm-crc.o
+ obj-$(CONFIG_PWM_CROS_EC)	+= pwm-cros-ec.o
+ obj-$(CONFIG_PWM_EP93XX)	+= pwm-ep93xx.o
+ obj-$(CONFIG_PWM_FSL_FTM)	+= pwm-fsl-ftm.o
++obj-$(CONFIG_PWM_GPIO)		+= pwm-gpio.o
+ obj-$(CONFIG_PWM_HIBVT)		+= pwm-hibvt.o
+ obj-$(CONFIG_PWM_IMG)		+= pwm-img.o
+ obj-$(CONFIG_PWM_IMX)		+= pwm-imx.o
+diff --git a/drivers/pwm/core.c b/drivers/pwm/core.c
+index b1b74cfb1..4b6c0622c 100644
+--- a/drivers/pwm/core.c
++++ b/drivers/pwm/core.c
+@@ -294,6 +294,7 @@ int pwmchip_add_with_polarity(struct pwm_chip *chip,
+ 		pwm->pwm = chip->base + i;
+ 		pwm->hwpwm = i;
+ 		pwm->state.polarity = polarity;
++		pwm->state.output_type = PWM_OUTPUT_FIXED;
+ 
+ 		if (chip->ops->get_state)
+ 			chip->ops->get_state(chip, pwm, &pwm->state);
+@@ -507,11 +508,46 @@ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state)
+ 			pwm->state.polarity = state->polarity;
+ 		}
+ 
++		if (state->output_type != pwm->state.output_type) {
++			if (!pwm->chip->ops->set_output_type)
++				return -ENOTSUPP;
++
++			err = pwm->chip->ops->set_output_type(pwm->chip, pwm,
++						state->output_type);
++			if (err)
++				return err;
++
++			pwm->state.output_type = state->output_type;
++		}
++
++		if (state->output_pattern != pwm->state.output_pattern &&
++				state->output_pattern != NULL) {
++			if (!pwm->chip->ops->set_output_pattern)
++				return -ENOTSUPP;
++
++			err = pwm->chip->ops->set_output_pattern(pwm->chip,
++					pwm, state->output_pattern);
++			if (err)
++				return err;
++
++			pwm->state.output_pattern = state->output_pattern;
++		}
++
+ 		if (state->period != pwm->state.period ||
+ 		    state->duty_cycle != pwm->state.duty_cycle) {
+-			err = pwm->chip->ops->config(pwm->chip, pwm,
+-						     state->duty_cycle,
+-						     state->period);
++			if (pwm->chip->ops->config_extend) {
++				err = pwm->chip->ops->config_extend(pwm->chip,
++						pwm, state->duty_cycle,
++						state->period);
++			} else {
++				if (state->period > UINT_MAX)
++					pr_warn("period %llu duty_cycle %llu will be truncated\n",
++							state->period,
++							state->duty_cycle);
++				err = pwm->chip->ops->config(pwm->chip, pwm,
++						state->duty_cycle,
++						state->period);
++			}
+ 			if (err)
+ 				return err;
+ 
+@@ -996,8 +1032,8 @@ static void pwm_dbg_show(struct pwm_chip *chip, struct seq_file *s)
+ 		if (state.enabled)
+ 			seq_puts(s, " enabled");
+ 
+-		seq_printf(s, " period: %u ns", state.period);
+-		seq_printf(s, " duty: %u ns", state.duty_cycle);
++		seq_printf(s, " period: %llu ns", state.period);
++		seq_printf(s, " duty: %llu ns", state.duty_cycle);
+ 		seq_printf(s, " polarity: %s",
+ 			   state.polarity ? "inverse" : "normal");
+ 
+diff --git a/drivers/pwm/pwm-rockchip.c b/drivers/pwm/pwm-rockchip.c
+index cf34fb00c..e505d5863 100644
+--- a/drivers/pwm/pwm-rockchip.c
++++ b/drivers/pwm/pwm-rockchip.c
+@@ -14,6 +14,7 @@
+ #include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/of_device.h>
++#include <linux/pinctrl/consumer.h>
+ #include <linux/platform_device.h>
+ #include <linux/pwm.h>
+ #include <linux/time.h>
+@@ -29,15 +30,25 @@
+ #define PWM_INACTIVE_POSITIVE	(1 << 4)
+ #define PWM_POLARITY_MASK	(PWM_DUTY_POSITIVE | PWM_INACTIVE_POSITIVE)
+ #define PWM_OUTPUT_LEFT		(0 << 5)
++#define PWM_OUTPUT_CENTER	(1 << 5)
+ #define PWM_LOCK_EN		(1 << 6)
+ #define PWM_LP_DISABLE		(0 << 8)
+ 
++#define PWM_ONESHOT_COUNT_SHIFT	24
++#define PWM_ONESHOT_COUNT_MAX	256
++
+ struct rockchip_pwm_chip {
+ 	struct pwm_chip chip;
+ 	struct clk *clk;
+ 	struct clk *pclk;
++	struct pinctrl *pinctrl;
++	struct pinctrl_state *active_state;
+ 	const struct rockchip_pwm_data *data;
+ 	void __iomem *base;
++	unsigned long clk_rate;
++	bool vop_pwm_en; /* indicate voppwm mirror register state */
++	bool center_aligned;
++	bool oneshot;
+ };
+ 
+ struct rockchip_pwm_regs {
+@@ -52,7 +63,9 @@ struct rockchip_pwm_data {
+ 	unsigned int prescaler;
+ 	bool supports_polarity;
+ 	bool supports_lock;
++	bool vop_pwm;
+ 	u32 enable_conf;
++	u32 enable_conf_mask;
+ };
+ 
+ static inline struct rockchip_pwm_chip *to_rockchip_pwm_chip(struct pwm_chip *c)
+@@ -66,7 +79,6 @@ static void rockchip_pwm_get_state(struct pwm_chip *chip,
+ {
+ 	struct rockchip_pwm_chip *pc = to_rockchip_pwm_chip(chip);
+ 	u32 enable_conf = pc->data->enable_conf;
+-	unsigned long clk_rate;
+ 	u64 tmp;
+ 	u32 val;
+ 	int ret;
+@@ -75,15 +87,13 @@ static void rockchip_pwm_get_state(struct pwm_chip *chip,
+ 	if (ret)
+ 		return;
+ 
+-	clk_rate = clk_get_rate(pc->clk);
+-
+ 	tmp = readl_relaxed(pc->base + pc->data->regs.period);
+ 	tmp *= pc->data->prescaler * NSEC_PER_SEC;
+-	state->period = DIV_ROUND_CLOSEST_ULL(tmp, clk_rate);
++	state->period = DIV_ROUND_CLOSEST_ULL(tmp, pc->clk_rate);
+ 
+ 	tmp = readl_relaxed(pc->base + pc->data->regs.duty);
+ 	tmp *= pc->data->prescaler * NSEC_PER_SEC;
+-	state->duty_cycle =  DIV_ROUND_CLOSEST_ULL(tmp, clk_rate);
++	state->duty_cycle =  DIV_ROUND_CLOSEST_ULL(tmp, pc->clk_rate);
+ 
+ 	val = readl_relaxed(pc->base + pc->data->regs.ctrl);
+ 	if (pc->data->supports_polarity)
+@@ -102,32 +112,52 @@ static void rockchip_pwm_get_state(struct pwm_chip *chip,
+ }
+ 
+ static void rockchip_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+-			       struct pwm_state *state)
++				struct pwm_state *state)
+ {
+ 	struct rockchip_pwm_chip *pc = to_rockchip_pwm_chip(chip);
+ 	unsigned long period, duty;
+-	u64 clk_rate, div;
++	unsigned long flags;
++	u64 div;
+ 	u32 ctrl;
+ 
+-	clk_rate = clk_get_rate(pc->clk);
+-
+ 	/*
+ 	 * Since period and duty cycle registers have a width of 32
+ 	 * bits, every possible input period can be obtained using the
+ 	 * default prescaler value for all practical clock rate values.
+ 	 */
+-	div = clk_rate * state->period;
++	div = (u64)pc->clk_rate * state->period;
+ 	period = DIV_ROUND_CLOSEST_ULL(div,
+ 				       pc->data->prescaler * NSEC_PER_SEC);
+ 
+-	div = clk_rate * state->duty_cycle;
++	div = (u64)pc->clk_rate * state->duty_cycle;
+ 	duty = DIV_ROUND_CLOSEST_ULL(div, pc->data->prescaler * NSEC_PER_SEC);
+ 
++	local_irq_save(flags);
+ 	/*
+ 	 * Lock the period and duty of previous configuration, then
+ 	 * change the duty and period, that would not be effective.
+ 	 */
+ 	ctrl = readl_relaxed(pc->base + pc->data->regs.ctrl);
++	if (pc->data->vop_pwm) {
++		if (pc->vop_pwm_en)
++			ctrl |= PWM_ENABLE;
++		else
++			ctrl &= ~PWM_ENABLE;
++	}
++
++#ifdef CONFIG_PWM_ROCKCHIP_ONESHOT
++	if (state->oneshot_count > PWM_ONESHOT_COUNT_MAX) {
++		pc->oneshot = false;
++		dev_err(chip->dev, "Oneshot_count value overflow.\n");
++	} else if (state->oneshot_count > 0) {
++		pc->oneshot = true;
++		ctrl |= (state->oneshot_count - 1) << PWM_ONESHOT_COUNT_SHIFT;
++	} else {
++		pc->oneshot = false;
++		ctrl |= PWM_CONTINUOUS;
++	}
++#endif
++
+ 	if (pc->data->supports_lock) {
+ 		ctrl |= PWM_LOCK_EN;
+ 		writel_relaxed(ctrl, pc->base + pc->data->regs.ctrl);
+@@ -153,6 +183,7 @@ static void rockchip_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		ctrl &= ~PWM_LOCK_EN;
+ 
+ 	writel(ctrl, pc->base + pc->data->regs.ctrl);
++	local_irq_restore(flags);
+ }
+ 
+ static int rockchip_pwm_enable(struct pwm_chip *chip,
+@@ -171,13 +202,24 @@ static int rockchip_pwm_enable(struct pwm_chip *chip,
+ 	}
+ 
+ 	val = readl_relaxed(pc->base + pc->data->regs.ctrl);
++	val &= ~pc->data->enable_conf_mask;
+ 
+-	if (enable)
++	if (PWM_OUTPUT_CENTER & pc->data->enable_conf_mask) {
++		if (pc->center_aligned)
++			val |= PWM_OUTPUT_CENTER;
++	}
++
++	if (enable) {
+ 		val |= enable_conf;
+-	else
++		if (pc->oneshot)
++			val &= ~PWM_CONTINUOUS;
++	} else {
+ 		val &= ~enable_conf;
++	}
+ 
+ 	writel_relaxed(val, pc->base + pc->data->regs.ctrl);
++	if (pc->data->vop_pwm)
++		pc->vop_pwm_en = enable;
+ 
+ 	if (!enable)
+ 		clk_disable(pc->clk);
+@@ -221,6 +263,8 @@ static int rockchip_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+ 	 */
+ 	rockchip_pwm_get_state(chip, pwm, state);
+ 
++	if (state->enabled || pc->oneshot)
++		ret = pinctrl_select_state(pc->pinctrl, pc->active_state);
+ out:
+ 	clk_disable(pc->pclk);
+ 
+@@ -243,7 +287,9 @@ static const struct rockchip_pwm_data pwm_data_v1 = {
+ 	.prescaler = 2,
+ 	.supports_polarity = false,
+ 	.supports_lock = false,
++	.vop_pwm = false,
+ 	.enable_conf = PWM_CTRL_OUTPUT_EN | PWM_CTRL_TIMER_EN,
++	.enable_conf_mask = BIT(1) | BIT(3),
+ };
+ 
+ static const struct rockchip_pwm_data pwm_data_v2 = {
+@@ -256,8 +302,10 @@ static const struct rockchip_pwm_data pwm_data_v2 = {
+ 	.prescaler = 1,
+ 	.supports_polarity = true,
+ 	.supports_lock = false,
++	.vop_pwm = false,
+ 	.enable_conf = PWM_OUTPUT_LEFT | PWM_LP_DISABLE | PWM_ENABLE |
+ 		       PWM_CONTINUOUS,
++	.enable_conf_mask = GENMASK(2, 0) | BIT(5) | BIT(8),
+ };
+ 
+ static const struct rockchip_pwm_data pwm_data_vop = {
+@@ -270,8 +318,10 @@ static const struct rockchip_pwm_data pwm_data_vop = {
+ 	.prescaler = 1,
+ 	.supports_polarity = true,
+ 	.supports_lock = false,
++	.vop_pwm = true,
+ 	.enable_conf = PWM_OUTPUT_LEFT | PWM_LP_DISABLE | PWM_ENABLE |
+ 		       PWM_CONTINUOUS,
++	.enable_conf_mask = GENMASK(2, 0) | BIT(5) | BIT(8),
+ };
+ 
+ static const struct rockchip_pwm_data pwm_data_v3 = {
+@@ -284,8 +334,10 @@ static const struct rockchip_pwm_data pwm_data_v3 = {
+ 	.prescaler = 1,
+ 	.supports_polarity = true,
+ 	.supports_lock = true,
++	.vop_pwm = false,
+ 	.enable_conf = PWM_OUTPUT_LEFT | PWM_LP_DISABLE | PWM_ENABLE |
+ 		       PWM_CONTINUOUS,
++	.enable_conf_mask = GENMASK(2, 0) | BIT(5) | BIT(8),
+ };
+ 
+ static const struct of_device_id rockchip_pwm_dt_ids[] = {
+@@ -313,7 +365,8 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 
+ 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+-	pc->base = devm_ioremap_resource(&pdev->dev, r);
++	pc->base = devm_ioremap(&pdev->dev, r->start,
++				resource_size(r));
+ 	if (IS_ERR(pc->base))
+ 		return PTR_ERR(pc->base);
+ 
+@@ -355,6 +408,18 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+ 		goto err_clk;
+ 	}
+ 
++	pc->pinctrl = devm_pinctrl_get(&pdev->dev);
++	if (IS_ERR(pc->pinctrl)) {
++		dev_err(&pdev->dev, "Get pinctrl failed!\n");
++		return PTR_ERR(pc->pinctrl);
++	}
++
++	pc->active_state = pinctrl_lookup_state(pc->pinctrl, "active");
++	if (IS_ERR(pc->active_state)) {
++		dev_err(&pdev->dev, "No active pinctrl state\n");
++		return PTR_ERR(pc->active_state);
++	}
++
+ 	platform_set_drvdata(pdev, pc);
+ 
+ 	pc->data = id->data;
+@@ -362,12 +427,16 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+ 	pc->chip.ops = &rockchip_pwm_ops;
+ 	pc->chip.base = -1;
+ 	pc->chip.npwm = 1;
++	pc->clk_rate = clk_get_rate(pc->clk);
+ 
+ 	if (pc->data->supports_polarity) {
+ 		pc->chip.of_xlate = of_pwm_xlate_with_flags;
+ 		pc->chip.of_pwm_n_cells = 3;
+ 	}
+ 
++	pc->center_aligned =
++		device_property_read_bool(&pdev->dev, "center-aligned");
++
+ 	ret = pwmchip_add(&pc->chip);
+ 	if (ret < 0) {
+ 		dev_err(&pdev->dev, "pwmchip_add() failed: %d\n", ret);
+@@ -406,7 +475,21 @@ static struct platform_driver rockchip_pwm_driver = {
+ 	.probe = rockchip_pwm_probe,
+ 	.remove = rockchip_pwm_remove,
+ };
++#ifdef CONFIG_ROCKCHIP_THUNDER_BOOT
++static int __init rockchip_pwm_driver_init(void)
++{
++	return platform_driver_register(&rockchip_pwm_driver);
++}
++subsys_initcall(rockchip_pwm_driver_init);
++
++static void __exit rockchip_pwm_driver_exit(void)
++{
++	platform_driver_unregister(&rockchip_pwm_driver);
++}
++module_exit(rockchip_pwm_driver_exit);
++#else
+ module_platform_driver(rockchip_pwm_driver);
++#endif
+ 
+ MODULE_AUTHOR("Beniamino Galvani <b.galvani@gmail.com>");
+ MODULE_DESCRIPTION("Rockchip SoC PWM driver");
+diff --git a/drivers/pwm/sysfs.c b/drivers/pwm/sysfs.c
+index 72bdda4cc..b8efa7b1a 100644
+--- a/drivers/pwm/sysfs.c
++++ b/drivers/pwm/sysfs.c
+@@ -50,7 +50,7 @@ static ssize_t period_show(struct device *child,
+ 
+ 	pwm_get_state(pwm, &state);
+ 
+-	return sprintf(buf, "%u\n", state.period);
++	return sprintf(buf, "%llu\n", state.period);
+ }
+ 
+ static ssize_t period_store(struct device *child,
+@@ -85,7 +85,7 @@ static ssize_t duty_cycle_show(struct device *child,
+ 
+ 	pwm_get_state(pwm, &state);
+ 
+-	return sprintf(buf, "%u\n", state.duty_cycle);
++	return sprintf(buf, "%llu\n", state.duty_cycle);
+ }
+ 
+ static ssize_t duty_cycle_store(struct device *child,
+@@ -111,6 +111,43 @@ static ssize_t duty_cycle_store(struct device *child,
+ 	return ret ? : size;
+ }
+ 
++#ifdef CONFIG_PWM_ROCKCHIP_ONESHOT
++static ssize_t oneshot_count_show(struct device *child,
++			       struct device_attribute *attr,
++			       char *buf)
++{
++	const struct pwm_device *pwm = child_to_pwm_device(child);
++	struct pwm_state state;
++
++	pwm_get_state(pwm, &state);
++
++	return sprintf(buf, "%llu\n", state.oneshot_count);
++}
++
++static ssize_t oneshot_count_store(struct device *child,
++				struct device_attribute *attr,
++				const char *buf, size_t size)
++{
++	struct pwm_export *export = child_to_pwm_export(child);
++	struct pwm_device *pwm = export->pwm;
++	struct pwm_state state;
++	unsigned int val;
++	int ret;
++
++	ret = kstrtouint(buf, 0, &val);
++	if (ret)
++		return ret;
++
++	mutex_lock(&export->lock);
++	pwm_get_state(pwm, &state);
++	state.oneshot_count = val;
++	ret = pwm_apply_state(pwm, &state);
++	mutex_unlock(&export->lock);
++
++	return ret ? : size;
++}
++#endif
++
+ static ssize_t enable_show(struct device *child,
+ 			   struct device_attribute *attr,
+ 			   char *buf)
+@@ -220,11 +257,14 @@ static ssize_t capture_show(struct device *child,
+ 	if (ret)
+ 		return ret;
+ 
+-	return sprintf(buf, "%u %u\n", result.period, result.duty_cycle);
++	return sprintf(buf, "%llu %llu\n", result.period, result.duty_cycle);
+ }
+ 
+ static DEVICE_ATTR_RW(period);
+ static DEVICE_ATTR_RW(duty_cycle);
++#ifdef CONFIG_PWM_ROCKCHIP_ONESHOT
++static DEVICE_ATTR_RW(oneshot_count);
++#endif
+ static DEVICE_ATTR_RW(enable);
+ static DEVICE_ATTR_RW(polarity);
+ static DEVICE_ATTR_RO(capture);
+@@ -232,6 +272,9 @@ static DEVICE_ATTR_RO(capture);
+ static struct attribute *pwm_attrs[] = {
+ 	&dev_attr_period.attr,
+ 	&dev_attr_duty_cycle.attr,
++#ifdef CONFIG_PWM_ROCKCHIP_ONESHOT
++	&dev_attr_oneshot_count.attr,
++#endif
+ 	&dev_attr_enable.attr,
+ 	&dev_attr_polarity.attr,
+ 	&dev_attr_capture.attr,
+diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
+index d483b0e29..2b071773e 100644
+--- a/drivers/soc/rockchip/Kconfig
++++ b/drivers/soc/rockchip/Kconfig
+@@ -1,20 +1,71 @@
+ if ARCH_ROCKCHIP || COMPILE_TEST
+ 
++source "drivers/soc/rockchip/Kconfig.cpu"
++
+ #
+ # Rockchip Soc drivers
+ #
+ 
++config ANDROID_VERSION
++	hex "Android Version"
++	depends on ANDROID
++	default "0x08010000"
++	help
++	  The version of Android kernel supported.
++	  The value is 0xAABBCCRR, corresponding to Android A.B.C release R
++
++config ROCKCHIP_AMP
++	tristate "Rockchip AMP support"
++	help
++	  Say y here to enable Rockchip AMP support.
++	  This option protects resources used by AMP.
++
++config ROCKCHIP_CPUINFO
++	tristate "Rockchip cpuinfo support"
++	depends on (ROCKCHIP_EFUSE || ROCKCHIP_OTP) && (ARM64 || ARM)
++	default y
++	help
++	  Say y here to enable Rockchip cpuinfo support.
++	  Set system_serial_low/high from eFuse ID.
++	  Serial can read from /proc/cpuinfo.
++
++	  If unsure, say N.
++
+ config ROCKCHIP_GRF
+-	bool "Rockchip General Register Files support" if COMPILE_TEST
+-	default y if ARCH_ROCKCHIP
++	tristate "Rockchip General Register Files support"
++	default y
+ 	help
+ 	  The General Register Files are a central component providing
+ 	  special additional settings registers for a lot of soc-components.
+ 	  In a lot of cases there also need to be default settings initialized
+ 	  to make some of them conform to expectations of the kernel.
+ 
++config ROCKCHIP_HW_DECOMPRESS
++	bool "Rockchip HardWare Decompress Support"
++	help
++	  This driver support Decompress IP built-in Rockchip SoC, support
++	  LZ4, GZIP, ZLIB.
++
++config ROCKCHIP_IPA
++	tristate "Rockchip IPA support"
++	depends on THERMAL && OF
++	default y
++	help
++	  Say y here to enable rockchip IPA.
++	  Add a simple power model for ipa to calculate static power and
++	  dynamic power.
++
++	  If unsure, say N.
++
++config ROCKCHIP_OPP
++	tristate "Rockchip OPP select support"
++	depends on PM_DEVFREQ
++	default y
++	help
++	  Say y here to enable rockchip OPP support.
++
+ config ROCKCHIP_PM_DOMAINS
+-        bool "Rockchip generic power domain"
++        tristate "Rockchip generic power domain"
+         depends on PM
+         select PM_GENERIC_DOMAINS
+         help
+@@ -25,4 +76,88 @@ config ROCKCHIP_PM_DOMAINS
+ 
+           If unsure, say N.
+ 
++config ROCKCHIP_PVTM
++	tristate "Rockchip PVTM support"
++	help
++	  Say y here to enable pvtm support.
++	  The Process-Voltage-Temperature Monitor (PVTM) is used to monitor
++	  the chip performance variance caused by chip process, voltage and
++	  temperature.
++
++config ROCKCHIP_RAMDISK
++	bool "Rockchip RAM disk support"
++	help
++	  Saying Y here will allow you to use reserved RAM memory as a block
++	  device.
++
++config ROCKCHIP_SUSPEND_MODE
++	tristate "Rockchip suspend mode config"
++	depends on ROCKCHIP_SIP
++	help
++	  Say Y here if you want to set the suspend mode to the ATF.
++
++config ROCKCHIP_SYSTEM_MONITOR
++	tristate "Rockchip system monitor support"
++	default y
++	help
++	  Say y here to enable rockchip system monitor support.
++
++config ROCKCHIP_MTD_VENDOR_STORAGE
++	bool "Rockchip mtd vendor storage support"
++	depends on MTD
++	default y
++	help
++	  Say y here to enable rockchip mtd vendor storage support.
++
++config ROCKCHIP_VENDOR_STORAGE_UPDATE_LOADER
++	bool "Rockchip vendor storage update loader support"
++	default n
++	help
++	  Say y here to enable rockchip vendor storage update loader support.
++	  The /dev/vendor_storage must set root user access only.
++
++config ROCKCHIP_DEBUG
++	tristate "Rockchip DEBUG"
++	default y
++	help
++	  Print dbgpcsr for every cpu when panic.
++
++config ROCKCHIP_LOW_PERFORMANCE
++	bool "Rockchip low performance support"
++	help
++	  Say y here to enable Rockchip low performance support.
++	  This option make the SoC low power.
++
++config ROCKCHIP_THUNDER_BOOT
++	bool "Rockchip Thunder Boot support"
++	help
++	  Say y here to enable Rockchip thunder boot support.
++	  This option make the kernel boot faster.
++
++config ROCKCHIP_THUNDER_BOOT_MMC
++	bool "Rockchip Thunder Boot from MMC"
++	depends on ROCKCHIP_THUNDER_BOOT
++	help
++	  Say y if boot from MMC.
++
++config ROCKCHIP_THUNDER_BOOT_SFC
++	bool "Rockchip Thunder Boot from SFC"
++	depends on ROCKCHIP_THUNDER_BOOT
++	help
++	  Say y if boot from SPI Flash from SFC controller.
++
++config ROCKCHIP_THUNDER_BOOT_CRYPTO
++	bool "Rockchip Thunder Boot support hardware crypto"
++	depends on ROCKCHIP_THUNDER_BOOT
++	help
++	  Say y if boot need hardware crypto.
++
++config ROCKCHIP_SCHED_PERFORMANCE_BIAS
++	bool "Rockchip task scheduler optimization"
++	depends on SMP && CPU_FREQ_GOV_INTERACTIVE
++	default y
++	help
++	  Say y here to enable rockchip optimize task scheduler for performance bias,
++	  this would cause a little more power consumption.
++
+ endif
+diff --git a/drivers/soc/rockchip/Makefile b/drivers/soc/rockchip/Makefile
+index c851fa005..4e256ce63 100644
+--- a/drivers/soc/rockchip/Makefile
++++ b/drivers/soc/rockchip/Makefile
+@@ -1,5 +1,23 @@
+ #
+ # Rockchip Soc drivers
+ #
++obj-$(CONFIG_ROCKCHIP_CPUINFO)	+= rockchip-cpuinfo.o
+ obj-$(CONFIG_ROCKCHIP_GRF) += grf.o
++obj-$(CONFIG_ROCKCHIP_HW_DECOMPRESS) += rockchip_decompress.o
+ obj-$(CONFIG_ROCKCHIP_PM_DOMAINS) += pm_domains.o
++obj-$(CONFIG_FIQ_DEBUGGER) += rk_fiq_debugger.o
++obj-y += rk_vendor_storage.o
++obj-$(CONFIG_MMC_DW_ROCKCHIP)	+= sdmmc_vendor_storage.o
++obj-$(CONFIG_RK_FLASH)	+= flash_vendor_storage.o
++obj-$(CONFIG_ROCKCHIP_MTD_VENDOR_STORAGE) += mtd_vendor_storage.o
++obj-$(CONFIG_ROCKCHIP_IPA)	+= rockchip_ipa.o
++obj-$(CONFIG_ROCKCHIP_OPP)	+= rockchip_opp_select.o
++obj-$(CONFIG_ROCKCHIP_PVTM)	+= rockchip_pvtm.o
++obj-$(CONFIG_ROCKCHIP_RAMDISK)	+= rockchip_ramdisk.o
++obj-$(CONFIG_ROCKCHIP_AMP)	+= rockchip_amp.o
++obj-$(CONFIG_ROCKCHIP_SUSPEND_MODE) += rockchip_pm_config.o
++obj-$(CONFIG_ROCKCHIP_SYSTEM_MONITOR) += rockchip_system_monitor.o
++obj-$(CONFIG_ROCKCHIP_THUNDER_BOOT_CRYPTO) += rockchip_thunderboot_crypto.o
++obj-$(CONFIG_ROCKCHIP_THUNDER_BOOT_MMC) += rockchip_thunderboot_mmc.o
++obj-$(CONFIG_ROCKCHIP_THUNDER_BOOT_SFC) += rockchip_thunderboot_sfc.o
++obj-$(CONFIG_ROCKCHIP_DEBUG) += rockchip_debug.o
+diff --git a/drivers/soc/rockchip/grf.c b/drivers/soc/rockchip/grf.c
+index 3b81e1d75..4f926f04b 100644
+--- a/drivers/soc/rockchip/grf.c
++++ b/drivers/soc/rockchip/grf.c
+@@ -8,12 +8,105 @@
+  * published by the Free Software Foundation.
+  */
+ 
++#include <linux/bitfield.h>
+ #include <linux/err.h>
+ #include <linux/mfd/syscon.h>
++#include <linux/module.h>
+ #include <linux/of_device.h>
+ #include <linux/platform_device.h>
+ #include <linux/regmap.h>
+ 
++struct rockchip_grf;
++
++struct rockchip_grf_funcs {
++	int (*reset)(struct rockchip_grf *grf);
++};
++
++struct rockchip_grf {
++	struct regmap *regmap;
++	const struct rockchip_grf_funcs *funcs;
++};
++
++static int rockchip_edp_phy_grf_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct rockchip_grf *grf;
++	int ret;
++
++	grf = devm_kzalloc(dev, sizeof(*grf), GFP_KERNEL);
++	if (!grf)
++		return -ENOMEM;
++
++	grf->funcs = of_device_get_match_data(dev);
++	if (!grf->funcs)
++		return -ENODEV;
++
++	grf->regmap = syscon_node_to_regmap(dev->of_node);
++	if (IS_ERR(grf->regmap)) {
++		ret = PTR_ERR(grf->regmap);
++		dev_err(dev, "failed to get grf: %d\n", ret);
++		return ret;
++	}
++
++	ret = grf->funcs->reset(grf);
++	if (ret)
++		return ret;
++
++	platform_set_drvdata(pdev, grf);
++
++	return 0;
++}
++
++static int __maybe_unused rockchip_edp_phy_grf_resume(struct device *dev)
++{
++	struct rockchip_grf *grf = dev_get_drvdata(dev);
++
++	return grf->funcs->reset(grf);
++}
++
++static const struct dev_pm_ops rockchip_edp_phy_grf_pm_ops = {
++	SET_LATE_SYSTEM_SLEEP_PM_OPS(NULL, rockchip_edp_phy_grf_resume)
++};
++
++static int rk3568_edp_phy_grf_reset(struct rockchip_grf *grf)
++{
++	u32 status;
++	int ret;
++
++	ret = regmap_read(grf->regmap, 0x0030, &status);
++	if (ret < 0)
++		return ret;
++
++	if (!FIELD_GET(0x1, status)) {
++		regmap_write(grf->regmap, 0x0028, 0x00070007);
++		regmap_write(grf->regmap, 0x0000, 0x0ff10ff1);
++	}
++
++	return 0;
++}
++
++static const struct rockchip_grf_funcs rk3568_edp_phy_grf_funcs = {
++	.reset = rk3568_edp_phy_grf_reset,
++};
++
++static const struct of_device_id rockchip_edp_phy_grf_match[] = {
++	{
++		.compatible = "rockchip,rk3568-edp-phy-grf",
++		.data = &rk3568_edp_phy_grf_funcs,
++	},
++	{}
++};
++MODULE_DEVICE_TABLE(of, rockchip_edp_phy_grf_match);
++
++static struct platform_driver rockchip_edp_phy_grf_driver = {
++	.driver = {
++		.name = "rockchip-edp-phy-grf",
++		.of_match_table = rockchip_edp_phy_grf_match,
++		.pm = &rockchip_edp_phy_grf_pm_ops,
++	},
++	.probe = rockchip_edp_phy_grf_probe,
++};
++
+ #define HIWORD_UPDATE(val, mask, shift) \
+ 		((val) << (shift) | (mask) << ((shift) + 16))
+ 
+@@ -28,6 +121,21 @@ struct rockchip_grf_info {
+ 	int num_values;
+ };
+ 
++#define PX30_GRF_SOC_CON5		0x414
++
++static const struct rockchip_grf_value px30_defaults[] __initconst = {
++	/*
++	 * Postponing auto jtag/sdmmc switching by 5 seconds.
++	 * The counter value is calculated based on 24MHz clock.
++	 */
++	{ "jtag switching delay", PX30_GRF_SOC_CON5, 0x7270E00},
++};
++
++static const struct rockchip_grf_info px30_grf __initconst = {
++	.values = px30_defaults,
++	.num_values = ARRAY_SIZE(px30_defaults),
++};
++
+ #define RK3036_GRF_SOC_CON0		0x140
+ 
+ static const struct rockchip_grf_value rk3036_defaults[] __initconst = {
+@@ -89,6 +197,17 @@ static const struct rockchip_grf_info rk3328_grf __initconst = {
+ 	.num_values = ARRAY_SIZE(rk3328_defaults),
+ };
+ 
++#define RK3308_GRF_SOC_CON3		0x30c
++
++static const struct rockchip_grf_value rk3308_defaults[] __initconst = {
++	{ "uart dma mask", RK3308_GRF_SOC_CON3, HIWORD_UPDATE(0, 0x1f, 10) },
++};
++
++static const struct rockchip_grf_info rk3308_grf __initconst = {
++	.values = rk3308_defaults,
++	.num_values = ARRAY_SIZE(rk3308_defaults),
++};
++
+ #define RK3368_GRF_SOC_CON15		0x43c
+ 
+ static const struct rockchip_grf_value rk3368_defaults[] __initconst = {
+@@ -111,8 +230,37 @@ static const struct rockchip_grf_info rk3399_grf __initconst = {
+ 	.num_values = ARRAY_SIZE(rk3399_defaults),
+ };
+ 
++#define DELAY_ONE_SECOND		0x16E3600
++
++#define RV1126_GRF1_SDDETFLT_CON	0x10254
++#define RV1126_GRF1_UART2RX_LOW_CON	0x10258
++#define RV1126_GRF1_IOFUNC_CON1		0x10264
++#define RV1126_GRF1_IOFUNC_CON3		0x1026C
++#define RV1126_JTAG_GROUP0		0x0      /* mux to sdmmc*/
++#define RV1126_JTAG_GROUP1		0x1      /* mux to uart2 */
++#define FORCE_JTAG_ENABLE		0x1
++#define FORCE_JTAG_DISABLE		0x0
++
++static const struct rockchip_grf_value rv1126_defaults[] __initconst = {
++	{ "jtag group0 force", RV1126_GRF1_IOFUNC_CON3,
++		HIWORD_UPDATE(FORCE_JTAG_DISABLE, 1, 4) },
++	{ "jtag group1 force", RV1126_GRF1_IOFUNC_CON3,
++		HIWORD_UPDATE(FORCE_JTAG_DISABLE, 1, 5) },
++	{ "jtag group1 tms low delay", RV1126_GRF1_UART2RX_LOW_CON, DELAY_ONE_SECOND },
++	{ "switch to jtag groupx", RV1126_GRF1_IOFUNC_CON1, HIWORD_UPDATE(RV1126_JTAG_GROUP0, 1, 15) },
++	{ "jtag group0 switching delay", RV1126_GRF1_SDDETFLT_CON, DELAY_ONE_SECOND * 5 },
++};
++
++static const struct rockchip_grf_info rv1126_grf __initconst = {
++	.values = rv1126_defaults,
++	.num_values = ARRAY_SIZE(rv1126_defaults),
++};
++
+ static const struct of_device_id rockchip_grf_dt_match[] __initconst = {
+ 	{
++		.compatible = "rockchip,px30-grf",
++		.data = (void *)&px30_grf,
++	}, {
+ 		.compatible = "rockchip,rk3036-grf",
+ 		.data = (void *)&rk3036_grf,
+ 	}, {
+@@ -124,6 +272,9 @@ static const struct of_device_id rockchip_grf_dt_match[] __initconst = {
+ 	}, {
+ 		.compatible = "rockchip,rk3288-grf",
+ 		.data = (void *)&rk3288_grf,
++	}, {
++		.compatible = "rockchip,rk3308-grf",
++		.data = (void *)&rk3308_grf,
+ 	}, {
+ 		.compatible = "rockchip,rk3328-grf",
+ 		.data = (void *)&rk3328_grf,
+@@ -133,6 +284,9 @@ static const struct of_device_id rockchip_grf_dt_match[] __initconst = {
+ 	}, {
+ 		.compatible = "rockchip,rk3399-grf",
+ 		.data = (void *)&rk3399_grf,
++	}, {
++		.compatible = "rockchip,rv1126-grf",
++		.data = (void *)&rv1126_grf,
+ 	},
+ 	{ /* sentinel */ },
+ };
+@@ -145,6 +299,10 @@ static int __init rockchip_grf_init(void)
+ 	struct regmap *grf;
+ 	int ret, i;
+ 
++	ret = platform_driver_register(&rockchip_edp_phy_grf_driver);
++	if (ret)
++		return ret;
++
+ 	np = of_find_matching_node_and_match(NULL, rockchip_grf_dt_match,
+ 					     &match);
+ 	if (!np)
+@@ -176,3 +334,6 @@ static int __init rockchip_grf_init(void)
+ 	return 0;
+ }
+ postcore_initcall(rockchip_grf_init);
++
++MODULE_DESCRIPTION("Rockchip GRF");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/soc/rockchip/pm_domains.c b/drivers/soc/rockchip/pm_domains.c
+index 6dff86821..aae12c575 100644
+--- a/drivers/soc/rockchip/pm_domains.c
++++ b/drivers/soc/rockchip/pm_domains.c
+@@ -8,6 +8,7 @@
+  * published by the Free Software Foundation.
+  */
+ 
++#include <linux/module.h>
+ #include <linux/io.h>
+ #include <linux/iopoll.h>
+ #include <linux/err.h>
+@@ -18,16 +19,14 @@
+ #include <linux/of_platform.h>
+ #include <linux/clk.h>
+ #include <linux/regmap.h>
++#include <linux/slab.h>
+ #include <linux/mfd/syscon.h>
+-#include <dt-bindings/power/px30-power.h>
+-#include <dt-bindings/power/rk3036-power.h>
+-#include <dt-bindings/power/rk3128-power.h>
+-#include <dt-bindings/power/rk3228-power.h>
+-#include <dt-bindings/power/rk3288-power.h>
+-#include <dt-bindings/power/rk3328-power.h>
+-#include <dt-bindings/power/rk3366-power.h>
+-#include <dt-bindings/power/rk3368-power.h>
+-#include <dt-bindings/power/rk3399-power.h>
++#include <linux/pm_runtime.h>
++#include <linux/regulator/consumer.h>
++#include <linux/rockchip/cpu.h>
++#include <soc/rockchip/pm_domains.h>
++#include <soc/rockchip/rockchip_dmc.h>
++#include <dt-bindings/power/rk3568-power.h>
+ 
+ struct rockchip_domain_info {
+ 	int pwr_mask;
+@@ -38,6 +37,9 @@ struct rockchip_domain_info {
+ 	bool active_wakeup;
+ 	int pwr_w_mask;
+ 	int req_w_mask;
++	bool keepon_startup;
++	u32 pwr_offset;
++	u32 req_offset;
+ };
+ 
+ struct rockchip_pmu_info {
+@@ -73,6 +75,9 @@ struct rockchip_pm_domain {
+ 	u32 *qos_save_regs[MAX_QOS_REGS_NUM];
+ 	int num_clks;
+ 	struct clk_bulk_data *clks;
++	bool is_ignore_pwr;
++	bool is_qos_saved;
++	struct regulator *supply;
+ };
+ 
+ struct rockchip_pmu {
+@@ -84,53 +89,40 @@ struct rockchip_pmu {
+ 	struct generic_pm_domain *domains[];
+ };
+ 
+-#define to_rockchip_pd(gpd) container_of(gpd, struct rockchip_pm_domain, genpd)
++static struct rockchip_pmu *g_pmu;
+ 
+-#define DOMAIN(pwr, status, req, idle, ack, wakeup)	\
+-{						\
+-	.pwr_mask = (pwr >= 0) ? BIT(pwr) : 0,		\
+-	.status_mask = (status >= 0) ? BIT(status) : 0,	\
+-	.req_mask = (req >= 0) ? BIT(req) : 0,		\
+-	.idle_mask = (idle >= 0) ? BIT(idle) : 0,	\
+-	.ack_mask = (ack >= 0) ? BIT(ack) : 0,		\
+-	.active_wakeup = wakeup,			\
++static void rockchip_pmu_lock(struct rockchip_pm_domain *pd)
++{
++	mutex_lock(&pd->pmu->mutex);
++	rockchip_dmcfreq_lock_nested();
+ }
+ 
+-#define DOMAIN_M(pwr, status, req, idle, ack, wakeup)	\
+-{							\
+-	.pwr_w_mask = (pwr >= 0) ? BIT(pwr + 16) : 0,	\
+-	.pwr_mask = (pwr >= 0) ? BIT(pwr) : 0,		\
+-	.status_mask = (status >= 0) ? BIT(status) : 0,	\
+-	.req_w_mask = (req >= 0) ?  BIT(req + 16) : 0,	\
+-	.req_mask = (req >= 0) ?  BIT(req) : 0,		\
+-	.idle_mask = (idle >= 0) ? BIT(idle) : 0,	\
+-	.ack_mask = (ack >= 0) ? BIT(ack) : 0,		\
+-	.active_wakeup = wakeup,			\
++static void rockchip_pmu_unlock(struct rockchip_pm_domain *pd)
++{
++	rockchip_dmcfreq_unlock();
++	mutex_unlock(&pd->pmu->mutex);
+ }
+ 
+-#define DOMAIN_RK3036(req, ack, idle, wakeup)		\
++#define to_rockchip_pd(gpd) container_of(gpd, struct rockchip_pm_domain, genpd)
++
++#define DOMAIN_M(pwr, status, req, idle, ack, wakeup, keepon)	\
+ {							\
+-	.req_mask = (req >= 0) ? BIT(req) : 0,		\
+-	.req_w_mask = (req >= 0) ?  BIT(req + 16) : 0,	\
+-	.ack_mask = (ack >= 0) ? BIT(ack) : 0,		\
+-	.idle_mask = (idle >= 0) ? BIT(idle) : 0,	\
++	.pwr_w_mask = (pwr) << 16,			\
++	.pwr_mask = (pwr),				\
++	.status_mask = (status),			\
++	.req_w_mask = (req) << 16,			\
++	.req_mask = (req),				\
++	.idle_mask = (idle),				\
++	.ack_mask = (ack),				\
+ 	.active_wakeup = wakeup,			\
++	.keepon_startup = keepon,			\
+ }
+ 
+-#define DOMAIN_PX30(pwr, status, req, wakeup)		\
+-	DOMAIN_M(pwr, status, req, (req) + 16, req, wakeup)
++#define DOMAIN_RK3568(pwr, req, wakeup)		\
++	DOMAIN_M(pwr, pwr, req, req, req, wakeup, false)
+ 
+-#define DOMAIN_RK3288(pwr, status, req, wakeup)		\
+-	DOMAIN(pwr, status, req, req, (req) + 16, wakeup)
+-
+-#define DOMAIN_RK3328(pwr, status, req, wakeup)		\
+-	DOMAIN_M(pwr, pwr, req, (req) + 10, req, wakeup)
+-
+-#define DOMAIN_RK3368(pwr, status, req, wakeup)		\
+-	DOMAIN(pwr, status, req, (req) + 16, req, wakeup)
+-
+-#define DOMAIN_RK3399(pwr, status, req, wakeup)		\
+-	DOMAIN(pwr, status, req, req, req, wakeup)
++#define DOMAIN_RK3568_PROTECT(pwr, req, wakeup)		\
++	DOMAIN_M(pwr, pwr, req, req, req, wakeup, true)
+ 
+ static bool rockchip_pmu_domain_is_idle(struct rockchip_pm_domain *pd)
+ {
+@@ -156,20 +148,25 @@ static int rockchip_pmu_set_idle_request(struct rockchip_pm_domain *pd,
+ 	const struct rockchip_domain_info *pd_info = pd->info;
+ 	struct generic_pm_domain *genpd = &pd->genpd;
+ 	struct rockchip_pmu *pmu = pd->pmu;
++	u32 pd_req_offset = 0;
+ 	unsigned int target_ack;
+ 	unsigned int val;
+ 	bool is_idle;
+-	int ret;
++	int ret = 0;
++
++	if (pd_info->req_offset)
++		pd_req_offset = pd_info->req_offset;
+ 
+ 	if (pd_info->req_mask == 0)
+ 		return 0;
+ 	else if (pd_info->req_w_mask)
+-		regmap_write(pmu->regmap, pmu->info->req_offset,
++		regmap_write(pmu->regmap, pmu->info->req_offset + pd_req_offset,
+ 			     idle ? (pd_info->req_mask | pd_info->req_w_mask) :
+ 			     pd_info->req_w_mask);
+ 	else
+-		regmap_update_bits(pmu->regmap, pmu->info->req_offset,
+-				   pd_info->req_mask, idle ? -1U : 0);
++		regmap_update_bits(pmu->regmap, pmu->info->req_offset +
++				   pd_req_offset, pd_info->req_mask,
++				   idle ? -1U : 0);
+ 
+ 	dsb(sy);
+ 
+@@ -180,22 +177,48 @@ static int rockchip_pmu_set_idle_request(struct rockchip_pm_domain *pd,
+ 					0, 10000);
+ 	if (ret) {
+ 		dev_err(pmu->dev,
+-			"failed to get ack on domain '%s', val=0x%x\n",
+-			genpd->name, val);
+-		return ret;
++			"failed to get ack on domain '%s', target_idle = %d, target_ack = %d, val=0x%x\n",
++			genpd->name, idle, target_ack, val);
++		goto error;
+ 	}
+ 
+ 	ret = readx_poll_timeout_atomic(rockchip_pmu_domain_is_idle, pd,
+ 					is_idle, is_idle == idle, 0, 10000);
+ 	if (ret) {
+ 		dev_err(pmu->dev,
+-			"failed to set idle on domain '%s', val=%d\n",
+-			genpd->name, is_idle);
+-		return ret;
++			"failed to set idle on domain '%s',  target_idle = %d, val=%d\n",
++			genpd->name, idle, is_idle);
++		goto error;
+ 	}
+ 
+-	return 0;
++	return ret;
++error:
++	panic("panic_on_set_idle set ...\n");
++	return ret;
++}
++
++int rockchip_pmu_idle_request(struct device *dev, bool idle)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++	int ret;
++
++	if (IS_ERR_OR_NULL(dev))
++		return -EINVAL;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return -EINVAL;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	rockchip_pmu_lock(pd);
++	ret = rockchip_pmu_set_idle_request(pd, idle);
++	rockchip_pmu_unlock(pd);
++
++	return ret;
+ }
++EXPORT_SYMBOL(rockchip_pmu_idle_request);
+ 
+ static int rockchip_pmu_save_qos(struct rockchip_pm_domain *pd)
+ {
+@@ -246,6 +269,52 @@ static int rockchip_pmu_restore_qos(struct rockchip_pm_domain *pd)
+ 	return 0;
+ }
+ 
++int rockchip_save_qos(struct device *dev)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++	int ret;
++
++	if (IS_ERR_OR_NULL(dev))
++		return -EINVAL;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return -EINVAL;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	rockchip_pmu_lock(pd);
++	ret = rockchip_pmu_save_qos(pd);
++	rockchip_pmu_unlock(pd);
++
++	return ret;
++}
++EXPORT_SYMBOL(rockchip_save_qos);
++
++int rockchip_restore_qos(struct device *dev)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++	int ret;
++
++	if (IS_ERR_OR_NULL(dev))
++		return -EINVAL;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return -EINVAL;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	rockchip_pmu_lock(pd);
++	ret = rockchip_pmu_restore_qos(pd);
++	rockchip_pmu_unlock(pd);
++
++	return ret;
++}
++EXPORT_SYMBOL(rockchip_restore_qos);
++
+ static bool rockchip_pmu_domain_is_on(struct rockchip_pm_domain *pd)
+ {
+ 	struct rockchip_pmu *pmu = pd->pmu;
+@@ -261,76 +330,133 @@ static bool rockchip_pmu_domain_is_on(struct rockchip_pm_domain *pd)
+ 	return !(val & pd->info->status_mask);
+ }
+ 
+-static void rockchip_do_pmu_set_power_domain(struct rockchip_pm_domain *pd,
+-					     bool on)
++static int rockchip_do_pmu_set_power_domain(struct rockchip_pm_domain *pd,
++					    bool on)
+ {
+ 	struct rockchip_pmu *pmu = pd->pmu;
+ 	struct generic_pm_domain *genpd = &pd->genpd;
++	u32 pd_pwr_offset = 0;
+ 	bool is_on;
++	int ret = 0;
++
++	if (pd->info->pwr_offset)
++		pd_pwr_offset = pd->info->pwr_offset;
+ 
+ 	if (pd->info->pwr_mask == 0)
+-		return;
++		return 0;
+ 	else if (pd->info->pwr_w_mask)
+-		regmap_write(pmu->regmap, pmu->info->pwr_offset,
++		regmap_write(pmu->regmap, pmu->info->pwr_offset + pd_pwr_offset,
+ 			     on ? pd->info->pwr_w_mask :
+ 			     (pd->info->pwr_mask | pd->info->pwr_w_mask));
+ 	else
+-		regmap_update_bits(pmu->regmap, pmu->info->pwr_offset,
+-				   pd->info->pwr_mask, on ? 0 : -1U);
++		regmap_update_bits(pmu->regmap, pmu->info->pwr_offset +
++				   pd_pwr_offset, pd->info->pwr_mask,
++				   on ? 0 : -1U);
+ 
+ 	dsb(sy);
+ 
+-	if (readx_poll_timeout_atomic(rockchip_pmu_domain_is_on, pd, is_on,
+-				      is_on == on, 0, 10000)) {
++	ret = readx_poll_timeout_atomic(rockchip_pmu_domain_is_on, pd, is_on,
++					is_on == on, 0, 10000);
++	if (ret) {
+ 		dev_err(pmu->dev,
+-			"failed to set domain '%s', val=%d\n",
+-			genpd->name, is_on);
+-		return;
++			"failed to set domain '%s', target_on= %d, val=%d\n",
++			genpd->name, on, is_on);
++			goto error;
+ 	}
++	return ret;
++
++error:
++	panic("panic_on_set_domain set ...\n");
++	return ret;
+ }
+ 
+ static int rockchip_pd_power(struct rockchip_pm_domain *pd, bool power_on)
+ {
+ 	struct rockchip_pmu *pmu = pd->pmu;
+-	int ret;
++	int ret = 0;
++	struct generic_pm_domain *genpd = &pd->genpd;
+ 
+-	mutex_lock(&pmu->mutex);
++	if (!power_on && (soc_is_px30s())) {
++		if (genpd->name && !strcmp(genpd->name, "pd_gpu"))
++			return 0;
++	}
++
++	rockchip_pmu_lock(pd);
+ 
+ 	if (rockchip_pmu_domain_is_on(pd) != power_on) {
++		if (IS_ERR_OR_NULL(pd->supply) &&
++		    PTR_ERR(pd->supply) != -ENODEV)
++			pd->supply = devm_regulator_get_optional(pd->pmu->dev,
++								 genpd->name);
++
++		if (power_on && !IS_ERR(pd->supply)) {
++			ret = regulator_enable(pd->supply);
++			if (ret < 0) {
++				dev_err(pd->pmu->dev, "failed to set vdd supply enable '%s',\n",
++					genpd->name);
++				rockchip_pmu_unlock(pd);
++				return ret;
++			}
++		}
++
+ 		ret = clk_bulk_enable(pd->num_clks, pd->clks);
+ 		if (ret < 0) {
+ 			dev_err(pmu->dev, "failed to enable clocks\n");
+-			mutex_unlock(&pmu->mutex);
++			rockchip_pmu_unlock(pd);
+ 			return ret;
+ 		}
+ 
+ 		if (!power_on) {
+ 			rockchip_pmu_save_qos(pd);
++			pd->is_qos_saved = true;
+ 
+ 			/* if powering down, idle request to NIU first */
+-			rockchip_pmu_set_idle_request(pd, true);
++			ret = rockchip_pmu_set_idle_request(pd, true);
++			if (ret) {
++				dev_err(pd->pmu->dev, "failed to set idle request '%s',\n",
++					genpd->name);
++				goto out;
++			}
+ 		}
+ 
+-		rockchip_do_pmu_set_power_domain(pd, power_on);
++		ret = rockchip_do_pmu_set_power_domain(pd, power_on);
++		if (ret) {
++			dev_err(pd->pmu->dev, "failed to set power '%s' = %d,\n",
++				genpd->name, power_on);
++			goto out;
++		}
+ 
+ 		if (power_on) {
+ 			/* if powering up, leave idle mode */
+-			rockchip_pmu_set_idle_request(pd, false);
++			ret = rockchip_pmu_set_idle_request(pd, false);
++			if (ret) {
++				dev_err(pd->pmu->dev, "failed to set deidle request '%s',\n",
++					genpd->name);
++				goto out;
++			}
+ 
+-			rockchip_pmu_restore_qos(pd);
++			if (pd->is_qos_saved)
++				rockchip_pmu_restore_qos(pd);
+ 		}
+ 
++out:
+ 		clk_bulk_disable(pd->num_clks, pd->clks);
++
++		if (!power_on && !IS_ERR(pd->supply))
++			ret = regulator_disable(pd->supply);
+ 	}
+ 
+-	mutex_unlock(&pmu->mutex);
+-	return 0;
++	rockchip_pmu_unlock(pd);
++	return ret;
+ }
+ 
+ static int rockchip_pd_power_on(struct generic_pm_domain *domain)
+ {
+ 	struct rockchip_pm_domain *pd = to_rockchip_pd(domain);
+ 
++	if (pd->is_ignore_pwr)
++		return 0;
++
+ 	return rockchip_pd_power(pd, true);
+ }
+ 
+@@ -338,9 +464,71 @@ static int rockchip_pd_power_off(struct generic_pm_domain *domain)
+ {
+ 	struct rockchip_pm_domain *pd = to_rockchip_pd(domain);
+ 
++	if (pd->is_ignore_pwr)
++		return 0;
++
+ 	return rockchip_pd_power(pd, false);
+ }
+ 
++int rockchip_pmu_pd_on(struct device *dev)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++
++	if (IS_ERR_OR_NULL(dev))
++		return -EINVAL;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return -EINVAL;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	return rockchip_pd_power(pd, true);
++}
++EXPORT_SYMBOL(rockchip_pmu_pd_on);
++
++int rockchip_pmu_pd_off(struct device *dev)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++
++	if (IS_ERR_OR_NULL(dev))
++		return -EINVAL;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return -EINVAL;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	return rockchip_pd_power(pd, false);
++}
++EXPORT_SYMBOL(rockchip_pmu_pd_off);
++
++bool rockchip_pmu_pd_is_on(struct device *dev)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++	bool is_on;
++
++	if (IS_ERR_OR_NULL(dev))
++		return false;
++
++	if (IS_ERR_OR_NULL(dev->pm_domain))
++		return false;
++
++	genpd = pd_to_genpd(dev->pm_domain);
++	pd = to_rockchip_pd(genpd);
++
++	rockchip_pmu_lock(pd);
++	is_on = rockchip_pmu_domain_is_on(pd);
++	rockchip_pmu_unlock(pd);
++
++	return is_on;
++}
++EXPORT_SYMBOL(rockchip_pmu_pd_is_on);
++
+ static int rockchip_pd_attach_dev(struct generic_pm_domain *genpd,
+ 				  struct device *dev)
+ {
+@@ -379,15 +567,58 @@ static void rockchip_pd_detach_dev(struct generic_pm_domain *genpd,
+ 	pm_clk_destroy(dev);
+ }
+ 
++static void rockchip_pd_qos_init(struct rockchip_pm_domain *pd,
++				 bool **qos_is_need_init)
++{
++	int i, is_pd_on;
++
++	is_pd_on = rockchip_pmu_domain_is_on(pd);
++	if (!is_pd_on)
++		rockchip_pd_power(pd, true);
++
++	for (i = 0; i < pd->num_qos; i++) {
++		if (qos_is_need_init[0][i])
++			regmap_write(pd->qos_regmap[i],
++				     QOS_PRIORITY,
++				     pd->qos_save_regs[0][i]);
++
++		if (qos_is_need_init[1][i])
++			regmap_write(pd->qos_regmap[i],
++				     QOS_MODE,
++				     pd->qos_save_regs[1][i]);
++
++		if (qos_is_need_init[2][i])
++			regmap_write(pd->qos_regmap[i],
++				     QOS_BANDWIDTH,
++				     pd->qos_save_regs[2][i]);
++
++		if (qos_is_need_init[3][i])
++			regmap_write(pd->qos_regmap[i],
++				     QOS_SATURATION,
++				     pd->qos_save_regs[3][i]);
++
++		if (qos_is_need_init[4][i])
++			regmap_write(pd->qos_regmap[i],
++				     QOS_EXTCONTROL,
++				     pd->qos_save_regs[4][i]);
++	}
++
++	if (!is_pd_on)
++		rockchip_pd_power(pd, false);
++}
++
+ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 				      struct device_node *node)
+ {
+ 	const struct rockchip_domain_info *pd_info;
+ 	struct rockchip_pm_domain *pd;
+ 	struct device_node *qos_node;
++	int num_qos = 0, num_qos_reg = 0;
+ 	int i, j;
+-	u32 id;
++	u32 id, val;
+ 	int error;
++	bool *qos_is_need_init[MAX_QOS_REGS_NUM] = { NULL };
++	bool is_qos_need_init = false;
+ 
+ 	error = of_property_read_u32(node, "reg", &id);
+ 	if (error) {
+@@ -416,6 +647,8 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 
+ 	pd->info = pd_info;
+ 	pd->pmu = pmu;
++	if (!pd_info->pwr_mask)
++		pd->is_ignore_pwr = true;
+ 
+ 	pd->num_clks = of_clk_get_parent_count(node);
+ 	if (pd->num_clks > 0) {
+@@ -444,8 +677,14 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 	if (error)
+ 		goto err_put_clocks;
+ 
+-	pd->num_qos = of_count_phandle_with_args(node, "pm_qos",
+-						 NULL);
++	num_qos = of_count_phandle_with_args(node, "pm_qos", NULL);
++
++	for (j = 0; j < num_qos; j++) {
++		qos_node = of_parse_phandle(node, "pm_qos", j);
++		if (qos_node && of_device_is_available(qos_node))
++			pd->num_qos++;
++		of_node_put(qos_node);
++	}
+ 
+ 	if (pd->num_qos > 0) {
+ 		pd->qos_regmap = devm_kcalloc(pmu->dev, pd->num_qos,
+@@ -456,55 +695,124 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+ 			goto err_unprepare_clocks;
+ 		}
+ 
+-		for (j = 0; j < MAX_QOS_REGS_NUM; j++) {
+-			pd->qos_save_regs[j] = devm_kcalloc(pmu->dev,
+-							    pd->num_qos,
+-							    sizeof(u32),
+-							    GFP_KERNEL);
+-			if (!pd->qos_save_regs[j]) {
+-				error = -ENOMEM;
+-				goto err_unprepare_clocks;
+-			}
++		pd->qos_save_regs[0] = (u32 *)devm_kmalloc(pmu->dev,
++							   sizeof(u32) *
++							   MAX_QOS_REGS_NUM *
++							   pd->num_qos,
++							   GFP_KERNEL);
++		if (!pd->qos_save_regs[0]) {
++			error = -ENOMEM;
++			goto err_unprepare_clocks;
++		}
++		qos_is_need_init[0] = kzalloc(sizeof(bool) *
++					      MAX_QOS_REGS_NUM *
++					      pd->num_qos,
++					      GFP_KERNEL);
++		if (!qos_is_need_init[0]) {
++			error = -ENOMEM;
++			goto err_unprepare_clocks;
++		}
++		for (i = 1; i < MAX_QOS_REGS_NUM; i++) {
++			pd->qos_save_regs[i] = pd->qos_save_regs[i - 1] +
++					       num_qos;
++			qos_is_need_init[i] = qos_is_need_init[i - 1] + num_qos;
+ 		}
+ 
+-		for (j = 0; j < pd->num_qos; j++) {
++		for (j = 0; j < num_qos; j++) {
+ 			qos_node = of_parse_phandle(node, "pm_qos", j);
+ 			if (!qos_node) {
+ 				error = -ENODEV;
+ 				goto err_unprepare_clocks;
+ 			}
+-			pd->qos_regmap[j] = syscon_node_to_regmap(qos_node);
+-			if (IS_ERR(pd->qos_regmap[j])) {
+-				error = -ENODEV;
+-				of_node_put(qos_node);
+-				goto err_unprepare_clocks;
++			if (of_device_is_available(qos_node)) {
++				pd->qos_regmap[num_qos_reg] =
++					syscon_node_to_regmap(qos_node);
++				if (IS_ERR(pd->qos_regmap[num_qos_reg])) {
++					error = -ENODEV;
++					of_node_put(qos_node);
++					goto err_unprepare_clocks;
++				}
++				if (!of_property_read_u32(qos_node,
++							  "priority-init",
++							  &val)) {
++					pd->qos_save_regs[0][j] = val;
++					qos_is_need_init[0][j] = true;
++					is_qos_need_init = true;
++				}
++
++				if (!of_property_read_u32(qos_node,
++							  "mode-init",
++							  &val)) {
++					pd->qos_save_regs[1][j] = val;
++					qos_is_need_init[1][j] = true;
++					is_qos_need_init = true;
++				}
++
++				if (!of_property_read_u32(qos_node,
++							  "bandwidth-init",
++							  &val)) {
++					pd->qos_save_regs[2][j] = val;
++					qos_is_need_init[2][j] = true;
++					is_qos_need_init = true;
++				}
++
++				if (!of_property_read_u32(qos_node,
++							  "saturation-init",
++							  &val)) {
++					pd->qos_save_regs[3][j] = val;
++					qos_is_need_init[3][j] = true;
++					is_qos_need_init = true;
++				}
++
++				if (!of_property_read_u32(qos_node,
++							  "extcontrol-init",
++							  &val)) {
++					pd->qos_save_regs[4][j] = val;
++					qos_is_need_init[4][j] = true;
++					is_qos_need_init = true;
++				}
++
++				num_qos_reg++;
+ 			}
+ 			of_node_put(qos_node);
++			if (num_qos_reg > pd->num_qos)
++				goto err_unprepare_clocks;
+ 		}
+ 	}
+ 
+-	error = rockchip_pd_power(pd, true);
+-	if (error) {
+-		dev_err(pmu->dev,
+-			"failed to power on domain '%s': %d\n",
+-			node->name, error);
+-		goto err_unprepare_clocks;
+-	}
+-
+ 	pd->genpd.name = node->name;
+ 	pd->genpd.power_off = rockchip_pd_power_off;
+ 	pd->genpd.power_on = rockchip_pd_power_on;
+ 	pd->genpd.attach_dev = rockchip_pd_attach_dev;
+ 	pd->genpd.detach_dev = rockchip_pd_detach_dev;
+-	pd->genpd.flags = GENPD_FLAG_PM_CLK;
+ 	if (pd_info->active_wakeup)
+ 		pd->genpd.flags |= GENPD_FLAG_ACTIVE_WAKEUP;
+-	pm_genpd_init(&pd->genpd, NULL, false);
++#ifndef MODULE
++	if (pd_info->keepon_startup) {
++		pd->genpd.flags |= GENPD_FLAG_ALWAYS_ON;
++		if (!rockchip_pmu_domain_is_on(pd)) {
++			error = rockchip_pd_power(pd, true);
++			if (error) {
++				dev_err(pmu->dev,
++					"failed to power on domain '%s': %d\n",
++					node->name, error);
++				goto err_unprepare_clocks;
++			}
++		}
++	}
++#endif
++	if (is_qos_need_init)
++		rockchip_pd_qos_init(pd, &qos_is_need_init[0]);
++
++	kfree(qos_is_need_init[0]);
++
++	pm_genpd_init(&pd->genpd, NULL, !rockchip_pmu_domain_is_on(pd));
+ 
+ 	pmu->genpd_data.domains[id] = &pd->genpd;
+ 	return 0;
+ 
+ err_unprepare_clocks:
++	kfree(qos_is_need_init[0]);
+ 	clk_bulk_unprepare(pd->num_clks, pd->clks);
+ err_put_clocks:
+ 	clk_bulk_put(pd->num_clks, pd->clks);
+@@ -528,9 +836,9 @@ static void rockchip_pm_remove_one_domain(struct rockchip_pm_domain *pd)
+ 	clk_bulk_put(pd->num_clks, pd->clks);
+ 
+ 	/* protect the zeroing of pm->num_clks */
+-	mutex_lock(&pd->pmu->mutex);
++	rockchip_pmu_lock(pd);
+ 	pd->num_clks = 0;
+-	mutex_unlock(&pd->pmu->mutex);
++	rockchip_pmu_unlock(pd);
+ 
+ 	/* devm will free our memory */
+ }
+@@ -567,6 +875,7 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+ {
+ 	struct device_node *np;
+ 	struct generic_pm_domain *child_domain, *parent_domain;
++	struct rockchip_pm_domain *child_pd, *parent_pd;
+ 	int error;
+ 
+ 	for_each_child_of_node(parent, np) {
+@@ -607,6 +916,17 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+ 				parent_domain->name, child_domain->name);
+ 		}
+ 
++		/*
++		 * If child_pd doesn't do idle request or power on/off,
++		 * parent_pd may fail to do power on/off, so if parent_pd
++		 * need to power on/off, child_pd can't ignore to do idle
++		 * request and power on/off.
++		 */
++		child_pd = to_rockchip_pd(child_domain);
++		parent_pd = to_rockchip_pd(parent_domain);
++		if (!parent_pd->is_ignore_pwr)
++			child_pd->is_ignore_pwr = false;
++
+ 		rockchip_pm_add_subdomain(pmu, np);
+ 	}
+ 
+@@ -617,6 +937,75 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+ 	return error;
+ }
+ 
++#ifndef MODULE
++static void rockchip_pd_keepon_do_release(struct generic_pm_domain *genpd,
++					  struct rockchip_pm_domain *pd)
++{
++	struct pm_domain_data *pm_data;
++	int enable_count;
++
++	pd->genpd.flags &= (~GENPD_FLAG_ALWAYS_ON);
++	list_for_each_entry(pm_data, &genpd->dev_list, list_node) {
++		if (!atomic_read(&pm_data->dev->power.usage_count)) {
++			enable_count = 0;
++			if (!pm_runtime_enabled(pm_data->dev)) {
++				pm_runtime_enable(pm_data->dev);
++				enable_count = 1;
++			}
++			pm_runtime_get_sync(pm_data->dev);
++			pm_runtime_put_sync(pm_data->dev);
++			if (enable_count)
++				pm_runtime_disable(pm_data->dev);
++		}
++	}
++}
++
++static int __init rockchip_pd_keepon_release(void)
++{
++	struct generic_pm_domain *genpd;
++	struct rockchip_pm_domain *pd;
++	int i;
++
++	if (!g_pmu)
++		return 0;
++
++	for (i = 0; i < g_pmu->genpd_data.num_domains; i++) {
++		genpd = g_pmu->genpd_data.domains[i];
++		if (genpd) {
++			pd = to_rockchip_pd(genpd);
++			if (pd->info->keepon_startup)
++				rockchip_pd_keepon_do_release(genpd, pd);
++		}
++	}
++	return 0;
++}
++late_initcall_sync(rockchip_pd_keepon_release);
++#endif
++
++static void __iomem *pd_base;
++
++void rockchip_dump_pmu(void)
++{
++	if (pd_base) {
++		pr_warn("PMU:\n");
++		print_hex_dump(KERN_WARNING, "", DUMP_PREFIX_OFFSET,
++			       32, 4, pd_base,
++			       0x100, false);
++	}
++}
++EXPORT_SYMBOL_GPL(rockchip_dump_pmu);
++
++static int rockchip_pmu_panic(struct notifier_block *this,
++			     unsigned long ev, void *ptr)
++{
++	rockchip_dump_pmu();
++	return NOTIFY_DONE;
++}
++
++static struct notifier_block pmu_panic_block = {
++	.notifier_call = rockchip_pmu_panic,
++};
++
+ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+@@ -627,6 +1016,7 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+ 	const struct of_device_id *match;
+ 	const struct rockchip_pmu_info *pmu_info;
+ 	int error;
++	void __iomem *reg_base;
+ 
+ 	if (!np) {
+ 		dev_err(dev, "device tree node not found\n");
+@@ -667,6 +1057,14 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+ 		return PTR_ERR(pmu->regmap);
+ 	}
+ 
++	reg_base = of_iomap(parent->of_node, 0);
++	if (!reg_base) {
++		dev_err(dev, "%s: could not map pmu region\n", __func__);
++		return -ENOMEM;
++	}
++
++	pd_base = reg_base;
++
+ 	/*
+ 	 * Configure power up and down transition delays for CORE
+ 	 * and GPU domains.
+@@ -709,6 +1107,10 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+ 		goto err_out;
+ 	}
+ 
++	atomic_notifier_chain_register(&panic_notifier_list,
++				       &pmu_panic_block);
++
++	g_pmu = pmu;
+ 	return 0;
+ 
+ err_out:
+@@ -716,268 +1118,39 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+ 	return error;
+ }
+ 
+-static const struct rockchip_domain_info px30_pm_domains[] = {
+-	[PX30_PD_USB]		= DOMAIN_PX30(5, 5, 10, false),
+-	[PX30_PD_SDCARD]	= DOMAIN_PX30(8, 8, 9, false),
+-	[PX30_PD_GMAC]		= DOMAIN_PX30(10, 10, 6, false),
+-	[PX30_PD_MMC_NAND]	= DOMAIN_PX30(11, 11, 5, false),
+-	[PX30_PD_VPU]		= DOMAIN_PX30(12, 12, 14, false),
+-	[PX30_PD_VO]		= DOMAIN_PX30(13, 13, 7, false),
+-	[PX30_PD_VI]		= DOMAIN_PX30(14, 14, 8, false),
+-	[PX30_PD_GPU]		= DOMAIN_PX30(15, 15, 2, false),
+-};
+-
+-static const struct rockchip_domain_info rk3036_pm_domains[] = {
+-	[RK3036_PD_MSCH]	= DOMAIN_RK3036(14, 23, 30, true),
+-	[RK3036_PD_CORE]	= DOMAIN_RK3036(13, 17, 24, false),
+-	[RK3036_PD_PERI]	= DOMAIN_RK3036(12, 18, 25, false),
+-	[RK3036_PD_VIO]		= DOMAIN_RK3036(11, 19, 26, false),
+-	[RK3036_PD_VPU]		= DOMAIN_RK3036(10, 20, 27, false),
+-	[RK3036_PD_GPU]		= DOMAIN_RK3036(9, 21, 28, false),
+-	[RK3036_PD_SYS]		= DOMAIN_RK3036(8, 22, 29, false),
+-};
+-
+-static const struct rockchip_domain_info rk3128_pm_domains[] = {
+-	[RK3128_PD_CORE]	= DOMAIN_RK3288(0, 0, 4, false),
+-	[RK3128_PD_MSCH]	= DOMAIN_RK3288(-1, -1, 6, true),
+-	[RK3128_PD_VIO]		= DOMAIN_RK3288(3, 3, 2, false),
+-	[RK3128_PD_VIDEO]	= DOMAIN_RK3288(2, 2, 1, false),
+-	[RK3128_PD_GPU]		= DOMAIN_RK3288(1, 1, 3, false),
++static const struct rockchip_domain_info rk3568_pm_domains[] = {
++	[RK3568_PD_NPU]		= DOMAIN_RK3568(BIT(1), BIT(2), false),
++	[RK3568_PD_GPU]		= DOMAIN_RK3568(BIT(0), BIT(1), false),
++	[RK3568_PD_VI]		= DOMAIN_RK3568(BIT(6), BIT(3), false),
++	[RK3568_PD_VO]		= DOMAIN_RK3568_PROTECT(BIT(7),  BIT(4), false),
++	[RK3568_PD_RGA]		= DOMAIN_RK3568(BIT(5),  BIT(5), false),
++	[RK3568_PD_VPU]		= DOMAIN_RK3568(BIT(2), BIT(6), false),
++	[RK3568_PD_RKVDEC]	= DOMAIN_RK3568(BIT(4), BIT(8), false),
++	[RK3568_PD_RKVENC]	= DOMAIN_RK3568(BIT(3), BIT(7), false),
++	[RK3568_PD_PIPE]	= DOMAIN_RK3568(BIT(8), BIT(11), false),
+ };
+ 
+-static const struct rockchip_domain_info rk3228_pm_domains[] = {
+-	[RK3228_PD_CORE]	= DOMAIN_RK3036(0, 0, 16, true),
+-	[RK3228_PD_MSCH]	= DOMAIN_RK3036(1, 1, 17, true),
+-	[RK3228_PD_BUS]		= DOMAIN_RK3036(2, 2, 18, true),
+-	[RK3228_PD_SYS]		= DOMAIN_RK3036(3, 3, 19, true),
+-	[RK3228_PD_VIO]		= DOMAIN_RK3036(4, 4, 20, false),
+-	[RK3228_PD_VOP]		= DOMAIN_RK3036(5, 5, 21, false),
+-	[RK3228_PD_VPU]		= DOMAIN_RK3036(6, 6, 22, false),
+-	[RK3228_PD_RKVDEC]	= DOMAIN_RK3036(7, 7, 23, false),
+-	[RK3228_PD_GPU]		= DOMAIN_RK3036(8, 8, 24, false),
+-	[RK3228_PD_PERI]	= DOMAIN_RK3036(9, 9, 25, true),
+-	[RK3228_PD_GMAC]	= DOMAIN_RK3036(10, 10, 26, false),
+-};
+-
+-static const struct rockchip_domain_info rk3288_pm_domains[] = {
+-	[RK3288_PD_VIO]		= DOMAIN_RK3288(7, 7, 4, false),
+-	[RK3288_PD_HEVC]	= DOMAIN_RK3288(14, 10, 9, false),
+-	[RK3288_PD_VIDEO]	= DOMAIN_RK3288(8, 8, 3, false),
+-	[RK3288_PD_GPU]		= DOMAIN_RK3288(9, 9, 2, false),
+-};
+-
+-static const struct rockchip_domain_info rk3328_pm_domains[] = {
+-	[RK3328_PD_CORE]	= DOMAIN_RK3328(-1, 0, 0, false),
+-	[RK3328_PD_GPU]		= DOMAIN_RK3328(-1, 1, 1, false),
+-	[RK3328_PD_BUS]		= DOMAIN_RK3328(-1, 2, 2, true),
+-	[RK3328_PD_MSCH]	= DOMAIN_RK3328(-1, 3, 3, true),
+-	[RK3328_PD_PERI]	= DOMAIN_RK3328(-1, 4, 4, true),
+-	[RK3328_PD_VIDEO]	= DOMAIN_RK3328(-1, 5, 5, false),
+-	[RK3328_PD_HEVC]	= DOMAIN_RK3328(-1, 6, 6, false),
+-	[RK3328_PD_VIO]		= DOMAIN_RK3328(-1, 8, 8, false),
+-	[RK3328_PD_VPU]		= DOMAIN_RK3328(-1, 9, 9, false),
+-};
+-
+-static const struct rockchip_domain_info rk3366_pm_domains[] = {
+-	[RK3366_PD_PERI]	= DOMAIN_RK3368(10, 10, 6, true),
+-	[RK3366_PD_VIO]		= DOMAIN_RK3368(14, 14, 8, false),
+-	[RK3366_PD_VIDEO]	= DOMAIN_RK3368(13, 13, 7, false),
+-	[RK3366_PD_RKVDEC]	= DOMAIN_RK3368(11, 11, 7, false),
+-	[RK3366_PD_WIFIBT]	= DOMAIN_RK3368(8, 8, 9, false),
+-	[RK3366_PD_VPU]		= DOMAIN_RK3368(12, 12, 7, false),
+-	[RK3366_PD_GPU]		= DOMAIN_RK3368(15, 15, 2, false),
+-};
+-
+-static const struct rockchip_domain_info rk3368_pm_domains[] = {
+-	[RK3368_PD_PERI]	= DOMAIN_RK3368(13, 12, 6, true),
+-	[RK3368_PD_VIO]		= DOMAIN_RK3368(15, 14, 8, false),
+-	[RK3368_PD_VIDEO]	= DOMAIN_RK3368(14, 13, 7, false),
+-	[RK3368_PD_GPU_0]	= DOMAIN_RK3368(16, 15, 2, false),
+-	[RK3368_PD_GPU_1]	= DOMAIN_RK3368(17, 16, 2, false),
+-};
+-
+-static const struct rockchip_domain_info rk3399_pm_domains[] = {
+-	[RK3399_PD_TCPD0]	= DOMAIN_RK3399(8, 8, -1, false),
+-	[RK3399_PD_TCPD1]	= DOMAIN_RK3399(9, 9, -1, false),
+-	[RK3399_PD_CCI]		= DOMAIN_RK3399(10, 10, -1, true),
+-	[RK3399_PD_CCI0]	= DOMAIN_RK3399(-1, -1, 15, true),
+-	[RK3399_PD_CCI1]	= DOMAIN_RK3399(-1, -1, 16, true),
+-	[RK3399_PD_PERILP]	= DOMAIN_RK3399(11, 11, 1, true),
+-	[RK3399_PD_PERIHP]	= DOMAIN_RK3399(12, 12, 2, true),
+-	[RK3399_PD_CENTER]	= DOMAIN_RK3399(13, 13, 14, true),
+-	[RK3399_PD_VIO]		= DOMAIN_RK3399(14, 14, 17, false),
+-	[RK3399_PD_GPU]		= DOMAIN_RK3399(15, 15, 0, false),
+-	[RK3399_PD_VCODEC]	= DOMAIN_RK3399(16, 16, 3, false),
+-	[RK3399_PD_VDU]		= DOMAIN_RK3399(17, 17, 4, false),
+-	[RK3399_PD_RGA]		= DOMAIN_RK3399(18, 18, 5, false),
+-	[RK3399_PD_IEP]		= DOMAIN_RK3399(19, 19, 6, false),
+-	[RK3399_PD_VO]		= DOMAIN_RK3399(20, 20, -1, false),
+-	[RK3399_PD_VOPB]	= DOMAIN_RK3399(-1, -1, 7, false),
+-	[RK3399_PD_VOPL]	= DOMAIN_RK3399(-1, -1, 8, false),
+-	[RK3399_PD_ISP0]	= DOMAIN_RK3399(22, 22, 9, false),
+-	[RK3399_PD_ISP1]	= DOMAIN_RK3399(23, 23, 10, false),
+-	[RK3399_PD_HDCP]	= DOMAIN_RK3399(24, 24, 11, false),
+-	[RK3399_PD_GMAC]	= DOMAIN_RK3399(25, 25, 23, true),
+-	[RK3399_PD_EMMC]	= DOMAIN_RK3399(26, 26, 24, true),
+-	[RK3399_PD_USB3]	= DOMAIN_RK3399(27, 27, 12, true),
+-	[RK3399_PD_EDP]		= DOMAIN_RK3399(28, 28, 22, false),
+-	[RK3399_PD_GIC]		= DOMAIN_RK3399(29, 29, 27, true),
+-	[RK3399_PD_SD]		= DOMAIN_RK3399(30, 30, 28, true),
+-	[RK3399_PD_SDIOAUDIO]	= DOMAIN_RK3399(31, 31, 29, true),
+-};
+-
+-static const struct rockchip_pmu_info px30_pmu = {
+-	.pwr_offset = 0x18,
+-	.status_offset = 0x20,
+-	.req_offset = 0x64,
+-	.idle_offset = 0x6c,
+-	.ack_offset = 0x6c,
+-
+-	.num_domains = ARRAY_SIZE(px30_pm_domains),
+-	.domain_info = px30_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3036_pmu = {
+-	.req_offset = 0x148,
+-	.idle_offset = 0x14c,
+-	.ack_offset = 0x14c,
+-
+-	.num_domains = ARRAY_SIZE(rk3036_pm_domains),
+-	.domain_info = rk3036_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3128_pmu = {
+-	.pwr_offset = 0x04,
+-	.status_offset = 0x08,
+-	.req_offset = 0x0c,
+-	.idle_offset = 0x10,
+-	.ack_offset = 0x10,
+-
+-	.num_domains = ARRAY_SIZE(rk3128_pm_domains),
+-	.domain_info = rk3128_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3228_pmu = {
+-	.req_offset = 0x40c,
+-	.idle_offset = 0x488,
+-	.ack_offset = 0x488,
+-
+-	.num_domains = ARRAY_SIZE(rk3228_pm_domains),
+-	.domain_info = rk3228_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3288_pmu = {
+-	.pwr_offset = 0x08,
+-	.status_offset = 0x0c,
+-	.req_offset = 0x10,
+-	.idle_offset = 0x14,
+-	.ack_offset = 0x14,
++static const struct rockchip_pmu_info rk3568_pmu = {
++	.pwr_offset = 0xa0,
++	.status_offset = 0x98,
++	.req_offset = 0x50,
++	.idle_offset = 0x68,
++	.ack_offset = 0x60,
+ 
+-	.core_pwrcnt_offset = 0x34,
+-	.gpu_pwrcnt_offset = 0x3c,
+-
+-	.core_power_transition_time = 24, /* 1us */
+-	.gpu_power_transition_time = 24, /* 1us */
+-
+-	.num_domains = ARRAY_SIZE(rk3288_pm_domains),
+-	.domain_info = rk3288_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3328_pmu = {
+-	.req_offset = 0x414,
+-	.idle_offset = 0x484,
+-	.ack_offset = 0x484,
+-
+-	.num_domains = ARRAY_SIZE(rk3328_pm_domains),
+-	.domain_info = rk3328_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3366_pmu = {
+-	.pwr_offset = 0x0c,
+-	.status_offset = 0x10,
+-	.req_offset = 0x3c,
+-	.idle_offset = 0x40,
+-	.ack_offset = 0x40,
+-
+-	.core_pwrcnt_offset = 0x48,
+-	.gpu_pwrcnt_offset = 0x50,
+-
+-	.core_power_transition_time = 24,
+-	.gpu_power_transition_time = 24,
+-
+-	.num_domains = ARRAY_SIZE(rk3366_pm_domains),
+-	.domain_info = rk3366_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3368_pmu = {
+-	.pwr_offset = 0x0c,
+-	.status_offset = 0x10,
+-	.req_offset = 0x3c,
+-	.idle_offset = 0x40,
+-	.ack_offset = 0x40,
+-
+-	.core_pwrcnt_offset = 0x48,
+-	.gpu_pwrcnt_offset = 0x50,
+-
+-	.core_power_transition_time = 24,
+-	.gpu_power_transition_time = 24,
+-
+-	.num_domains = ARRAY_SIZE(rk3368_pm_domains),
+-	.domain_info = rk3368_pm_domains,
+-};
+-
+-static const struct rockchip_pmu_info rk3399_pmu = {
+-	.pwr_offset = 0x14,
+-	.status_offset = 0x18,
+-	.req_offset = 0x60,
+-	.idle_offset = 0x64,
+-	.ack_offset = 0x68,
+-
+-	/* ARM Trusted Firmware manages power transition times */
+-
+-	.num_domains = ARRAY_SIZE(rk3399_pm_domains),
+-	.domain_info = rk3399_pm_domains,
++	.num_domains = ARRAY_SIZE(rk3568_pm_domains),
++	.domain_info = rk3568_pm_domains,
+ };
+ 
+ static const struct of_device_id rockchip_pm_domain_dt_match[] = {
++#ifdef CONFIG_CPU_RK3568
+ 	{
+-		.compatible = "rockchip,px30-power-controller",
+-		.data = (void *)&px30_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3036-power-controller",
+-		.data = (void *)&rk3036_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3128-power-controller",
+-		.data = (void *)&rk3128_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3228-power-controller",
+-		.data = (void *)&rk3228_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3288-power-controller",
+-		.data = (void *)&rk3288_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3328-power-controller",
+-		.data = (void *)&rk3328_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3366-power-controller",
+-		.data = (void *)&rk3366_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3368-power-controller",
+-		.data = (void *)&rk3368_pmu,
+-	},
+-	{
+-		.compatible = "rockchip,rk3399-power-controller",
+-		.data = (void *)&rk3399_pmu,
++		.compatible = "rockchip,rk3568-power-controller",
++		.data = (void *)&rk3568_pmu,
+ 	},
++#endif
+ 	{ /* sentinel */ },
+ };
++MODULE_DEVICE_TABLE(of, rockchip_pm_domain_dt_match);
+ 
+ static struct platform_driver rockchip_pm_domain_driver = {
+ 	.probe = rockchip_pm_domain_probe,
+@@ -998,3 +1171,13 @@ static int __init rockchip_pm_domain_drv_register(void)
+ 	return platform_driver_register(&rockchip_pm_domain_driver);
+ }
+ postcore_initcall(rockchip_pm_domain_drv_register);
++
++static void __exit rockchip_pm_domain_drv_unregister(void)
++{
++	platform_driver_unregister(&rockchip_pm_domain_driver);
++}
++module_exit(rockchip_pm_domain_drv_unregister);
++
++MODULE_DESCRIPTION("ROCKCHIP PM Domain Driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:rockchip-pm-domain");
+diff --git a/include/linux/pwm.h b/include/linux/pwm.h
+index bd7d611d6..88c16c529 100644
+--- a/include/linux/pwm.h
++++ b/include/linux/pwm.h
+@@ -39,7 +39,7 @@ enum pwm_polarity {
+  * current PWM hardware state.
+  */
+ struct pwm_args {
+-	unsigned int period;
++	u64 period;
+ 	enum pwm_polarity polarity;
+ };
+ 
+@@ -48,6 +48,29 @@ enum {
+ 	PWMF_EXPORTED = 1 << 1,
+ };
+ 
++/**
++ * enum pwm_output_type - output type of the PWM signal
++ * @PWM_OUTPUT_FIXED: PWM output is fixed until a change request
++ * @PWM_OUTPUT_MODULATED: PWM output is modulated in hardware
++ * autonomously with a predefined pattern
++ */
++enum pwm_output_type {
++	PWM_OUTPUT_FIXED = 1 << 0,
++	PWM_OUTPUT_MODULATED = 1 << 1,
++};
++
++/**
++ * struct pwm_output_pattern - PWM duty pattern for MODULATED duty type
++ * @duty_pattern: PWM duty cycles in the pattern for duty modulation
++ * @num_entries: number of entries in the pattern
++ * @cycles_per_duty: number of PWM period cycles an entry stays at
++ */
++struct pwm_output_pattern {
++	u64 *duty_pattern;
++	unsigned int num_entries;
++	u64 cycles_per_duty;
++};
++
+ /*
+  * struct pwm_state - state of a PWM channel
+  * @period: PWM period (in nanoseconds)
+@@ -56,9 +79,14 @@ enum {
+  * @enabled: PWM enabled status
+  */
+ struct pwm_state {
+-	unsigned int period;
+-	unsigned int duty_cycle;
++	u64 period;
++	u64 duty_cycle;
+ 	enum pwm_polarity polarity;
++	enum pwm_output_type output_type;
++	struct pwm_output_pattern *output_pattern;
++#ifdef CONFIG_PWM_ROCKCHIP_ONESHOT
++	u64 oneshot_count;
++#endif /* CONFIG_PWM_ROCKCHIP_ONESHOT */
+ 	bool enabled;
+ };
+ 
+@@ -111,12 +139,30 @@ static inline void pwm_set_period(struct pwm_device *pwm, unsigned int period)
+ 		pwm->state.period = period;
+ }
+ 
++static inline void pwm_set_period_extend(struct pwm_device *pwm, u64 period)
++{
++	if (pwm)
++		pwm->state.period = period;
++}
++
+ static inline unsigned int pwm_get_period(const struct pwm_device *pwm)
+ {
+ 	struct pwm_state state;
+ 
+ 	pwm_get_state(pwm, &state);
+ 
++	if (state.period > UINT_MAX)
++		pr_warn("PWM period %llu is truncated\n", state.period);
++
++	return (unsigned int)state.period;
++}
++
++static inline u64 pwm_get_period_extend(const struct pwm_device *pwm)
++{
++	struct pwm_state state;
++
++	pwm_get_state(pwm, &state);
++
+ 	return state.period;
+ }
+ 
+@@ -126,12 +172,30 @@ static inline void pwm_set_duty_cycle(struct pwm_device *pwm, unsigned int duty)
+ 		pwm->state.duty_cycle = duty;
+ }
+ 
++static inline void pwm_set_duty_cycle_extend(struct pwm_device *pwm, u64 duty)
++{
++	if (pwm)
++		pwm->state.duty_cycle = duty;
++}
++
+ static inline unsigned int pwm_get_duty_cycle(const struct pwm_device *pwm)
+ {
+ 	struct pwm_state state;
+ 
+ 	pwm_get_state(pwm, &state);
+ 
++	if (state.duty_cycle > UINT_MAX)
++		pr_warn("PWM duty cycle %llu is truncated\n", state.duty_cycle);
++
++	return (unsigned int)state.duty_cycle;
++}
++
++static inline u64 pwm_get_duty_cycle_extend(const struct pwm_device *pwm)
++{
++	struct pwm_state state;
++
++	pwm_get_state(pwm, &state);
++
+ 	return state.duty_cycle;
+ }
+ 
+@@ -144,6 +208,26 @@ static inline enum pwm_polarity pwm_get_polarity(const struct pwm_device *pwm)
+ 	return state.polarity;
+ }
+ 
++static inline enum pwm_output_type pwm_get_output_type(
++		const struct pwm_device *pwm)
++{
++	struct pwm_state state;
++
++	pwm_get_state(pwm, &state);
++
++	return state.output_type;
++}
++
++static inline struct pwm_output_pattern *pwm_get_output_pattern(
++				struct pwm_device *pwm)
++{
++	struct pwm_state state;
++
++	pwm_get_state(pwm, &state);
++
++	return pwm->state.output_pattern ?: NULL;
++}
++
+ static inline void pwm_get_args(const struct pwm_device *pwm,
+ 				struct pwm_args *args)
+ {
+@@ -243,10 +327,15 @@ pwm_set_relative_duty_cycle(struct pwm_state *state, unsigned int duty_cycle,
+  * @request: optional hook for requesting a PWM
+  * @free: optional hook for freeing a PWM
+  * @config: configure duty cycles and period length for this PWM
++ * @config_extend: configure duty cycles and period length for this
++ *	PWM with u64 data type
+  * @set_polarity: configure the polarity of this PWM
+  * @capture: capture and report PWM signal
+  * @enable: enable PWM output toggling
+  * @disable: disable PWM output toggling
++ * @get_output_type_supported: get the supported output type
++ * @set_output_type: set PWM output type
++ * @set_output_pattern: set the pattern for the modulated output
+  * @apply: atomically apply a new PWM config. The state argument
+  *	   should be adjusted with the real hardware config (if the
+  *	   approximate the period or duty_cycle value, state should
+@@ -262,12 +351,21 @@ struct pwm_ops {
+ 	void (*free)(struct pwm_chip *chip, struct pwm_device *pwm);
+ 	int (*config)(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		      int duty_ns, int period_ns);
++	int (*config_extend)(struct pwm_chip *chip, struct pwm_device *pwm,
++		      u64 duty_ns, u64 period_ns);
+ 	int (*set_polarity)(struct pwm_chip *chip, struct pwm_device *pwm,
+ 			    enum pwm_polarity polarity);
+ 	int (*capture)(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		       struct pwm_capture *result, unsigned long timeout);
+ 	int (*enable)(struct pwm_chip *chip, struct pwm_device *pwm);
+ 	void (*disable)(struct pwm_chip *chip, struct pwm_device *pwm);
++	int (*get_output_type_supported)(struct pwm_chip *chip,
++			struct pwm_device *pwm);
++	int (*set_output_type)(struct pwm_chip *chip, struct pwm_device *pwm,
++			enum pwm_output_type output_type);
++	int (*set_output_pattern)(struct pwm_chip *chip,
++			struct pwm_device *pwm,
++			struct pwm_output_pattern *output_pattern);
+ 	int (*apply)(struct pwm_chip *chip, struct pwm_device *pwm,
+ 		     struct pwm_state *state);
+ 	void (*get_state)(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -309,8 +407,8 @@ struct pwm_chip {
+  * @duty_cycle: duty cycle of the PWM signal (in nanoseconds)
+  */
+ struct pwm_capture {
+-	unsigned int period;
+-	unsigned int duty_cycle;
++	u64 period;
++	u64 duty_cycle;
+ };
+ 
+ #if IS_ENABLED(CONFIG_PWM)
+@@ -320,6 +418,21 @@ void pwm_free(struct pwm_device *pwm);
+ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state);
+ int pwm_adjust_config(struct pwm_device *pwm);
+ 
++/**
++ * pwm_output_type_support()
++ * @pwm: PWM device
++ *
++ * Returns:  output types supported by the PWM device
++ */
++static inline int pwm_get_output_type_supported(struct pwm_device *pwm)
++{
++	if (pwm->chip->ops->get_output_type_supported != NULL)
++		return pwm->chip->ops->get_output_type_supported(pwm->chip,
++								 pwm);
++	else
++		return PWM_OUTPUT_FIXED;
++}
++
+ /**
+  * pwm_config() - change a PWM device configuration
+  * @pwm: PWM device
+@@ -348,6 +461,31 @@ static inline int pwm_config(struct pwm_device *pwm, int duty_ns,
+ 	return pwm_apply_state(pwm, &state);
+ }
+ 
++/**
++ * pwm_config_extend() - change PWM period and duty length with u64 data type
++ * @pwm: PWM device
++ * @duty_ns: "on" time (in nanoseconds)
++ * @period_ns: duration (in nanoseconds) of one cycle
++ *
++ * Returns: 0 on success or a negative error code on failure.
++ */
++static inline int pwm_config_extend(struct pwm_device *pwm, u64 duty_ns,
++			     u64 period_ns)
++{
++	struct pwm_state state;
++
++	if (!pwm)
++		return -EINVAL;
++
++	pwm_get_state(pwm, &state);
++	if (state.duty_cycle == duty_ns && state.period == period_ns)
++		return 0;
++
++	state.duty_cycle = duty_ns;
++	state.period = period_ns;
++	return pwm_apply_state(pwm, &state);
++}
++
+ /**
+  * pwm_set_polarity() - configure the polarity of a PWM signal
+  * @pwm: PWM device
+diff --git a/include/soc/rockchip/rockchip_sip.h b/include/soc/rockchip/rockchip_sip.h
+index 7e28092c4..f65f9e8f9 100644
+--- a/include/soc/rockchip/rockchip_sip.h
++++ b/include/soc/rockchip/rockchip_sip.h
+@@ -23,5 +23,11 @@
+ #define ROCKCHIP_SIP_CONFIG_DRAM_GET_RATE	0x05
+ #define ROCKCHIP_SIP_CONFIG_DRAM_CLR_IRQ	0x06
+ #define ROCKCHIP_SIP_CONFIG_DRAM_SET_PARAM	0x07
++#define ROCKCHIP_SIP_CONFIG_DRAM_GET_VERSION	0x08
++#define ROCKCHIP_SIP_CONFIG_DRAM_POST_SET_RATE	0x09
++#define ROCKCHIP_SIP_CONFIG_DRAM_SET_MSCH_RL	0x0a
++#define ROCKCHIP_SIP_CONFIG_DRAM_DEBUG		0x0b
++#define ROCKCHIP_SIP_CONFIG_MCU_START		0x0c
++#define ROCKCHIP_SIP_CONFIG_DRAM_GET_FREQ_INFO	0x0e
+ 
+ #endif
+diff --git a/include/uapi/linux/magic.h b/include/uapi/linux/magic.h
+index 1a6fee974..b22a4f635 100644
+--- a/include/uapi/linux/magic.h
++++ b/include/uapi/linux/magic.h
+@@ -89,5 +89,6 @@
+ #define UDF_SUPER_MAGIC		0x15013346
+ #define BALLOON_KVM_MAGIC	0x13661366
+ #define ZSMALLOC_MAGIC		0x58295829
++#define DMA_BUF_MAGIC		0x444d4142	/* "DMAB" */
+ 
+ #endif /* __LINUX_MAGIC_H__ */
+-- 
+2.37.0 (Apple Git-136)
+

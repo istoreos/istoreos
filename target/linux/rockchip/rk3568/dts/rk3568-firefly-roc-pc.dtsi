@@ -1,0 +1,288 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+#include "rk3568-firefly-port.dtsi"
+
+/ {
+	aliases {
+		led-boot = &user_led;
+		led-failsafe = &user_led;
+		led-running = &user_led;
+		led-upgrade = &user_led;
+	};
+	vcc_hub_power: vcc-hub-power-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc_hub_power_en>;
+		regulator-name = "vcc_hub_power_en";
+		regulator-always-on;
+	};
+
+	vcc_hub_reset: vcc-hub-reset-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio1 RK_PA4 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc_hub_reset_en>;
+		regulator-name = "vcc_hub_reset_en";
+		regulator-always-on;
+	};
+
+    pcie_pi6c_oe: pcie-pi6c-oe-regulator {
+		compatible = "regulator-fixed";
+		//enable-active-high;
+		gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_pi6c_oe_en>;
+		regulator-name = "pcie_pi6c_oe_en";
+		regulator-always-on;
+	};
+
+    vcc_4g_power: vcc-4g-power-regulator {
+        compatible = "regulator-fixed";
+        enable-active-high;
+        gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&vcc_4g_power_en>;
+        regulator-name = "vcc_4g_power_en";
+        regulator-always-on;
+    };
+
+	firefly_leds: leds {
+		status = "okay";
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_power>,
+			<&led_user>;
+		power_led: power {
+			label = "firefly:blue:power";
+			linux,default-trigger = "ir-power-click";
+			default-state = "on";
+			gpios = <&gpio1 RK_PB2 GPIO_ACTIVE_HIGH>;
+
+		};
+
+		user_led: user {
+			label = "firefly:yellow:user";
+			linux,default-trigger = "ir-user-click";
+			default-state = "off";
+			gpios = <&gpio1 RK_PB1 GPIO_ACTIVE_HIGH>;
+		};
+
+    };
+};
+
+&csi2_dphy0 {
+	status = "disabled";
+};
+
+&i2c0 {
+    status = "okay";
+
+	fusb0: fusb30x@22 {
+		compatible = "fairchild,fusb302";
+		reg = <0x22>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fusb0_int>;
+		int-n-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+		fusb340-switch-gpios = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
+		vbus-5v-gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
+};
+
+&i2c1 {
+    status = "okay";
+};
+
+&i2c4 {
+	status = "okay";
+};
+
+&pca9555 {
+    status = "okay";
+};
+
+&i2c5 {
+    status = "okay";
+};
+
+&hym8563 {
+    status = "okay";
+};
+
+&mc3230 {
+    status = "okay";
+};
+
+&uart3 {
+	status = "okay";
+};
+
+&uart4 {
+        status = "okay";
+};
+
+&spi1 {
+	status = "disabled";
+};
+
+&spi_wk2xxx {
+	status = "disabled";
+};
+
+&pcie30phy {
+       status = "okay";
+};
+
+&pcie3x2 {
+        reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
+        vpcie3v3-supply = <&pcie30_3v3>;
+
+       status = "okay";
+};
+
+&its {
+    status = "okay";
+};
+
+&can1 {
+    status = "okay";
+};
+
+&can2 {
+    status = "okay";
+};
+
+&gmac0 {
+    status = "okay";
+};
+
+&gmac1 {
+    status = "okay";
+};
+
+&rgmii_phy0 {
+	led_status_value = <0x6940>;
+};
+
+&rgmii_phy1 {
+	led_status_value = <0x6940>;
+};
+
+&uart8 {
+	status = "okay";
+};
+
+&sdio_pwrseq {
+	status = "okay";
+	reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
+	post-power-on-delay-ms = <100>;
+};
+
+&sdmmc2 {
+	status = "okay";
+};
+
+&wireless_wlan {
+	wifi_chip_type = "ap6275s";
+	status = "okay";
+};
+
+&wireless_bluetooth {
+	status = "okay";
+};
+
+&spdif_8ch{
+    status = "disabled";
+};
+
+&rk809 {
+    rtc {
+        status = "disabled";
+    };
+};
+
+&pwm7 {
+	status = "okay";
+};
+
+&sata2 {
+	status = "okay";
+};
+
+&vcc3v3_vga {
+	status = "disabled";
+};
+
+&vcc5v0_otg {
+	status = "disabled";
+};
+
+&combphy0_us {
+	status = "okay";
+	extcon = <&fusb0>;
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&fusb0>;
+	status = "okay";
+};
+
+&usb2phy0 {
+	status = "okay";
+	extcon = <&fusb0>;
+};
+
+&u2phy0_otg {
+	/delete-property/ vbus-supply;
+	status = "okay";
+};
+
+
+&pinctrl {
+
+	usb {
+		vcc_hub_power_en: vcc-hub-power-en {
+			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		vcc_hub_reset_en: vcc-hub-reset-en {
+			rockchip,pins = <1 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	fusb30x {
+		fusb0_int: fusb0-int {
+			rockchip,pins = <0 RK_PC1 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+    pcie {
+        pcie_pi6c_oe_en: pcie-pi6c-oe-en {
+			rockchip,pins = <3 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+    };
+
+	4g {
+	    vcc_4g_power_en: vcc-4g-power-en {
+	        rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+	    };
+	};
+
+	leds {
+	    led_power: led-power {
+			rockchip,pins = <1 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+	    };
+
+	    led_user: led-user {
+			rockchip,pins = <1 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+	    };
+	};
+};

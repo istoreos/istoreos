@@ -1,0 +1,16 @@
+if ROCKCHIP_RV1126
+
+config TARGET_EVB_RV1126
+	bool "EVB_RV1126"
+	help
+	  RV1126 EVB is a evaluation board for Rockchp RV1126.
+
+config SYS_SOC
+	default "rockchip"
+
+config SYS_MALLOC_F_LEN
+	default 0x400
+
+source board/rockchip/evb_rv1126/Kconfig
+
+endif

@@ -1,0 +1,35 @@
+config AVB_LIBAVB_USER
+	bool "Android AVB read/write hardware"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+	  to fastboot and kernel.
+
+config AVB_VBMETA_PUBLIC_KEY_VALIDATE
+	bool "Support vbmeta public key validate"
+	depends on AVB_LIBAVB_USER
+	select CONSOLE_DISABLE_CLI
+	help
+	  support vbmeta public key validate, system bootflow would be
+	  uninterruptale when it is enabled:
+	    - only allow "boot_android" as bootcmd;
+	    - enter rockusb or fastboot when boot failed;
+	    - not allow ctrl+c to enter hush;
+	  only the CONFIG_BOOTDELAY can interrupt the bootflow.
+
+config SPL_AVB_LIBAVB_USER
+	bool "Android AVB read/write hardware for spl"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+	  to fastboot and kernel.
+
+config TPL_AVB_LIBAVB_USER
+	bool "Android AVB read/write hardware for tpl"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+	  to fastboot and kernel.

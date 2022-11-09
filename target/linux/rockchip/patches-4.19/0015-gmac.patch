@@ -1,0 +1,1828 @@
+From 3ce6c0b9b96a0e3069e67062ddfae6a5d7f8ae33 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:12:10 +0800
+Subject: [PATCH 15/46] gmac
+
+---
+ drivers/net/ethernet/stmicro/stmmac/Kconfig   |  29 +
+ drivers/net/ethernet/stmicro/stmmac/Makefile  |  23 +-
+ .../net/ethernet/stmicro/stmmac/dwmac-rk.c    | 837 +++++++++++++++++-
+ .../net/ethernet/stmicro/stmmac/dwmac4_core.c |   4 +
+ drivers/net/ethernet/stmicro/stmmac/hwif.c    |  30 +-
+ drivers/net/ethernet/stmicro/stmmac/stmmac.h  |  19 +
+ .../net/ethernet/stmicro/stmmac/stmmac_main.c | 125 ++-
+ .../ethernet/stmicro/stmmac/stmmac_platform.c |   2 +-
+ .../net/ethernet/stmicro/stmmac/stmmac_ptp.h  |   9 +-
+ include/linux/stmmac.h                        |   1 +
+ 10 files changed, 987 insertions(+), 92 deletions(-)
+
+diff --git a/drivers/net/ethernet/stmicro/stmmac/Kconfig b/drivers/net/ethernet/stmicro/stmmac/Kconfig
+index 324049eeb..21f40747f 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/Kconfig
++++ b/drivers/net/ethernet/stmicro/stmmac/Kconfig
+@@ -12,6 +12,25 @@ config STMMAC_ETH
+ 
+ if STMMAC_ETH
+ 
++config STMMAC_ETHTOOL
++	bool "Ethtool feature for STMMAC"
++	default STMMAC_ETH
++	help
++	  This selects the ethtool function, default is Y.
++
++config STMMAC_FULL
++	bool "Support full driver for STMMAC"
++	default STMMAC_ETH
++	help
++	  This selects the full function, default is Y, full-featured version
++	  includes 4.10 and other versions, if it is N, only 4.10 core working.
++
++config STMMAC_PTP
++	bool "PTP feature for STMMAC"
++	default STMMAC_ETH
++	help
++	  This selects the ptp timestamp function, default is Y.
++
+ config STMMAC_PLATFORM
+ 	tristate "STMMAC Platform bus support"
+ 	depends on STMMAC_ETH
+@@ -108,6 +127,16 @@ config DWMAC_ROCKCHIP
+ 	  This selects the Rockchip RK3288 SoC glue layer support for
+ 	  the stmmac device driver.
+ 
++config DWMAC_ROCKCHIP_TOOL
++	bool "Rockchip dwmac tool support"
++	depends on DWMAC_ROCKCHIP
++	default DWMAC_ROCKCHIP
++	help
++	  Support for Ethernet functions on Rockchip SoCs.
++
++	  This selects the features for Rockchip's Ethernet, include PHY loopback,
++	  MAC loopback, and delayline scanning of RGMII mode.
++
+ config DWMAC_SOCFPGA
+ 	tristate "SOCFPGA dwmac support"
+ 	default (ARCH_SOCFPGA || ARCH_STRATIX10)
+diff --git a/drivers/net/ethernet/stmicro/stmmac/Makefile b/drivers/net/ethernet/stmicro/stmmac/Makefile
+index 99967a80a..f8275ed91 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/Makefile
++++ b/drivers/net/ethernet/stmicro/stmmac/Makefile
+@@ -1,13 +1,20 @@
+ # SPDX-License-Identifier: GPL-2.0
+ obj-$(CONFIG_STMMAC_ETH) += stmmac.o
+-stmmac-objs:= stmmac_main.o stmmac_ethtool.o stmmac_mdio.o ring_mode.o	\
+-	      chain_mode.o dwmac_lib.o dwmac1000_core.o dwmac1000_dma.o	\
+-	      dwmac100_core.o dwmac100_dma.o enh_desc.o norm_desc.o	\
+-	      mmc_core.o stmmac_hwtstamp.o stmmac_ptp.o dwmac4_descs.o	\
+-	      dwmac4_dma.o dwmac4_lib.o dwmac4_core.o dwmac5.o hwif.o \
+-	      stmmac_tc.o dwxgmac2_core.o dwxgmac2_dma.o dwxgmac2_descs.o \
++
++stmmac-objs:= stmmac_main.o stmmac_mdio.o dwmac_lib.o	\
++	      mmc_core.o dwmac4_descs.o dwmac4_dma.o	\
++	      dwmac4_lib.o dwmac4_core.o hwif.o	\
+ 	      $(stmmac-y)
+ 
++stmmac-$(CONFIG_STMMAC_FULL) += ring_mode.o chain_mode.o dwmac1000_core.o	\
++				dwmac1000_dma.o dwmac100_core.o dwmac100_dma.o	\
++				enh_desc.o norm_desc.o dwmac5.o stmmac_tc.o	\
++				dwxgmac2_core.o dwxgmac2_dma.o dwxgmac2_descs.o
++
++stmmac-$(CONFIG_STMMAC_ETHTOOL) += stmmac_ethtool.o
++
++stmmac-$(CONFIG_STMMAC_PTP) += stmmac_hwtstamp.o stmmac_ptp.o
++
+ # Ordering matters. Generic driver must be last.
+ obj-$(CONFIG_STMMAC_PLATFORM)	+= stmmac-platform.o
+ obj-$(CONFIG_DWMAC_ANARION)	+= dwmac-anarion.o
+@@ -15,7 +22,9 @@ obj-$(CONFIG_DWMAC_IPQ806X)	+= dwmac-ipq806x.o
+ obj-$(CONFIG_DWMAC_LPC18XX)	+= dwmac-lpc18xx.o
+ obj-$(CONFIG_DWMAC_MESON)	+= dwmac-meson.o dwmac-meson8b.o
+ obj-$(CONFIG_DWMAC_OXNAS)	+= dwmac-oxnas.o
+-obj-$(CONFIG_DWMAC_ROCKCHIP)	+= dwmac-rk.o
++obj-$(CONFIG_DWMAC_ROCKCHIP)	+= dwmac-rockchip.o
++dwmac-rockchip-objs := dwmac-rk.o
++dwmac-rockchip-$(CONFIG_DWMAC_ROCKCHIP_TOOL) += dwmac-rk-tool.o
+ obj-$(CONFIG_DWMAC_SOCFPGA)	+= dwmac-altr-socfpga.o
+ obj-$(CONFIG_DWMAC_STI)		+= dwmac-sti.o
+ obj-$(CONFIG_DWMAC_STM32)	+= dwmac-stm32.o
+diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+index 4e83ccab7..1e392acd8 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -20,6 +20,7 @@
+ #include <linux/bitops.h>
+ #include <linux/clk.h>
+ #include <linux/phy.h>
++#include <linux/phy/phy.h>
+ #include <linux/of_net.h>
+ #include <linux/gpio.h>
+ #include <linux/module.h>
+@@ -31,22 +32,29 @@
+ #include <linux/mfd/syscon.h>
+ #include <linux/regmap.h>
+ #include <linux/pm_runtime.h>
+-
++#include <linux/soc/rockchip/rk_vendor_storage.h>
+ #include "stmmac_platform.h"
++#include "dwmac-rk-tool.h"
++
++#define MAX_ETH		2
+ 
+ struct rk_priv_data;
+ struct rk_gmac_ops {
+ 	void (*set_to_rgmii)(struct rk_priv_data *bsp_priv,
+ 			     int tx_delay, int rx_delay);
+ 	void (*set_to_rmii)(struct rk_priv_data *bsp_priv);
++	void (*set_to_sgmii)(struct rk_priv_data *bsp_priv);
++	void (*set_to_qsgmii)(struct rk_priv_data *bsp_priv);
+ 	void (*set_rgmii_speed)(struct rk_priv_data *bsp_priv, int speed);
+ 	void (*set_rmii_speed)(struct rk_priv_data *bsp_priv, int speed);
++	void (*set_sgmii_speed)(struct rk_priv_data *bsp_priv, int speed);
+ 	void (*integrated_phy_powerup)(struct rk_priv_data *bsp_priv);
+ };
+ 
+ struct rk_priv_data {
+ 	struct platform_device *pdev;
+ 	int phy_iface;
++	int bus_id;
+ 	struct regulator *regulator;
+ 	bool suspended;
+ 	const struct rk_gmac_ops *ops;
+@@ -65,6 +73,7 @@ struct rk_priv_data {
+ 	struct clk *aclk_mac;
+ 	struct clk *pclk_mac;
+ 	struct clk *clk_phy;
++	struct clk *pclk_xpcs;
+ 
+ 	struct reset_control *phy_reset;
+ 
+@@ -72,8 +81,131 @@ struct rk_priv_data {
+ 	int rx_delay;
+ 
+ 	struct regmap *grf;
++	struct regmap *xpcs;
+ };
+ 
++/* XPCS */
++#define XPCS_APB_INCREMENT		(0x4)
++#define XPCS_APB_MASK			GENMASK_ULL(20, 0)
++
++#define SR_MII_BASE			(0x1F0000)
++#define SR_MII1_BASE			(0x1A0000)
++
++#define VR_MII_DIG_CTRL1		(0x8000)
++#define VR_MII_AN_CTRL			(0x8001)
++#define VR_MII_AN_INTR_STS		(0x8002)
++#define VR_MII_LINK_TIMER_CTRL		(0x800A)
++
++#define SR_MII_CTRL_AN_ENABLE		\
++	(BMCR_ANENABLE | BMCR_ANRESTART | BMCR_FULLDPLX | BMCR_SPEED1000)
++#define MII_MAC_AUTO_SW			(0x0200)
++#define PCS_MODE_OFFSET			(0x1)
++#define MII_AN_INTR_EN			(0x1)
++#define PCS_SGMII_MODE			(0x2 << PCS_MODE_OFFSET)
++#define PCS_QSGMII_MODE			(0X3 << PCS_MODE_OFFSET)
++#define VR_MII_CTRL_SGMII_AN_EN		(PCS_SGMII_MODE | MII_AN_INTR_EN)
++#define VR_MII_CTRL_QSGMII_AN_EN	(PCS_QSGMII_MODE | MII_AN_INTR_EN)
++
++#define SR_MII_OFFSET(_x) ({		\
++	typeof(_x) (x) = (_x); \
++	(((x) == 0) ? SR_MII_BASE : (SR_MII1_BASE + ((x) - 1) * 0x10000)); \
++}) \
++
++static int xpcs_read(void *priv, int reg)
++{
++	struct rk_priv_data *bsp_priv = (struct rk_priv_data *)priv;
++	int ret, val;
++
++	ret = regmap_read(bsp_priv->xpcs,
++			  (u32)(reg * XPCS_APB_INCREMENT) & XPCS_APB_MASK,
++			  &val);
++	if (ret)
++		return ret;
++
++	return val;
++}
++
++static int xpcs_write(void *priv, int reg, u16 value)
++{
++	struct rk_priv_data *bsp_priv = (struct rk_priv_data *)priv;
++
++	return regmap_write(bsp_priv->xpcs,
++			    (reg * XPCS_APB_INCREMENT) & XPCS_APB_MASK, value);
++}
++
++static int xpcs_poll_reset(struct rk_priv_data *bsp_priv, int dev)
++{
++	/* Poll until the reset bit clears (50ms per retry == 0.6 sec) */
++	unsigned int retries = 12;
++	int ret;
++
++	do {
++		msleep(50);
++		ret = xpcs_read(bsp_priv, SR_MII_OFFSET(dev) + MDIO_CTRL1);
++		if (ret < 0)
++			return ret;
++	} while (ret & MDIO_CTRL1_RESET && --retries);
++
++	return (ret & MDIO_CTRL1_RESET) ? -ETIMEDOUT : 0;
++}
++
++static int xpcs_soft_reset(struct rk_priv_data *bsp_priv, int dev)
++{
++	int ret;
++
++	ret = xpcs_write(bsp_priv, SR_MII_OFFSET(dev) + MDIO_CTRL1,
++			 MDIO_CTRL1_RESET);
++	if (ret < 0)
++		return ret;
++
++	return xpcs_poll_reset(bsp_priv, dev);
++}
++
++static int xpcs_setup(struct rk_priv_data *bsp_priv, int mode)
++{
++	int ret, i, id = bsp_priv->bus_id;
++	u32 val;
++
++	if (mode == PHY_INTERFACE_MODE_QSGMII && id > 0)
++		return 0;
++
++	ret = xpcs_soft_reset(bsp_priv, id);
++	if (ret) {
++		dev_err(&bsp_priv->pdev->dev, "xpcs_soft_reset fail %d\n", ret);
++		return ret;
++	}
++
++	xpcs_write(bsp_priv, SR_MII_OFFSET(0) + VR_MII_AN_INTR_STS, 0x0);
++	xpcs_write(bsp_priv, SR_MII_OFFSET(0) + VR_MII_LINK_TIMER_CTRL, 0x1);
++
++	if (mode == PHY_INTERFACE_MODE_SGMII)
++		xpcs_write(bsp_priv, SR_MII_OFFSET(0) + VR_MII_AN_CTRL,
++			   VR_MII_CTRL_SGMII_AN_EN);
++	else
++		xpcs_write(bsp_priv, SR_MII_OFFSET(0) + VR_MII_AN_CTRL,
++			   VR_MII_CTRL_QSGMII_AN_EN);
++
++	if (mode == PHY_INTERFACE_MODE_QSGMII) {
++		for (i = 0; i < 4; i++) {
++			val = xpcs_read(bsp_priv,
++					SR_MII_OFFSET(i) + VR_MII_DIG_CTRL1);
++			xpcs_write(bsp_priv,
++				   SR_MII_OFFSET(i) + VR_MII_DIG_CTRL1,
++				   val | MII_MAC_AUTO_SW);
++			xpcs_write(bsp_priv, SR_MII_OFFSET(i) + MII_BMCR,
++				   SR_MII_CTRL_AN_ENABLE);
++		}
++	} else {
++		val = xpcs_read(bsp_priv, SR_MII_OFFSET(0) + VR_MII_DIG_CTRL1);
++		xpcs_write(bsp_priv, SR_MII_OFFSET(0) + VR_MII_DIG_CTRL1,
++			   val | MII_MAC_AUTO_SW);
++		xpcs_write(bsp_priv, SR_MII_OFFSET(0) + MII_BMCR,
++			   SR_MII_CTRL_AN_ENABLE);
++	}
++
++	return ret;
++}
++
+ #define HIWORD_UPDATE(val, mask, shift) \
+ 		((val) << (shift) | (mask) << ((shift) + 16))
+ 
+@@ -81,8 +213,12 @@ struct rk_priv_data {
+ #define GRF_CLR_BIT(nr)	(BIT(nr+16))
+ 
+ #define DELAY_ENABLE(soc, tx, rx) \
+-	(((tx) ? soc##_GMAC_TXCLK_DLY_ENABLE : soc##_GMAC_TXCLK_DLY_DISABLE) | \
+-	 ((rx) ? soc##_GMAC_RXCLK_DLY_ENABLE : soc##_GMAC_RXCLK_DLY_DISABLE))
++	((((tx) >= 0) ? soc##_GMAC_TXCLK_DLY_ENABLE : soc##_GMAC_TXCLK_DLY_DISABLE) | \
++	 (((rx) >= 0) ? soc##_GMAC_RXCLK_DLY_ENABLE : soc##_GMAC_RXCLK_DLY_DISABLE))
++
++#define DELAY_VALUE(soc, tx, rx) \
++	((((tx) >= 0) ? soc##_GMAC_CLK_TX_DL_CFG(tx) : 0) | \
++	 (((rx) >= 0) ? soc##_GMAC_CLK_RX_DL_CFG(rx) : 0))
+ 
+ #define PX30_GRF_GMAC_CON1		0x0904
+ 
+@@ -142,6 +278,127 @@ static const struct rk_gmac_ops px30_ops = {
+ 	.set_rmii_speed = px30_set_rmii_speed,
+ };
+ 
++#define RK1808_GRF_GMAC_CON0		0X0900
++#define RK1808_GRF_GMAC_CON1		0X0904
++
++/* RK1808_GRF_GMAC_CON0 */
++#define RK1808_GMAC_CLK_RX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 8)
++#define RK1808_GMAC_CLK_TX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 0)
++
++/* RK1808_GRF_GMAC_CON1 */
++#define RK1808_GMAC_PHY_INTF_SEL_RGMII	\
++		(GRF_BIT(4) | GRF_CLR_BIT(5) | GRF_CLR_BIT(6))
++#define RK1808_GMAC_PHY_INTF_SEL_RMII	\
++		(GRF_CLR_BIT(4) | GRF_CLR_BIT(5) | GRF_BIT(6))
++#define RK1808_GMAC_FLOW_CTRL		GRF_BIT(3)
++#define RK1808_GMAC_FLOW_CTRL_CLR	GRF_CLR_BIT(3)
++#define RK1808_GMAC_SPEED_10M		GRF_CLR_BIT(2)
++#define RK1808_GMAC_SPEED_100M		GRF_BIT(2)
++#define RK1808_GMAC_RXCLK_DLY_ENABLE	GRF_BIT(1)
++#define RK1808_GMAC_RXCLK_DLY_DISABLE	GRF_CLR_BIT(1)
++#define RK1808_GMAC_TXCLK_DLY_ENABLE	GRF_BIT(0)
++#define RK1808_GMAC_TXCLK_DLY_DISABLE	GRF_CLR_BIT(0)
++
++static void rk1808_set_to_rgmii(struct rk_priv_data *bsp_priv,
++				int tx_delay, int rx_delay)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "Missing rockchip,grf property\n");
++		return;
++	}
++
++	regmap_write(bsp_priv->grf, RK1808_GRF_GMAC_CON1,
++		     RK1808_GMAC_PHY_INTF_SEL_RGMII |
++		     DELAY_ENABLE(RK1808, tx_delay, rx_delay));
++
++	regmap_write(bsp_priv->grf, RK1808_GRF_GMAC_CON0,
++		     DELAY_VALUE(RK1808, tx_delay, rx_delay));
++}
++
++static void rk1808_set_to_rmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
++		return;
++	}
++
++	regmap_write(bsp_priv->grf, RK1808_GRF_GMAC_CON1,
++		     RK1808_GMAC_PHY_INTF_SEL_RMII);
++}
++
++static void rk1808_set_rgmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	int ret;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "Missing rockchip,grf property\n");
++		return;
++	}
++
++	if (speed == 10) {
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 2500000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 2500000 failed: %d\n",
++				__func__, ret);
++	} else if (speed == 100) {
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 25000000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 25000000 failed: %d\n",
++				__func__, ret);
++	} else if (speed == 1000) {
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 125000000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 125000000 failed: %d\n",
++				__func__, ret);
++	} else {
++		dev_err(dev, "unknown speed value for RGMII! speed=%d", speed);
++	}
++}
++
++static void rk1808_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	int ret;
++
++	if (IS_ERR(bsp_priv->clk_mac_speed)) {
++		dev_err(dev, "%s: Missing clk_mac_speed clock\n", __func__);
++		return;
++	}
++
++	if (speed == 10) {
++		regmap_write(bsp_priv->grf, RK1808_GRF_GMAC_CON1,
++			     RK1808_GMAC_SPEED_10M);
++
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 2500000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 2500000 failed: %d\n",
++				__func__, ret);
++	} else if (speed == 100) {
++		regmap_write(bsp_priv->grf, RK1808_GRF_GMAC_CON1,
++			     RK1808_GMAC_SPEED_100M);
++
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 25000000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 25000000 failed: %d\n",
++				__func__, ret);
++
++	} else {
++		dev_err(dev, "unknown speed value for RMII! speed=%d", speed);
++	}
++}
++
++static const struct rk_gmac_ops rk1808_ops = {
++	.set_to_rgmii = rk1808_set_to_rgmii,
++	.set_to_rmii = rk1808_set_to_rmii,
++	.set_rgmii_speed = rk1808_set_rgmii_speed,
++	.set_rmii_speed = rk1808_set_rmii_speed,
++};
++
+ #define RK3128_GRF_MAC_CON0	0x0168
+ #define RK3128_GRF_MAC_CON1	0x016c
+ 
+@@ -185,8 +442,7 @@ static void rk3128_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     RK3128_GMAC_RMII_MODE_CLR);
+ 	regmap_write(bsp_priv->grf, RK3128_GRF_MAC_CON0,
+ 		     DELAY_ENABLE(RK3128, tx_delay, rx_delay) |
+-		     RK3128_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3128_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3128, tx_delay, rx_delay));
+ }
+ 
+ static void rk3128_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -302,8 +558,7 @@ static void rk3228_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     DELAY_ENABLE(RK3228, tx_delay, rx_delay));
+ 
+ 	regmap_write(bsp_priv->grf, RK3228_GRF_MAC_CON0,
+-		     RK3228_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3228_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3128, tx_delay, rx_delay));
+ }
+ 
+ static void rk3228_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -423,8 +678,7 @@ static void rk3288_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     RK3288_GMAC_RMII_MODE_CLR);
+ 	regmap_write(bsp_priv->grf, RK3288_GRF_SOC_CON3,
+ 		     DELAY_ENABLE(RK3288, tx_delay, rx_delay) |
+-		     RK3288_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3288_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3288, tx_delay, rx_delay));
+ }
+ 
+ static void rk3288_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -491,6 +745,64 @@ static const struct rk_gmac_ops rk3288_ops = {
+ 	.set_rmii_speed = rk3288_set_rmii_speed,
+ };
+ 
++#define RK3308_GRF_MAC_CON0		0x04a0
++
++/* Rk3308_GRF_MAC_CON1 */
++#define RK3308_MAC_PHY_INTF_SEL_RMII	(GRF_CLR_BIT(2) | GRF_CLR_BIT(3) | \
++					GRF_BIT(4))
++#define RK3308_MAC_SPEED_10M		GRF_CLR_BIT(0)
++#define Rk3308_MAC_SPEED_100M		GRF_BIT(0)
++
++static void rk3308_set_to_rmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
++		return;
++	}
++
++	regmap_write(bsp_priv->grf, RK3308_GRF_MAC_CON0,
++		     RK3308_MAC_PHY_INTF_SEL_RMII);
++}
++
++static void rk3308_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	int ret;
++
++	if (IS_ERR(bsp_priv->clk_mac_speed)) {
++		dev_err(dev, "%s: Missing clk_mac_speed clock\n", __func__);
++		return;
++	}
++
++	if (speed == 10) {
++		regmap_write(bsp_priv->grf, RK3308_GRF_MAC_CON0,
++			     RK3308_MAC_SPEED_10M);
++
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 2500000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 2500000 failed: %d\n",
++				__func__, ret);
++	} else if (speed == 100) {
++		regmap_write(bsp_priv->grf, RK3308_GRF_MAC_CON0,
++			     Rk3308_MAC_SPEED_100M);
++
++		ret = clk_set_rate(bsp_priv->clk_mac_speed, 25000000);
++		if (ret)
++			dev_err(dev, "%s: set clk_mac_speed rate 25000000 failed: %d\n",
++				__func__, ret);
++
++	} else {
++		dev_err(dev, "unknown speed value for RMII! speed=%d", speed);
++	}
++}
++
++static const struct rk_gmac_ops rk3308_ops = {
++	.set_to_rmii = rk3308_set_to_rmii,
++	.set_rmii_speed = rk3308_set_rmii_speed,
++};
++
+ #define RK3328_GRF_MAC_CON0	0x0900
+ #define RK3328_GRF_MAC_CON1	0x0904
+ #define RK3328_GRF_MAC_CON2	0x0908
+@@ -537,12 +849,10 @@ static void rk3328_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 	regmap_write(bsp_priv->grf, RK3328_GRF_MAC_CON1,
+ 		     RK3328_GMAC_PHY_INTF_SEL_RGMII |
+ 		     RK3328_GMAC_RMII_MODE_CLR |
+-		     RK3328_GMAC_RXCLK_DLY_ENABLE |
+-		     RK3328_GMAC_TXCLK_DLY_ENABLE);
++		     DELAY_ENABLE(RK3328, tx_delay, rx_delay));
+ 
+ 	regmap_write(bsp_priv->grf, RK3328_GRF_MAC_CON0,
+-		     RK3328_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3328_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3328, tx_delay, rx_delay));
+ }
+ 
+ static void rk3328_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -667,8 +977,7 @@ static void rk3366_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     RK3366_GMAC_RMII_MODE_CLR);
+ 	regmap_write(bsp_priv->grf, RK3366_GRF_SOC_CON7,
+ 		     DELAY_ENABLE(RK3366, tx_delay, rx_delay) |
+-		     RK3366_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3366_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3366, tx_delay, rx_delay));
+ }
+ 
+ static void rk3366_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -778,8 +1087,7 @@ static void rk3368_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     RK3368_GMAC_RMII_MODE_CLR);
+ 	regmap_write(bsp_priv->grf, RK3368_GRF_SOC_CON16,
+ 		     DELAY_ENABLE(RK3368, tx_delay, rx_delay) |
+-		     RK3368_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3368_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3368, tx_delay, rx_delay));
+ }
+ 
+ static void rk3368_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -889,8 +1197,7 @@ static void rk3399_set_to_rgmii(struct rk_priv_data *bsp_priv,
+ 		     RK3399_GMAC_RMII_MODE_CLR);
+ 	regmap_write(bsp_priv->grf, RK3399_GRF_SOC_CON6,
+ 		     DELAY_ENABLE(RK3399, tx_delay, rx_delay) |
+-		     RK3399_GMAC_CLK_RX_DL_CFG(rx_delay) |
+-		     RK3399_GMAC_CLK_TX_DL_CFG(tx_delay));
++		     DELAY_VALUE(RK3399, tx_delay, rx_delay));
+ }
+ 
+ static void rk3399_set_to_rmii(struct rk_priv_data *bsp_priv)
+@@ -957,6 +1264,173 @@ static const struct rk_gmac_ops rk3399_ops = {
+ 	.set_rmii_speed = rk3399_set_rmii_speed,
+ };
+ 
++#define RK3568_GRF_GMAC0_CON0		0X0380
++#define RK3568_GRF_GMAC0_CON1		0X0384
++#define RK3568_GRF_GMAC1_CON0		0X0388
++#define RK3568_GRF_GMAC1_CON1		0X038c
++
++/* RK3568_GRF_GMAC0_CON1 && RK3568_GRF_GMAC1_CON1 */
++#define RK3568_GMAC_GMII_MODE			GRF_BIT(7)
++#define RK3568_GMAC_PHY_INTF_SEL_RGMII	\
++		(GRF_BIT(4) | GRF_CLR_BIT(5) | GRF_CLR_BIT(6))
++#define RK3568_GMAC_PHY_INTF_SEL_RMII	\
++		(GRF_CLR_BIT(4) | GRF_CLR_BIT(5) | GRF_BIT(6))
++#define RK3568_GMAC_FLOW_CTRL			GRF_BIT(3)
++#define RK3568_GMAC_FLOW_CTRL_CLR		GRF_CLR_BIT(3)
++#define RK3568_GMAC_RXCLK_DLY_ENABLE		GRF_BIT(1)
++#define RK3568_GMAC_RXCLK_DLY_DISABLE		GRF_CLR_BIT(1)
++#define RK3568_GMAC_TXCLK_DLY_ENABLE		GRF_BIT(0)
++#define RK3568_GMAC_TXCLK_DLY_DISABLE		GRF_CLR_BIT(0)
++
++/* RK3568_GRF_GMAC0_CON0 && RK3568_GRF_GMAC1_CON0 */
++#define RK3568_GMAC_CLK_RX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 8)
++#define RK3568_GMAC_CLK_TX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 0)
++
++#define RK3568_PIPE_GRF_XPCS_CON0	0X0040
++
++#define RK3568_PIPE_GRF_XPCS_QGMII_MAC_SEL	GRF_BIT(0)
++#define RK3568_PIPE_GRF_XPCS_SGMII_MAC_SEL	GRF_BIT(1)
++#define RK3568_PIPE_GRF_XPCS_PHY_READY		GRF_BIT(2)
++
++static void rk3568_set_to_sgmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	u32 offset_con1;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grfs property\n", __func__);
++		return;
++	}
++
++	offset_con1 = bsp_priv->bus_id == 1 ? RK3568_GRF_GMAC1_CON1 :
++					      RK3568_GRF_GMAC0_CON1;
++	regmap_write(bsp_priv->grf, offset_con1, RK3568_GMAC_GMII_MODE);
++
++	xpcs_setup(bsp_priv, PHY_INTERFACE_MODE_SGMII);
++}
++
++static void rk3568_set_to_qsgmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	u32 offset_con1;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grfs property\n", __func__);
++		return;
++	}
++
++	offset_con1 = bsp_priv->bus_id == 1 ? RK3568_GRF_GMAC1_CON1 :
++					      RK3568_GRF_GMAC0_CON1;
++	regmap_write(bsp_priv->grf, offset_con1, RK3568_GMAC_GMII_MODE);
++
++	xpcs_setup(bsp_priv, PHY_INTERFACE_MODE_QSGMII);
++}
++
++static void rk3568_set_to_rgmii(struct rk_priv_data *bsp_priv,
++				int tx_delay, int rx_delay)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	u32 offset_con0, offset_con1;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "Missing rockchip,grf property\n");
++		return;
++	}
++
++	offset_con0 = (bsp_priv->bus_id == 1) ? RK3568_GRF_GMAC1_CON0 :
++						RK3568_GRF_GMAC0_CON0;
++	offset_con1 = (bsp_priv->bus_id == 1) ? RK3568_GRF_GMAC1_CON1 :
++						RK3568_GRF_GMAC0_CON1;
++
++	regmap_write(bsp_priv->grf, offset_con1,
++		     RK3568_GMAC_PHY_INTF_SEL_RGMII |
++		     DELAY_ENABLE(RK3568, tx_delay, rx_delay));
++
++	regmap_write(bsp_priv->grf, offset_con0,
++		     DELAY_VALUE(RK3568, tx_delay, rx_delay));
++}
++
++static void rk3568_set_to_rmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	u32 offset_con1;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
++		return;
++	}
++
++	offset_con1 = (bsp_priv->bus_id == 1) ? RK3568_GRF_GMAC1_CON1 :
++						RK3568_GRF_GMAC0_CON1;
++
++	regmap_write(bsp_priv->grf, offset_con1, RK3568_GMAC_PHY_INTF_SEL_RMII);
++}
++
++static void rk3568_set_gmac_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	unsigned long rate;
++	int ret;
++
++	switch (speed) {
++	case 10:
++		rate = 2500000;
++		break;
++	case 100:
++		rate = 25000000;
++		break;
++	case 1000:
++		rate = 125000000;
++		break;
++	default:
++		dev_err(dev, "unknown speed value for GMAC speed=%d", speed);
++		return;
++	}
++
++	ret = clk_set_rate(bsp_priv->clk_mac_speed, rate);
++	if (ret)
++		dev_err(dev, "%s: set clk_mac_speed rate %ld failed %d\n",
++			__func__, rate, ret);
++}
++
++static void rk3568_set_gmac_sgmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	unsigned int ctrl;
++
++	/* Only gmac1 set the speed for port1 */
++	if (!bsp_priv->bus_id)
++		return;
++
++	switch (speed) {
++	case 10:
++		ctrl = BMCR_SPEED10;
++		break;
++	case 100:
++		ctrl = BMCR_SPEED100;
++		break;
++	case 1000:
++		ctrl = BMCR_SPEED1000;
++		break;
++	default:
++		dev_err(dev, "unknown speed value for GMAC speed=%d", speed);
++		return;
++	}
++
++	xpcs_write(bsp_priv, SR_MII_OFFSET(bsp_priv->bus_id) + MII_BMCR,
++		   ctrl | BMCR_FULLDPLX);
++}
++
++static const struct rk_gmac_ops rk3568_ops = {
++	.set_to_rgmii = rk3568_set_to_rgmii,
++	.set_to_rmii = rk3568_set_to_rmii,
++	.set_to_sgmii = rk3568_set_to_sgmii,
++	.set_to_qsgmii = rk3568_set_to_qsgmii,
++	.set_rgmii_speed = rk3568_set_gmac_speed,
++	.set_rmii_speed = rk3568_set_gmac_speed,
++	.set_sgmii_speed = rk3568_set_gmac_sgmii_speed,
++};
++
+ #define RV1108_GRF_GMAC_CON0		0X0900
+ 
+ /* RV1108_GRF_GMAC_CON0 */
+@@ -1009,6 +1483,123 @@ static const struct rk_gmac_ops rv1108_ops = {
+ 	.set_rmii_speed = rv1108_set_rmii_speed,
+ };
+ 
++#define RV1126_GRF_GMAC_CON0		0X0070
++#define RV1126_GRF_GMAC_CON1		0X0074
++#define RV1126_GRF_GMAC_CON2		0X0078
++
++/* RV1126_GRF_GMAC_CON0 */
++#define RV1126_GMAC_PHY_INTF_SEL_RGMII	\
++		(GRF_BIT(4) | GRF_CLR_BIT(5) | GRF_CLR_BIT(6))
++#define RV1126_GMAC_PHY_INTF_SEL_RMII	\
++		(GRF_CLR_BIT(4) | GRF_CLR_BIT(5) | GRF_BIT(6))
++#define RV1126_GMAC_FLOW_CTRL			GRF_BIT(7)
++#define RV1126_GMAC_FLOW_CTRL_CLR		GRF_CLR_BIT(7)
++#define RV1126_M0_GMAC_RXCLK_DLY_ENABLE		GRF_BIT(1)
++#define RV1126_M0_GMAC_RXCLK_DLY_DISABLE	GRF_CLR_BIT(1)
++#define RV1126_M0_GMAC_TXCLK_DLY_ENABLE		GRF_BIT(0)
++#define RV1126_M0_GMAC_TXCLK_DLY_DISABLE	GRF_CLR_BIT(0)
++#define RV1126_M1_GMAC_RXCLK_DLY_ENABLE		GRF_BIT(3)
++#define RV1126_M1_GMAC_RXCLK_DLY_DISABLE	GRF_CLR_BIT(3)
++#define RV1126_M1_GMAC_TXCLK_DLY_ENABLE		GRF_BIT(2)
++#define RV1126_M1_GMAC_TXCLK_DLY_DISABLE	GRF_CLR_BIT(2)
++
++/* RV1126_GRF_GMAC_CON1 && RV1126_GRF_GMAC_CON2 */
++#define RV1126_GMAC_CLK_RX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 8)
++#define RV1126_GMAC_CLK_TX_DL_CFG(val)	HIWORD_UPDATE(val, 0x7F, 0)
++
++static void rv1126_set_to_rgmii(struct rk_priv_data *bsp_priv,
++				int tx_delay, int rx_delay)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "Missing rockchip,grf property\n");
++		return;
++	}
++
++	regmap_write(bsp_priv->grf, RV1126_GRF_GMAC_CON0,
++		     RV1126_GMAC_PHY_INTF_SEL_RGMII |
++		     DELAY_ENABLE(RV1126_M0, tx_delay, rx_delay) |
++		     DELAY_ENABLE(RV1126_M1, tx_delay, rx_delay));
++
++	regmap_write(bsp_priv->grf, RV1126_GRF_GMAC_CON1,
++		     DELAY_VALUE(RV1126, tx_delay, rx_delay));
++
++	regmap_write(bsp_priv->grf, RV1126_GRF_GMAC_CON2,
++		     DELAY_VALUE(RV1126, tx_delay, rx_delay));
++}
++
++static void rv1126_set_to_rmii(struct rk_priv_data *bsp_priv)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++
++	if (IS_ERR(bsp_priv->grf)) {
++		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
++		return;
++	}
++
++	regmap_write(bsp_priv->grf, RV1126_GRF_GMAC_CON0,
++		     RV1126_GMAC_PHY_INTF_SEL_RMII);
++}
++
++static void rv1126_set_rgmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	unsigned long rate;
++	int ret;
++
++	switch (speed) {
++	case 10:
++		rate = 2500000;
++		break;
++	case 100:
++		rate = 25000000;
++		break;
++	case 1000:
++		rate = 125000000;
++		break;
++	default:
++		dev_err(dev, "unknown speed value for RGMII speed=%d", speed);
++		return;
++	}
++
++	ret = clk_set_rate(bsp_priv->clk_mac_speed, rate);
++	if (ret)
++		dev_err(dev, "%s: set clk_mac_speed rate %ld failed %d\n",
++			__func__, rate, ret);
++}
++
++static void rv1126_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
++{
++	struct device *dev = &bsp_priv->pdev->dev;
++	unsigned long rate;
++	int ret;
++
++	switch (speed) {
++	case 10:
++		rate = 2500000;
++		break;
++	case 100:
++		rate = 25000000;
++		break;
++	default:
++		dev_err(dev, "unknown speed value for RGMII speed=%d", speed);
++		return;
++	}
++
++	ret = clk_set_rate(bsp_priv->clk_mac_speed, rate);
++	if (ret)
++		dev_err(dev, "%s: set clk_mac_speed rate %ld failed %d\n",
++			__func__, rate, ret);
++}
++
++static const struct rk_gmac_ops rv1126_ops = {
++	.set_to_rgmii = rv1126_set_to_rgmii,
++	.set_to_rmii = rv1126_set_to_rmii,
++	.set_rgmii_speed = rv1126_set_rgmii_speed,
++	.set_rmii_speed = rv1126_set_rmii_speed,
++};
++
+ #define RK_GRF_MACPHY_CON0		0xb00
+ #define RK_GRF_MACPHY_CON1		0xb04
+ #define RK_GRF_MACPHY_CON2		0xb08
+@@ -1099,6 +1690,12 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
+ 				dev_err(dev, "cannot get clock %s\n",
+ 					"clk_mac_refout");
+ 		}
++	} else if (bsp_priv->phy_iface == PHY_INTERFACE_MODE_SGMII ||
++		   bsp_priv->phy_iface == PHY_INTERFACE_MODE_QSGMII) {
++		bsp_priv->pclk_xpcs = devm_clk_get(dev, "pclk_xpcs");
++		if (IS_ERR(bsp_priv->pclk_xpcs))
++			dev_err(dev, "cannot get clock %s\n",
++				"pclk_xpcs");
+ 	}
+ 
+ 	bsp_priv->clk_mac_speed = devm_clk_get(dev, "clk_mac_speed");
+@@ -1112,14 +1709,17 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
+ 			clk_set_rate(bsp_priv->clk_mac, 50000000);
+ 	}
+ 
+-	if (plat->phy_node && bsp_priv->integrated_phy) {
++	if (plat->phy_node) {
+ 		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
+-		if (IS_ERR(bsp_priv->clk_phy)) {
+-			ret = PTR_ERR(bsp_priv->clk_phy);
+-			dev_err(dev, "Cannot get PHY clock: %d\n", ret);
+-			return -EINVAL;
++		/* If it is not integrated_phy, clk_phy is optional */
++		if (bsp_priv->integrated_phy) {
++			if (IS_ERR(bsp_priv->clk_phy)) {
++				ret = PTR_ERR(bsp_priv->clk_phy);
++				dev_err(dev, "Cannot get PHY clock: %d\n", ret);
++				return -EINVAL;
++			}
++			clk_set_rate(bsp_priv->clk_phy, 50000000);
+ 		}
+-		clk_set_rate(bsp_priv->clk_phy, 50000000);
+ 	}
+ 
+ 	return 0;
+@@ -1160,6 +1760,9 @@ static int gmac_clk_enable(struct rk_priv_data *bsp_priv, bool enable)
+ 			if (!IS_ERR(bsp_priv->clk_mac_speed))
+ 				clk_prepare_enable(bsp_priv->clk_mac_speed);
+ 
++			if (!IS_ERR(bsp_priv->pclk_xpcs))
++				clk_prepare_enable(bsp_priv->pclk_xpcs);
++
+ 			/**
+ 			 * if (!IS_ERR(bsp_priv->clk_mac))
+ 			 *	clk_prepare_enable(bsp_priv->clk_mac);
+@@ -1186,6 +1789,9 @@ static int gmac_clk_enable(struct rk_priv_data *bsp_priv, bool enable)
+ 			clk_disable_unprepare(bsp_priv->mac_clk_tx);
+ 
+ 			clk_disable_unprepare(bsp_priv->clk_mac_speed);
++
++			clk_disable_unprepare(bsp_priv->pclk_xpcs);
++
+ 			/**
+ 			 * if (!IS_ERR(bsp_priv->clk_mac))
+ 			 *	clk_disable_unprepare(bsp_priv->clk_mac);
+@@ -1197,7 +1803,7 @@ static int gmac_clk_enable(struct rk_priv_data *bsp_priv, bool enable)
+ 	return 0;
+ }
+ 
+-static int phy_power_on(struct rk_priv_data *bsp_priv, bool enable)
++static int rk_gmac_phy_power_on(struct rk_priv_data *bsp_priv, bool enable)
+ {
+ 	struct regulator *ldo = bsp_priv->regulator;
+ 	int ret;
+@@ -1235,6 +1841,7 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+ 
+ 	bsp_priv->phy_iface = of_get_phy_mode(dev->of_node);
+ 	bsp_priv->ops = ops;
++	bsp_priv->bus_id = plat->bus_id;
+ 
+ 	bsp_priv->regulator = devm_regulator_get_optional(dev, "phy");
+ 	if (IS_ERR(bsp_priv->regulator)) {
+@@ -1261,7 +1868,7 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+ 
+ 	ret = of_property_read_u32(dev->of_node, "tx_delay", &value);
+ 	if (ret) {
+-		bsp_priv->tx_delay = 0x30;
++		bsp_priv->tx_delay = -1;
+ 		dev_err(dev, "Can not read property: tx_delay.");
+ 		dev_err(dev, "set tx_delay to 0x%x\n",
+ 			bsp_priv->tx_delay);
+@@ -1272,7 +1879,7 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+ 
+ 	ret = of_property_read_u32(dev->of_node, "rx_delay", &value);
+ 	if (ret) {
+-		bsp_priv->rx_delay = 0x10;
++		bsp_priv->rx_delay = -1;
+ 		dev_err(dev, "Can not read property: rx_delay.");
+ 		dev_err(dev, "set rx_delay to 0x%x\n",
+ 			bsp_priv->rx_delay);
+@@ -1283,6 +1890,18 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+ 
+ 	bsp_priv->grf = syscon_regmap_lookup_by_phandle(dev->of_node,
+ 							"rockchip,grf");
++	bsp_priv->xpcs = syscon_regmap_lookup_by_phandle(dev->of_node,
++							 "rockchip,xpcs");
++	if (!IS_ERR(bsp_priv->xpcs)) {
++		struct phy *comphy;
++
++		comphy = devm_of_phy_get(&pdev->dev, dev->of_node, NULL);
++		if (IS_ERR(comphy))
++			dev_err(dev, "devm_of_phy_get error\n");
++		ret = phy_init(comphy);
++		if (ret)
++			dev_err(dev, "phy_init error\n");
++	}
+ 
+ 	if (plat->phy_node) {
+ 		bsp_priv->integrated_phy = of_property_read_bool(plat->phy_node,
+@@ -1316,30 +1935,45 @@ static int rk_gmac_powerup(struct rk_priv_data *bsp_priv)
+ 	switch (bsp_priv->phy_iface) {
+ 	case PHY_INTERFACE_MODE_RGMII:
+ 		dev_info(dev, "init for RGMII\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay,
+-					    bsp_priv->rx_delay);
++		if (bsp_priv->ops && bsp_priv->ops->set_to_rgmii)
++			bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay,
++						    bsp_priv->rx_delay);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_ID:
+ 		dev_info(dev, "init for RGMII_ID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, 0, 0);
++		if (bsp_priv->ops && bsp_priv->ops->set_to_rgmii)
++			bsp_priv->ops->set_to_rgmii(bsp_priv, -1, -1);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_RXID:
+ 		dev_info(dev, "init for RGMII_RXID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay, 0);
++		if (bsp_priv->ops && bsp_priv->ops->set_to_rgmii)
++			bsp_priv->ops->set_to_rgmii(bsp_priv, bsp_priv->tx_delay, -1);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RGMII_TXID:
+ 		dev_info(dev, "init for RGMII_TXID\n");
+-		bsp_priv->ops->set_to_rgmii(bsp_priv, 0, bsp_priv->rx_delay);
++		if (bsp_priv->ops && bsp_priv->ops->set_to_rgmii)
++			bsp_priv->ops->set_to_rgmii(bsp_priv, -1, bsp_priv->rx_delay);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RMII:
+ 		dev_info(dev, "init for RMII\n");
+-		bsp_priv->ops->set_to_rmii(bsp_priv);
++		if (bsp_priv->ops && bsp_priv->ops->set_to_rmii)
++			bsp_priv->ops->set_to_rmii(bsp_priv);
++		break;
++	case PHY_INTERFACE_MODE_SGMII:
++		dev_info(dev, "init for SGMII\n");
++		if (bsp_priv->ops && bsp_priv->ops->set_to_sgmii)
++			bsp_priv->ops->set_to_sgmii(bsp_priv);
++		break;
++	case PHY_INTERFACE_MODE_QSGMII:
++		dev_info(dev, "init for QSGMII\n");
++		if (bsp_priv->ops && bsp_priv->ops->set_to_qsgmii)
++			bsp_priv->ops->set_to_qsgmii(bsp_priv);
+ 		break;
+ 	default:
+ 		dev_err(dev, "NO interface defined!\n");
+ 	}
+ 
+-	ret = phy_power_on(bsp_priv, true);
++	ret = rk_gmac_phy_power_on(bsp_priv, true);
+ 	if (ret) {
+ 		gmac_clk_enable(bsp_priv, false);
+ 		return ret;
+@@ -1364,7 +1998,7 @@ static void rk_gmac_powerdown(struct rk_priv_data *gmac)
+ 	pm_runtime_put_sync(dev);
+ 	pm_runtime_disable(dev);
+ 
+-	phy_power_on(gmac, false);
++	rk_gmac_phy_power_on(gmac, false);
+ 	gmac_clk_enable(gmac, false);
+ }
+ 
+@@ -1378,16 +2012,103 @@ static void rk_fix_speed(void *priv, unsigned int speed)
+ 	case PHY_INTERFACE_MODE_RGMII_ID:
+ 	case PHY_INTERFACE_MODE_RGMII_RXID:
+ 	case PHY_INTERFACE_MODE_RGMII_TXID:
+-		bsp_priv->ops->set_rgmii_speed(bsp_priv, speed);
++		if (bsp_priv->ops && bsp_priv->ops->set_rgmii_speed)
++			bsp_priv->ops->set_rgmii_speed(bsp_priv, speed);
+ 		break;
+ 	case PHY_INTERFACE_MODE_RMII:
+-		bsp_priv->ops->set_rmii_speed(bsp_priv, speed);
++		if (bsp_priv->ops && bsp_priv->ops->set_rmii_speed)
++			bsp_priv->ops->set_rmii_speed(bsp_priv, speed);
++		break;
++	case PHY_INTERFACE_MODE_SGMII:
++		if (bsp_priv->ops && bsp_priv->ops->set_sgmii_speed)
++			bsp_priv->ops->set_sgmii_speed(bsp_priv, speed);
++	case PHY_INTERFACE_MODE_QSGMII:
+ 		break;
+ 	default:
+ 		dev_err(dev, "unsupported interface %d", bsp_priv->phy_iface);
+ 	}
+ }
+ 
++void dwmac_rk_set_rgmii_delayline(struct stmmac_priv *priv,
++				  int tx_delay, int rx_delay)
++{
++	struct rk_priv_data *bsp_priv = priv->plat->bsp_priv;
++
++	if (bsp_priv->ops->set_to_rgmii) {
++		bsp_priv->ops->set_to_rgmii(bsp_priv, tx_delay, rx_delay);
++		bsp_priv->tx_delay = tx_delay;
++		bsp_priv->rx_delay = rx_delay;
++	}
++}
++EXPORT_SYMBOL(dwmac_rk_set_rgmii_delayline);
++
++void dwmac_rk_get_rgmii_delayline(struct stmmac_priv *priv,
++				  int *tx_delay, int *rx_delay)
++{
++	struct rk_priv_data *bsp_priv = priv->plat->bsp_priv;
++
++	if (!bsp_priv->ops->set_to_rgmii)
++		return;
++
++	*tx_delay = bsp_priv->tx_delay;
++	*rx_delay = bsp_priv->rx_delay;
++}
++EXPORT_SYMBOL(dwmac_rk_get_rgmii_delayline);
++
++int dwmac_rk_get_phy_interface(struct stmmac_priv *priv)
++{
++	struct rk_priv_data *bsp_priv = priv->plat->bsp_priv;
++
++	return bsp_priv->phy_iface;
++}
++EXPORT_SYMBOL(dwmac_rk_get_phy_interface);
++
++void __weak rk_devinfo_get_eth_mac(u8 *mac)
++{
++}
++
++void rk_get_eth_addr(void *priv, unsigned char *addr)
++{
++	struct rk_priv_data *bsp_priv = priv;
++	struct device *dev = &bsp_priv->pdev->dev;
++	unsigned char ethaddr[ETH_ALEN * MAX_ETH] = {0};
++	int ret, id = bsp_priv->bus_id;
++
++	rk_devinfo_get_eth_mac(addr);
++	if (is_valid_ether_addr(addr))
++		goto out;
++
++	if (id < 0 || id >= MAX_ETH) {
++		dev_err(dev, "%s: Invalid ethernet bus id %d\n", __func__, id);
++		return;
++	}
++
++	ret = rk_vendor_read(LAN_MAC_ID, ethaddr, ETH_ALEN * MAX_ETH);
++	if (ret <= 0 ||
++	    !is_valid_ether_addr(&ethaddr[id * ETH_ALEN])) {
++		dev_err(dev, "%s: rk_vendor_read eth mac address failed (%d)\n",
++			__func__, ret);
++		random_ether_addr(&ethaddr[id * ETH_ALEN]);
++		memcpy(addr, &ethaddr[id * ETH_ALEN], ETH_ALEN);
++		dev_err(dev, "%s: generate random eth mac address: %pM\n", __func__, addr);
++
++		ret = rk_vendor_write(LAN_MAC_ID, ethaddr, ETH_ALEN * MAX_ETH);
++		if (ret != 0)
++			dev_err(dev, "%s: rk_vendor_write eth mac address failed (%d)\n",
++				__func__, ret);
++
++		ret = rk_vendor_read(LAN_MAC_ID, ethaddr, ETH_ALEN * MAX_ETH);
++		if (ret != ETH_ALEN * MAX_ETH)
++			dev_err(dev, "%s: id: %d rk_vendor_read eth mac address failed (%d)\n",
++				__func__, id, ret);
++	} else {
++		memcpy(addr, &ethaddr[id * ETH_ALEN], ETH_ALEN);
++	}
++
++out:
++	dev_err(dev, "%s: mac address: %pM\n", __func__, addr);
++}
++
+ static int rk_gmac_probe(struct platform_device *pdev)
+ {
+ 	struct plat_stmmacenet_data *plat_dat;
+@@ -1409,8 +2130,11 @@ static int rk_gmac_probe(struct platform_device *pdev)
+ 	if (IS_ERR(plat_dat))
+ 		return PTR_ERR(plat_dat);
+ 
+-	plat_dat->has_gmac = true;
++	if (!of_device_is_compatible(pdev->dev.of_node, "snps,dwmac-4.20a"))
++		plat_dat->has_gmac = true;
++
+ 	plat_dat->fix_mac_speed = rk_fix_speed;
++	plat_dat->get_eth_addr = rk_get_eth_addr;
+ 
+ 	plat_dat->bsp_priv = rk_gmac_setup(pdev, plat_dat, data);
+ 	if (IS_ERR(plat_dat->bsp_priv)) {
+@@ -1430,6 +2154,10 @@ static int rk_gmac_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		goto err_gmac_powerdown;
+ 
++	ret = dwmac_rk_create_loopback_sysfs(&pdev->dev);
++	if (ret)
++		goto err_gmac_powerdown;
++
+ 	return 0;
+ 
+ err_gmac_powerdown:
+@@ -1446,6 +2174,7 @@ static int rk_gmac_remove(struct platform_device *pdev)
+ 	int ret = stmmac_dvr_remove(&pdev->dev);
+ 
+ 	rk_gmac_powerdown(bsp_priv);
++	dwmac_rk_remove_loopback_sysfs(&pdev->dev);
+ 
+ 	return ret;
+ }
+@@ -1482,15 +2211,45 @@ static int rk_gmac_resume(struct device *dev)
+ static SIMPLE_DEV_PM_OPS(rk_gmac_pm_ops, rk_gmac_suspend, rk_gmac_resume);
+ 
+ static const struct of_device_id rk_gmac_dwmac_match[] = {
++#ifdef CONFIG_CPU_PX30
+ 	{ .compatible = "rockchip,px30-gmac",	.data = &px30_ops   },
++#endif
++#ifdef CONFIG_CPU_RK1808
++	{ .compatible = "rockchip,rk1808-gmac", .data = &rk1808_ops },
++#endif
++#ifdef CONFIG_CPU_RK312X
+ 	{ .compatible = "rockchip,rk3128-gmac", .data = &rk3128_ops },
++#endif
++#ifdef CONFIG_CPU_RK322X
+ 	{ .compatible = "rockchip,rk3228-gmac", .data = &rk3228_ops },
++#endif
++#ifdef CONFIG_CPU_RK3288
+ 	{ .compatible = "rockchip,rk3288-gmac", .data = &rk3288_ops },
++#endif
++#ifdef CONFIG_CPU_RK3308
++	{ .compatible = "rockchip,rk3308-mac",  .data = &rk3308_ops },
++#endif
++#ifdef CONFIG_CPU_RK3328
+ 	{ .compatible = "rockchip,rk3328-gmac", .data = &rk3328_ops },
++#endif
++#ifdef CONFIG_CPU_RK3366
+ 	{ .compatible = "rockchip,rk3366-gmac", .data = &rk3366_ops },
++#endif
++#ifdef CONFIG_CPU_RK3368
+ 	{ .compatible = "rockchip,rk3368-gmac", .data = &rk3368_ops },
++#endif
++#ifdef CONFIG_CPU_RK3399
+ 	{ .compatible = "rockchip,rk3399-gmac", .data = &rk3399_ops },
++#endif
++#ifdef CONFIG_CPU_RK3568
++	{ .compatible = "rockchip,rk3568-gmac", .data = &rk3568_ops },
++#endif
++#ifdef CONFIG_CPU_RV110X
+ 	{ .compatible = "rockchip,rv1108-gmac", .data = &rv1108_ops },
++#endif
++#ifdef CONFIG_CPU_RV1126
++	{ .compatible = "rockchip,rv1126-gmac", .data = &rv1126_ops },
++#endif
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, rk_gmac_dwmac_match);
+diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
+index bc8871e73..da5d9e5d0 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
+@@ -715,6 +715,7 @@ static void dwmac4_debug(void __iomem *ioaddr, struct stmmac_extra_stats *x,
+ 		x->mac_gmii_rx_proto_engine++;
+ }
+ 
++#ifdef CONFIG_STMMAC_FULL
+ const struct stmmac_ops dwmac4_ops = {
+ 	.core_init = dwmac4_core_init,
+ 	.set_mac = stmmac_set_mac,
+@@ -745,6 +746,7 @@ const struct stmmac_ops dwmac4_ops = {
+ 	.debug = dwmac4_debug,
+ 	.set_filter = dwmac4_set_filter,
+ };
++#endif
+ 
+ const struct stmmac_ops dwmac410_ops = {
+ 	.core_init = dwmac4_core_init,
+@@ -777,6 +779,7 @@ const struct stmmac_ops dwmac410_ops = {
+ 	.set_filter = dwmac4_set_filter,
+ };
+ 
++#ifdef CONFIG_STMMAC_FULL
+ const struct stmmac_ops dwmac510_ops = {
+ 	.core_init = dwmac4_core_init,
+ 	.set_mac = stmmac_dwmac4_set_mac,
+@@ -812,6 +815,7 @@ const struct stmmac_ops dwmac510_ops = {
+ 	.rxp_config = dwmac5_rxp_config,
+ 	.flex_pps_config = dwmac5_flex_pps_config,
+ };
++#endif
+ 
+ int dwmac4_setup(struct stmmac_priv *priv)
+ {
+diff --git a/drivers/net/ethernet/stmicro/stmmac/hwif.c b/drivers/net/ethernet/stmicro/stmmac/hwif.c
+index 357309a6d..c6b88cd9a 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/hwif.c
++++ b/drivers/net/ethernet/stmicro/stmmac/hwif.c
+@@ -23,6 +23,7 @@ static u32 stmmac_get_id(struct stmmac_priv *priv, u32 id_reg)
+ 	return reg & GENMASK(7, 0);
+ }
+ 
++#ifdef CONFIG_STMMAC_FULL
+ static void stmmac_dwmac_mode_quirk(struct stmmac_priv *priv)
+ {
+ 	struct mac_device_info *mac = priv->hw;
+@@ -68,6 +69,7 @@ static int stmmac_dwmac4_quirks(struct stmmac_priv *priv)
+ 	stmmac_dwmac_mode_quirk(priv);
+ 	return 0;
+ }
++#endif
+ 
+ static const struct stmmac_hwif_entry {
+ 	bool gmac;
+@@ -78,13 +80,16 @@ static const struct stmmac_hwif_entry {
+ 	const void *desc;
+ 	const void *dma;
+ 	const void *mac;
++#ifdef CONFIG_STMMAC_PTP
+ 	const void *hwtimestamp;
++#endif
+ 	const void *mode;
+ 	const void *tc;
+ 	int (*setup)(struct stmmac_priv *priv);
+ 	int (*quirks)(struct stmmac_priv *priv);
+ } stmmac_hw[] = {
+ 	/* NOTE: New HW versions shall go to the end of this table */
++#ifdef CONFIG_STMMAC_FULL
+ 	{
+ 		.gmac = false,
+ 		.gmac4 = false,
+@@ -97,7 +102,9 @@ static const struct stmmac_hwif_entry {
+ 		.desc = NULL,
+ 		.dma = &dwmac100_dma_ops,
+ 		.mac = &dwmac100_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = NULL,
+ 		.tc = NULL,
+ 		.setup = dwmac100_setup,
+@@ -114,7 +121,9 @@ static const struct stmmac_hwif_entry {
+ 		.desc = NULL,
+ 		.dma = &dwmac1000_dma_ops,
+ 		.mac = &dwmac1000_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = NULL,
+ 		.tc = NULL,
+ 		.setup = dwmac1000_setup,
+@@ -131,7 +140,9 @@ static const struct stmmac_hwif_entry {
+ 		.desc = &dwmac4_desc_ops,
+ 		.dma = &dwmac4_dma_ops,
+ 		.mac = &dwmac4_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = NULL,
+ 		.tc = NULL,
+ 		.setup = dwmac4_setup,
+@@ -148,12 +159,16 @@ static const struct stmmac_hwif_entry {
+ 		.desc = &dwmac4_desc_ops,
+ 		.dma = &dwmac4_dma_ops,
+ 		.mac = &dwmac410_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = &dwmac4_ring_mode_ops,
+ 		.tc = NULL,
+ 		.setup = dwmac4_setup,
+ 		.quirks = NULL,
+-	}, {
++	},
++#endif /* CONFIG_STMMAC_FULL */
++	{
+ 		.gmac = false,
+ 		.gmac4 = true,
+ 		.xgmac = false,
+@@ -165,12 +180,16 @@ static const struct stmmac_hwif_entry {
+ 		.desc = &dwmac4_desc_ops,
+ 		.dma = &dwmac410_dma_ops,
+ 		.mac = &dwmac410_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = &dwmac4_ring_mode_ops,
+ 		.tc = NULL,
+ 		.setup = dwmac4_setup,
+ 		.quirks = NULL,
+-	}, {
++	},
++#ifdef CONFIG_STMMAC_FULL
++	{
+ 		.gmac = false,
+ 		.gmac4 = true,
+ 		.xgmac = false,
+@@ -182,7 +201,9 @@ static const struct stmmac_hwif_entry {
+ 		.desc = &dwmac4_desc_ops,
+ 		.dma = &dwmac410_dma_ops,
+ 		.mac = &dwmac510_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = &dwmac4_ring_mode_ops,
+ 		.tc = &dwmac510_tc_ops,
+ 		.setup = dwmac4_setup,
+@@ -199,12 +220,15 @@ static const struct stmmac_hwif_entry {
+ 		.desc = &dwxgmac210_desc_ops,
+ 		.dma = &dwxgmac210_dma_ops,
+ 		.mac = &dwxgmac210_ops,
++#ifdef CONFIG_STMMAC_PTP
+ 		.hwtimestamp = &stmmac_ptp,
++#endif
+ 		.mode = NULL,
+ 		.tc = NULL,
+ 		.setup = dwxgmac2_setup,
+ 		.quirks = NULL,
+ 	},
++#endif
+ };
+ 
+ int stmmac_hwif_init(struct stmmac_priv *priv)
+@@ -264,7 +288,9 @@ int stmmac_hwif_init(struct stmmac_priv *priv)
+ 		mac->desc = mac->desc ? : entry->desc;
+ 		mac->dma = mac->dma ? : entry->dma;
+ 		mac->mac = mac->mac ? : entry->mac;
++#ifdef CONFIG_STMMAC_PTP
+ 		mac->ptp = mac->ptp ? : entry->hwtimestamp;
++#endif
+ 		mac->mode = mac->mode ? : entry->mode;
+ 		mac->tc = mac->tc ? : entry->tc;
+ 
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac.h b/drivers/net/ethernet/stmicro/stmmac/stmmac.h
+index 63e1064b2..1eaa1f8bd 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac.h
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac.h
+@@ -28,6 +28,7 @@
+ #include <linux/pci.h>
+ #include "common.h"
+ #include <linux/ptp_clock_kernel.h>
++#include <linux/net_tstamp.h>
+ #include <linux/reset.h>
+ 
+ struct stmmac_resources {
+@@ -174,6 +175,7 @@ struct stmmac_priv {
+ 	unsigned int mode;
+ 	unsigned int chain_mode;
+ 	int extend_desc;
++	struct hwtstamp_config tstamp_config;
+ 	struct ptp_clock *ptp_clock;
+ 	struct ptp_clock_info ptp_clock_ops;
+ 	unsigned int default_addend;
+@@ -215,10 +217,27 @@ enum stmmac_state {
+ int stmmac_mdio_unregister(struct net_device *ndev);
+ int stmmac_mdio_register(struct net_device *ndev);
+ int stmmac_mdio_reset(struct mii_bus *mii);
++
++#ifdef CONFIG_STMMAC_ETHTOOL
+ void stmmac_set_ethtool_ops(struct net_device *netdev);
++#else
++static inline void stmmac_set_ethtool_ops(struct net_device *netdev)
++{
++}
++#endif
+ 
++#ifdef CONFIG_STMMAC_PTP
+ void stmmac_ptp_register(struct stmmac_priv *priv);
+ void stmmac_ptp_unregister(struct stmmac_priv *priv);
++#else
++static inline void stmmac_ptp_register(struct stmmac_priv *priv)
++{
++}
++
++static inline void stmmac_ptp_unregister(struct stmmac_priv *priv)
++{
++}
++#endif
+ int stmmac_resume(struct device *dev);
+ int stmmac_suspend(struct device *dev);
+ int stmmac_dvr_remove(struct device *dev);
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+index 0a4d093ad..6ec1e605f 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+@@ -45,6 +45,7 @@
+ #include <linux/seq_file.h>
+ #endif /* CONFIG_DEBUG_FS */
+ #include <linux/net_tstamp.h>
++#include <linux/udp.h>
+ #include <net/pkt_cls.h>
+ #include "stmmac_ptp.h"
+ #include "stmmac.h"
+@@ -207,7 +208,7 @@ static void stmmac_clk_csr_set(struct stmmac_priv *priv)
+ {
+ 	u32 clk_rate;
+ 
+-	clk_rate = clk_get_rate(priv->plat->stmmac_clk);
++	clk_rate = clk_get_rate(priv->plat->pclk);
+ 
+ 	/* Platform provided default clk_csr would be assumed valid
+ 	 * for all other cases except for the below mentioned ones.
+@@ -507,8 +508,9 @@ static void stmmac_get_rx_hwtstamp(struct stmmac_priv *priv, struct dma_desc *p,
+ 	}
+ }
+ 
++#ifdef CONFIG_STMMAC_PTP
+ /**
+- *  stmmac_hwtstamp_ioctl - control hardware timestamping.
++ *  stmmac_hwtstamp_set - control hardware timestamping.
+  *  @dev: device pointer.
+  *  @ifr: An IOCTL specific structure, that can contain a pointer to
+  *  a proprietary structure used to pass information to the driver.
+@@ -518,7 +520,7 @@ static void stmmac_get_rx_hwtstamp(struct stmmac_priv *priv, struct dma_desc *p,
+  *  Return Value:
+  *  0 on success and an appropriate -ve integer on failure.
+  */
+-static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
++static int stmmac_hwtstamp_set(struct net_device *dev, struct ifreq *ifr)
+ {
+ 	struct stmmac_priv *priv = netdev_priv(dev);
+ 	struct hwtstamp_config config;
+@@ -547,7 +549,7 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+ 	}
+ 
+ 	if (copy_from_user(&config, ifr->ifr_data,
+-			   sizeof(struct hwtstamp_config)))
++			   sizeof(config)))
+ 		return -EFAULT;
+ 
+ 	netdev_dbg(priv->dev, "%s config flags:0x%x, tx_type:0x%x, rx_filter:0x%x\n",
+@@ -571,12 +573,13 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+ 		case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
+ 			/* PTP v1, UDP, any kind of event packet */
+ 			config.rx_filter = HWTSTAMP_FILTER_PTP_V1_L4_EVENT;
+-			/* take time stamp for all event messages */
+-			if (xmac)
+-				snap_type_sel = PTP_GMAC4_TCR_SNAPTYPSEL_1;
+-			else
+-				snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
+-
++			/* 'xmac' hardware can support Sync, Pdelay_Req and
++			 * Pdelay_resp by setting bit14 and bits17/16 to 01
++			 * This leaves Delay_Req timestamps out.
++			 * Enable all events *and* general purpose message
++			 * timestamping
++			 */
++			snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
+ 			ptp_over_ipv4_udp = PTP_TCR_TSIPV4ENA;
+ 			ptp_over_ipv6_udp = PTP_TCR_TSIPV6ENA;
+ 			break;
+@@ -607,10 +610,7 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+ 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L4_EVENT;
+ 			ptp_v2 = PTP_TCR_TSVER2ENA;
+ 			/* take time stamp for all event messages */
+-			if (xmac)
+-				snap_type_sel = PTP_GMAC4_TCR_SNAPTYPSEL_1;
+-			else
+-				snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
++			snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
+ 
+ 			ptp_over_ipv4_udp = PTP_TCR_TSIPV4ENA;
+ 			ptp_over_ipv6_udp = PTP_TCR_TSIPV6ENA;
+@@ -643,12 +643,8 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+ 			/* PTP v2/802.AS1 any layer, any kind of event packet */
+ 			config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
+ 			ptp_v2 = PTP_TCR_TSVER2ENA;
+-			/* take time stamp for all event messages */
+-			if (xmac)
+-				snap_type_sel = PTP_GMAC4_TCR_SNAPTYPSEL_1;
+-			else
+-				snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
+-
++			snap_type_sel = PTP_TCR_SNAPTYPSEL_1;
++			ts_event_en = PTP_TCR_TSEVNTENA;
+ 			ptp_over_ipv4_udp = PTP_TCR_TSIPV4ENA;
+ 			ptp_over_ipv6_udp = PTP_TCR_TSIPV6ENA;
+ 			ptp_over_ethernet = PTP_TCR_TSIPENA;
+@@ -739,10 +735,34 @@ static int stmmac_hwtstamp_ioctl(struct net_device *dev, struct ifreq *ifr)
+ 				(u32)now.tv_sec, now.tv_nsec);
+ 	}
+ 
++	memcpy(&priv->tstamp_config, &config, sizeof(config));
++
+ 	return copy_to_user(ifr->ifr_data, &config,
+-			    sizeof(struct hwtstamp_config)) ? -EFAULT : 0;
++			    sizeof(config)) ? -EFAULT : 0;
+ }
+ 
++/**
++ *  stmmac_hwtstamp_get - read hardware timestamping.
++ *  @dev: device pointer.
++ *  @ifr: An IOCTL specific structure, that can contain a pointer to
++ *  a proprietary structure used to pass information to the driver.
++ *  Description:
++ *  This function obtain the current hardware timestamping settings
++    as requested.
++ */
++static int stmmac_hwtstamp_get(struct net_device *dev, struct ifreq *ifr)
++{
++	struct stmmac_priv *priv = netdev_priv(dev);
++	struct hwtstamp_config *config = &priv->tstamp_config;
++
++	if (!(priv->dma_cap.time_stamp || priv->dma_cap.atime_stamp))
++		return -EOPNOTSUPP;
++
++	return copy_to_user(ifr->ifr_data, config,
++			    sizeof(*config)) ? -EFAULT : 0;
++}
++#endif /* CONFIG_STMMAC_PTP */
++
+ /**
+  * stmmac_init_ptp - init PTP
+  * @priv: driver private structure
+@@ -782,7 +802,7 @@ static int stmmac_init_ptp(struct stmmac_priv *priv)
+ 
+ static void stmmac_release_ptp(struct stmmac_priv *priv)
+ {
+-	if (priv->plat->clk_ptp_ref)
++	if (priv->plat->clk_ptp_ref && IS_ENABLED(CONFIG_STMMAC_PTP))
+ 		clk_disable_unprepare(priv->plat->clk_ptp_ref);
+ 	stmmac_ptp_unregister(priv);
+ }
+@@ -2138,10 +2158,13 @@ static void stmmac_check_ether_addr(struct stmmac_priv *priv)
+ {
+ 	if (!is_valid_ether_addr(priv->dev->dev_addr)) {
+ 		stmmac_get_umac_addr(priv, priv->hw, priv->dev->dev_addr, 0);
++		if (likely(priv->plat->get_eth_addr))
++			priv->plat->get_eth_addr(priv->plat->bsp_priv,
++				priv->dev->dev_addr);
+ 		if (!is_valid_ether_addr(priv->dev->dev_addr))
+ 			eth_hw_addr_random(priv->dev);
+-		netdev_info(priv->dev, "device MAC address %pM\n",
+-			    priv->dev->dev_addr);
++		dev_info(priv->device, "device MAC address %pM\n",
++			 priv->dev->dev_addr);
+ 	}
+ }
+ 
+@@ -2526,7 +2549,7 @@ static int stmmac_hw_setup(struct net_device *dev, bool init_ptp)
+ 
+ 	stmmac_mmc_setup(priv);
+ 
+-	if (init_ptp) {
++	if (IS_ENABLED(CONFIG_STMMAC_PTP) && init_ptp) {
+ 		ret = clk_prepare_enable(priv->plat->clk_ptp_ref);
+ 		if (ret < 0)
+ 			netdev_warn(priv->dev, "failed to enable PTP reference clock: %d\n", ret);
+@@ -2568,7 +2591,8 @@ static void stmmac_hw_teardown(struct net_device *dev)
+ {
+ 	struct stmmac_priv *priv = netdev_priv(dev);
+ 
+-	clk_disable_unprepare(priv->plat->clk_ptp_ref);
++	if (IS_ENABLED(CONFIG_STMMAC_PTP))
++		clk_disable_unprepare(priv->plat->clk_ptp_ref);
+ }
+ 
+ /**
+@@ -2736,7 +2760,8 @@ static int stmmac_release(struct net_device *dev)
+ 
+ 	netif_carrier_off(dev);
+ 
+-	stmmac_release_ptp(priv);
++	if (IS_ENABLED(CONFIG_STMMAC_PTP))
++		stmmac_release_ptp(priv);
+ 
+ 	return 0;
+ }
+@@ -2814,16 +2839,22 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	int nfrags = skb_shinfo(skb)->nr_frags;
+ 	u32 queue = skb_get_queue_mapping(skb);
+ 	unsigned int first_entry, des;
++	u8 proto_hdr_len, hdr;
+ 	struct stmmac_tx_queue *tx_q;
+ 	int tmp_pay_len = 0;
+ 	u32 pay_len, mss;
+-	u8 proto_hdr_len;
+ 	int i;
+ 
+ 	tx_q = &priv->tx_queue[queue];
+ 
+ 	/* Compute header lengths */
+-	proto_hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
++	if (skb_shinfo(skb)->gso_type & SKB_GSO_UDP_L4) {
++		proto_hdr_len = skb_transport_offset(skb) + sizeof(struct udphdr);
++		hdr = sizeof(struct udphdr);
++	} else {
++		proto_hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
++		hdr = tcp_hdrlen(skb);
++	}
+ 
+ 	/* Desc availability based on threshold should be enough safe */
+ 	if (unlikely(stmmac_tx_avail(priv, queue) <
+@@ -2853,8 +2884,8 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	}
+ 
+ 	if (netif_msg_tx_queued(priv)) {
+-		pr_info("%s: tcphdrlen %d, hdr_len %d, pay_len %d, mss %d\n",
+-			__func__, tcp_hdrlen(skb), proto_hdr_len, pay_len, mss);
++		pr_info("%s: hdrlen %d, hdr_len %d, pay_len %d, mss %d\n",
++			__func__, hdr, proto_hdr_len, pay_len, mss);
+ 		pr_info("\tskb->len %d, skb->data_len %d\n", skb->len,
+ 			skb->data_len);
+ 	}
+@@ -2952,7 +2983,7 @@ static netdev_tx_t stmmac_tso_xmit(struct sk_buff *skb, struct net_device *dev)
+ 			proto_hdr_len,
+ 			pay_len,
+ 			1, tx_q->tx_skbuff_dma[first_entry].last_segment,
+-			tcp_hdrlen(skb) / 4, (skb->len - proto_hdr_len));
++			hdr / 4, (skb->len - proto_hdr_len));
+ 
+ 	/* If context desc is used to change MSS */
+ 	if (mss_desc) {
+@@ -3012,6 +3043,7 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
+ 	int i, csum_insertion = 0, is_jumbo = 0;
+ 	u32 queue = skb_get_queue_mapping(skb);
+ 	int nfrags = skb_shinfo(skb)->nr_frags;
++	int gso = skb_shinfo(skb)->gso_type;
+ 	int entry;
+ 	unsigned int first_entry;
+ 	struct dma_desc *desc, *first;
+@@ -3026,7 +3058,9 @@ static netdev_tx_t stmmac_xmit(struct sk_buff *skb, struct net_device *dev)
+ 
+ 	/* Manage oversized TCP frames for GMAC4 device */
+ 	if (skb_is_gso(skb) && priv->tso) {
+-		if (skb_shinfo(skb)->gso_type & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6))
++		if (gso & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6))
++			return stmmac_tso_xmit(skb, dev);
++		if (priv->plat->has_gmac4 && (gso & SKB_GSO_UDP_L4))
+ 			return stmmac_tso_xmit(skb, dev);
+ 	}
+ 
+@@ -3771,9 +3805,14 @@ static int stmmac_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
+ 			return -EINVAL;
+ 		ret = phy_mii_ioctl(dev->phydev, rq, cmd);
+ 		break;
++#ifdef CONFIG_STMMAC_PTP
+ 	case SIOCSHWTSTAMP:
+-		ret = stmmac_hwtstamp_ioctl(dev, rq);
++		ret = stmmac_hwtstamp_set(dev, rq);
++		break;
++	case SIOCGHWTSTAMP:
++		ret = stmmac_hwtstamp_get(dev, rq);
+ 		break;
++#endif
+ 	default:
+ 		break;
+ 	}
+@@ -3839,11 +3878,13 @@ static u16 stmmac_select_queue(struct net_device *dev, struct sk_buff *skb,
+ 			       struct net_device *sb_dev,
+ 			       select_queue_fallback_t fallback)
+ {
+-	if (skb_shinfo(skb)->gso_type & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6)) {
++	int gso = skb_shinfo(skb)->gso_type;
++
++	if (gso & (SKB_GSO_TCPV4 | SKB_GSO_TCPV6 | SKB_GSO_UDP_L4)) {
+ 		/*
+-		 * There is no way to determine the number of TSO
++		 * There is no way to determine the number of TSO/USO
+ 		 * capable Queues. Let's use always the Queue 0
+-		 * because if TSO is supported then at least this
++		 * because if TSO/USO is supported then at least this
+ 		 * one will be capable.
+ 		 */
+ 		return 0;
+@@ -4323,6 +4364,8 @@ int stmmac_dvr_probe(struct device *device,
+ 
+ 	if ((priv->plat->tso_en) && (priv->dma_cap.tsoen)) {
+ 		ndev->hw_features |= NETIF_F_TSO | NETIF_F_TSO6;
++		if (priv->plat->has_gmac4)
++			ndev->hw_features |= NETIF_F_GSO_UDP_L4;
+ 		priv->tso = true;
+ 		dev_info(priv->device, "TSO feature enabled\n");
+ 	}
+@@ -4519,7 +4562,7 @@ int stmmac_suspend(struct device *dev)
+ 		stmmac_mac_set(priv, priv->ioaddr, false);
+ 		pinctrl_pm_select_sleep_state(priv->device);
+ 		/* Disable clock in case of PWM is off */
+-		if (priv->plat->clk_ptp_ref)
++		if (priv->plat->clk_ptp_ref && IS_ENABLED(CONFIG_STMMAC_PTP))
+ 			clk_disable_unprepare(priv->plat->clk_ptp_ref);
+ 		clk_disable_unprepare(priv->plat->pclk);
+ 		clk_disable_unprepare(priv->plat->stmmac_clk);
+@@ -4591,15 +4634,13 @@ int stmmac_resume(struct device *dev)
+ 		/* enable the clk previously disabled */
+ 		clk_prepare_enable(priv->plat->stmmac_clk);
+ 		clk_prepare_enable(priv->plat->pclk);
+-		if (priv->plat->clk_ptp_ref)
++		if (priv->plat->clk_ptp_ref && IS_ENABLED(CONFIG_STMMAC_PTP))
+ 			clk_prepare_enable(priv->plat->clk_ptp_ref);
+ 		/* reset the phy so that it's ready */
+ 		if (priv->mii)
+ 			stmmac_mdio_reset(priv->mii);
+ 	}
+ 
+-	netif_device_attach(ndev);
+-
+ 	mutex_lock(&priv->lock);
+ 
+ 	stmmac_reset_queues_param(priv);
+@@ -4613,6 +4654,8 @@ int stmmac_resume(struct device *dev)
+ 
+ 	stmmac_enable_all_queues(priv);
+ 
++	netif_device_attach(ndev);
++
+ 	mutex_unlock(&priv->lock);
+ 
+ 	if (ndev->phydev)
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
+index 9762e687f..97db19ba1 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
+@@ -542,7 +542,7 @@ stmmac_probe_config_dt(struct platform_device *pdev, const char **mac)
+ 	}
+ 	clk_prepare_enable(plat->stmmac_clk);
+ 
+-	plat->pclk = devm_clk_get(&pdev->dev, "pclk");
++	plat->pclk = devm_clk_get(&pdev->dev, "pclk_mac");
+ 	if (IS_ERR(plat->pclk)) {
+ 		if (PTR_ERR(plat->pclk) == -EPROBE_DEFER)
+ 			goto error_pclk_get;
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_ptp.h b/drivers/net/ethernet/stmicro/stmmac/stmmac_ptp.h
+index ecccf895f..e85282128 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_ptp.h
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_ptp.h
+@@ -59,9 +59,14 @@
+ #define	PTP_TCR_TSEVNTENA	BIT(14)
+ /* Enable Snapshot for Messages Relevant to Master */
+ #define	PTP_TCR_TSMSTRENA	BIT(15)
+-/* Select PTP packets for Taking Snapshots */
++/* Select PTP packets for Taking Snapshots
++ * On gmac4 specifically:
++ * Enable SYNC, Pdelay_Req, Pdelay_Resp when TSEVNTENA is enabled.
++ * or
++ * Enable  SYNC, Follow_Up, Delay_Req, Delay_Resp, Pdelay_Req, Pdelay_Resp,
++ * Pdelay_Resp_Follow_Up if TSEVNTENA is disabled
++ */
+ #define	PTP_TCR_SNAPTYPSEL_1	BIT(16)
+-#define	PTP_GMAC4_TCR_SNAPTYPSEL_1	GENMASK(17, 16)
+ /* Enable MAC address for PTP Frame Filtering */
+ #define	PTP_TCR_TSENMACADDR	BIT(18)
+ 
+diff --git a/include/linux/stmmac.h b/include/linux/stmmac.h
+index 4335bd771..9b561685f 100644
+--- a/include/linux/stmmac.h
++++ b/include/linux/stmmac.h
+@@ -178,6 +178,7 @@ struct plat_stmmacenet_data {
+ 	void (*fix_mac_speed)(void *priv, unsigned int speed);
+ 	int (*init)(struct platform_device *pdev, void *priv);
+ 	void (*exit)(struct platform_device *pdev, void *priv);
++	void (*get_eth_addr)(void *priv, unsigned char *addr);
+ 	struct mac_device_info *(*setup)(void *priv);
+ 	void *bsp_priv;
+ 	struct clk *stmmac_clk;
+-- 
+2.37.0 (Apple Git-136)
+

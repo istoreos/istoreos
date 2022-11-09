@@ -1,0 +1,535 @@
+From f8b01e631bba8d2989ae9e0fd49790b1df13d1b9 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 10:39:06 +0800
+Subject: [PATCH 02/46] high memory
+
+---
+ include/linux/dma-buf.h      | 207 ++++++++++++++++++++++++++++++++++-
+ include/linux/dma-iommu.h    |   3 +
+ include/linux/gfp.h          |   9 +-
+ include/linux/highmem.h      |   5 +
+ include/uapi/linux/dma-buf.h |  21 +++-
+ kernel/dma/contiguous.c      |   3 +
+ mm/backing-dev.c             |   5 +-
+ mm/cma.c                     |   5 +
+ mm/cma.h                     |   1 +
+ mm/dmapool.c                 |   4 +-
+ mm/page_alloc.c              |  13 +++
+ 11 files changed, 268 insertions(+), 8 deletions(-)
+
+diff --git a/include/linux/dma-buf.h b/include/linux/dma-buf.h
+index 58725f890..cbadb1f8e 100644
+--- a/include/linux/dma-buf.h
++++ b/include/linux/dma-buf.h
+@@ -146,7 +146,12 @@ struct dma_buf_ops {
+ 	/* TODO: Add try_map_dma_buf version, to return immed with -EBUSY
+ 	 * if the call would block.
+ 	 */
+-
++#if !defined(CONFIG_DMABUF_CACHE)
++	int (*set_release_callback)(void (*release_callback)(void *data),
++				    void *data);
++	void *(*get_release_callback_data)(void *callback);
++	/* after final dma_buf_put() */
++#endif
+ 	/**
+ 	 * @release:
+ 	 *
+@@ -187,6 +192,68 @@ struct dma_buf_ops {
+ 	 */
+ 	int (*begin_cpu_access)(struct dma_buf *, enum dma_data_direction);
+ 
++	/**
++	 * @begin_cpu_access_umapped:
++	 *
++	 * This is called as a result of the DMA_BUF_IOCTL_SYNC IOCTL being
++	 * called with the DMA_BUF_SYNC_START and DMA_BUF_SYNC_USER_MAPPED flags
++	 * set. It allows the exporter to ensure that the mmap(ed) portions of
++	 * the buffer are available for cpu access - the exporter might need to
++	 * allocate or swap-in and pin the backing storage.
++	 * The exporter also needs to ensure that cpu access is
++	 * coherent for the access direction. The direction can be used by the
++	 * exporter to optimize the cache flushing, i.e. access with a different
++	 * direction (read instead of write) might return stale or even bogus
++	 * data (e.g. when the exporter needs to copy the data to temporary
++	 * storage).
++	 *
++	 * This callback is optional.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. This can for
++	 * example fail when the backing storage can't be allocated. Can also
++	 * return -ERESTARTSYS or -EINTR when the call has been interrupted and
++	 * needs to be restarted.
++	 */
++	int (*begin_cpu_access_umapped)(struct dma_buf *dmabuf,
++					enum dma_data_direction);
++
++	/**
++	 * @begin_cpu_access_partial:
++	 *
++	 * This is called from dma_buf_begin_cpu_access_partial() and allows the
++	 * exporter to ensure that the memory specified in the range is
++	 * available for cpu access - the exporter might need to allocate or
++	 * swap-in and pin the backing storage.
++	 * The exporter also needs to ensure that cpu access is
++	 * coherent for the access direction. The direction can be used by the
++	 * exporter to optimize the cache flushing, i.e. access with a different
++	 * direction (read instead of write) might return stale or even bogus
++	 * data (e.g. when the exporter needs to copy the data to temporary
++	 * storage).
++	 *
++	 * This callback is optional.
++	 *
++	 * FIXME: This is both called through the DMA_BUF_IOCTL_SYNC command
++	 * from userspace (where storage shouldn't be pinned to avoid handing
++	 * de-factor mlock rights to userspace) and for the kernel-internal
++	 * users of the various kmap interfaces, where the backing storage must
++	 * be pinned to guarantee that the atomic kmap calls can succeed. Since
++	 * there's no in-kernel users of the kmap interfaces yet this isn't a
++	 * real problem.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. This can for
++	 * example fail when the backing storage can't be allocated. Can also
++	 * return -ERESTARTSYS or -EINTR when the call has been interrupted and
++	 * needs to be restarted.
++	 */
++	int (*begin_cpu_access_partial)(struct dma_buf *dmabuf,
++					enum dma_data_direction,
++					unsigned int offset, unsigned int len);
++
+ 	/**
+ 	 * @end_cpu_access:
+ 	 *
+@@ -205,6 +272,51 @@ struct dma_buf_ops {
+ 	 * to be restarted.
+ 	 */
+ 	int (*end_cpu_access)(struct dma_buf *, enum dma_data_direction);
++
++	/**
++	 * @end_cpu_access_umapped:
++	 *
++	 * This is called as result a of the DMA_BUF_IOCTL_SYNC IOCTL being
++	 * called with the DMA_BUF_SYNC_END and DMA_BUF_SYNC_USER_MAPPED flags
++	 * set. The exporter can use to limit cache flushing to only those parts
++	 * of the buffer which are mmap(ed) and to unpin any resources pinned in
++	 * @begin_cpu_access_umapped.
++	 * The result of any dma_buf kmap calls after end_cpu_access_umapped is
++	 * undefined.
++	 *
++	 * This callback is optional.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. Can return
++	 * -ERESTARTSYS or -EINTR when the call has been interrupted and needs
++	 * to be restarted.
++	 */
++	int (*end_cpu_access_umapped)(struct dma_buf *dmabuf,
++				      enum dma_data_direction);
++
++	/**
++	 * @end_cpu_access_partial:
++	 *
++	 * This is called from dma_buf_end_cpu_access_partial() when the
++	 * importer is done accessing the CPU. The exporter can use to limit
++	 * cache flushing to only the range specefied and to unpin any
++	 * resources pinned in @begin_cpu_access_umapped.
++	 * The result of any dma_buf kmap calls after end_cpu_access_partial is
++	 * undefined.
++	 *
++	 * This callback is optional.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. Can return
++	 * -ERESTARTSYS or -EINTR when the call has been interrupted and needs
++	 * to be restarted.
++	 */
++	int (*end_cpu_access_partial)(struct dma_buf *dmabuf,
++				      enum dma_data_direction,
++				      unsigned int offset, unsigned int len);
++
+ 	void *(*map)(struct dma_buf *, unsigned long);
+ 	void (*unmap)(struct dma_buf *, unsigned long, void *);
+ 
+@@ -247,18 +359,63 @@ struct dma_buf_ops {
+ 
+ 	void *(*vmap)(struct dma_buf *);
+ 	void (*vunmap)(struct dma_buf *, void *vaddr);
++
++	/**
++	 * @get_uuid
++	 *
++	 * This is called by dma_buf_get_uuid to get the UUID which identifies
++	 * the buffer to virtio devices.
++	 *
++	 * This callback is optional.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. On success uuid
++	 * will be populated with the buffer's UUID.
++	 */
++	int (*get_uuid)(struct dma_buf *dmabuf, uuid_t *uuid);
++
++	/**
++	 * @get_flags:
++	 *
++	 * This is called by dma_buf_get_flags and is used to get the buffer's
++	 * flags.
++	 * This callback is optional.
++	 *
++	 * Returns:
++	 *
++	 * 0 on success or a negative error code on failure. On success flags
++	 * will be populated with the buffer's flags.
++	 */
++	int (*get_flags)(struct dma_buf *dmabuf, unsigned long *flags);
+ };
+ 
++/**
++ * dma_buf_destructor - dma-buf destructor function
++ * @dmabuf:	[in]	pointer to dma-buf
++ * @dtor_data:	[in]	destructor data associated with this buffer
++ *
++ * The dma-buf destructor which is called when the dma-buf is freed.
++ *
++ * If the destructor returns an error the dma-buf's exporter release function
++ * won't be called.
++ */
++typedef int (*dma_buf_destructor)(struct dma_buf *dmabuf, void *dtor_data);
++
+ /**
+  * struct dma_buf - shared buffer object
+  * @size: size of the buffer
+  * @file: file pointer used for sharing buffers across, and for refcounting.
+  * @attachments: list of dma_buf_attachment that denotes all devices attached.
+  * @ops: dma_buf_ops associated with this buffer object.
+- * @lock: used internally to serialize list manipulation, attach/detach and vmap/unmap
++ * @lock: used internally to serialize list manipulation, attach/detach and
++ *        vmap/unmap, and accesses to name
+  * @vmapping_counter: used internally to refcnt the vmaps
+  * @vmap_ptr: the current vmap ptr if vmapping_counter > 0
+  * @exp_name: name of the exporter; useful for debugging.
++ * @name: userspace-provided name; useful for accounting and debugging.
++ * @name_lock: lock to protect name.
++ * @ktime: time (in jiffies) at which the buffer was born
+  * @owner: pointer to exporter module; used for refcounting when exporter is a
+  *         kernel module.
+  * @list_node: node for dma_buf accounting and debugging.
+@@ -281,11 +438,20 @@ struct dma_buf {
+ 	size_t size;
+ 	struct file *file;
+ 	struct list_head attachments;
++#if !defined(CONFIG_DMABUF_CACHE)
++	struct list_head release_callbacks;
++	struct mutex release_lock;
++#endif
+ 	const struct dma_buf_ops *ops;
+ 	struct mutex lock;
+ 	unsigned vmapping_counter;
+ 	void *vmap_ptr;
+ 	const char *exp_name;
++	const char *name;
++	spinlock_t name_lock;
++#if defined(CONFIG_DEBUG_FS)
++	ktime_t ktime;
++#endif
+ 	struct module *owner;
+ 	struct list_head list_node;
+ 	void *priv;
+@@ -300,6 +466,9 @@ struct dma_buf {
+ 
+ 		__poll_t active;
+ 	} cb_excl, cb_shared;
++	dma_buf_destructor dtor;
++	void *dtor_data;
++	atomic_t dent_count;
+ };
+ 
+ /**
+@@ -308,6 +477,8 @@ struct dma_buf {
+  * @dev: device attached to the buffer.
+  * @node: list of dma_buf_attachment.
+  * @priv: exporter specific attachment data.
++ * @dma_map_attrs: DMA attributes to be used when the exporter maps the buffer
++ * through dma_buf_map_attachment.
+  *
+  * This structure holds the attachment information between the dma_buf buffer
+  * and its user device(s). The list contains one attachment struct per device
+@@ -323,6 +494,7 @@ struct dma_buf_attachment {
+ 	struct device *dev;
+ 	struct list_head node;
+ 	void *priv;
++	unsigned long dma_map_attrs;
+ };
+ 
+ /**
+@@ -373,6 +545,14 @@ static inline void get_dma_buf(struct dma_buf *dmabuf)
+ 	get_file(dmabuf->file);
+ }
+ 
++#if !defined(CONFIG_DMABUF_CACHE)
++int dma_buf_set_release_callback(struct dma_buf *dmabuf,
++				 void (*callback)(void *), void *data);
++
++void *dma_buf_get_release_callback_data(struct dma_buf *dmabuf,
++					void (*callback)(void *));
++#endif
++
+ struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
+ 							struct device *dev);
+ void dma_buf_detach(struct dma_buf *dmabuf,
+@@ -390,8 +570,14 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *, struct sg_table *,
+ 				enum dma_data_direction);
+ int dma_buf_begin_cpu_access(struct dma_buf *dma_buf,
+ 			     enum dma_data_direction dir);
++int dma_buf_begin_cpu_access_partial(struct dma_buf *dma_buf,
++				     enum dma_data_direction dir,
++				     unsigned int offset, unsigned int len);
+ int dma_buf_end_cpu_access(struct dma_buf *dma_buf,
+ 			   enum dma_data_direction dir);
++int dma_buf_end_cpu_access_partial(struct dma_buf *dma_buf,
++				     enum dma_data_direction dir,
++				     unsigned int offset, unsigned int len);
+ void *dma_buf_kmap(struct dma_buf *, unsigned long);
+ void dma_buf_kunmap(struct dma_buf *, unsigned long, void *);
+ 
+@@ -399,4 +585,21 @@ int dma_buf_mmap(struct dma_buf *, struct vm_area_struct *,
+ 		 unsigned long);
+ void *dma_buf_vmap(struct dma_buf *);
+ void dma_buf_vunmap(struct dma_buf *, void *vaddr);
++int dma_buf_get_flags(struct dma_buf *dmabuf, unsigned long *flags);
++int dma_buf_get_uuid(struct dma_buf *dmabuf, uuid_t *uuid);
++
++/**
++ * dma_buf_set_destructor - set the dma-buf's destructor
++ * @dmabuf:		[in]	pointer to dma-buf
++ * @dma_buf_destructor	[in]	the destructor function
++ * @dtor_data:		[in]	destructor data associated with this buffer
++ */
++static inline void dma_buf_set_destructor(struct dma_buf *dmabuf,
++					  dma_buf_destructor dtor,
++					  void *dtor_data)
++{
++	dmabuf->dtor = dtor;
++	dmabuf->dtor_data = dtor_data;
++}
++
+ #endif /* __DMA_BUF_H__ */
+diff --git a/include/linux/dma-iommu.h b/include/linux/dma-iommu.h
+index e8ca5e654..2e42d2deb 100644
+--- a/include/linux/dma-iommu.h
++++ b/include/linux/dma-iommu.h
+@@ -75,6 +75,9 @@ int iommu_dma_mapping_error(struct device *dev, dma_addr_t dma_addr);
+ void iommu_dma_map_msi_msg(int irq, struct msi_msg *msg);
+ void iommu_dma_get_resv_regions(struct device *dev, struct list_head *list);
+ 
++int iommu_dma_reserve_iova(struct device *dev, dma_addr_t base,
++			   u64 size);
++
+ #else
+ 
+ struct iommu_domain;
+diff --git a/include/linux/gfp.h b/include/linux/gfp.h
+index f78d1e895..194da88f1 100644
+--- a/include/linux/gfp.h
++++ b/include/linux/gfp.h
+@@ -44,6 +44,7 @@ struct vm_area_struct;
+ #else
+ #define ___GFP_NOLOCKDEP	0
+ #endif
++#define ___GFP_CMA		0x1000000u
+ /* If the above are modified, __GFP_BITS_SHIFT may need updating */
+ 
+ /*
+@@ -57,6 +58,7 @@ struct vm_area_struct;
+ #define __GFP_HIGHMEM	((__force gfp_t)___GFP_HIGHMEM)
+ #define __GFP_DMA32	((__force gfp_t)___GFP_DMA32)
+ #define __GFP_MOVABLE	((__force gfp_t)___GFP_MOVABLE)  /* ZONE_MOVABLE allowed */
++#define __GFP_CMA	((__force gfp_t)___GFP_CMA)
+ #define GFP_ZONEMASK	(__GFP_DMA|__GFP_HIGHMEM|__GFP_DMA32|__GFP_MOVABLE)
+ 
+ /**
+@@ -217,8 +219,13 @@ struct vm_area_struct;
+ #define __GFP_NOLOCKDEP ((__force gfp_t)___GFP_NOLOCKDEP)
+ 
+ /* Room for N __GFP_FOO bits */
+-#define __GFP_BITS_SHIFT (23 + IS_ENABLED(CONFIG_LOCKDEP))
++#define __GFP_BITS_SHIFT (25)
++#ifdef CONFIG_LOCKDEP
+ #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
++#else
++#define __GFP_BITS_MASK (((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1)) & \
++				~0x800000u)
++#endif
+ 
+ /**
+  * DOC: Useful GFP flag combinations
+diff --git a/include/linux/highmem.h b/include/linux/highmem.h
+index 069067983..e80602ee3 100644
+--- a/include/linux/highmem.h
++++ b/include/linux/highmem.h
+@@ -181,7 +181,12 @@ static inline struct page *
+ alloc_zeroed_user_highpage_movable(struct vm_area_struct *vma,
+ 					unsigned long vaddr)
+ {
++#ifndef CONFIG_CMA
+ 	return __alloc_zeroed_user_highpage(__GFP_MOVABLE, vma, vaddr);
++#else
++	return __alloc_zeroed_user_highpage(__GFP_MOVABLE|__GFP_CMA, vma,
++						vaddr);
++#endif
+ }
+ 
+ static inline void clear_highpage(struct page *page)
+diff --git a/include/uapi/linux/dma-buf.h b/include/uapi/linux/dma-buf.h
+index d75df5210..fa847a9f4 100644
+--- a/include/uapi/linux/dma-buf.h
++++ b/include/uapi/linux/dma-buf.h
+@@ -32,10 +32,29 @@ struct dma_buf_sync {
+ #define DMA_BUF_SYNC_RW        (DMA_BUF_SYNC_READ | DMA_BUF_SYNC_WRITE)
+ #define DMA_BUF_SYNC_START     (0 << 2)
+ #define DMA_BUF_SYNC_END       (1 << 2)
++#define DMA_BUF_SYNC_USER_MAPPED       (1 << 3)
++
+ #define DMA_BUF_SYNC_VALID_FLAGS_MASK \
+-	(DMA_BUF_SYNC_RW | DMA_BUF_SYNC_END)
++	(DMA_BUF_SYNC_RW | DMA_BUF_SYNC_END | DMA_BUF_SYNC_USER_MAPPED)
++
++#define DMA_BUF_NAME_LEN	32
+ 
+ #define DMA_BUF_BASE		'b'
+ #define DMA_BUF_IOCTL_SYNC	_IOW(DMA_BUF_BASE, 0, struct dma_buf_sync)
+ 
++/* 32/64bitness of this uapi was botched in android, there's no difference
++ * between them in actual uapi, they're just different numbers.
++ */
++#define DMA_BUF_SET_NAME	_IOW(DMA_BUF_BASE, 1, const char *)
++#define DMA_BUF_SET_NAME_A	_IOW(DMA_BUF_BASE, 1, u32)
++#define DMA_BUF_SET_NAME_B	_IOW(DMA_BUF_BASE, 1, u64)
++
++struct dma_buf_sync_partial {
++	__u64 flags;
++	__u32 offset;
++	__u32 len;
++};
++
++#define DMA_BUF_IOCTL_SYNC_PARTIAL	_IOW(DMA_BUF_BASE, 2, struct dma_buf_sync_partial)
++
+ #endif
+diff --git a/kernel/dma/contiguous.c b/kernel/dma/contiguous.c
+index b2a879058..14e0117c3 100644
+--- a/kernel/dma/contiguous.c
++++ b/kernel/dma/contiguous.c
+@@ -270,6 +270,9 @@ static int __init rmem_cma_setup(struct reserved_mem *rmem)
+ 	if (of_get_flat_dt_prop(node, "linux,cma-default", NULL))
+ 		dma_contiguous_set_default(cma);
+ 
++	if (of_get_flat_dt_prop(node, "inactive", NULL))
++		set_cma_area_inactive(cma);
++
+ 	rmem->ops = &rmem_cma_ops;
+ 	rmem->priv = cma;
+ 
+diff --git a/mm/backing-dev.c b/mm/backing-dev.c
+index 67431d02a..5794da516 100644
+--- a/mm/backing-dev.c
++++ b/mm/backing-dev.c
+@@ -880,8 +880,7 @@ int bdi_register_va(struct backing_dev_info *bdi, const char *fmt, va_list args)
+ 	if (bdi->dev)	/* The driver needs to use separate queues per device */
+ 		return 0;
+ 
+-	vsnprintf(bdi->dev_name, sizeof(bdi->dev_name), fmt, args);
+-	dev = device_create(bdi_class, NULL, MKDEV(0, 0), bdi, bdi->dev_name);
++	dev = device_create_vargs(bdi_class, NULL, MKDEV(0, 0), bdi, fmt, args);
+ 	if (IS_ERR(dev))
+ 		return PTR_ERR(dev);
+ 
+@@ -988,7 +987,7 @@ const char *bdi_dev_name(struct backing_dev_info *bdi)
+ {
+ 	if (!bdi || !bdi->dev)
+ 		return bdi_unknown_name;
+-	return bdi->dev_name;
++	return dev_name(bdi->dev);
+ }
+ EXPORT_SYMBOL_GPL(bdi_dev_name);
+ 
+diff --git a/mm/cma.c b/mm/cma.c
+index 4c2864270..f2c231ffb 100644
+--- a/mm/cma.c
++++ b/mm/cma.c
+@@ -542,3 +542,8 @@ int cma_for_each_area(int (*it)(struct cma *cma, void *data), void *data)
+ 
+ 	return 0;
+ }
++void set_cma_area_inactive(struct cma *cma)
++{
++	cma->inactive = true;
++}
++EXPORT_SYMBOL_GPL(set_cma_area_inactive);
+diff --git a/mm/cma.h b/mm/cma.h
+index 33c0b5177..e9e592436 100644
+--- a/mm/cma.h
++++ b/mm/cma.h
+@@ -13,6 +13,7 @@ struct cma {
+ 	spinlock_t mem_head_lock;
+ #endif
+ 	const char *name;
++	bool inactive;
+ };
+ 
+ extern struct cma cma_areas[MAX_CMA_AREAS];
+diff --git a/mm/dmapool.c b/mm/dmapool.c
+index 6d4b97e7e..d46b14e3c 100644
+--- a/mm/dmapool.c
++++ b/mm/dmapool.c
+@@ -379,7 +379,7 @@ void *dma_pool_alloc(struct dma_pool *pool, gfp_t mem_flags,
+ #endif
+ 	spin_unlock_irqrestore(&pool->lock, flags);
+ 
+-	if (mem_flags & __GFP_ZERO)
++	if (want_init_on_alloc(mem_flags))
+ 		memset(retval, 0, pool->size);
+ 
+ 	return retval;
+@@ -429,6 +429,8 @@ void dma_pool_free(struct dma_pool *pool, void *vaddr, dma_addr_t dma)
+ 	}
+ 
+ 	offset = vaddr - page->vaddr;
++	if (want_init_on_free())
++		memset(vaddr, 0, pool->size);
+ #ifdef	DMAPOOL_DEBUG
+ 	if ((dma - page->dma) != offset) {
+ 		spin_unlock_irqrestore(&pool->lock, flags);
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index cc52c666c..0fd1c7684 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -131,6 +131,19 @@ unsigned long totalcma_pages __read_mostly;
+ 
+ int percpu_pagelist_fraction;
+ gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
++#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
++DEFINE_STATIC_KEY_TRUE(init_on_alloc);
++#else
++DEFINE_STATIC_KEY_FALSE(init_on_alloc);
++#endif
++EXPORT_SYMBOL(init_on_alloc);
++
++#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
++DEFINE_STATIC_KEY_TRUE(init_on_free);
++#else
++DEFINE_STATIC_KEY_FALSE(init_on_free);
++#endif
++EXPORT_SYMBOL(init_on_free);
+ 
+ /*
+  * A cached value of the page's pageblock's migratetype, used when the page is
+-- 
+2.37.0 (Apple Git-136)
+

@@ -1,0 +1,39 @@
+config OPTEE_CLIENT
+	bool "Support OPTEE"
+	help
+	  U-boot can communicate with trust if
+	  the config is enable. This function can
+	  be use in android bootloader a/b and avb
+	  step.
+
+config OPTEE_V1
+	bool "Support OPTEE version 1.0"
+	depends on OPTEE_CLIENT
+	help
+	  U-boot can communicate with trust if
+	  the config is enable. This function can
+	  be use in android bootloader a/b and avb
+	  step.
+
+config OPTEE_V2
+	bool "Support OPTEE version 2.0"
+	depends on OPTEE_CLIENT
+	help
+	  U-boot can communicate with trust if
+	  the config is enable. This function can
+	  be use in android bootloader a/b and avb
+	  step.
+
+config OPTEE_ALWAYS_USE_SECURITY_PARTITION
+	bool "Support use emmc security partition for OPTEE"
+	depends on OPTEE_CLIENT
+	help
+	  U-boot can secure store data to security partition
+	  for nand or emmc, do not to store data to rpmb.
+
+config OPTEE_SECURITY_LEVEL
+	int "Support select security level for OPTEE"
+	depends on OPTEE_CLIENT
+	default 0
+	help
+	  U-boot can select security level for OPTEE.

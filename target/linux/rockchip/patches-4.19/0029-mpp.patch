@@ -1,0 +1,40 @@
+From f1fb7090daeea5238adc6cfffaaefd3666e47690 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:37:24 +0800
+Subject: [PATCH 29/46] mpp
+
+---
+ drivers/video/Kconfig  | 4 ++++
+ drivers/video/Makefile | 1 +
+ 2 files changed, 5 insertions(+)
+
+diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
+index 83d3d271c..638e140dc 100644
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
+@@ -24,6 +24,10 @@ endmenu
+ 
+ source "drivers/video/backlight/Kconfig"
+ 
++menu "Rockchip Misc Video driver"
++source "drivers/video/rockchip/Kconfig"
++endmenu
++
+ config VGASTATE
+        tristate
+        default n
+diff --git a/drivers/video/Makefile b/drivers/video/Makefile
+index df7650ade..b355e2fcb 100644
+--- a/drivers/video/Makefile
++++ b/drivers/video/Makefile
+@@ -6,6 +6,7 @@ obj-$(CONFIG_VT)		  += console/
+ obj-$(CONFIG_FB_STI)		  += console/
+ obj-$(CONFIG_LOGO)		  += logo/
+ obj-y				  += backlight/
++obj-y				  += rockchip/
+ 
+ obj-y				  += fbdev/
+ 
+-- 
+2.37.0 (Apple Git-136)
+

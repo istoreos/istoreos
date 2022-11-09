@@ -1,0 +1,878 @@
+From 2fc7a7d354c64c2f29546d0adeb1c175aad2b368 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:36:15 +0800
+Subject: [PATCH 28/46] serial tty
+
+---
+ drivers/staging/android/Kconfig     |   2 +
+ drivers/staging/android/Makefile    |   1 +
+ drivers/tty/serial/8250/8250.h      |   3 +
+ drivers/tty/serial/8250/8250_core.c |   6 +-
+ drivers/tty/serial/8250/8250_dma.c  | 219 ++++++++++++++++++++++------
+ drivers/tty/serial/8250/8250_dw.c   | 101 +++++++++++--
+ drivers/tty/serial/8250/8250_port.c | 102 ++++++++++++-
+ drivers/tty/sysrq.c                 |  13 +-
+ include/uapi/linux/serial_reg.h     |   1 +
+ 9 files changed, 378 insertions(+), 70 deletions(-)
+
+diff --git a/drivers/staging/android/Kconfig b/drivers/staging/android/Kconfig
+index 17c558780..ec8139599 100644
+--- a/drivers/staging/android/Kconfig
++++ b/drivers/staging/android/Kconfig
+@@ -25,6 +25,8 @@ config ANDROID_VSOC
+ 
+ source "drivers/staging/android/ion/Kconfig"
+ 
++source "drivers/staging/android/fiq_debugger/Kconfig"
++
+ endif # if ANDROID
+ 
+ endmenu
+diff --git a/drivers/staging/android/Makefile b/drivers/staging/android/Makefile
+index 90e6154f1..2638b4a23 100644
+--- a/drivers/staging/android/Makefile
++++ b/drivers/staging/android/Makefile
+@@ -1,6 +1,7 @@
+ ccflags-y += -I$(src)			# needed for trace events
+ 
+ obj-y					+= ion/
++obj-$(CONFIG_FIQ_DEBUGGER)		+= fiq_debugger/
+ 
+ obj-$(CONFIG_ASHMEM)			+= ashmem.o
+ obj-$(CONFIG_ANDROID_VSOC)		+= vsoc.o
+diff --git a/drivers/tty/serial/8250/8250.h b/drivers/tty/serial/8250/8250.h
+index ebfb0bd5b..7c19addb6 100644
+--- a/drivers/tty/serial/8250/8250.h
++++ b/drivers/tty/serial/8250/8250.h
+@@ -46,6 +46,9 @@ struct uart_8250_dma {
+ 	unsigned char		tx_running;
+ 	unsigned char		tx_err;
+ 	unsigned char		rx_running;
++#ifdef CONFIG_ARCH_ROCKCHIP
++	size_t			rx_index;
++#endif
+ };
+ 
+ struct old_serial_port {
+diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
+index d2df7d71d..90f3855c7 100644
+--- a/drivers/tty/serial/8250/8250_core.c
++++ b/drivers/tty/serial/8250/8250_core.c
+@@ -561,6 +561,7 @@ static void __init serial8250_isa_init_ports(void)
+ static void __init
+ serial8250_register_ports(struct uart_driver *drv, struct device *dev)
+ {
++#ifndef CONFIG_ARCH_ROCKCHIP
+ 	int i;
+ 
+ 	for (i = 0; i < nr_uarts; i++) {
+@@ -577,6 +578,7 @@ serial8250_register_ports(struct uart_driver *drv, struct device *dev)
+ 		serial8250_apply_quirks(up);
+ 		uart_add_one_port(drv, &up->port);
+ 	}
++#endif
+ }
+ 
+ #ifdef CONFIG_SERIAL_8250_CONSOLE
+@@ -1008,7 +1010,9 @@ int serial8250_register_8250_port(struct uart_8250_port *up)
+ 		uart->port.rs485_config	= up->port.rs485_config;
+ 		uart->port.rs485	= up->port.rs485;
+ 		uart->dma		= up->dma;
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++		uart->port.line		= up->port.line;
++#endif
+ 		/* Take tx_loadsz from fifosize if it wasn't set separately */
+ 		if (uart->port.fifosize && !uart->tx_loadsz)
+ 			uart->tx_loadsz = uart->port.fifosize;
+diff --git a/drivers/tty/serial/8250/8250_dma.c b/drivers/tty/serial/8250/8250_dma.c
+index bfa1a857f..141a5b03b 100644
+--- a/drivers/tty/serial/8250/8250_dma.c
++++ b/drivers/tty/serial/8250/8250_dma.c
+@@ -11,6 +11,12 @@
+ 
+ #include "8250.h"
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++#define MAX_TX_BYTES		64
++#define MAX_FIFO_SIZE		64
++#define UART_RFL_16550A		0x21
++#endif
++
+ static void __dma_tx_complete(void *param)
+ {
+ 	struct uart_8250_port	*p = param;
+@@ -36,12 +42,48 @@ static void __dma_tx_complete(void *param)
+ 	ret = serial8250_tx_dma(p);
+ 	if (ret) {
+ 		p->ier |= UART_IER_THRI;
++#ifdef CONFIG_ARCH_ROCKCHIP
++		p->ier |= UART_IER_PTIME;
++#endif
+ 		serial_port_out(&p->port, UART_IER, p->ier);
+ 	}
+ 
+ 	spin_unlock_irqrestore(&p->port.lock, flags);
+ }
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++
++static void __dma_rx_complete(void *param)
++{
++	struct uart_8250_port	*p = param;
++	struct uart_8250_dma	*dma = p->dma;
++	struct tty_port		*tty_port = &p->port.state->port;
++	struct dma_tx_state	state;
++	unsigned int		count = 0, cur_index = 0;
++
++	dmaengine_tx_status(dma->rxchan, dma->rx_cookie, &state);
++	cur_index = dma->rx_size - state.residue;
++
++	if (cur_index == dma->rx_index)
++		return;
++	else if (cur_index > dma->rx_index)
++		count = cur_index - dma->rx_index;
++	else
++		count = dma->rx_size - dma->rx_index;
++
++	tty_insert_flip_string(tty_port, dma->rx_buf + dma->rx_index, count);
++
++	if (cur_index < dma->rx_index) {
++		tty_insert_flip_string(tty_port, dma->rx_buf, cur_index);
++		count += cur_index;
++	}
++
++	p->port.icount.rx += count;
++	dma->rx_index = cur_index;
++}
++
++#else
++
+ static void __dma_rx_complete(void *param)
+ {
+ 	struct uart_8250_port	*p = param;
+@@ -61,6 +103,8 @@ static void __dma_rx_complete(void *param)
+ 	tty_flip_buffer_push(tty_port);
+ }
+ 
++#endif
++
+ int serial8250_tx_dma(struct uart_8250_port *p)
+ {
+ 	struct uart_8250_dma		*dma = p->dma;
+@@ -78,7 +122,12 @@ int serial8250_tx_dma(struct uart_8250_port *p)
+ 	}
+ 
+ 	dma->tx_size = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (dma->tx_size < MAX_TX_BYTES) {
++		ret = -EBUSY;
++		goto err;
++	}
++#endif
+ 	desc = dmaengine_prep_slave_single(dma->txchan,
+ 					   dma->tx_addr + xmit->tail,
+ 					   dma->tx_size, DMA_MEM_TO_DEV,
+@@ -102,6 +151,9 @@ int serial8250_tx_dma(struct uart_8250_port *p)
+ 		dma->tx_err = 0;
+ 		if (p->ier & UART_IER_THRI) {
+ 			p->ier &= ~UART_IER_THRI;
++#ifdef CONFIG_ARCH_ROCKCHIP
++			p->ier &= ~UART_IER_PTIME;
++#endif
+ 			serial_out(p, UART_IER, p->ier);
+ 		}
+ 	}
+@@ -111,6 +163,64 @@ int serial8250_tx_dma(struct uart_8250_port *p)
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++
++int serial8250_rx_dma(struct uart_8250_port *p)
++{
++	unsigned int rfl, i = 0, fcr = 0, cur_index = 0;
++	unsigned char buf[MAX_FIFO_SIZE];
++	struct uart_port	*port = &p->port;
++	struct tty_port		*tty_port = &p->port.state->port;
++	struct dma_tx_state	state;
++	struct uart_8250_dma	*dma = p->dma;
++
++	fcr = UART_FCR_ENABLE_FIFO | UART_FCR_T_TRIG_10 | UART_FCR_R_TRIG_11;
++	serial_port_out(port, UART_FCR, fcr);
++
++	do {
++		dmaengine_tx_status(dma->rxchan, dma->rx_cookie, &state);
++		cur_index = dma->rx_size - state.residue;
++	} while (cur_index % dma->rxconf.src_maxburst);
++
++	rfl = serial_port_in(port, UART_RFL_16550A);
++	while (i < rfl)
++		buf[i++] = serial_port_in(port, UART_RX);
++
++	__dma_rx_complete(p);
++
++	tty_insert_flip_string(tty_port, buf, i);
++	p->port.icount.rx += i;
++	tty_flip_buffer_push(tty_port);
++
++	if (fcr)
++		serial_port_out(port, UART_FCR, p->fcr);
++	return 0;
++}
++
++int serial8250_start_rx_dma(struct uart_8250_port *p)
++{
++	struct uart_8250_dma		*dma = p->dma;
++	struct dma_async_tx_descriptor	*desc;
++
++	desc = dmaengine_prep_dma_cyclic(dma->rxchan, dma->rx_addr,
++					 dma->rx_size, dma->rx_size,
++					 DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT |
++					 DMA_CTRL_ACK);
++	if (!desc)
++		return -EBUSY;
++
++	dma->rx_running = 1;
++	desc->callback = NULL;
++	desc->callback_param = NULL;
++
++	dma->rx_cookie = dmaengine_submit(desc);
++	dma_async_issue_pending(dma->rxchan);
++	dma->rx_index = 0;
++	return 0;
++}
++
++#else
++
+ int serial8250_rx_dma(struct uart_8250_port *p)
+ {
+ 	struct uart_8250_dma		*dma = p->dma;
+@@ -136,6 +246,8 @@ int serial8250_rx_dma(struct uart_8250_port *p)
+ 	return 0;
+ }
+ 
++#endif
++
+ void serial8250_rx_dma_flush(struct uart_8250_port *p)
+ {
+ 	struct uart_8250_dma *dma = p->dma;
+@@ -163,11 +275,19 @@ int serial8250_request_dma(struct uart_8250_port *p)
+ 	dma->rxconf.direction		= DMA_DEV_TO_MEM;
+ 	dma->rxconf.src_addr_width	= DMA_SLAVE_BUSWIDTH_1_BYTE;
+ 	dma->rxconf.src_addr		= rx_dma_addr + UART_RX;
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if ((p->port.fifosize / 4) < 16)
++		dma->rxconf.src_maxburst = p->port.fifosize / 4;
++	else
++		dma->rxconf.src_maxburst = 16;
++#endif
+ 
+ 	dma->txconf.direction		= DMA_MEM_TO_DEV;
+ 	dma->txconf.dst_addr_width	= DMA_SLAVE_BUSWIDTH_1_BYTE;
+ 	dma->txconf.dst_addr		= tx_dma_addr + UART_TX;
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++	dma->txconf.dst_maxburst	= 16;
++#endif
+ 	dma_cap_zero(mask);
+ 	dma_cap_set(DMA_SLAVE, mask);
+ 
+@@ -181,64 +301,64 @@ int serial8250_request_dma(struct uart_8250_port *p)
+ 	/* 8250 rx dma requires dmaengine driver to support pause/terminate */
+ 	ret = dma_get_slave_caps(dma->rxchan, &caps);
+ 	if (ret)
+-		goto release_rx;
++		goto err_rx;
+ 	if (!caps.cmd_pause || !caps.cmd_terminate ||
+ 	    caps.residue_granularity == DMA_RESIDUE_GRANULARITY_DESCRIPTOR) {
+ 		ret = -EINVAL;
+-		goto release_rx;
++		goto err_rx;
+ 	}
+ 
+ 	dmaengine_slave_config(dma->rxchan, &dma->rxconf);
+ 
+-	/* Get a channel for TX */
+-	dma->txchan = dma_request_slave_channel_compat(mask,
+-						       dma->fn, dma->tx_param,
+-						       p->port.dev, "tx");
+-	if (!dma->txchan) {
+-		ret = -ENODEV;
+-		goto release_rx;
+-	}
+-
+-	/* 8250 tx dma requires dmaengine driver to support terminate */
+-	ret = dma_get_slave_caps(dma->txchan, &caps);
+-	if (ret)
+-		goto err;
+-	if (!caps.cmd_terminate) {
+-		ret = -EINVAL;
+-		goto err;
+-	}
+-
+-	dmaengine_slave_config(dma->txchan, &dma->txconf);
+-
+ 	/* RX buffer */
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (!dma->rx_size)
++		dma->rx_size = PAGE_SIZE * 2;
++#else
+ 	if (!dma->rx_size)
+ 		dma->rx_size = PAGE_SIZE;
++#endif
+ 
+ 	dma->rx_buf = dma_alloc_coherent(dma->rxchan->device->dev, dma->rx_size,
+ 					&dma->rx_addr, GFP_KERNEL);
++
+ 	if (!dma->rx_buf) {
+ 		ret = -ENOMEM;
+-		goto err;
++		goto err_rx;
+ 	}
+ 
+-	/* TX buffer */
+-	dma->tx_addr = dma_map_single(dma->txchan->device->dev,
+-					p->port.state->xmit.buf,
+-					UART_XMIT_SIZE,
+-					DMA_TO_DEVICE);
+-	if (dma_mapping_error(dma->txchan->device->dev, dma->tx_addr)) {
+-		dma_free_coherent(dma->rxchan->device->dev, dma->rx_size,
+-				  dma->rx_buf, dma->rx_addr);
+-		ret = -ENOMEM;
+-		goto err;
+-	}
++	/* Get a channel for TX */
++	dma->txchan = dma_request_slave_channel_compat(mask,
++						       dma->fn, dma->tx_param,
++						       p->port.dev, "tx");
++	if (dma->txchan) {
++		dmaengine_slave_config(dma->txchan, &dma->txconf);
++
++		/* TX buffer */
++		dma->tx_addr = dma_map_single(dma->txchan->device->dev,
++						p->port.state->xmit.buf,
++						UART_XMIT_SIZE,
++						DMA_TO_DEVICE);
++		if (dma_mapping_error(dma->txchan->device->dev, dma->tx_addr)) {
++			dma_free_coherent(dma->rxchan->device->dev,
++					  dma->rx_size, dma->rx_buf,
++					  dma->rx_addr);
++			dma_release_channel(dma->txchan);
++			dma->txchan = NULL;
++		}
+ 
+-	dev_dbg_ratelimited(p->port.dev, "got both dma channels\n");
++		dev_info_ratelimited(p->port.dev, "got rx and tx dma channels\n");
++	} else {
++		dev_info_ratelimited(p->port.dev, "got rx dma channels only\n");
++	}
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	/* start dma for rx*/
++	serial8250_start_rx_dma(p);
++#endif
+ 	return 0;
+-err:
+-	dma_release_channel(dma->txchan);
+-release_rx:
++
++err_rx:
+ 	dma_release_channel(dma->rxchan);
+ 	return ret;
+ }
+@@ -257,15 +377,18 @@ void serial8250_release_dma(struct uart_8250_port *p)
+ 			  dma->rx_addr);
+ 	dma_release_channel(dma->rxchan);
+ 	dma->rxchan = NULL;
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++	dma->rx_running = 0;
++#endif
+ 	/* Release TX resources */
+-	dmaengine_terminate_sync(dma->txchan);
+-	dma_unmap_single(dma->txchan->device->dev, dma->tx_addr,
+-			 UART_XMIT_SIZE, DMA_TO_DEVICE);
+-	dma_release_channel(dma->txchan);
+-	dma->txchan = NULL;
+-	dma->tx_running = 0;
+-
++	if (dma->txchan) {
++		dmaengine_terminate_all(dma->txchan);
++		dma_unmap_single(dma->txchan->device->dev, dma->tx_addr,
++				 UART_XMIT_SIZE, DMA_TO_DEVICE);
++		dma_release_channel(dma->txchan);
++		dma->txchan = NULL;
++		dma->tx_running = 0;
++	}
+ 	dev_dbg_ratelimited(p->port.dev, "dma channels released\n");
+ }
+ EXPORT_SYMBOL_GPL(serial8250_release_dma);
+diff --git a/drivers/tty/serial/8250/8250_dw.c b/drivers/tty/serial/8250/8250_dw.c
+index c73d0eddd..2882547b8 100644
+--- a/drivers/tty/serial/8250/8250_dw.c
++++ b/drivers/tty/serial/8250/8250_dw.c
+@@ -32,6 +32,7 @@
+ /* Offsets for the DesignWare specific registers */
+ #define DW_UART_USR	0x1f /* UART Status Register */
+ #define DW_UART_DLF	0xc0 /* Divisor Latch Fraction Register */
++#define DW_UART_RFL	0x21 /* UART Receive Fifo Level Register */
+ #define DW_UART_CPR	0xf4 /* Component Parameter Register */
+ #define DW_UART_UCV	0xf8 /* UART Component Version */
+ 
+@@ -64,7 +65,11 @@ struct dw8250_data {
+ 	struct clk		*pclk;
+ 	struct reset_control	*rst;
+ 	struct uart_8250_dma	dma;
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++	int			irq;
++	int			irq_wake;
++	int			enable_wakeup;
++#endif
+ 	unsigned int		skip_autocfg:1;
+ 	unsigned int		uart_16550_compatible:1;
+ };
+@@ -251,10 +256,9 @@ static unsigned int dw8250_serial_in32be(struct uart_port *p, int offset)
+ 
+ static int dw8250_handle_irq(struct uart_port *p)
+ {
+-	struct uart_8250_port *up = up_to_u8250p(p);
+ 	struct dw8250_data *d = p->private_data;
+ 	unsigned int iir = p->serial_in(p, UART_IIR);
+-	unsigned int status;
++	unsigned int status, usr, rfl;
+ 	unsigned long flags;
+ 
+ 	/*
+@@ -263,15 +267,13 @@ static int dw8250_handle_irq(struct uart_port *p)
+ 	 * data available.  If we see such a case then we'll do a bogus
+ 	 * read.  If we don't do this then the "RX TIMEOUT" interrupt will
+ 	 * fire forever.
+-	 *
+-	 * This problem has only been observed so far when not in DMA mode
+-	 * so we limit the workaround only to non-DMA mode.
+ 	 */
+-	if (!up->dma && ((iir & 0x3f) == UART_IIR_RX_TIMEOUT)) {
++	if ((iir & 0x3f) == UART_IIR_RX_TIMEOUT) {
+ 		spin_lock_irqsave(&p->lock, flags);
++		usr = p->serial_in(p, d->usr_reg);
+ 		status = p->serial_in(p, UART_LSR);
+-
+-		if (!(status & (UART_LSR_DR | UART_LSR_BI)))
++		rfl = p->serial_in(p, DW_UART_RFL);
++		if (!(status & (UART_LSR_DR | UART_LSR_BI)) && !(usr & 0x1) && (rfl == 0))
+ 			(void) p->serial_in(p, UART_RX);
+ 
+ 		spin_unlock_irqrestore(&p->lock, flags);
+@@ -308,12 +310,44 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
+ 	unsigned int baud = tty_termios_baud_rate(termios);
+ 	struct dw8250_data *d = p->private_data;
+ 	long rate;
++#ifdef CONFIG_ARCH_ROCKCHIP
++	unsigned int rate_temp, diff;
++#endif
+ 	int ret;
+ 
+ 	if (IS_ERR(d->clk))
+ 		goto out;
+ 
+ 	clk_disable_unprepare(d->clk);
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (baud <= 115200)
++		rate = 24000000;
++	else if (baud == 230400)
++		rate = baud * 16 * 2;
++	else if (baud == 1152000)
++		rate = baud * 16 * 2;
++	else
++		rate = baud * 16;
++
++	ret = clk_set_rate(d->clk, rate);
++	rate_temp = clk_get_rate(d->clk);
++	diff = rate * 20 / 1000;
++	/*
++	 * If rate_temp is not equal to rate, is means fractional frequency
++	 * division is failed. Then use Integer frequency division, and
++	 * the buad rate error must be under -+2%
++	 */
++	if ((rate_temp < rate) && ((rate - rate_temp) > diff)) {
++		ret = clk_set_rate(d->clk, rate + diff);
++		rate_temp = clk_get_rate(d->clk);
++		if ((rate_temp < rate) && ((rate - rate_temp) > diff))
++			dev_info(p->dev, "set rate:%ld, but get rate:%d\n",
++				 rate, rate_temp);
++		else if ((rate < rate_temp) && ((rate_temp - rate) > diff))
++			dev_info(p->dev, "set rate:%ld, but get rate:%d\n",
++				 rate, rate_temp);
++	}
++#else
+ 	rate = clk_round_rate(d->clk, baud * 16);
+ 	if (rate < 0)
+ 		ret = rate;
+@@ -321,6 +355,7 @@ static void dw8250_set_termios(struct uart_port *p, struct ktermios *termios,
+ 		ret = -ENOENT;
+ 	else
+ 		ret = clk_set_rate(d->clk, rate);
++#endif
+ 	clk_prepare_enable(d->clk);
+ 
+ 	if (!ret)
+@@ -472,6 +507,15 @@ static void dw8250_setup_port(struct uart_port *p)
+ 	}
+ 
+ 	reg = dw8250_readl_ext(p, DW_UART_CPR);
++
++#ifdef CONFIG_ARCH_ROCKCHIP
++	/*
++	 * The UART CPR may be 0 of some rockchip soc,
++	 * but it supports fifo and AFC, fifo entry is 32 default.
++	 */
++	if (reg == 0)
++		reg = 0x00023ff2;
++#endif
+ 	if (!reg)
+ 		return;
+ 
+@@ -480,6 +524,9 @@ static void dw8250_setup_port(struct uart_port *p)
+ 		p->type = PORT_16550A;
+ 		p->flags |= UPF_FIXED_TYPE;
+ 		p->fifosize = DW_UART_CPR_FIFO_SIZE(reg);
++#ifdef CONFIG_ARCH_ROCKCHIP
++		up->tx_loadsz = p->fifosize * 3 / 4;
++#endif
+ 		up->capabilities = UART_CAP_FIFO;
+ 	}
+ 
+@@ -536,6 +583,9 @@ static int dw8250_probe(struct platform_device *pdev)
+ 
+ 	data->dma.fn = dw8250_fallback_dma_filter;
+ 	data->usr_reg = DW_UART_USR;
++#ifdef CONFIG_ARCH_ROCKCHIP
++	data->irq	= irq;
++#endif
+ 	p->private_data = data;
+ 
+ 	data->uart_16550_compatible = device_property_read_bool(dev,
+@@ -576,6 +626,13 @@ static int dw8250_probe(struct platform_device *pdev)
+ 		data->msr_mask_off |= UART_MSR_TERI;
+ 	}
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (device_property_read_bool(p->dev, "wakeup-source"))
++		data->enable_wakeup = 1;
++	else
++		data->enable_wakeup = 0;
++#endif
++
+ 	/* Always ask for fixed clock rate from a property. */
+ 	device_property_read_u32(dev, "clock-frequency", &p->uartclk);
+ 
+@@ -643,6 +700,11 @@ static int dw8250_probe(struct platform_device *pdev)
+ 		goto err_reset;
+ 	}
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (data->enable_wakeup)
++		device_init_wakeup(&pdev->dev, true);
++#endif
++
+ 	platform_set_drvdata(pdev, data);
+ 
+ 	pm_runtime_set_active(dev);
+@@ -680,6 +742,11 @@ static int dw8250_remove(struct platform_device *pdev)
+ 	if (!IS_ERR(data->clk))
+ 		clk_disable_unprepare(data->clk);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (data->enable_wakeup)
++		device_init_wakeup(&pdev->dev, false);
++#endif
++
+ 	pm_runtime_disable(&pdev->dev);
+ 	pm_runtime_put_noidle(&pdev->dev);
+ 
+@@ -691,6 +758,13 @@ static int dw8250_suspend(struct device *dev)
+ {
+ 	struct dw8250_data *data = dev_get_drvdata(dev);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (device_may_wakeup(dev)) {
++		if (!enable_irq_wake(data->irq))
++			data->irq_wake = 1;
++		return 0;
++	}
++#endif
+ 	serial8250_suspend_port(data->line);
+ 
+ 	return 0;
+@@ -700,6 +774,15 @@ static int dw8250_resume(struct device *dev)
+ {
+ 	struct dw8250_data *data = dev_get_drvdata(dev);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (device_may_wakeup(dev)) {
++		if (data->irq_wake) {
++			disable_irq_wake(data->irq);
++			data->irq_wake = 0;
++		}
++		return 0;
++	}
++#endif
+ 	serial8250_resume_port(data->line);
+ 
+ 	return 0;
+diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
+index 5ec50ccfb..3fff24bf5 100644
+--- a/drivers/tty/serial/8250/8250_port.c
++++ b/drivers/tty/serial/8250/8250_port.c
+@@ -1511,6 +1511,9 @@ static inline void __do_stop_tx(struct uart_8250_port *p)
+ {
+ 	if (p->ier & UART_IER_THRI) {
+ 		p->ier &= ~UART_IER_THRI;
++#ifdef CONFIG_ARCH_ROCKCHIP
++		p->ier &= ~UART_IER_PTIME;
++#endif
+ 		serial_out(p, UART_IER, p->ier);
+ 		serial8250_rpm_put_tx(p);
+ 	}
+@@ -1559,11 +1562,19 @@ static inline void __start_tx(struct uart_port *port)
+ {
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (up->dma && up->dma->txchan && !up->dma->tx_dma(up))
++		return;
++#else
+ 	if (up->dma && !up->dma->tx_dma(up))
+ 		return;
++#endif
+ 
+ 	if (!(up->ier & UART_IER_THRI)) {
+ 		up->ier |= UART_IER_THRI;
++#ifdef CONFIG_ARCH_ROCKCHIP
++		up->ier |= UART_IER_PTIME;
++#endif
+ 		serial_port_out(port, UART_IER, up->ier);
+ 
+ 		if (up->bugs & UART_BUG_TXEN) {
+@@ -1862,6 +1873,12 @@ EXPORT_SYMBOL_GPL(serial8250_modem_status);
+ 
+ static bool handle_rx_dma(struct uart_8250_port *up, unsigned int iir)
+ {
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if ((iir & 0xf) != UART_IIR_RX_TIMEOUT)
++		return 0;
++	else
++		return up->dma->rx_dma(up);
++#else
+ 	switch (iir & 0x3f) {
+ 	case UART_IIR_RX_TIMEOUT:
+ 		serial8250_rx_dma_flush(up);
+@@ -1870,6 +1887,7 @@ static bool handle_rx_dma(struct uart_8250_port *up, unsigned int iir)
+ 		return true;
+ 	}
+ 	return up->dma->rx_dma(up);
++#endif
+ }
+ 
+ /*
+@@ -1903,14 +1921,46 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
+ 		skip_rx = true;
+ 
+ 	if (status & (UART_LSR_DR | UART_LSR_BI) && !skip_rx) {
++#ifdef CONFIG_ARCH_ROCKCHIP
++		int dma_err = -1;
++
++		if (up->dma && up->dma->rxchan)
++			dma_err = handle_rx_dma(up, iir);
++
++		if (!up->dma || dma_err)
++			status = serial8250_rx_chars(up, status);
++#else
+ 		if (!up->dma || handle_rx_dma(up, iir))
+ 			status = serial8250_rx_chars(up, status);
++#endif
+ 	}
+ 	serial8250_modem_status(up);
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if ((!up->dma || (up->dma && (!up->dma->txchan || up->dma->tx_err))) &&
++	    ((iir & 0xf) == UART_IIR_THRI))
++		serial8250_tx_chars(up);
++#else
+ 	if ((!up->dma || up->dma->tx_err) && (status & UART_LSR_THRE) &&
+ 		(up->ier & UART_IER_THRI))
+ 		serial8250_tx_chars(up);
++#endif
++
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (status & UART_LSR_BRK_ERROR_BITS) {
++
++		if (status & UART_LSR_OE)
++			pr_err("%s: Overrun error!\n", port->name);
++		if (status & UART_LSR_PE)
++			pr_err("%s: Parity error!\n", port->name);
++		if (status & UART_LSR_FE)
++			pr_err("%s: Frame error!\n", port->name);
++		if (status & UART_LSR_BI)
++			pr_err("%s: Break interrupt!\n", port->name);
+ 
++		pr_err("%s: maybe rx pin is low or baudrate is not correct!\n",
++			port->name);
++	}
++#endif
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 	return 1;
+ }
+@@ -2410,8 +2460,13 @@ int serial8250_do_startup(struct uart_port *port)
+ 	if (up->dma) {
+ 		retval = serial8250_request_dma(up);
+ 		if (retval) {
++#ifdef CONFIG_ARCH_ROCKCHIP
++			pr_warn_ratelimited("%s - failed to request DMA, use interrupt mode\n",
++					    port->name);
++#else
+ 			pr_warn_ratelimited("%s - failed to request DMA\n",
+ 					    port->name);
++#endif
+ 			up->dma = NULL;
+ 		}
+ 	}
+@@ -2622,6 +2677,10 @@ void serial8250_do_set_divisor(struct uart_port *port, unsigned int baud,
+ {
+ 	struct uart_8250_port *up = up_to_u8250p(port);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	serial_port_out(port, UART_MCR, UART_MCR_LOOP);
++#endif
++
+ 	/* Workaround to enable 115200 baud on OMAP1510 internal ports */
+ 	if (is_omap1510_8250(up)) {
+ 		if (baud == 115200) {
+@@ -2641,6 +2700,17 @@ void serial8250_do_set_divisor(struct uart_port *port, unsigned int baud,
+ 		serial_port_out(port, UART_LCR, up->lcr | UART_LCR_DLAB);
+ 
+ 	serial_dl_write(up, quot);
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (quot != serial_dl_read(up))
++		dev_warn_ratelimited(port->dev, "ttyS%d set divisor fail, quot:%d != dll,dlh:%d\n",
++					serial_index(port), quot, serial_dl_read(up));
++#endif
++	if (port->type != PORT_16750)
++		serial_port_out(port, UART_LCR, up->lcr);	/* reset DLAB */
++
++#ifdef CONFIG_ARCH_ROCKCHIP
++	serial_port_out(port, UART_MCR, up->mcr);
++#endif
+ 
+ 	/* XR17V35x UARTs have an extra fractional divisor register (DLD) */
+ 	if (up->port.type == PORT_XR17V35X) {
+@@ -2771,6 +2841,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 	if ((termios->c_cflag & CREAD) == 0)
+ 		port->ignore_status_mask |= UART_LSR_DR;
+ 
++#ifndef CONFIG_ARCH_ROCKCHIP
+ 	/*
+ 	 * CTS flow control flag and modem status interrupts
+ 	 */
+@@ -2784,6 +2855,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 		up->ier |= UART_IER_RTOIE;
+ 
+ 	serial_port_out(port, UART_IER, up->ier);
++#endif
+ 
+ 	if (up->capabilities & UART_CAP_EFR) {
+ 		unsigned char efr = 0;
+@@ -2802,16 +2874,25 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 			serial_port_out(port, UART_EFR, efr);
+ 	}
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	/* Reset uart to make sure it is idle, then set buad rate */
++	serial_port_out(port, 0x88 >> 2, 0x7);
++#endif
++
+ 	serial8250_set_divisor(port, baud, quot, frac);
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++	up->fcr = UART_FCR_ENABLE_FIFO | UART_FCR_T_TRIG_10 | UART_FCR_R_TRIG_10;
++#endif
+ 	/*
+ 	 * LCR DLAB must be set to enable 64-byte FIFO mode. If the FCR
+ 	 * is written without DLAB set, this mode will be disabled.
+ 	 */
+-	if (port->type == PORT_16750)
++	if (port->type == PORT_16750) {
+ 		serial_port_out(port, UART_FCR, up->fcr);
++		serial_port_out(port, UART_LCR, up->lcr);	/* reset DLAB */
++	}
+ 
+-	serial_port_out(port, UART_LCR, up->lcr);	/* reset DLAB */
+ 	if (port->type != PORT_16750) {
+ 		/* emulated UARTs (Lucent Venus 167x) need two steps */
+ 		if (up->fcr & UART_FCR_ENABLE_FIFO)
+@@ -2819,6 +2900,23 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 		serial_port_out(port, UART_FCR, up->fcr);	/* set fcr */
+ 	}
+ 	serial8250_set_mctrl(port, port->mctrl);
++
++#ifdef CONFIG_ARCH_ROCKCHIP
++	/*
++	 * CTS flow control flag and modem status interrupts
++	 */
++	up->ier &= ~UART_IER_MSI;
++	if (!(up->bugs & UART_BUG_NOMSR) &&
++			UART_ENABLE_MS(&up->port, termios->c_cflag))
++		up->ier |= UART_IER_MSI;
++	if (up->capabilities & UART_CAP_UUE)
++		up->ier |= UART_IER_UUE;
++	if (up->capabilities & UART_CAP_RTOIE)
++		up->ier |= UART_IER_RTOIE;
++
++	serial_port_out(port, UART_IER, up->ier);
++#endif
++
+ 	spin_unlock_irqrestore(&port->lock, flags);
+ 	serial8250_rpm_put(up);
+ 
+diff --git a/drivers/tty/sysrq.c b/drivers/tty/sysrq.c
+index cee027480..8b4a46ae7 100644
+--- a/drivers/tty/sysrq.c
++++ b/drivers/tty/sysrq.c
+@@ -134,17 +134,10 @@ static struct sysrq_key_op sysrq_unraw_op = {
+ 
+ static void sysrq_handle_crash(int key)
+ {
+-	char *killer = NULL;
+-
+-	/* we need to release the RCU read lock here,
+-	 * otherwise we get an annoying
+-	 * 'BUG: sleeping function called from invalid context'
+-	 * complaint from the kernel before the panic.
+-	 */
++	/* release the RCU read lock before crashing */
+ 	rcu_read_unlock();
+-	panic_on_oops = 1;	/* force panic */
+-	wmb();
+-	*killer = 1;
++
++	panic("sysrq triggered crash\n");
+ }
+ static struct sysrq_key_op sysrq_crash_op = {
+ 	.handler	= sysrq_handle_crash,
+diff --git a/include/uapi/linux/serial_reg.h b/include/uapi/linux/serial_reg.h
+index f51bc8f36..95708a1f5 100644
+--- a/include/uapi/linux/serial_reg.h
++++ b/include/uapi/linux/serial_reg.h
+@@ -30,6 +30,7 @@
+  * Sleep mode for ST16650 and TI16750.  For the ST16650, EFR[4]=1
+  */
+ #define UART_IERX_SLEEP		0x10 /* Enable sleep mode */
++#define UART_IER_PTIME		0x80 /* Enable programmable THRE Interrupt */
+ 
+ #define UART_IIR	2	/* In:  Interrupt ID Register */
+ #define UART_IIR_NO_INT		0x01 /* No interrupts pending */
+-- 
+2.37.0 (Apple Git-136)
+

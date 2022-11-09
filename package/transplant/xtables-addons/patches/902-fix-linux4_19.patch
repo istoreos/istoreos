@@ -1,0 +1,28 @@
+--- a/extensions/compat_xtables.h
++++ b/extensions/compat_xtables.h
+@@ -80,6 +80,11 @@ static inline void proc_remove(struct pr
+ #	define ip_route_me_harder(xnet, xskb, xaddrtype) ip_route_me_harder((xskb), (xaddrtype))
+ #endif
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
++#       define ip6_route_me_harder(xnet, xskb) ip6_route_me_harder(xnet, (xskb)->sk, xskb)
++#       define ip_route_me_harder(xnet, xskb, xaddrtype) ip_route_me_harder(xnet, (xskb)->sk, (xskb), (xaddrtype))
++#endif
++
+ static inline struct net *par_net(const struct xt_action_param *par)
+ {
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0)
+--- a/extensions/xt_DNETMAP.c
++++ b/extensions/xt_DNETMAP.c
+@@ -367,7 +367,11 @@ dnetmap_tg(struct sk_buff *skb, const st
+ 	__be32 prenat_ip, postnat_ip, prenat_ip_prev;
+ 	const struct xt_DNETMAP_tginfo *tginfo = par->targinfo;
+ 	const struct nf_nat_range *mr = &tginfo->prefix;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,19,0)
++	struct nf_nat_range2 newrange;
++#else
+ 	struct nf_nat_range newrange;
++#endif
+ 	struct dnetmap_entry *e;
+ 	struct dnetmap_prefix *p;
+ 	__s32 jttl;

@@ -1,0 +1,110 @@
+From b743f60b2c5dcb84c45a0b8e50fad93c422acc53 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 10:55:30 +0800
+Subject: [PATCH 08/46] gpio
+
+---
+ drivers/gpio/Kconfig        |  9 ++++++++-
+ drivers/gpio/Makefile       |  1 +
+ drivers/gpio/gpiolib.c      | 19 +++++++++++++++----
+ include/linux/gpio/driver.h |  8 ++++++++
+ 4 files changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index 2c34e9537..e5c9ef4d2 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -12,7 +12,6 @@ config ARCH_HAVE_CUSTOM_GPIO_H
+ 
+ menuconfig GPIOLIB
+ 	bool "GPIO Support"
+-	select ANON_INODES
+ 	help
+ 	  This enables GPIO support through the generic GPIO library.
+ 	  You only need to enable this, if you also want to enable
+@@ -439,6 +438,14 @@ config GPIO_REG
+ 	  A 32-bit single register GPIO fixed in/out implementation.  This
+ 	  can be used to represent any register as a set of GPIO signals.
+ 
++config GPIO_ROCKCHIP
++	tristate "Rockchip GPIO support"
++	depends on ARCH_ROCKCHIP || COMPILE_TEST
++	select GPIOLIB_IRQCHIP
++	default ARCH_ROCKCHIP
++	help
++	  Say yes here to support GPIO on Rockchip SoCs.
++
+ config GPIO_SPEAR_SPICS
+ 	bool "ST SPEAr13xx SPI Chip Select as GPIO support"
+ 	depends on PLAT_SPEAR
+diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
+index c256aff66..644ce79e8 100644
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -108,6 +108,7 @@ obj-$(CONFIG_GPIO_RC5T583)	+= gpio-rc5t583.o
+ obj-$(CONFIG_GPIO_RDC321X)	+= gpio-rdc321x.o
+ obj-$(CONFIG_GPIO_RCAR)		+= gpio-rcar.o
+ obj-$(CONFIG_GPIO_REG)		+= gpio-reg.o
++obj-$(CONFIG_GPIO_ROCKCHIP)	+= gpio-rockchip.o
+ obj-$(CONFIG_ARCH_SA1100)	+= gpio-sa1100.o
+ obj-$(CONFIG_GPIO_SCH)		+= gpio-sch.o
+ obj-$(CONFIG_GPIO_SCH311X)	+= gpio-sch311x.o
+diff --git a/drivers/gpio/gpiolib.c b/drivers/gpio/gpiolib.c
+index 12472b84a..602dce9a1 100644
+--- a/drivers/gpio/gpiolib.c
++++ b/drivers/gpio/gpiolib.c
+@@ -1909,7 +1909,11 @@ static int gpiochip_add_irqchip(struct gpio_chip *gpiochip,
+ 		type = IRQ_TYPE_NONE;
+ 	}
+ 
+-	gpiochip->to_irq = gpiochip_to_irq;
++#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
++	if (!gpiochip->to_irq)
++#endif
++		gpiochip->to_irq = gpiochip_to_irq;
++
+ 	gpiochip->irq.default_type = type;
+ 	gpiochip->irq.lock_key = lock_key;
+ 	gpiochip->irq.request_key = request_key;
+@@ -1919,9 +1923,16 @@ static int gpiochip_add_irqchip(struct gpio_chip *gpiochip,
+ 	else
+ 		ops = &gpiochip_domain_ops;
+ 
+-	gpiochip->irq.domain = irq_domain_add_simple(np, gpiochip->ngpio,
+-						     gpiochip->irq.first,
+-						     ops, gpiochip);
++#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
++	if (gpiochip->irq.parent_domain)
++		gpiochip->irq.domain = irq_domain_add_hierarchy(gpiochip->irq.parent_domain,
++								0, gpiochip->ngpio,
++								np, ops, gpiochip);
++	else
++#endif
++		gpiochip->irq.domain = irq_domain_add_simple(np, gpiochip->ngpio,
++							     gpiochip->irq.first,
++							     ops, gpiochip);
+ 	if (!gpiochip->irq.domain)
+ 		return -EINVAL;
+ 
+diff --git a/include/linux/gpio/driver.h b/include/linux/gpio/driver.h
+index a4d5eb377..6e0774d18 100644
+--- a/include/linux/gpio/driver.h
++++ b/include/linux/gpio/driver.h
+@@ -47,6 +47,14 @@ struct gpio_irq_chip {
+ 	 */
+ 	const struct irq_domain_ops *domain_ops;
+ 
++#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
++	/**
++	 * @parent_domain:
++	 *
++	 */
++	struct irq_domain *parent_domain;
++#endif
++
+ 	/**
+ 	 * @handler:
+ 	 *
+-- 
+2.37.0 (Apple Git-136)
+

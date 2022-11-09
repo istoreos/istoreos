@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config DM_POWER_DELIVERY
+	bool "Enable driver model power delivery support"
+	depends on DM
+	help
+	  This adds a simple uclass for power delivery.
+
+config TYPEC_TCPM
+	tristate "USB Type-C Port Controller Manager"
+	depends on DM && DM_POWER_DELIVERY
+	help
+	  The Type-C Port Controller Manager provides a USB PD and USB Type-C
+	  state machine for use with Type-C Port Controllers.
+
+config TYPEC_TCPCI
+	tristate "Type-C Port Controller Interface driver"
+	depends on DM && DM_POWER_DELIVERY && DM_I2C
+	help
+	  Type-C Port Controller driver for TCPCI-compliant controller.
+
+if TYPEC_TCPCI
+
+config TYPEC_HUSB311
+	tristate "Hynetek HUSB311 Type-C chip driver"
+	depends on DM && DM_POWER_DELIVERY && DM_I2C
+	help
+	  Hynetek HUSB311 Type-C chip driver that works with
+	  Type-C Port Controller Manager to provide USB PD and USB
+	  Type-C functionalities.
+
+endif # TYPEC_TCPCI
+
+config TYPEC_FUSB302
+	tristate "Fairchild FUSB302 Type-C chip driver"
+	depends on DM && DM_POWER_DELIVERY && DM_I2C
+	help
+	  The Fairchild FUSB302 Type-C chip driver that works with
+	  Type-C Port Controller Manager to provide USB PD and USB
+	  Type-C functionalities.

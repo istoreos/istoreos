@@ -1,0 +1,58 @@
+From fcd71ff6e3e8b0152d39c6608ce838353a13121a Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:48:53 +0800
+Subject: [PATCH 39/46] ata
+
+---
+ drivers/ata/libata-core.c | 6 +++++-
+ drivers/ata/libata-eh.c   | 9 +++++++++
+ 2 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/ata/libata-core.c b/drivers/ata/libata-core.c
+index 3c779a752..ee9ddd397 100644
+--- a/drivers/ata/libata-core.c
++++ b/drivers/ata/libata-core.c
+@@ -4145,8 +4145,12 @@ int sata_link_hardreset(struct ata_link *link, const unsigned long *timing,
+ 
+ 	/* Couldn't find anything in SATA I/II specs, but AHCI-1.1
+ 	 * 10.4.2 says at least 1 ms.
++	 * Add 1000ms delay to support JMB575 and INIC-6651.
+ 	 */
+-	ata_msleep(link->ap, 1);
++	if (ata_is_host_link(link))
++		ata_msleep(link->ap, 1000);
++	else
++		ata_msleep(link->ap, 1);
+ 
+ 	/* bring link back */
+ 	rc = sata_link_resume(link, timing, deadline);
+diff --git a/drivers/ata/libata-eh.c b/drivers/ata/libata-eh.c
+index 096f29a2f..f596a85f7 100644
+--- a/drivers/ata/libata-eh.c
++++ b/drivers/ata/libata-eh.c
+@@ -48,6 +48,7 @@
+ 
+ #include <trace/events/libata.h>
+ #include "libata.h"
++#include "ahci.h"
+ 
+ enum {
+ 	/* speed down verdicts */
+@@ -2979,6 +2980,14 @@ int ata_eh_reset(struct ata_link *link, int classify,
+ 		ata_link_warn(link,
+ 			      "link online but %d devices misclassified, "
+ 			      "device detection might fail\n", nr_unknown);
++	} else if (ata_is_host_link(link)) {
++		ata_link_err(link, "ready = %x sstatus = %x\n", ahci_check_ready(link), sstatus);
++		if (!ahci_check_ready(link) && try < max_tries && sstatus != 3) {
++			ata_link_err(link, "rk: link port busy, retrying %d\n", try);
++			failed_link = link;
++			rc = -EAGAIN;
++			goto fail;
++		}
+ 	}
+ 
+ 	/* reset successful, schedule revalidation */
+-- 
+2.37.0 (Apple Git-136)
+

@@ -1,0 +1,74 @@
+#
+# Copyright (c) 2020, Rockchip Electronics Co., Ltd.
+# Written by Elon Zhang <zhangzj@rock-chips.com>
+#
+# SPDX-License-Identifier:      GPL-2.0+
+#
+
+OP-TEE Client in U-Boot
+==========================
+OP-TEE Client in U-Boot is responsible for communication managerment
+between Secure World(OP-TEE) and Non-Secure World(U-Boot).
+
+
+Change Log
+==========================
+2020.8 Update OP-TEE message protocol
+
+OP-TEE message protocol is updated from version 1 to version 2
+on platform RK312x/RK322x/RK3288/RK3399/RK3399Pro/RK3368/RK3328/RK3228H.
+
+This message protocol update involves some software component, including
+OP-TEE(trust.img), U-Boot, Kernel, binary&library in Android/Linux.
+The software component above **MUST** be consistent because OP-TEE message
+protocol v1 and v2 are not compatible, otherwise TEE related function
+will **NOT** work normally.
+
+One Very Important Change:
+
+	MMU policy for share memory between REE and TEE
+	+-------+-----------------+----------------+
+	| arch  |  before update  |  after update  |
+	+-------+-----------------+----------------+
+	| arm64 | dcache enabled  | dcache enabled |
+	+-------+-----------------+----------------+
+	|  arm  | dcache disabled | dcache enabled |
+	+-------+-----------------+----------------+
+
+Related commits are shown below:
+
+1. rkbin
+	c20711e rk3036: tee: update optee version to v2.00
+	cb7d8f9 rk322x: tee with ta: update optee version to v2.11
+	4f9488e rk3128x: tee with ta: update optee version to v2.11
+	6d6473c rk312x: tee with ta: update optee version to v2.01
+	c0b025b rk3288: tee with ta: update optee version to v2.01
+	664ccee rk3228h/rk3328: bl32: update version to 2.01
+	6334115 rk3368: bl32: update version to 2.01
+	ccf1bef rk3399pro: bl32: update version to 2.01
+	8c01e53 rk3399: bl32: update version to 2.01
+
+2. uboot
+	7a349fdcbd lib: optee_client: add optee initialize flag
+	74eb602743 lib: optee_client: update to new optee msg for optee v1 platform
+	102dfafc4a rochchip: board: map op-tee memory as dcache enabled
+	396e3049bd rochchip: board: only map op-tee share memory as dcache enabled
+
+3. kernel
+	1) 4.19
+		90928381ffa9 ARM: dts: rockchip: add firmware and optee node
+		d752a21c0853 arm64: dts: rockchip: add firmware and optee node
+		c31ab35ad86d ARM: rockchip_defconfig: enable CONFIG_TEE and CONFIG_OPTEE
+
+4. Android
+	1) Android 10
+	repo: android/rk/platform/vendor/rockchip/common
+		a515160d optee: v1 rebuild ca/ta to support new OP-TEE MSG
+		4fc68259 optee v1: arm&arm64: update tee-supplicant and libteec.so
+		a515160d optee: v1 rebuild ca/ta to support new OP-TEE MSG
+	repo: android/rk/hardware/rk29/weaver
+		26c9dd9b rebuild libRkTeeWeaver.v1.so for new OP-TEE MSG
+
+5. Linux
+	repo: linux/security/bin
+		f59085c optee_v1: lib: arm&arm64: update binary and library

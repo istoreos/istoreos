@@ -1,0 +1,1407 @@
+From 3d32c1f41efc43d4166a764e5cf6b5971056e8b7 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 10:35:32 +0800
+Subject: [PATCH 01/46] memory and cpu
+
+---
+ arch/arm64/include/asm/asm-uaccess.h |   7 +-
+ arch/arm64/include/asm/assembler.h   |  29 +++++
+ arch/arm64/include/asm/cacheflush.h  |  15 +++
+ arch/arm64/include/asm/memory.h      |  30 +++++
+ arch/arm64/include/asm/uaccess.h     |   7 --
+ arch/arm64/include/uapi/asm/setup.h  |   2 +-
+ arch/arm64/kernel/cpu_errata.c       |  48 +++-----
+ arch/arm64/kernel/cpuinfo.c          |  24 +++-
+ arch/arm64/kernel/entry.S            |   6 +-
+ arch/arm64/mm/cache.S                |  77 +++++++++++-
+ arch/arm64/mm/flush.c                |   1 +
+ arch/arm64/mm/init.c                 |   2 +
+ include/linux/cma.h                  |   4 +
+ include/linux/iommu.h                | 169 ++++++++++++++++++++++++++-
+ include/linux/irq.h                  |   6 +
+ include/linux/mm.h                   |  35 ++++++
+ include/linux/of_irq.h               |   1 +
+ include/linux/psci.h                 |   7 +-
+ include/linux/regmap.h               |   6 +
+ include/trace/events/iommu.h         | 115 ++++++++++++++++--
+ kernel/cpu.c                         |   7 ++
+ kernel/padata.c                      |   2 +-
+ mm/frame_vector.c                    |   2 +
+ mm/gup.c                             |   4 +
+ mm/madvise.c                         |   2 +
+ mm/migrate.c                         |   2 +-
+ mm/mincore.c                         |   2 +
+ mm/mlock.c                           |   2 +
+ mm/mmap.c                            |   1 +
+ mm/mprotect.c                        |   2 +
+ mm/mremap.c                          |   2 +
+ mm/msync.c                           |   2 +
+ 32 files changed, 553 insertions(+), 68 deletions(-)
+
+diff --git a/arch/arm64/include/asm/asm-uaccess.h b/arch/arm64/include/asm/asm-uaccess.h
+index 4128bec03..d8b2ce576 100644
+--- a/arch/arm64/include/asm/asm-uaccess.h
++++ b/arch/arm64/include/asm/asm-uaccess.h
+@@ -78,10 +78,9 @@ alternative_else_nop_endif
+ /*
+  * Remove the address tag from a virtual address, if present.
+  */
+-	.macro	clear_address_tag, dst, addr
+-	tst	\addr, #(1 << 55)
+-	bic	\dst, \addr, #(0xff << 56)
+-	csel	\dst, \dst, \addr, eq
++	.macro	untagged_addr, dst, addr
++	sbfx	\dst, \addr, #0, #56
++	and	\dst, \dst, \addr
+ 	.endm
+ 
+ #endif
+diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+index fc3d26c95..301894317 100644
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -23,6 +23,8 @@
+ #ifndef __ASM_ASSEMBLER_H
+ #define __ASM_ASSEMBLER_H
+ 
++#include <asm-generic/export.h>
++
+ #include <asm/asm-offsets.h>
+ #include <asm/cpufeature.h>
+ #include <asm/debug-monitors.h>
+@@ -79,6 +81,18 @@
+ 	msr	daif, \flags
+ 	.endm
+ 
++/*
++ * Save/disable and restore interrupts.
++ */
++	.macro	save_and_disable_irqs, olddaif
++	mrs	\olddaif, daif
++	disable_irq
++	.endm
++
++	.macro	restore_irqs, olddaif
++	msr	daif, \olddaif
++	.endm
++
+ 	.macro	enable_dbg
+ 	msr	daifclr, #8
+ 	.endm
+@@ -144,6 +158,14 @@
+ 	csdb
+ 	.endm
+ 
++/*
++ * Speculation barrier
++ */
++	.macro	sb
++	dsb	nsh
++	isb
++	.endm
++
+ /*
+  * NOP sequence
+  */
+@@ -495,6 +517,13 @@ USER(\label, ic	ivau, \tmp2)			// invalidate I line PoU
+ #else
+ #define NOKPROBE(x)
+ #endif
++
++#ifdef CONFIG_KASAN
++#define EXPORT_SYMBOL_NOKASAN(name)
++#else
++#define EXPORT_SYMBOL_NOKASAN(name)	EXPORT_SYMBOL(name)
++#endif
++
+ 	/*
+ 	 * Emit a 64-bit absolute little endian symbol reference in a way that
+ 	 * ensures that it will be resolved at build time, even when building a
+diff --git a/arch/arm64/include/asm/cacheflush.h b/arch/arm64/include/asm/cacheflush.h
+index a449a1c60..a4fa4b507 100644
+--- a/arch/arm64/include/asm/cacheflush.h
++++ b/arch/arm64/include/asm/cacheflush.h
+@@ -41,6 +41,10 @@
+  *	the implementation assumes non-aliasing VIPT D-cache and (aliasing)
+  *	VIPT I-cache.
+  *
++ *	flush_cache_all()
++ *
++ *		Unconditionally clean and invalidate the entire cache.
++ *
+  *	flush_cache_mm(mm)
+  *
+  *		Clean and invalidate all user space cache entries
+@@ -72,8 +76,10 @@
+  *		- kaddr  - page address
+  *		- size   - region size
+  */
++extern void flush_cache_all(void);
+ extern void __flush_icache_range(unsigned long start, unsigned long end);
+ extern int  invalidate_icache_range(unsigned long start, unsigned long end);
++extern void __flush_dcache_all(void);
+ extern void __flush_dcache_area(void *addr, size_t len);
+ extern void __inval_dcache_area(void *addr, size_t len);
+ extern void __clean_dcache_area_poc(void *addr, size_t len);
+@@ -126,6 +132,15 @@ static inline void flush_cache_range(struct vm_area_struct *vma,
+ extern void __dma_map_area(const void *, size_t, int);
+ extern void __dma_unmap_area(const void *, size_t, int);
+ extern void __dma_flush_area(const void *, size_t);
++extern void __dma_inv_area(const void *start, size_t size);
++extern void __dma_clean_area(const void *start, size_t size);
++
++#define dmac_flush_range(start, end) \
++	__dma_flush_area(start, (void *)(end) - (void *)(start))
++#define dmac_inv_range(start, end) \
++	__dma_inv_area(start, (void *)(end) - (void *)(start))
++#define dmac_clean_range(start, end) \
++	__dma_clean_area(start, (void *)(end) - (void *)(start))
+ 
+ /*
+  * Copy user data from/to a page which is mapped into a different
+diff --git a/arch/arm64/include/asm/memory.h b/arch/arm64/include/asm/memory.h
+index 56562ff01..548948eb9 100644
+--- a/arch/arm64/include/asm/memory.h
++++ b/arch/arm64/include/asm/memory.h
+@@ -217,6 +217,36 @@ static inline unsigned long kaslr_offset(void)
+  */
+ #define PHYS_PFN_OFFSET	(PHYS_OFFSET >> PAGE_SHIFT)
+ 
++/*
++ * When dealing with data aborts, watchpoints, or instruction traps we may end
++ * up with a tagged userland pointer. Clear the tag to get a sane pointer to
++ * pass on to access_ok(), for instance.
++ */
++#define __untagged_addr(addr)	\
++	((__force __typeof__(addr))sign_extend64((__force u64)(addr), 55))
++
++#define untagged_addr(addr)	({					\
++	u64 __addr = (__force u64)(addr);					\
++	__addr &= __untagged_addr(__addr);				\
++	(__force __typeof__(addr))__addr;				\
++})
++
++#ifdef CONFIG_KASAN_SW_TAGS
++#define __tag_shifted(tag)	((u64)(tag) << 56)
++#define __tag_reset(addr)	__untagged_addr(addr)
++#define __tag_get(addr)		(__u8)((u64)(addr) >> 56)
++#else
++#define __tag_shifted(tag)	0UL
++#define __tag_reset(addr)	(addr)
++#define __tag_get(addr)		0
++#endif
++
++static inline const void *__tag_set(const void *addr, u8 tag)
++{
++	u64 __addr = (u64)addr & ~__tag_shifted(0xff);
++	return (const void *)(__addr | __tag_shifted(tag));
++}
++
+ /*
+  * Physical vs virtual RAM address space conversion.  These are
+  * private definitions which should NOT be used outside memory.h
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index e66b0fca9..6bd70f2b6 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -97,13 +97,6 @@ static inline unsigned long __range_ok(const void __user *addr, unsigned long si
+ 	return ret;
+ }
+ 
+-/*
+- * When dealing with data aborts, watchpoints, or instruction traps we may end
+- * up with a tagged userland pointer. Clear the tag to get a sane pointer to
+- * pass on to access_ok(), for instance.
+- */
+-#define untagged_addr(addr)		sign_extend64(addr, 55)
+-
+ #define access_ok(type, addr, size)	__range_ok(addr, size)
+ #define user_addr_max			get_fs
+ 
+diff --git a/arch/arm64/include/uapi/asm/setup.h b/arch/arm64/include/uapi/asm/setup.h
+index 5d703888f..85e34aa78 100644
+--- a/arch/arm64/include/uapi/asm/setup.h
++++ b/arch/arm64/include/uapi/asm/setup.h
+@@ -22,6 +22,6 @@
+ 
+ #include <linux/types.h>
+ 
+-#define COMMAND_LINE_SIZE	2048
++#define COMMAND_LINE_SIZE	4096
+ 
+ #endif
+diff --git a/arch/arm64/kernel/cpu_errata.c b/arch/arm64/kernel/cpu_errata.c
+index d0b7dd608..16af1bc01 100644
+--- a/arch/arm64/kernel/cpu_errata.c
++++ b/arch/arm64/kernel/cpu_errata.c
+@@ -17,7 +17,6 @@
+  */
+ 
+ #include <linux/arm-smccc.h>
+-#include <linux/psci.h>
+ #include <linux/types.h>
+ #include <linux/cpu.h>
+ #include <asm/cpu.h>
+@@ -159,9 +158,7 @@ static void install_bp_hardening_cb(bp_hardening_cb_t fn,
+ }
+ #endif	/* CONFIG_KVM_INDIRECT_VECTORS */
+ 
+-#include <uapi/linux/psci.h>
+ #include <linux/arm-smccc.h>
+-#include <linux/psci.h>
+ 
+ static void call_smc_arch_workaround_1(void)
+ {
+@@ -205,11 +202,8 @@ static int detect_harden_bp_fw(void)
+ 	struct arm_smccc_res res;
+ 	u32 midr = read_cpuid_id();
+ 
+-	if (psci_ops.smccc_version == SMCCC_VERSION_1_0)
+-		return -1;
+-
+-	switch (psci_ops.conduit) {
+-	case PSCI_CONDUIT_HVC:
++	switch (arm_smccc_1_1_get_conduit()) {
++	case SMCCC_CONDUIT_HVC:
+ 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_1, &res);
+ 		switch ((int)res.a0) {
+@@ -227,7 +221,7 @@ static int detect_harden_bp_fw(void)
+ 		}
+ 		break;
+ 
+-	case PSCI_CONDUIT_SMC:
++	case SMCCC_CONDUIT_SMC:
+ 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_1, &res);
+ 		switch ((int)res.a0) {
+@@ -301,11 +295,11 @@ void __init arm64_update_smccc_conduit(struct alt_instr *alt,
+ 
+ 	BUG_ON(nr_inst != 1);
+ 
+-	switch (psci_ops.conduit) {
+-	case PSCI_CONDUIT_HVC:
++	switch (arm_smccc_1_1_get_conduit()) {
++	case SMCCC_CONDUIT_HVC:
+ 		insn = aarch64_insn_get_hvc_value();
+ 		break;
+-	case PSCI_CONDUIT_SMC:
++	case SMCCC_CONDUIT_SMC:
+ 		insn = aarch64_insn_get_smc_value();
+ 		break;
+ 	default:
+@@ -344,12 +338,12 @@ void arm64_set_ssbd_mitigation(bool state)
+ 		return;
+ 	}
+ 
+-	switch (psci_ops.conduit) {
+-	case PSCI_CONDUIT_HVC:
++	switch (arm_smccc_1_1_get_conduit()) {
++	case SMCCC_CONDUIT_HVC:
+ 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_WORKAROUND_2, state, NULL);
+ 		break;
+ 
+-	case PSCI_CONDUIT_SMC:
++	case SMCCC_CONDUIT_SMC:
+ 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_WORKAROUND_2, state, NULL);
+ 		break;
+ 
+@@ -383,20 +377,13 @@ static bool has_ssbd_mitigation(const struct arm64_cpu_capabilities *entry,
+ 		goto out_printmsg;
+ 	}
+ 
+-	if (psci_ops.smccc_version == SMCCC_VERSION_1_0) {
+-		ssbd_state = ARM64_SSBD_UNKNOWN;
+-		if (!this_cpu_safe)
+-			__ssb_safe = false;
+-		return false;
+-	}
+-
+-	switch (psci_ops.conduit) {
+-	case PSCI_CONDUIT_HVC:
++	switch (arm_smccc_1_1_get_conduit()) {
++	case SMCCC_CONDUIT_HVC:
+ 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_2, &res);
+ 		break;
+ 
+-	case PSCI_CONDUIT_SMC:
++	case SMCCC_CONDUIT_SMC:
+ 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_2, &res);
+ 		break;
+@@ -1035,16 +1022,13 @@ static enum mitigation_state spectre_bhb_get_cpu_fw_mitigation_state(void)
+ 	int ret;
+ 	struct arm_smccc_res res;
+ 
+-	if (psci_ops.smccc_version == SMCCC_VERSION_1_0)
+-		return SPECTRE_VULNERABLE;
+-
+-	switch (psci_ops.conduit) {
+-	case PSCI_CONDUIT_HVC:
++	switch (arm_smccc_1_1_get_conduit()) {
++	case SMCCC_CONDUIT_HVC:
+ 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_3, &res);
+ 		break;
+ 
+-	case PSCI_CONDUIT_SMC:
++	case SMCCC_CONDUIT_SMC:
+ 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
+ 				  ARM_SMCCC_ARCH_WORKAROUND_3, &res);
+ 		break;
+@@ -1069,7 +1053,7 @@ static bool is_spectre_bhb_fw_affected(int scope)
+ {
+ 	static bool system_affected;
+ 	enum mitigation_state fw_state;
+-	bool has_smccc = (psci_ops.smccc_version >= SMCCC_VERSION_1_1);
++	bool has_smccc = (SMCCC_CONDUIT_NONE != arm_smccc_1_1_get_conduit());
+ 	static const struct midr_range spectre_bhb_firmware_mitigated_list[] = {
+ 		MIDR_ALL_VERSIONS(MIDR_CORTEX_A73),
+ 		MIDR_ALL_VERSIONS(MIDR_CORTEX_A75),
+diff --git a/arch/arm64/kernel/cpuinfo.c b/arch/arm64/kernel/cpuinfo.c
+index e379a0c34..c82ddcc68 100644
+--- a/arch/arm64/kernel/cpuinfo.c
++++ b/arch/arm64/kernel/cpuinfo.c
+@@ -34,6 +34,18 @@
+ #include <linux/sched.h>
+ #include <linux/smp.h>
+ #include <linux/delay.h>
++#include <linux/of_fdt.h>
++
++char* (*arch_read_hardware_id)(void);
++EXPORT_SYMBOL(arch_read_hardware_id);
++
++static const char *machine_name;
++
++unsigned int system_serial_low;
++EXPORT_SYMBOL(system_serial_low);
++
++unsigned int system_serial_high;
++EXPORT_SYMBOL(system_serial_high);
+ 
+ /*
+  * In case the boot CPU is hotpluggable, we record its initial state and
+@@ -125,7 +137,8 @@ static const char *const compat_hwcap2_str[] = {
+ static int c_show(struct seq_file *m, void *v)
+ {
+ 	int i, j;
+-	bool compat = personality(current->personality) == PER_LINUX32;
++	bool compat = personality(current->personality) == PER_LINUX32 ||
++		      is_compat_task();
+ 
+ 	for_each_online_cpu(i) {
+ 		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, i);
+@@ -176,6 +189,14 @@ static int c_show(struct seq_file *m, void *v)
+ 		seq_printf(m, "CPU revision\t: %d\n\n", MIDR_REVISION(midr));
+ 	}
+ 
++	if (!arch_read_hardware_id)
++		seq_printf(m, "Hardware\t: %s\n", machine_name);
++	else
++		seq_printf(m, "Hardware\t: %s\n", arch_read_hardware_id());
++
++	seq_printf(m, "Serial\t\t: %08x%08x\n",
++		   system_serial_high, system_serial_low);
++
+ 	return 0;
+ }
+ 
+@@ -383,6 +404,7 @@ void __init cpuinfo_store_boot_cpu(void)
+ 
+ 	boot_cpu_data = *info;
+ 	init_cpu_features(&boot_cpu_data);
++	machine_name = of_flat_dt_get_machine_name();
+ }
+ 
+ device_initcall(cpuinfo_regs_init);
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 85433a847..cb9bd91dd 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -374,6 +374,7 @@ alternative_else_nop_endif
+ 	add	sp, sp, #S_FRAME_SIZE		// restore sp
+ 	eret
+ 	.endif
++	sb
+ 	.endm
+ 
+ 	.macro	irq_stack_entry
+@@ -579,7 +580,7 @@ el1_da:
+ 	 */
+ 	mrs	x3, far_el1
+ 	inherit_daif	pstate=x23, tmp=x2
+-	clear_address_tag x0, x3
++	untagged_addr x0, x3
+ 	mov	x2, sp				// struct pt_regs
+ 	bl	do_mem_abort
+ 
+@@ -742,7 +743,7 @@ el0_da:
+ 	mrs	x26, far_el1
+ 	enable_daif
+ 	ct_user_exit
+-	clear_address_tag x0, x26
++	untagged_addr x0, x26
+ 	mov	x1, x25
+ 	mov	x2, sp
+ 	bl	do_mem_abort
+@@ -1053,6 +1054,7 @@ alternative_endif
+ 	.endif
+ 	add	sp, sp, #S_FRAME_SIZE		// restore sp
+ 	eret
++	sb
+ 	.endm
+ 
+ 	.macro	generate_tramp_vector,	kpti, bhb
+diff --git a/arch/arm64/mm/cache.S b/arch/arm64/mm/cache.S
+index a194fd0e8..7fdea6b62 100644
+--- a/arch/arm64/mm/cache.S
++++ b/arch/arm64/mm/cache.S
+@@ -25,6 +25,79 @@
+ #include <asm/alternative.h>
+ #include <asm/asm-uaccess.h>
+ 
++/*
++ *	__flush_dcache_all()
++ *
++ *	Flush the whole D-cache.
++ *
++ *	Corrupted registers: x0-x7, x9-x11
++ */
++ENTRY(__flush_dcache_all)
++	dmb	sy				// ensure ordering with previous memory accesses
++	mrs	x0, clidr_el1			// read clidr
++	and	x3, x0, #0x7000000		// extract loc from clidr
++	lsr	x3, x3, #23			// left align loc bit field
++	cbz	x3, finished			// if loc is 0, then no need to clean
++	mov	x10, #0				// start clean at cache level 0
++loop1:
++	add	x2, x10, x10, lsr #1		// work out 3x current cache level
++	lsr	x1, x0, x2			// extract cache type bits from clidr
++	and	x1, x1, #7			// mask of the bits for current cache only
++	cmp	x1, #2				// see what cache we have at this level
++	b.lt	skip				// skip if no cache, or just i-cache
++	save_and_disable_irqs x9		// make CSSELR and CCSIDR access atomic
++	msr	csselr_el1, x10			// select current cache level in csselr
++	isb					// isb to sych the new cssr&csidr
++	mrs	x1, ccsidr_el1			// read the new ccsidr
++	restore_irqs x9
++	and	x2, x1, #7			// extract the length of the cache lines
++	add	x2, x2, #4			// add 4 (line length offset)
++	mov	x4, #0x3ff
++	and	x4, x4, x1, lsr #3		// find maximum number on the way size
++	clz	w5, w4				// find bit position of way size increment
++	mov	x7, #0x7fff
++	and	x7, x7, x1, lsr #13		// extract max number of the index size
++loop2:
++	mov	x9, x4				// create working copy of max way size
++loop3:
++	lsl	x6, x9, x5
++	orr	x11, x10, x6			// factor way and cache number into x11
++	lsl	x6, x7, x2
++	orr	x11, x11, x6			// factor index number into x11
++	dc	cisw, x11			// clean & invalidate by set/way
++	subs	x9, x9, #1			// decrement the way
++	b.ge	loop3
++	subs	x7, x7, #1			// decrement the index
++	b.ge	loop2
++skip:
++	add	x10, x10, #2			// increment cache number
++	cmp	x3, x10
++	b.gt	loop1
++finished:
++	mov	x10, #0				// swith back to cache level 0
++	msr	csselr_el1, x10			// select current cache level in csselr
++	dsb	sy
++	isb
++	ret
++ENDPROC(__flush_dcache_all)
++
++/*
++ *	flush_cache_all()
++ *
++ *	Flush the entire cache system.  The data cache flush is now achieved
++ *	using atomic clean / invalidates working outwards from L1 cache. This
++ *	is done using Set/Way based cache maintenance instructions.  The
++ *	instruction cache can still be invalidated back to the point of
++ *	unification in a single instruction.
++ */
++ENTRY(flush_cache_all)
++	mov	x12, lr
++	bl	__flush_dcache_all
++	mov	x0, #0
++	ic	ialluis				// I+BTB cache invalidate
++	ret	x12
++ENDPROC(flush_cache_all)
++
+ /*
+  *	flush_icache_range(start,end)
+  *
+@@ -157,7 +230,7 @@ ENTRY(__inval_dcache_area)
+  *	- start   - virtual start address of region
+  *	- size    - size in question
+  */
+-__dma_inv_area:
++ENTRY(__dma_inv_area)
+ 	add	x1, x1, x0
+ 	dcache_line_size x2, x3
+ 	sub	x3, x2, #1
+@@ -196,7 +269,7 @@ ENTRY(__clean_dcache_area_poc)
+  *	- start   - virtual start address of region
+  *	- size    - size in question
+  */
+-__dma_clean_area:
++ENTRY(__dma_clean_area)
+ 	dcache_by_line_op cvac, sy, x0, x1, x2, x3
+ 	ret
+ ENDPIPROC(__clean_dcache_area_poc)
+diff --git a/arch/arm64/mm/flush.c b/arch/arm64/mm/flush.c
+index 5c9073bac..fb10aa0e7 100644
+--- a/arch/arm64/mm/flush.c
++++ b/arch/arm64/mm/flush.c
+@@ -87,6 +87,7 @@ EXPORT_SYMBOL(flush_dcache_page);
+ /*
+  * Additional functions defined in assembly.
+  */
++EXPORT_SYMBOL(flush_cache_all);
+ EXPORT_SYMBOL(__flush_icache_range);
+ 
+ #ifdef CONFIG_ARCH_HAS_PMEM_API
+diff --git a/arch/arm64/mm/init.c b/arch/arm64/mm/init.c
+index 29d2f4258..65efa46cf 100644
+--- a/arch/arm64/mm/init.c
++++ b/arch/arm64/mm/init.c
+@@ -53,6 +53,8 @@
+ #include <asm/tlb.h>
+ #include <asm/alternative.h>
+ 
++EXPORT_SYMBOL_GPL(kimage_vaddr);
++
+ /*
+  * We need to be able to catch inadvertent references to memstart_addr
+  * that occur (potentially in generic code) before arm64_memblock_init()
+diff --git a/include/linux/cma.h b/include/linux/cma.h
+index 190184b5f..28f59c1f6 100644
+--- a/include/linux/cma.h
++++ b/include/linux/cma.h
+@@ -35,6 +35,10 @@ extern int cma_init_reserved_mem(phys_addr_t base, phys_addr_t size,
+ extern struct page *cma_alloc(struct cma *cma, size_t count, unsigned int align,
+ 			      bool no_warn);
+ extern bool cma_release(struct cma *cma, const struct page *pages, unsigned int count);
++extern unsigned long cma_used_pages(void);
+ 
+ extern int cma_for_each_area(int (*it)(struct cma *cma, void *data), void *data);
++
++extern void set_cma_area_inactive(struct cma *cma);
++
+ #endif
+diff --git a/include/linux/iommu.h b/include/linux/iommu.h
+index 87994c265..c5470ac74 100644
+--- a/include/linux/iommu.h
++++ b/include/linux/iommu.h
+@@ -41,6 +41,14 @@
+  * if the IOMMU page table format is equivalent.
+  */
+ #define IOMMU_PRIV	(1 << 5)
++/* Use upstream device's bus attribute */
++#define IOMMU_USE_UPSTREAM_HINT	(1 << 6)
++
++/* Use upstream device's bus attribute with no write-allocate cache policy */
++#define IOMMU_USE_LLC_NWA	(1 << 7)
++
++/* For shoting entire IOMMU tlb once */
++#define IOMMU_TLB_SHOT_ENTIRE	(1 << 6)
+ 
+ struct iommu_ops;
+ struct iommu_group;
+@@ -50,8 +58,12 @@ struct iommu_domain;
+ struct notifier_block;
+ 
+ /* iommu fault flags */
+-#define IOMMU_FAULT_READ	0x0
+-#define IOMMU_FAULT_WRITE	0x1
++#define IOMMU_FAULT_READ                (1 << 0)
++#define IOMMU_FAULT_WRITE               (1 << 1)
++#define IOMMU_FAULT_TRANSLATION         (1 << 2)
++#define IOMMU_FAULT_PERMISSION          (1 << 3)
++#define IOMMU_FAULT_EXTERNAL            (1 << 4)
++#define IOMMU_FAULT_TRANSACTION_STALLED (1 << 5)
+ 
+ typedef int (*iommu_fault_handler_t)(struct iommu_domain *,
+ 			struct device *, unsigned long, int, void *);
+@@ -62,6 +74,10 @@ struct iommu_domain_geometry {
+ 	bool force_aperture;       /* DMA only allowed in mappable range? */
+ };
+ 
++struct iommu_pgtbl_info {
++	void *ops;
++};
++
+ /* Domain feature flags */
+ #define __IOMMU_DOMAIN_PAGING	(1U << 0)  /* Support for iommu_map/unmap */
+ #define __IOMMU_DOMAIN_DMA_API	(1U << 1)  /* Domain for use in DMA-API
+@@ -86,6 +102,8 @@ struct iommu_domain_geometry {
+ #define IOMMU_DOMAIN_DMA	(__IOMMU_DOMAIN_PAGING |	\
+ 				 __IOMMU_DOMAIN_DMA_API)
+ 
++
++#define IOMMU_DOMAIN_NAME_LEN 32
+ struct iommu_domain {
+ 	unsigned type;
+ 	const struct iommu_ops *ops;
+@@ -94,6 +112,8 @@ struct iommu_domain {
+ 	void *handler_token;
+ 	struct iommu_domain_geometry geometry;
+ 	void *iova_cookie;
++	bool is_debug_domain;
++	char name[IOMMU_DOMAIN_NAME_LEN];
+ };
+ 
+ enum iommu_cap {
+@@ -114,6 +134,11 @@ enum iommu_cap {
+  * DOMAIN_ATTR_FSL_PAMUV1 corresponds to the above mentioned contraints.
+  * The caller can invoke iommu_domain_get_attr to check if the underlying
+  * iommu implementation supports these constraints.
++ *
++ * DOMAIN_ATTR_NO_CFRE
++ * Some bus implementations may enter a bad state if iommu reports an error
++ * on context fault. As context faults are not always fatal, this must be
++ * avoided.
+  */
+ 
+ enum iommu_attr {
+@@ -124,6 +149,27 @@ enum iommu_attr {
+ 	DOMAIN_ATTR_FSL_PAMU_ENABLE,
+ 	DOMAIN_ATTR_FSL_PAMUV1,
+ 	DOMAIN_ATTR_NESTING,	/* two stages of translation */
++	DOMAIN_ATTR_PT_BASE_ADDR,
++	DOMAIN_ATTR_CONTEXT_BANK,
++	DOMAIN_ATTR_DYNAMIC,
++	DOMAIN_ATTR_TTBR0,
++	DOMAIN_ATTR_CONTEXTIDR,
++	DOMAIN_ATTR_PROCID,
++	DOMAIN_ATTR_NON_FATAL_FAULTS,
++	DOMAIN_ATTR_S1_BYPASS,
++	DOMAIN_ATTR_ATOMIC,
++	DOMAIN_ATTR_SECURE_VMID,
++	DOMAIN_ATTR_FAST,
++	DOMAIN_ATTR_PGTBL_INFO,
++	DOMAIN_ATTR_USE_UPSTREAM_HINT,
++	DOMAIN_ATTR_EARLY_MAP,
++	DOMAIN_ATTR_PAGE_TABLE_IS_COHERENT,
++	DOMAIN_ATTR_PAGE_TABLE_FORCE_COHERENT,
++	DOMAIN_ATTR_BITMAP_IOVA_ALLOCATOR,
++	DOMAIN_ATTR_USE_LLC_NWA,
++	DOMAIN_ATTR_FAULT_MODEL_NO_CFRE,
++	DOMAIN_ATTR_FAULT_MODEL_NO_STALL,
++	DOMAIN_ATTR_FAULT_MODEL_HUPCF,
+ 	DOMAIN_ATTR_MAX,
+ };
+ 
+@@ -155,6 +201,8 @@ struct iommu_resv_region {
+ 	enum iommu_resv_type	type;
+ };
+ 
++extern struct dentry *iommu_debugfs_top;
++
+ #ifdef CONFIG_IOMMU_API
+ 
+ /**
+@@ -166,11 +214,14 @@ struct iommu_resv_region {
+  * @detach_dev: detach device from an iommu domain
+  * @map: map a physically contiguous memory region to an iommu domain
+  * @unmap: unmap a physically contiguous memory region from an iommu domain
++ * @map_sg: map a scatter-gather list of physically contiguous memory chunks
++ *          to an iommu domain
+  * @flush_tlb_all: Synchronously flush all hardware TLBs for this domain
+  * @tlb_range_add: Add a given iova range to the flush queue for this domain
+  * @tlb_sync: Flush all queued ranges from the hardware TLBs and empty flush
+  *            queue
+  * @iova_to_phys: translate iova to physical address
++ * @iova_to_phys_hard: translate iova to physical address using IOMMU hardware
+  * @add_device: add device to iommu grouping
+  * @remove_device: remove device from iommu grouping
+  * @device_group: find iommu group for a particular device
+@@ -185,6 +236,10 @@ struct iommu_resv_region {
+  * @domain_get_windows: Return the number of windows for a domain
+  * @of_xlate: add OF master IDs to iommu grouping
+  * @pgsize_bitmap: bitmap of all possible supported page sizes
++ * @trigger_fault: trigger a fault on the device attached to an iommu domain
++ * @tlbi_domain: Invalidate all TLBs covering an iommu domain
++ * @enable_config_clocks: Enable all config clocks for this domain's IOMMU
++ * @disable_config_clocks: Disable all config clocks for this domain's IOMMU
+  */
+ struct iommu_ops {
+ 	bool (*capable)(enum iommu_cap);
+@@ -199,11 +254,15 @@ struct iommu_ops {
+ 		   phys_addr_t paddr, size_t size, int prot);
+ 	size_t (*unmap)(struct iommu_domain *domain, unsigned long iova,
+ 		     size_t size);
++	size_t (*map_sg)(struct iommu_domain *domain, unsigned long iova,
++			 struct scatterlist *sg, unsigned int nents, int prot);
+ 	void (*flush_iotlb_all)(struct iommu_domain *domain);
+ 	void (*iotlb_range_add)(struct iommu_domain *domain,
+ 				unsigned long iova, size_t size);
+ 	void (*iotlb_sync)(struct iommu_domain *domain);
+ 	phys_addr_t (*iova_to_phys)(struct iommu_domain *domain, dma_addr_t iova);
++	phys_addr_t (*iova_to_phys_hard)(struct iommu_domain *domain,
++					 dma_addr_t iova);
+ 	int (*add_device)(struct device *dev);
+ 	void (*remove_device)(struct device *dev);
+ 	struct iommu_group *(*device_group)(struct device *dev);
+@@ -227,10 +286,17 @@ struct iommu_ops {
+ 	int (*domain_set_windows)(struct iommu_domain *domain, u32 w_count);
+ 	/* Get the number of windows per domain */
+ 	u32 (*domain_get_windows)(struct iommu_domain *domain);
++	void (*trigger_fault)(struct iommu_domain *domain, unsigned long flags);
++	void (*tlbi_domain)(struct iommu_domain *domain);
++	int (*enable_config_clocks)(struct iommu_domain *domain);
++	void (*disable_config_clocks)(struct iommu_domain *domain);
++	uint64_t (*iova_to_pte)(struct iommu_domain *domain,
++			 dma_addr_t iova);
+ 
+ 	int (*of_xlate)(struct device *dev, struct of_phandle_args *args);
+ 	bool (*is_attach_deferred)(struct iommu_domain *domain, struct device *dev);
+ 
++	bool (*is_iova_coherent)(struct iommu_domain *domain, dma_addr_t iova);
+ 	unsigned long pgsize_bitmap;
+ };
+ 
+@@ -293,6 +359,8 @@ extern int iommu_attach_device(struct iommu_domain *domain,
+ extern void iommu_detach_device(struct iommu_domain *domain,
+ 				struct device *dev);
+ extern struct iommu_domain *iommu_get_domain_for_dev(struct device *dev);
++extern size_t iommu_pgsize(unsigned long pgsize_bitmap,
++			   unsigned long addr_merge, size_t size);
+ extern int iommu_map(struct iommu_domain *domain, unsigned long iova,
+ 		     phys_addr_t paddr, size_t size, int prot);
+ extern size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova,
+@@ -300,8 +368,17 @@ extern size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova,
+ extern size_t iommu_unmap_fast(struct iommu_domain *domain,
+ 			       unsigned long iova, size_t size);
+ extern size_t iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
+-			   struct scatterlist *sg,unsigned int nents, int prot);
++				struct scatterlist *sg, unsigned int nents,
++				int prot);
++extern size_t default_iommu_map_sg(struct iommu_domain *domain,
++				   unsigned long iova,
++				   struct scatterlist *sg, unsigned int nents,
++				   int prot);
+ extern phys_addr_t iommu_iova_to_phys(struct iommu_domain *domain, dma_addr_t iova);
++extern phys_addr_t iommu_iova_to_phys_hard(struct iommu_domain *domain,
++					   dma_addr_t iova);
++extern bool iommu_is_iova_coherent(struct iommu_domain *domain,
++				dma_addr_t iova);
+ extern void iommu_set_fault_handler(struct iommu_domain *domain,
+ 			iommu_fault_handler_t handler, void *token);
+ 
+@@ -351,6 +428,9 @@ extern int iommu_domain_window_enable(struct iommu_domain *domain, u32 wnd_nr,
+ 				      int prot);
+ extern void iommu_domain_window_disable(struct iommu_domain *domain, u32 wnd_nr);
+ 
++extern uint64_t iommu_iova_to_pte(struct iommu_domain *domain,
++	    dma_addr_t iova);
++
+ extern int report_iommu_fault(struct iommu_domain *domain, struct device *dev,
+ 			      unsigned long iova, int flags);
+ 
+@@ -373,10 +453,39 @@ static inline void iommu_tlb_sync(struct iommu_domain *domain)
+ 		domain->ops->iotlb_sync(domain);
+ }
+ 
++extern void iommu_trigger_fault(struct iommu_domain *domain,
++				unsigned long flags);
++
++extern unsigned long iommu_reg_read(struct iommu_domain *domain,
++				    unsigned long offset);
++extern void iommu_reg_write(struct iommu_domain *domain, unsigned long offset,
++			    unsigned long val);
++
+ /* PCI device grouping function */
+ extern struct iommu_group *pci_device_group(struct device *dev);
+ /* Generic device grouping function */
+ extern struct iommu_group *generic_device_group(struct device *dev);
++extern void rk_iommu_mask_irq(struct device *dev);
++extern void rk_iommu_unmask_irq(struct device *dev);
++
++static inline void iommu_tlbiall(struct iommu_domain *domain)
++{
++	if (domain->ops->tlbi_domain)
++		domain->ops->tlbi_domain(domain);
++}
++
++static inline int iommu_enable_config_clocks(struct iommu_domain *domain)
++{
++	if (domain->ops->enable_config_clocks)
++		return domain->ops->enable_config_clocks(domain);
++	return 0;
++}
++
++static inline void iommu_disable_config_clocks(struct iommu_domain *domain)
++{
++	if (domain->ops->disable_config_clocks)
++		domain->ops->disable_config_clocks(domain);
++}
+ 
+ /**
+  * struct iommu_fwspec - per-device IOMMU instance data
+@@ -399,6 +508,7 @@ int iommu_fwspec_init(struct device *dev, struct fwnode_handle *iommu_fwnode,
+ void iommu_fwspec_free(struct device *dev);
+ int iommu_fwspec_add_ids(struct device *dev, u32 *ids, int num_ids);
+ const struct iommu_ops *iommu_ops_from_fwnode(struct fwnode_handle *fwnode);
++int iommu_is_available(struct device *dev);
+ 
+ #else /* CONFIG_IOMMU_API */
+ 
+@@ -502,6 +612,18 @@ static inline phys_addr_t iommu_iova_to_phys(struct iommu_domain *domain, dma_ad
+ 	return 0;
+ }
+ 
++static inline phys_addr_t iommu_iova_to_phys_hard(struct iommu_domain *domain,
++						  dma_addr_t iova)
++{
++	return 0;
++}
++
++static inline bool iommu_is_iova_coherent(struct iommu_domain *domain,
++					  dma_addr_t iova)
++{
++	return 0;
++}
++
+ static inline void iommu_set_fault_handler(struct iommu_domain *domain,
+ 				iommu_fault_handler_t handler, void *token)
+ {
+@@ -661,6 +783,35 @@ static inline void iommu_device_unlink(struct device *dev, struct device *link)
+ {
+ }
+ 
++static inline void iommu_trigger_fault(struct iommu_domain *domain,
++				       unsigned long flags)
++{
++}
++
++static inline unsigned long iommu_reg_read(struct iommu_domain *domain,
++					   unsigned long offset)
++{
++	return 0;
++}
++
++static inline void iommu_reg_write(struct iommu_domain *domain,
++				   unsigned long val, unsigned long offset)
++{
++}
++
++static inline void iommu_tlbiall(struct iommu_domain *domain)
++{
++}
++
++static inline int iommu_enable_config_clocks(struct iommu_domain *domain)
++{
++	return 0;
++}
++
++static inline void iommu_disable_config_clocks(struct iommu_domain *domain)
++{
++}
++
+ static inline int iommu_fwspec_init(struct device *dev,
+ 				    struct fwnode_handle *iommu_fwnode,
+ 				    const struct iommu_ops *ops)
+@@ -684,6 +835,18 @@ const struct iommu_ops *iommu_ops_from_fwnode(struct fwnode_handle *fwnode)
+ 	return NULL;
+ }
+ 
++static inline int iommu_is_available(struct device *dev)
++{
++	return -ENODEV;
++}
++
++static inline void rk_iommu_mask_irq(struct device *dev)
++{
++}
++
++static inline void rk_iommu_unmask_irq(struct device *dev)
++{
++}
+ #endif /* CONFIG_IOMMU_API */
+ 
+ #ifdef CONFIG_IOMMU_DEBUGFS
+diff --git a/include/linux/irq.h b/include/linux/irq.h
+index 950426741..6d5467752 100644
+--- a/include/linux/irq.h
++++ b/include/linux/irq.h
+@@ -632,6 +632,12 @@ extern int irq_chip_pm_put(struct irq_data *data);
+ #ifdef	CONFIG_IRQ_DOMAIN_HIERARCHY
+ extern void handle_fasteoi_ack_irq(struct irq_desc *desc);
+ extern void handle_fasteoi_mask_irq(struct irq_desc *desc);
++extern int irq_chip_set_parent_state(struct irq_data *data,
++				     enum irqchip_irq_state which,
++				     bool val);
++extern int irq_chip_get_parent_state(struct irq_data *data,
++				     enum irqchip_irq_state which,
++				     bool *state);
+ extern void irq_chip_enable_parent(struct irq_data *data);
+ extern void irq_chip_disable_parent(struct irq_data *data);
+ extern void irq_chip_ack_parent(struct irq_data *data);
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index c736c677b..e803c6203 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -73,6 +73,17 @@ extern int mmap_rnd_compat_bits __read_mostly;
+ #include <asm/pgtable.h>
+ #include <asm/processor.h>
+ 
++/*
++ * Architectures that support memory tagging (assigning tags to memory regions,
++ * embedding these tags into addresses that point to these memory regions, and
++ * checking that the memory and the pointer tags match on memory accesses)
++ * redefine this macro to strip tags from pointers.
++ * It's defined as noop for arcitectures that don't support memory tagging.
++ */
++#ifndef untagged_addr
++#define untagged_addr(addr) (addr)
++#endif
++
+ #ifndef __pa_symbol
+ #define __pa_symbol(x)  __pa(RELOC_HIDE((unsigned long)(x), 0))
+ #endif
+@@ -2635,6 +2646,30 @@ static inline void kernel_poison_pages(struct page *page, int numpages,
+ 					int enable) { }
+ #endif
+ 
++#ifdef CONFIG_INIT_ON_ALLOC_DEFAULT_ON
++DECLARE_STATIC_KEY_TRUE(init_on_alloc);
++#else
++DECLARE_STATIC_KEY_FALSE(init_on_alloc);
++#endif
++static inline bool want_init_on_alloc(gfp_t flags)
++{
++	if (static_branch_unlikely(&init_on_alloc) &&
++	    !page_poisoning_enabled())
++		return true;
++	return flags & __GFP_ZERO;
++}
++
++#ifdef CONFIG_INIT_ON_FREE_DEFAULT_ON
++DECLARE_STATIC_KEY_TRUE(init_on_free);
++#else
++DECLARE_STATIC_KEY_FALSE(init_on_free);
++#endif
++static inline bool want_init_on_free(void)
++{
++	return static_branch_unlikely(&init_on_free) &&
++	       !page_poisoning_enabled();
++}
++
+ #ifdef CONFIG_DEBUG_PAGEALLOC
+ extern bool _debug_pagealloc_enabled;
+ extern void __kernel_map_pages(struct page *page, int numpages, int enable);
+diff --git a/include/linux/of_irq.h b/include/linux/of_irq.h
+index 1214cabb2..86342502a 100644
+--- a/include/linux/of_irq.h
++++ b/include/linux/of_irq.h
+@@ -32,6 +32,7 @@ static inline int of_irq_parse_oldworld(struct device_node *device, int index,
+ }
+ #endif /* CONFIG_PPC32 && CONFIG_PPC_PMAC */
+ 
++extern int of_irq_domain_map(const struct irq_fwspec *in, struct irq_fwspec *out);
+ extern int of_irq_parse_raw(const __be32 *addr, struct of_phandle_args *out_irq);
+ extern int of_irq_parse_one(struct device_node *device, int index,
+ 			  struct of_phandle_args *out_irq);
+diff --git a/include/linux/psci.h b/include/linux/psci.h
+index 8b1b3b593..c550f1fe5 100644
+--- a/include/linux/psci.h
++++ b/include/linux/psci.h
+@@ -31,11 +31,6 @@ enum psci_conduit {
+ 	PSCI_CONDUIT_HVC,
+ };
+ 
+-enum smccc_version {
+-	SMCCC_VERSION_1_0,
+-	SMCCC_VERSION_1_1,
+-};
+-
+ struct psci_operations {
+ 	u32 (*get_version)(void);
+ 	int (*cpu_suspend)(u32 state, unsigned long entry_point);
+@@ -46,7 +41,7 @@ struct psci_operations {
+ 			unsigned long lowest_affinity_level);
+ 	int (*migrate_info_type)(void);
+ 	enum psci_conduit conduit;
+-	enum smccc_version smccc_version;
++	u32 smccc_version;
+ };
+ 
+ extern struct psci_operations psci_ops;
+diff --git a/include/linux/regmap.h b/include/linux/regmap.h
+index e513caeaf..d07808cf1 100644
+--- a/include/linux/regmap.h
++++ b/include/linux/regmap.h
+@@ -1094,6 +1094,12 @@ struct regmap_irq {
+ #define REGMAP_IRQ_REG(_irq, _off, _mask)		\
+ 	[_irq] = { .reg_offset = (_off), .mask = (_mask) }
+ 
++#define REGMAP_IRQ_REG_LINE(_id, _reg_bits) \
++	[_id] = {				\
++		.mask = BIT((_id) % (_reg_bits)),	\
++		.reg_offset = (_id) / (_reg_bits),	\
++	}
++
+ /**
+  * struct regmap_irq_chip - Description of a generic regmap irq_chip.
+  *
+diff --git a/include/trace/events/iommu.h b/include/trace/events/iommu.h
+index 72b458232..0db6f7f86 100644
+--- a/include/trace/events/iommu.h
++++ b/include/trace/events/iommu.h
+@@ -12,8 +12,10 @@
+ #define _TRACE_IOMMU_H
+ 
+ #include <linux/tracepoint.h>
++#include <linux/iommu.h>
+ 
+ struct device;
++struct iommu_domain;
+ 
+ DECLARE_EVENT_CLASS(iommu_group_event,
+ 
+@@ -85,47 +87,84 @@ DEFINE_EVENT(iommu_device_event, detach_device_from_domain,
+ 
+ TRACE_EVENT(map,
+ 
+-	TP_PROTO(unsigned long iova, phys_addr_t paddr, size_t size),
++	TP_PROTO(struct iommu_domain *domain, unsigned long iova,
++		 phys_addr_t paddr, size_t size, int prot),
+ 
+-	TP_ARGS(iova, paddr, size),
++	TP_ARGS(domain, iova, paddr, size, prot),
+ 
+ 	TP_STRUCT__entry(
++		__string(name, domain->name)
+ 		__field(u64, iova)
+ 		__field(u64, paddr)
+ 		__field(size_t, size)
++		__field(int, prot)
+ 	),
+ 
+ 	TP_fast_assign(
++		__assign_str(name, domain->name);
+ 		__entry->iova = iova;
+ 		__entry->paddr = paddr;
+ 		__entry->size = size;
++		__entry->prot = prot;
+ 	),
+ 
+-	TP_printk("IOMMU: iova=0x%016llx paddr=0x%016llx size=%zu",
+-			__entry->iova, __entry->paddr, __entry->size
++	TP_printk("IOMMU:%s iova=0x%016llx paddr=0x%016llx size=0x%zx prot=0x%x",
++			__get_str(name), __entry->iova, __entry->paddr,
++			__entry->size, __entry->prot
+ 	)
+ );
+ 
+ TRACE_EVENT(unmap,
+ 
+-	TP_PROTO(unsigned long iova, size_t size, size_t unmapped_size),
++	TP_PROTO(struct iommu_domain *domain, unsigned long iova, size_t size,
++			size_t unmapped_size),
+ 
+-	TP_ARGS(iova, size, unmapped_size),
++	TP_ARGS(domain, iova, size, unmapped_size),
+ 
+ 	TP_STRUCT__entry(
++		__string(name, domain->name)
+ 		__field(u64, iova)
+ 		__field(size_t, size)
+ 		__field(size_t, unmapped_size)
+ 	),
+ 
+ 	TP_fast_assign(
++		__assign_str(name, domain->name);
+ 		__entry->iova = iova;
+ 		__entry->size = size;
+ 		__entry->unmapped_size = unmapped_size;
+ 	),
+ 
+-	TP_printk("IOMMU: iova=0x%016llx size=%zu unmapped_size=%zu",
+-			__entry->iova, __entry->size, __entry->unmapped_size
++	TP_printk("IOMMU:%s iova=0x%016llx size=0x%zx unmapped_size=0x%zx",
++			__get_str(name), __entry->iova, __entry->size,
++			__entry->unmapped_size
++	)
++);
++
++TRACE_EVENT(map_sg,
++
++	TP_PROTO(struct iommu_domain *domain, unsigned long iova, size_t size,
++		int prot),
++
++	TP_ARGS(domain, iova, size, prot),
++
++	TP_STRUCT__entry(
++		__string(name, domain->name)
++		__field(u64, iova)
++		__field(size_t, size)
++		__field(int, prot)
++	),
++
++	TP_fast_assign(
++		__assign_str(name, domain->name);
++		__entry->iova = iova;
++		__entry->size = size;
++		__entry->prot = prot;
++	),
++
++	TP_printk("IOMMU:%s iova=0x%016llx size=0x%zx prot=0x%x",
++			__get_str(name), __entry->iova, __entry->size,
++			__entry->prot
+ 	)
+ );
+ 
+@@ -161,6 +200,66 @@ DEFINE_EVENT(iommu_error, io_page_fault,
+ 
+ 	TP_ARGS(dev, iova, flags)
+ );
++
++DECLARE_EVENT_CLASS(iommu_tlbi,
++
++	TP_PROTO(struct device *dev, u64 time),
++
++	TP_ARGS(dev, time),
++
++	TP_STRUCT__entry(
++		__string(device, dev_name(dev))
++		__field(u64, time)
++	),
++
++	TP_fast_assign(
++		__assign_str(device, dev_name(dev));
++		__entry->time = time;
++	),
++
++	TP_printk("IOMMU:%s %lld us",
++			__get_str(device), __entry->time
++	)
++);
++
++DEFINE_EVENT(iommu_tlbi, tlbi_start,
++
++	TP_PROTO(struct device *dev, u64 time),
++
++	TP_ARGS(dev, time)
++);
++
++DEFINE_EVENT(iommu_tlbi, tlbi_end,
++
++	TP_PROTO(struct device *dev, u64 time),
++
++	TP_ARGS(dev, time)
++);
++
++DEFINE_EVENT(iommu_tlbi, tlbsync_timeout,
++
++	TP_PROTO(struct device *dev, u64 time),
++
++	TP_ARGS(dev, time)
++);
++
++TRACE_EVENT(smmu_init,
++
++	TP_PROTO(u64 time),
++
++	TP_ARGS(time),
++
++	TP_STRUCT__entry(
++		__field(u64, time)
++	),
++
++	TP_fast_assign(
++		__entry->time = time;
++	),
++
++	TP_printk("ARM SMMU init latency: %lld us", __entry->time)
++);
++
+ #endif /* _TRACE_IOMMU_H */
+ 
+ /* This part must be outside protection */
+diff --git a/kernel/cpu.c b/kernel/cpu.c
+index d6fd362af..52603e75c 100644
+--- a/kernel/cpu.c
++++ b/kernel/cpu.c
+@@ -1295,6 +1295,7 @@ void __weak arch_enable_nonboot_cpus_end(void)
+ void enable_nonboot_cpus(void)
+ {
+ 	int cpu, error;
++	struct device *cpu_device;
+ 
+ 	/* Allow everyone to use the CPU hotplug again */
+ 	cpu_maps_update_begin();
+@@ -1312,6 +1313,12 @@ void enable_nonboot_cpus(void)
+ 		trace_suspend_resume(TPS("CPU_ON"), cpu, false);
+ 		if (!error) {
+ 			pr_info("CPU%d is up\n", cpu);
++			cpu_device = get_cpu_device(cpu);
++			if (!cpu_device)
++				pr_err("%s: failed to get cpu%d device\n",
++				       __func__, cpu);
++			else
++				kobject_uevent(&cpu_device->kobj, KOBJ_ONLINE);
+ 			continue;
+ 		}
+ 		pr_warn("Error taking CPU%d up: %d\n", cpu, error);
+diff --git a/kernel/padata.c b/kernel/padata.c
+index 7f2b6d369..74cfd1393 100644
+--- a/kernel/padata.c
++++ b/kernel/padata.c
+@@ -682,7 +682,7 @@ static int __padata_remove_cpu(struct padata_instance *pinst, int cpu)
+ {
+ 	struct parallel_data *pd = NULL;
+ 
+-	if (!cpumask_test_cpu(cpu, cpu_online_mask)) {
++	if (cpumask_test_cpu(cpu, cpu_online_mask)) {
+ 
+ 		if (!padata_validate_cpumask(pinst, pinst->cpumask.pcpu) ||
+ 		    !padata_validate_cpumask(pinst, pinst->cpumask.cbcpu))
+diff --git a/mm/frame_vector.c b/mm/frame_vector.c
+index c64dca6e2..c431ca81d 100644
+--- a/mm/frame_vector.c
++++ b/mm/frame_vector.c
+@@ -46,6 +46,8 @@ int get_vaddr_frames(unsigned long start, unsigned int nr_frames,
+ 	if (WARN_ON_ONCE(nr_frames > vec->nr_allocated))
+ 		nr_frames = vec->nr_allocated;
+ 
++	start = untagged_addr(start);
++
+ 	down_read(&mm->mmap_sem);
+ 	locked = 1;
+ 	vma = find_vma_intersection(mm, start, start + 1);
+diff --git a/mm/gup.c b/mm/gup.c
+index 44569927f..216253ab1 100644
+--- a/mm/gup.c
++++ b/mm/gup.c
+@@ -687,6 +687,8 @@ static long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
+ 	if (!nr_pages)
+ 		return 0;
+ 
++	start = untagged_addr(start);
++
+ 	VM_BUG_ON(!!pages != !!(gup_flags & FOLL_GET));
+ 
+ 	/*
+@@ -847,6 +849,8 @@ int fixup_user_fault(struct task_struct *tsk, struct mm_struct *mm,
+ 	struct vm_area_struct *vma;
+ 	vm_fault_t ret, major = 0;
+ 
++	address = untagged_addr(address);
++
+ 	if (unlocked)
+ 		fault_flags |= FAULT_FLAG_ALLOW_RETRY;
+ 
+diff --git a/mm/madvise.c b/mm/madvise.c
+index 71d21df2a..ecf3533fa 100644
+--- a/mm/madvise.c
++++ b/mm/madvise.c
+@@ -808,6 +808,8 @@ SYSCALL_DEFINE3(madvise, unsigned long, start, size_t, len_in, int, behavior)
+ 	size_t len;
+ 	struct blk_plug plug;
+ 
++	start = untagged_addr(start);
++
+ 	if (!madvise_behavior_valid(behavior))
+ 		return error;
+ 
+diff --git a/mm/migrate.c b/mm/migrate.c
+index 76f8dedc0..677904dbf 100644
+--- a/mm/migrate.c
++++ b/mm/migrate.c
+@@ -1614,7 +1614,7 @@ static int do_pages_move(struct mm_struct *mm, nodemask_t task_nodes,
+ 			goto out_flush;
+ 		if (get_user(node, nodes + i))
+ 			goto out_flush;
+-		addr = (unsigned long)p;
++		addr = (unsigned long)untagged_addr(p);
+ 
+ 		err = -ENODEV;
+ 		if (node < 0 || node >= MAX_NUMNODES)
+diff --git a/mm/mincore.c b/mm/mincore.c
+index 2732c8c07..7eb149191 100644
+--- a/mm/mincore.c
++++ b/mm/mincore.c
+@@ -249,6 +249,8 @@ SYSCALL_DEFINE3(mincore, unsigned long, start, size_t, len,
+ 	unsigned long pages;
+ 	unsigned char *tmp;
+ 
++	start = untagged_addr(start);
++
+ 	/* Check the start address: needs to be page-aligned.. */
+ 	if (start & ~PAGE_MASK)
+ 		return -EINVAL;
+diff --git a/mm/mlock.c b/mm/mlock.c
+index 0ab8250af..6d2b5b691 100644
+--- a/mm/mlock.c
++++ b/mm/mlock.c
+@@ -735,6 +735,8 @@ SYSCALL_DEFINE2(munlock, unsigned long, start, size_t, len)
+ {
+ 	int ret;
+ 
++	start = untagged_addr(start);
++
+ 	len = PAGE_ALIGN(len + (offset_in_page(start)));
+ 	start &= PAGE_MASK;
+ 
+diff --git a/mm/mmap.c b/mm/mmap.c
+index bb8ba3258..ee00fc242 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -2806,6 +2806,7 @@ EXPORT_SYMBOL(vm_munmap);
+ 
+ SYSCALL_DEFINE2(munmap, unsigned long, addr, size_t, len)
+ {
++	addr = untagged_addr(addr);
+ 	profile_munmap(addr);
+ 	return vm_munmap(addr, len);
+ }
+diff --git a/mm/mprotect.c b/mm/mprotect.c
+index 86837f250..7071a6172 100644
+--- a/mm/mprotect.c
++++ b/mm/mprotect.c
+@@ -497,6 +497,8 @@ static int do_mprotect_pkey(unsigned long start, size_t len,
+ 	const bool rier = (current->personality & READ_IMPLIES_EXEC) &&
+ 				(prot & PROT_READ);
+ 
++	start = untagged_addr(start);
++
+ 	prot &= ~(PROT_GROWSDOWN|PROT_GROWSUP);
+ 	if (grows == (PROT_GROWSDOWN|PROT_GROWSUP)) /* can't be both */
+ 		return -EINVAL;
+diff --git a/mm/mremap.c b/mm/mremap.c
+index 3cf9d77b3..2561d97b8 100644
+--- a/mm/mremap.c
++++ b/mm/mremap.c
+@@ -528,6 +528,8 @@ SYSCALL_DEFINE5(mremap, unsigned long, addr, unsigned long, old_len,
+ 	LIST_HEAD(uf_unmap_early);
+ 	LIST_HEAD(uf_unmap);
+ 
++	addr = untagged_addr(addr);
++
+ 	if (flags & ~(MREMAP_FIXED | MREMAP_MAYMOVE))
+ 		return ret;
+ 
+diff --git a/mm/msync.c b/mm/msync.c
+index ef30a4296..c3bd3e75f 100644
+--- a/mm/msync.c
++++ b/mm/msync.c
+@@ -37,6 +37,8 @@ SYSCALL_DEFINE3(msync, unsigned long, start, size_t, len, int, flags)
+ 	int unmapped_error = 0;
+ 	int error = -EINVAL;
+ 
++	start = untagged_addr(start);
++
+ 	if (flags & ~(MS_ASYNC | MS_INVALIDATE | MS_SYNC))
+ 		goto out;
+ 	if (offset_in_page(start))
+-- 
+2.37.0 (Apple Git-136)
+

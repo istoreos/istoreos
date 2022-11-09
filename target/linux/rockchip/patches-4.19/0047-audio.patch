@@ -1,0 +1,87 @@
+From ab2eb8ca066cc5cb78e7736d214179141c92799c Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 18:33:46 +0800
+Subject: [PATCH] audio
+
+---
+ drivers/usb/gadget/function/u_audio.h |  1 +
+ include/linux/usb/audio-v2.h          | 17 +++++++++++++++++
+ include/linux/usb/audio.h             |  1 +
+ sound/core/compress_offload.c         |  2 +-
+ 4 files changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/gadget/function/u_audio.h b/drivers/usb/gadget/function/u_audio.h
+index 0178a35e0..cadf21809 100644
+--- a/drivers/usb/gadget/function/u_audio.h
++++ b/drivers/usb/gadget/function/u_audio.h
+@@ -10,6 +10,7 @@
+ #define __U_AUDIO_H
+ 
+ #include <linux/usb/composite.h>
++#include <linux/usb/audio.h>
+ 
+ #define UAC_VOLUME_CUR			0x0000
+ #define UAC_VOLUME_RES			0x0080 /* 0.5 dB */
+diff --git a/include/linux/usb/audio-v2.h b/include/linux/usb/audio-v2.h
+index ba4b3e332..8340c2268 100644
+--- a/include/linux/usb/audio-v2.h
++++ b/include/linux/usb/audio-v2.h
+@@ -156,6 +156,20 @@ struct uac2_feature_unit_descriptor {
+ 	__u8 bmaControls[0]; /* variable length */
+ } __attribute__((packed));
+ 
++#define UAC2_DT_FEATURE_UNIT_SIZE(ch)		(6 + ((ch) + 1) * 4)
++
++/* As above, but more useful for defining your own descriptors: */
++#define DECLARE_UAC2_FEATURE_UNIT_DESCRIPTOR(ch)		\
++struct uac2_feature_unit_descriptor_##ch {			\
++	__u8  bLength;						\
++	__u8  bDescriptorType;					\
++	__u8  bDescriptorSubtype;				\
++	__u8  bUnitID;						\
++	__u8  bSourceID;					\
++	__le32 bmaControls[ch + 1];				\
++	__u8  iFeature;						\
++} __attribute__((packed))
++
+ /* 4.9.2 Class-Specific AS Interface Descriptor */
+ 
+ struct uac2_as_header_descriptor {
+@@ -319,6 +333,9 @@ struct uac2_interrupt_data_msg {
+ #define UAC2_FU_OVERFLOW		0x0f
+ #define UAC2_FU_LATENCY			0x10
+ 
++#define UAC2_CONTROL_BIT_RO(CS)		(0x01 << (((CS) - 1) << 1))
++#define UAC2_CONTROL_BIT_RW(CS)		(0x03 << (((CS) - 1) << 1))
++
+ /* A.17.8.1 Parametric Equalizer Section Effect Unit Control Selectors */
+ #define UAC2_PE_UNDEFINED		0x00
+ #define UAC2_PE_ENABLE			0x01
+diff --git a/include/linux/usb/audio.h b/include/linux/usb/audio.h
+index 170acd500..646cb0a8d 100644
+--- a/include/linux/usb/audio.h
++++ b/include/linux/usb/audio.h
+@@ -31,6 +31,7 @@ struct usb_audio_control {
+ 	int data[5];
+ 	int (*set)(struct usb_audio_control *con, u8 cmd, int value);
+ 	int (*get)(struct usb_audio_control *con, u8 cmd);
++	void *context;
+ };
+ 
+ struct usb_audio_control_selector {
+diff --git a/sound/core/compress_offload.c b/sound/core/compress_offload.c
+index 68f016e49..b6f391a03 100644
+--- a/sound/core/compress_offload.c
++++ b/sound/core/compress_offload.c
+@@ -183,7 +183,7 @@ static int snd_compr_update_tstamp(struct snd_compr_stream *stream,
+ 	if (!stream->ops->pointer)
+ 		return -ENOTSUPP;
+ 	stream->ops->pointer(stream, tstamp);
+-	pr_debug("dsp consumed till %d total %d bytes\n",
++	pr_debug("dsp consumed till %d total %llu bytes\n",
+ 		tstamp->byte_offset, tstamp->copied_total);
+ 	if (stream->direction == SND_COMPRESS_PLAYBACK)
+ 		stream->runtime->total_bytes_transferred = tstamp->copied_total;
+-- 
+2.31.0
+

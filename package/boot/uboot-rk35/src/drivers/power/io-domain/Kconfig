@@ -1,0 +1,19 @@
+menu "IO Domain Support"
+
+config IO_DOMAIN
+	bool "Enable io domain support using Driver Model"
+	depends on DM && OF_CONTROL
+	help
+	  Enable support for the io domain driver class. Many SoCs allow
+	  power to be applied to or removed from portions of the SoC (io
+	  domains). This may be used to save power. This API provides the
+	  means to control such power management hardware.
+
+config ROCKCHIP_IO_DOMAIN
+	bool "Enable the rockchip io domain driver"
+	depends on IO_DOMAIN && ARCH_ROCKCHIP
+	help
+	  Enable support for manipulating ROCKCHIP io domains via MMIO mapped
+	  registers.
+
+endmenu

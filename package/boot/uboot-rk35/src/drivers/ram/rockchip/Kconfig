@@ -1,0 +1,33 @@
+config ROCKCHIP_DMC
+	bool "ROCKCHIP DMC"
+	help
+	  This enable dram devfreq driver.
+
+config ROCKCHIP_DMC_FSP
+	bool "Rockchip initialize DMC FSP"
+	depends on DM_DMC && ROCKCHIP_SMCCC
+	help
+	  This enable support for Rockchip initialize frequency set point of dynamic memory
+	  interface.
+
+config ROCKCHIP_SDRAM_COMMON
+	bool "Enable rockchip sdram common driver"
+	depends on TPL_RAM || SPL_RAM
+	help
+	  This enable sdram common driver
+
+config ROCKCHIP_DRAM_EXTENDED_TEMP_SUPPORT
+	bool "enable rockchip dram extended temperature support"
+	depends on TPL_RAM || SPL_RAM
+	default n
+	help
+	  This enable dram dram extended temperature support
+
+config ROCKCHIP_TPL_INIT_DRAM_TYPE
+	int "TPL select DRAM type"
+	depends on TPL_RAM || SPL_RAM
+	default 3
+	help
+	  This choose DRAM type for TPL INIT code, 0 for DDR4, 2 for DDR2,
+	  3 for DDR3, 5 for LPDDR2, 6 for LPDDR3, 7 for LPDDR4, all other
+	  value are reserved.

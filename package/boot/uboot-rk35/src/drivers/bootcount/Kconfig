@@ -1,0 +1,58 @@
+#
+# Boot count configuration
+#
+
+menu "Boot count support"
+
+config BOOTCOUNT
+	bool "Enable Boot count support"
+	help
+	  Enable boot count support, which provides the ability to store the
+	  number of times the board has booted on a number of different
+	  persistent storage mediums.
+
+if BOOTCOUNT
+
+config BOOTCOUNT_EXT
+	bool "Boot counter on EXT filesystem"
+	help
+	  Add support for maintaining boot count in a file on an EXT
+	  filesystem.
+
+if BOOTCOUNT_EXT
+
+config SYS_BOOTCOUNT_EXT_INTERFACE
+	string "Interface on which to find boot counter EXT filesystem"
+	default "mmc"
+	depends on BOOTCOUNT_EXT
+	help
+	  Set the interface to use when locating the filesystem to use for the
+	  boot counter.
+
+config SYS_BOOTCOUNT_EXT_DEVPART
+	string "Partition of the boot counter EXT filesystem"
+	default "0:1"
+	depends on BOOTCOUNT_EXT
+	help
+	  Set the partition to use when locating the filesystem to use for the
+	  boot counter.
+
+config SYS_BOOTCOUNT_EXT_NAME
+	string "Path and filename of the EXT filesystem based boot counter"
+	default "/boot/failures"
+	depends on BOOTCOUNT_EXT
+	help
+	  Set the filename and path of the file used to store the boot counter.
+
+config SYS_BOOTCOUNT_ADDR
+	hex "RAM address used for reading and writing the boot counter"
+	default 0x7000A000
+	depends on BOOTCOUNT_EXT
+	help
+	  Set the address used for reading and writing the boot counter.
+
+endif
+
+endif
+
+endmenu

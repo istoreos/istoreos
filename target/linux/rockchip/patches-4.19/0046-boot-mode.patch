@@ -1,0 +1,33 @@
+From 8661552908fb70cf32e5f1b74070e3f77e6d8426 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 15:37:19 +0800
+Subject: [PATCH 46/46] boot mode
+
+---
+ include/dt-bindings/soc/rockchip,boot-mode.h | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/include/dt-bindings/soc/rockchip,boot-mode.h b/include/dt-bindings/soc/rockchip,boot-mode.h
+index 4b0914c09..1436e1d32 100644
+--- a/include/dt-bindings/soc/rockchip,boot-mode.h
++++ b/include/dt-bindings/soc/rockchip,boot-mode.h
+@@ -10,7 +10,15 @@
+ #define BOOT_BL_DOWNLOAD	(REBOOT_FLAG + 1)
+ /* enter recovery */
+ #define BOOT_RECOVERY		(REBOOT_FLAG + 3)
+- /* enter fastboot mode */
++/* reboot by panic */
++#define BOOT_PANIC		(REBOOT_FLAG + 7)
++/* reboot by watchdog */
++#define BOOT_WATCHDOG		(REBOOT_FLAG + 8)
++/* enter fastboot mode */
+ #define BOOT_FASTBOOT		(REBOOT_FLAG + 9)
++/* enter charging mode */
++#define BOOT_CHARGING		(REBOOT_FLAG + 11)
++/* enter usb mass storage mode */
++#define BOOT_UMS		(REBOOT_FLAG + 12)
+ 
+ #endif
+-- 
+2.31.0
+

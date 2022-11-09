@@ -407,7 +407,7 @@ define KernelPackage/openmax
 	CONFIG_CMA_ALIGNMENT=4 \
 	CONFIG_ADF=n \
 
-  DEPENDS:=
+  DEPENDS:=@TARGET_realtek
   FILES:=
 endef
 

@@ -1,0 +1,86 @@
+/*
+ * (C) Copyright 2020 Rockchip Electronics Co., Ltd
+ *
+ * SPDX-License-Identifier:     GPL-2.0+
+ */
+
+All platform defconfigs of Rockchip SDK
+=======================================
+
+	|-----------------------|-----------------------------|
+	|    rv1108             |    evb-rv1108_defconfig     |
+	|-----------------------|-----------------------------|
+	|    rv1126             |    rv1126_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk1806             |    rk1806_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk1808             |    rk1808_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3036             |    rk3036_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3128x            |    rk3128x_defconfig        |
+	|-----------------------|-----------------------------|
+	|    rk3126             |    rk3126_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk322x             |    rk322x_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3288             |    rk3288_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3368             |    rk3368_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3328             |    rk3328_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3399             |    rk3399_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3399pro          |    rk3399pro_defconfig      |
+	|-----------------------|-----------------------------|
+	|    rk3399pro-npu      |    rknpu-lion_defconfig     |
+	|-----------------------|-----------------------------|
+	|    rk3308             |    rk3308_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3308-aarch32     |    rk3308-aarch32_defconfig |
+	|-----------------------|-----------------------------|
+	|    px30               |    px30_defconfig           |
+	|-----------------------|-----------------------------|
+	|    rk3326             |    rk3326_defconfig         |
+	|-----------------------|-----------------------------|
+	|    rk3326-aarch32     |    rk3326-aarch32_defconfig |
+	|-----------------------|-----------------------------|
+
+	We add config fragment support for some platform the name like: foo.config.
+	There is BASE_DEFCONFIG configure to indicate the base defconfig of it.
+
+	Usage example:
+		./make.sh rv1126-emmc-tb
+
+		It equals: make rv1126_defconfig rv1126-emmc-tb.config && make.
+
+
+All rv1126 defconfigs
+==============================
+
+	rv1126_defconfig
+	----------------
+		Full features on rv1126.
+
+	rv1126-spi-nor-tiny_defconfig
+	-----------------------------
+		Tiny SPL & U-Boot image size with gzip compressed on SPI Nor board.
+
+	rv1126-emmc-tb.config
+	---------------------
+		Thunder boot feature on eMMC board.
+
+	rv1126-spi-nor-tb.config
+	------------------------
+		Thunder boot feature on SPI Nor board.
+
+	rv1126-usbplug.config
+	---------------------
+		Open source version of UsbPlug supported in U-Boot project.
+		There is a ./usbplug.bin after compilation to replace the usbplug in rkbin project.
+
+	rv1126-ramboot.config
+	---------------------
+		Ram boot features on rv1126, only U-Boot proper is build.
+

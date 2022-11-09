@@ -1,0 +1,109 @@
+menuconfig MTD_SPI_NAND
+	bool "SPI NAND device Support"
+	depends on MTD && DM_SPI
+	select MTD_NAND_CORE
+	select SPI_MEM
+	select MTD_NAND_BBT_USING_FLASH
+	help
+	  This is the framework for the SPI NAND device drivers.
+
+if MTD_SPI_NAND
+
+config SPI_NAND_GIGADEVICE
+	bool "GIGADEVICE SPI flash support"
+	default y
+	help
+	  Add support for various GIGADEVICE SPI Nand flash chips
+
+config SPI_NAND_MACRONIX
+	bool "MACRONIX SPI flash support"
+	default y
+	help
+	  Add support for various MACRONIX SPI Nand flash chips
+
+config SPI_NAND_MICRON
+	bool "MICRON SPI flash support"
+	default y
+	help
+	  Add support for various MICRON SPI Nand flash chips
+
+config SPI_NAND_TOSHIBA
+	bool "TOSHIBA SPI flash support"
+	default y
+	help
+	  Add support for various TOSHIBA SPI Nand flash chips
+
+config SPI_NAND_WINBOND
+	bool "WINBOND SPI flash support"
+	default y
+	help
+	  Add support for various WINBOND SPI Nand flash chips
+
+config SPI_NAND_DOSILICON
+	bool "DOSILICON SPI flash support"
+	default y
+	help
+	  Add support for various DOSILICON SPI Nand flash chips
+
+config SPI_NAND_ESMT
+	bool "ESMT SPI flash support"
+	default y
+	select SPI_NAND_MICRON
+	help
+	  Add support for various ESMT SPI Nand flash chips
+
+config SPI_NAND_XTX
+	bool "XTX SPI flash support"
+	default y
+	select SPI_NAND_MICRON
+	help
+	  Add support for various XTX SPI Nand flash chips
+
+config SPI_NAND_HYF
+	bool "HYF SPI flash support"
+	default y
+	help
+	  Add support for various HYF SPI Nand flash chips
+
+config SPI_NAND_FMSH
+	default y
+	bool "FMSH SPI flash support"
+	help
+	  Add support for various FMSH SPI Nand flash chips
+
+config SPI_NAND_FORESEE
+	default y
+	bool "FORESEE SPI flash support"
+	help
+	  Add support for various FORESEE SPI Nand flash chips
+
+config SPI_NAND_BIWIN
+	default y
+	bool "BIWIN SPI flash support"
+	help
+	  Add support for various BIWIN SPI Nand flash chips
+
+config SPI_NAND_ETRON
+	default y
+	bool "ETRON SPI flash support"
+	help
+	  Add support for various ETRON SPI Nand flash chips
+
+config SPI_NAND_JSC
+	default y
+	bool "JSC SPI flash support"
+	help
+	  Add support for various JSC SPI Nand flash chips
+
+config SPI_NAND_SILICONGO
+	default y
+	bool "SILICONGO SPI flash support"
+	help
+	  Add support for various SILICONGO SPI Nand flash chips
+
+config SPI_NAND_UNIM
+	default y
+	bool "UNIM SPI flash support"
+	help
+	  Add support for various UNIM SPI Nand flash chips
+endif

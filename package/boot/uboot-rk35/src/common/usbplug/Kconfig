@@ -1,0 +1,10 @@
+menu "USBPLUG"
+
+config SUPPORT_USBPLUG
+	bool "Support USB PLUG"
+	default n
+	help
+	  Support to build U-Boot as usb plug image for download firmware.
+
+endmenu
+

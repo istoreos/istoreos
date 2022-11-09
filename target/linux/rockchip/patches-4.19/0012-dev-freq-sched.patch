@@ -1,0 +1,5521 @@
+From bface91961bde2e974a5e08fefd029a07ff48568 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:07:13 +0800
+Subject: [PATCH 12/46] dev freq sched
+
+---
+ arch/arm64/kernel/process.c               |  10 +
+ drivers/cpufreq/Kconfig                   |  48 +-
+ drivers/cpufreq/Kconfig.arm               |   9 +
+ drivers/cpufreq/Makefile                  |   9 +-
+ drivers/cpufreq/arm_big_little.c          |  10 +
+ drivers/cpufreq/cpufreq-dt-platdev.c      |  35 +-
+ drivers/cpufreq/cpufreq-dt.c              |  91 ++-
+ drivers/cpufreq/cpufreq.c                 |  37 +-
+ drivers/cpufreq/cpufreq_userspace.c       |   6 +-
+ drivers/cpufreq/scmi-cpufreq.c            |  36 +-
+ drivers/cpufreq/scpi-cpufreq.c            |   8 +-
+ drivers/cpuidle/cpuidle.c                 |   5 +-
+ drivers/cpuidle/governor.c                |   1 +
+ drivers/cpuidle/governors/menu.c          |   4 -
+ drivers/devfreq/Kconfig                   |  26 +-
+ drivers/devfreq/Makefile                  |   4 +-
+ drivers/devfreq/devfreq.c                 | 114 ++-
+ drivers/devfreq/event/Kconfig             |   7 +
+ drivers/devfreq/event/Makefile            |   1 +
+ drivers/devfreq/event/rockchip-dfi.c      | 576 +++++++++++++--
+ drivers/devfreq/governor.h                |   3 +
+ drivers/devfreq/governor_performance.c    |   8 +-
+ drivers/devfreq/governor_powersave.c      |   5 +-
+ drivers/devfreq/governor_simpleondemand.c |  35 +-
+ drivers/devfreq/governor_userspace.c      |  18 +-
+ drivers/devfreq/rk3399_dmc.c              | 442 ------------
+ drivers/thermal/of-thermal.c              | 496 +++++++++++--
+ drivers/thermal/power_allocator.c         |  14 +-
+ drivers/thermal/rockchip_thermal.c        | 837 ++++++++++++++++++++--
+ drivers/thermal/thermal_core.c            | 120 +++-
+ drivers/thermal/thermal_core.h            |  12 +
+ drivers/thermal/thermal_sysfs.c           |  20 +
+ include/linux/cpu.h                       |   7 +
+ include/linux/cpu_cooling.h               |  17 +
+ include/linux/cpufreq.h                   |  28 +
+ include/linux/cpuidle.h                   |   2 +-
+ include/linux/devfreq.h                   |  54 ++
+ include/linux/sched/cpufreq.h             |   6 +
+ include/linux/sched/loadavg.h             |  17 +
+ include/linux/thermal.h                   |  82 ++-
+ kernel/cpu.c                              |  23 +
+ kernel/sched/fair.c                       |  12 +
+ kernel/sched/idle.c                       |   3 +-
+ kernel/sched/loadavg.c                    |  15 -
+ kernel/sched/sched.h                      |  21 +
+ 45 files changed, 2599 insertions(+), 735 deletions(-)
+ delete mode 100644 drivers/devfreq/rk3399_dmc.c
+
+diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
+index 1945b8096..9987bcdd6 100644
+--- a/arch/arm64/kernel/process.c
++++ b/arch/arm64/kernel/process.c
+@@ -88,6 +88,16 @@ void arch_cpu_idle(void)
+ 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, smp_processor_id());
+ }
+ 
++void arch_cpu_idle_enter(void)
++{
++	idle_notifier_call_chain(IDLE_START);
++}
++
++void arch_cpu_idle_exit(void)
++{
++	idle_notifier_call_chain(IDLE_END);
++}
++
+ #ifdef CONFIG_HOTPLUG_CPU
+ void arch_cpu_idle_dead(void)
+ {
+diff --git a/drivers/cpufreq/Kconfig b/drivers/cpufreq/Kconfig
+index 608af20a3..e9f486b3f 100644
+--- a/drivers/cpufreq/Kconfig
++++ b/drivers/cpufreq/Kconfig
+@@ -37,6 +37,13 @@ config CPU_FREQ_STAT
+ 
+ 	  If in doubt, say N.
+ 
++config CPU_FREQ_TIMES
++       bool "CPU frequency time-in-state statistics"
++       help
++         Export CPU time-in-state information through procfs.
++
++         If in doubt, say N.
++
+ choice
+ 	prompt "Default CPUFreq governor"
+ 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if ARM_SA1100_CPUFREQ || ARM_SA1110_CPUFREQ
+@@ -104,6 +111,16 @@ config CPU_FREQ_DEFAULT_GOV_SCHEDUTIL
+ 	  have a look at the help section of that governor. The fallback
+ 	  governor will be 'performance'.
+ 
++config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
++	bool "interactive"
++	select CPU_FREQ_GOV_INTERACTIVE
++	select CPU_FREQ_GOV_PERFORMANCE
++	help
++	  Use the CPUFreq governor 'interactive' as default. This allows
++	  you to get a full dynamic cpu frequency capable system by simply
++	  loading your cpufreq low-level hardware driver, using the
++	  'interactive' governor for latency-sensitive workloads.
++
+ endchoice
+ 
+ config CPU_FREQ_GOV_PERFORMANCE
+@@ -202,6 +219,26 @@ config CPU_FREQ_GOV_SCHEDUTIL
+ 
+ 	  If in doubt, say N.
+ 
++config CPU_FREQ_GOV_INTERACTIVE
++	tristate "'interactive' cpufreq policy governor"
++	depends on CPU_FREQ
++	select CPU_FREQ_GOV_ATTR_SET
++	select IRQ_WORK
++	help
++	  'interactive' - This driver adds a dynamic cpufreq policy governor
++	  designed for latency-sensitive workloads.
++
++	  This governor attempts to reduce the latency of clock
++	  increases so that the system is more responsive to
++	  interactive workloads.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called cpufreq_interactive.
++
++	  For details, take a look at linux/Documentation/cpu-freq.
++
++	  If in doubt, say N.
++
+ comment "CPU frequency scaling drivers"
+ 
+ config CPUFREQ_DT
+@@ -209,7 +246,7 @@ config CPUFREQ_DT
+ 	depends on HAVE_CLK && OF
+ 	# if CPU_THERMAL is on and THERMAL=m, CPUFREQ_DT cannot be =y:
+ 	depends on !CPU_THERMAL || THERMAL
+-	select CPUFREQ_DT_PLATDEV
++	select CPUFREQ_DT_PLATDEV if !ARM_ROCKCHIP_CPUFREQ
+ 	select PM_OPP
+ 	help
+ 	  This adds a generic DT based cpufreq driver for frequency management.
+@@ -227,6 +264,15 @@ config CPUFREQ_DT_PLATDEV
+ 
+ 	  If in doubt, say N.
+ 
++config CPUFREQ_DUMMY
++	tristate "Dummy CPU frequency driver"
++	help
++	  This option adds a generic dummy CPUfreq driver, which sets a fake
++	  2-frequency table when initializing each policy and otherwise does
++	  nothing.
++
++	  If in doubt, say N
++
+ if X86
+ source "drivers/cpufreq/Kconfig.x86"
+ endif
+diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
+index 0cd8eb76a..cacd1aeec 100644
+--- a/drivers/cpufreq/Kconfig.arm
++++ b/drivers/cpufreq/Kconfig.arm
+@@ -121,6 +121,15 @@ config ARM_QCOM_CPUFREQ_KRYO
+ 
+ 	  If in doubt, say N.
+ 
++config ARM_ROCKCHIP_CPUFREQ
++	tristate "Rockchip CPUfreq driver"
++	depends on ARCH_ROCKCHIP && CPUFREQ_DT
++	select PM_OPP
++	help
++	  This adds the CPUFreq driver for Rockchip SoCs.
++
++	  If in doubt, say N.
++
+ config ARM_S3C_CPUFREQ
+ 	bool
+ 	help
+diff --git a/drivers/cpufreq/Makefile b/drivers/cpufreq/Makefile
+index c1ffeabe4..018c3de70 100644
+--- a/drivers/cpufreq/Makefile
++++ b/drivers/cpufreq/Makefile
+@@ -5,18 +5,24 @@ obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o freq_table.o
+ # CPUfreq stats
+ obj-$(CONFIG_CPU_FREQ_STAT)             += cpufreq_stats.o
+ 
+-# CPUfreq governors 
++# CPUfreq times
++obj-$(CONFIG_CPU_FREQ_TIMES)		+= cpufreq_times.o
++
++# CPUfreq governors
+ obj-$(CONFIG_CPU_FREQ_GOV_PERFORMANCE)	+= cpufreq_performance.o
+ obj-$(CONFIG_CPU_FREQ_GOV_POWERSAVE)	+= cpufreq_powersave.o
+ obj-$(CONFIG_CPU_FREQ_GOV_USERSPACE)	+= cpufreq_userspace.o
+ obj-$(CONFIG_CPU_FREQ_GOV_ONDEMAND)	+= cpufreq_ondemand.o
+ obj-$(CONFIG_CPU_FREQ_GOV_CONSERVATIVE)	+= cpufreq_conservative.o
++obj-$(CONFIG_CPU_FREQ_GOV_INTERACTIVE)	+= cpufreq_interactive.o
+ obj-$(CONFIG_CPU_FREQ_GOV_COMMON)		+= cpufreq_governor.o
+ obj-$(CONFIG_CPU_FREQ_GOV_ATTR_SET)	+= cpufreq_governor_attr_set.o
+ 
+ obj-$(CONFIG_CPUFREQ_DT)		+= cpufreq-dt.o
+ obj-$(CONFIG_CPUFREQ_DT_PLATDEV)	+= cpufreq-dt-platdev.o
+ 
++obj-$(CONFIG_CPUFREQ_DUMMY)		+= dummy-cpufreq.o
++
+ ##################################################################################
+ # x86 drivers.
+ # Link order matters. K8 is preferred to ACPI because of firmware bugs in early
+@@ -65,6 +71,7 @@ obj-$(CONFIG_ARM_OMAP2PLUS_CPUFREQ)	+= omap-cpufreq.o
+ obj-$(CONFIG_ARM_PXA2xx_CPUFREQ)	+= pxa2xx-cpufreq.o
+ obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
+ obj-$(CONFIG_ARM_QCOM_CPUFREQ_KRYO)	+= qcom-cpufreq-kryo.o
++obj-$(CONFIG_ARM_ROCKCHIP_CPUFREQ)	+= rockchip-cpufreq.o
+ obj-$(CONFIG_ARM_S3C2410_CPUFREQ)	+= s3c2410-cpufreq.o
+ obj-$(CONFIG_ARM_S3C2412_CPUFREQ)	+= s3c2412-cpufreq.o
+ obj-$(CONFIG_ARM_S3C2416_CPUFREQ)	+= s3c2416-cpufreq.o
+diff --git a/drivers/cpufreq/arm_big_little.c b/drivers/cpufreq/arm_big_little.c
+index cf62a1f64..803d41c62 100644
+--- a/drivers/cpufreq/arm_big_little.c
++++ b/drivers/cpufreq/arm_big_little.c
+@@ -24,6 +24,7 @@
+ #include <linux/cpufreq.h>
+ #include <linux/cpumask.h>
+ #include <linux/cpu_cooling.h>
++#include <linux/energy_model.h>
+ #include <linux/export.h>
+ #include <linux/module.h>
+ #include <linux/mutex.h>
+@@ -456,6 +457,7 @@ static int get_cluster_clk_and_freq_table(struct device *cpu_dev,
+ /* Per-CPU initialization */
+ static int bL_cpufreq_init(struct cpufreq_policy *policy)
+ {
++	struct em_data_callback em_cb = EM_DATA_CB(of_dev_pm_opp_get_cpu_power);
+ 	u32 cur_cluster = cpu_to_cluster(policy->cpu);
+ 	struct device *cpu_dev;
+ 	int ret;
+@@ -487,6 +489,14 @@ static int bL_cpufreq_init(struct cpufreq_policy *policy)
+ 	policy->cpuinfo.transition_latency =
+ 				arm_bL_ops->get_transition_latency(cpu_dev);
+ 
++	ret = dev_pm_opp_get_opp_count(cpu_dev);
++	if (ret <= 0) {
++		dev_dbg(cpu_dev, "OPP table is not ready, deferring probe\n");
++		return -EPROBE_DEFER;
++	}
++
++	em_register_perf_domain(policy->cpus, ret, &em_cb);
++
+ 	if (is_bL_switching_enabled())
+ 		per_cpu(cpu_last_req_freq, policy->cpu) = clk_get_cpu_rate(policy->cpu);
+ 
+diff --git a/drivers/cpufreq/cpufreq-dt-platdev.c b/drivers/cpufreq/cpufreq-dt-platdev.c
+index fe14c57de..eaf98286a 100644
+--- a/drivers/cpufreq/cpufreq-dt-platdev.c
++++ b/drivers/cpufreq/cpufreq-dt-platdev.c
+@@ -68,18 +68,6 @@ static const struct of_device_id whitelist[] __initconst = {
+ 	{ .compatible = "renesas,r8a7794", },
+ 	{ .compatible = "renesas,sh73a0", },
+ 
+-	{ .compatible = "rockchip,rk2928", },
+-	{ .compatible = "rockchip,rk3036", },
+-	{ .compatible = "rockchip,rk3066a", },
+-	{ .compatible = "rockchip,rk3066b", },
+-	{ .compatible = "rockchip,rk3188", },
+-	{ .compatible = "rockchip,rk3228", },
+-	{ .compatible = "rockchip,rk3288", },
+-	{ .compatible = "rockchip,rk3328", },
+-	{ .compatible = "rockchip,rk3366", },
+-	{ .compatible = "rockchip,rk3368", },
+-	{ .compatible = "rockchip,rk3399", },
+-
+ 	{ .compatible = "st-ericsson,u8500", },
+ 	{ .compatible = "st-ericsson,u8540", },
+ 	{ .compatible = "st-ericsson,u9500", },
+@@ -119,6 +107,29 @@ static const struct of_device_id blacklist[] __initconst = {
+ 	{ .compatible = "qcom,apq8096", },
+ 	{ .compatible = "qcom,msm8996", },
+ 
++	{ .compatible = "rockchip,px30", },
++	{ .compatible = "rockchip,rk2928", },
++	{ .compatible = "rockchip,rk3036", },
++	{ .compatible = "rockchip,rk3066a", },
++	{ .compatible = "rockchip,rk3066b", },
++	{ .compatible = "rockchip,rk3126", },
++	{ .compatible = "rockchip,rk3128", },
++	{ .compatible = "rockchip,rk3188", },
++	{ .compatible = "rockchip,rk3228", },
++	{ .compatible = "rockchip,rk3229", },
++	{ .compatible = "rockchip,rk3288", },
++	{ .compatible = "rockchip,rk3288w", },
++	{ .compatible = "rockchip,rk3326", },
++	{ .compatible = "rockchip,rk3328", },
++	{ .compatible = "rockchip,rk3366", },
++	{ .compatible = "rockchip,rk3368", },
++	{ .compatible = "rockchip,rk3399", },
++	{ .compatible = "rockchip,rk3399pro", },
++	{ .compatible = "rockchip,rk3566", },
++	{ .compatible = "rockchip,rk3568", },
++	{ .compatible = "rockchip,rv1109", },
++	{ .compatible = "rockchip,rv1126", },
++
+ 	{ .compatible = "st,stih407", },
+ 	{ .compatible = "st,stih410", },
+ 
+diff --git a/drivers/cpufreq/cpufreq-dt.c b/drivers/cpufreq/cpufreq-dt.c
+index e58bfcb11..d7e9331a7 100644
+--- a/drivers/cpufreq/cpufreq-dt.c
++++ b/drivers/cpufreq/cpufreq-dt.c
+@@ -13,9 +13,9 @@
+ 
+ #include <linux/clk.h>
+ #include <linux/cpu.h>
+-#include <linux/cpu_cooling.h>
+ #include <linux/cpufreq.h>
+ #include <linux/cpumask.h>
++#include <linux/energy_model.h>
+ #include <linux/err.h>
+ #include <linux/module.h>
+ #include <linux/of.h>
+@@ -26,11 +26,19 @@
+ #include <linux/thermal.h>
+ 
+ #include "cpufreq-dt.h"
++#ifdef CONFIG_ARCH_ROCKCHIP
++#include "rockchip-cpufreq.h"
++#include <soc/rockchip/rockchip_ipa.h>
++#include <soc/rockchip/rockchip_system_monitor.h>
++#endif
+ 
+ struct private_data {
+ 	struct opp_table *opp_table;
+ 	struct device *cpu_dev;
+-	struct thermal_cooling_device *cdev;
++#ifdef CONFIG_ARCH_ROCKCHIP
++	struct monitor_dev_info *mdev_info;
++	struct monitor_dev_profile *mdevp;
++#endif
+ 	const char *reg_name;
+ 	bool have_static_opps;
+ };
+@@ -47,7 +55,15 @@ static int set_target(struct cpufreq_policy *policy, unsigned int index)
+ 	unsigned long freq = policy->freq_table[index].frequency;
+ 	int ret;
+ 
++#ifdef CONFIG_ROCKCHIP_SYSTEM_MONITOR
++	if (priv->mdev_info)
++		ret = rockchip_monitor_opp_set_rate(priv->mdev_info,
++						    freq * 1000);
++	else
++		ret = dev_pm_opp_set_rate(priv->cpu_dev, freq * 1000);
++#else
+ 	ret = dev_pm_opp_set_rate(priv->cpu_dev, freq * 1000);
++#endif
+ 
+ 	if (!ret) {
+ 		arch_set_freq_scale(policy->related_cpus, freq,
+@@ -152,6 +168,7 @@ static int resources_available(void)
+ 
+ static int cpufreq_init(struct cpufreq_policy *policy)
+ {
++	struct em_data_callback em_cb = EM_DATA_CB(of_dev_pm_opp_get_cpu_power);
+ 	struct cpufreq_frequency_table *freq_table;
+ 	struct opp_table *opp_table = NULL;
+ 	struct private_data *priv;
+@@ -160,7 +177,7 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+ 	unsigned int transition_latency;
+ 	bool fallback = false;
+ 	const char *name;
+-	int ret;
++	int ret, nr_opp;
+ 
+ 	cpu_dev = get_cpu_device(policy->cpu);
+ 	if (!cpu_dev) {
+@@ -224,8 +241,31 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+ 	 *
+ 	 * OPPs might be populated at runtime, don't check for error here
+ 	 */
++#ifdef CONFIG_ARCH_ROCKCHIP
++	rockchip_cpufreq_set_opp_info(cpu_dev);
++	ret = dev_pm_opp_of_add_table(cpu_dev);
++	if (ret) {
++		dev_err(cpu_dev, "couldn't find opp table for cpu:%d, %d\n",
++			policy->cpu, ret);
++	} else {
++		struct cpumask cpus;
++
++		cpumask_copy(&cpus, policy->cpus);
++		cpumask_clear_cpu(policy->cpu, &cpus);
++		if (!cpumask_empty(&cpus)) {
++			if (!dev_pm_opp_of_cpumask_add_table(&cpus))
++				priv->have_static_opps = true;
++			else
++				dev_pm_opp_of_remove_table(cpu_dev);
++		} else {
++			priv->have_static_opps = true;
++		}
++	}
++	rockchip_cpufreq_adjust_power_scale(cpu_dev);
++#else
+ 	if (!dev_pm_opp_of_cpumask_add_table(policy->cpus))
+ 		priv->have_static_opps = true;
++#endif
+ 
+ 	/*
+ 	 * But we need OPP table to function so if it is not there let's
+@@ -237,6 +277,7 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+ 		ret = -EPROBE_DEFER;
+ 		goto out_free_opp;
+ 	}
++	nr_opp = ret;
+ 
+ 	if (fallback) {
+ 		cpumask_setall(policy->cpus);
+@@ -280,6 +321,28 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+ 	policy->cpuinfo.transition_latency = transition_latency;
+ 	policy->dvfs_possible_from_any_cpu = true;
+ 
++	em_register_perf_domain(policy->cpus, nr_opp, &em_cb);
++
++#ifdef CONFIG_ARCH_ROCKCHIP
++	priv->mdevp = kzalloc(sizeof(*priv->mdevp), GFP_KERNEL);
++	if (!priv->mdevp)
++		goto check_rate_volt;
++	priv->mdevp->type = MONITOR_TPYE_CPU;
++	priv->mdevp->low_temp_adjust = rockchip_monitor_cpu_low_temp_adjust;
++	priv->mdevp->high_temp_adjust = rockchip_monitor_cpu_high_temp_adjust;
++	cpumask_copy(&priv->mdevp->allowed_cpus, policy->cpus);
++	priv->mdev_info = rockchip_system_monitor_register(cpu_dev,
++							   priv->mdevp);
++	if (IS_ERR(priv->mdev_info)) {
++		kfree(priv->mdevp);
++		priv->mdevp = NULL;
++		dev_dbg(priv->cpu_dev,
++			"running cpufreq without system monitor\n");
++		priv->mdev_info = NULL;
++	}
++check_rate_volt:
++	rockchip_cpufreq_check_rate_volt(cpu_dev);
++#endif
+ 	return 0;
+ 
+ out_free_cpufreq_table:
+@@ -301,34 +364,34 @@ static int cpufreq_exit(struct cpufreq_policy *policy)
+ {
+ 	struct private_data *priv = policy->driver_data;
+ 
+-	cpufreq_cooling_unregister(priv->cdev);
++#ifdef CONFIG_ARCH_ROCKCHIP
++	rockchip_cpufreq_suspend(policy);
++	rockchip_system_monitor_unregister(priv->mdev_info);
++	kfree(priv->mdevp);
++	priv->mdevp = NULL;
++#endif
+ 	dev_pm_opp_free_cpufreq_table(priv->cpu_dev, &policy->freq_table);
+ 	if (priv->have_static_opps)
+ 		dev_pm_opp_of_cpumask_remove_table(policy->related_cpus);
+ 	if (priv->reg_name)
+ 		dev_pm_opp_put_regulators(priv->opp_table);
+-
++#ifdef CONFIG_ARCH_ROCKCHIP
++	rockchip_cpufreq_put_opp_info(priv->cpu_dev);
++#endif
+ 	clk_put(policy->clk);
+ 	kfree(priv);
+ 
+ 	return 0;
+ }
+ 
+-static void cpufreq_ready(struct cpufreq_policy *policy)
+-{
+-	struct private_data *priv = policy->driver_data;
+-
+-	priv->cdev = of_cpufreq_cooling_register(policy);
+-}
+-
+ static struct cpufreq_driver dt_cpufreq_driver = {
+-	.flags = CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK,
++	.flags = CPUFREQ_STICKY | CPUFREQ_NEED_INITIAL_FREQ_CHECK |
++		 CPUFREQ_IS_COOLING_DEV,
+ 	.verify = cpufreq_generic_frequency_table_verify,
+ 	.target_index = set_target,
+ 	.get = cpufreq_generic_get,
+ 	.init = cpufreq_init,
+ 	.exit = cpufreq_exit,
+-	.ready = cpufreq_ready,
+ 	.name = "cpufreq-dt",
+ 	.attr = cpufreq_dt_attr,
+ 	.suspend = cpufreq_generic_suspend,
+diff --git a/drivers/cpufreq/cpufreq.c b/drivers/cpufreq/cpufreq.c
+index e35c397b1..d568a099e 100644
+--- a/drivers/cpufreq/cpufreq.c
++++ b/drivers/cpufreq/cpufreq.c
+@@ -19,6 +19,8 @@
+ 
+ #include <linux/cpu.h>
+ #include <linux/cpufreq.h>
++#include <linux/cpufreq_times.h>
++#include <linux/cpu_cooling.h>
+ #include <linux/delay.h>
+ #include <linux/device.h>
+ #include <linux/init.h>
+@@ -31,6 +33,10 @@
+ #include <linux/tick.h>
+ #include <trace/events/power.h>
+ 
++#if IS_ENABLED(CONFIG_ARM_ROCKCHIP_CPUFREQ)
++#include "rockchip-cpufreq.h"
++#endif
++
+ static LIST_HEAD(cpufreq_policy_list);
+ 
+ static inline bool policy_is_inactive(struct cpufreq_policy *policy)
+@@ -158,6 +164,12 @@ __weak void arch_set_freq_scale(struct cpumask *cpus, unsigned long cur_freq,
+ }
+ EXPORT_SYMBOL_GPL(arch_set_freq_scale);
+ 
++__weak void arch_set_max_freq_scale(struct cpumask *cpus,
++				    unsigned long policy_max_freq)
++{
++}
++EXPORT_SYMBOL_GPL(arch_set_max_freq_scale);
++
+ /*
+  * This is a generic cpufreq init() routine which can be used by cpufreq
+  * drivers of SMP systems. It will do following:
+@@ -349,6 +361,7 @@ static void cpufreq_notify_transition(struct cpufreq_policy *policy,
+ 		}
+ 
+ 		cpufreq_stats_record_transition(policy, freqs->new);
++		cpufreq_times_record_transition(policy, freqs->new);
+ 		policy->cur = freqs->new;
+ 	}
+ }
+@@ -1302,6 +1315,7 @@ static int cpufreq_online(unsigned int cpu)
+ 			goto out_destroy_policy;
+ 
+ 		cpufreq_stats_create_table(policy);
++		cpufreq_times_create_policy(policy);
+ 
+ 		write_lock_irqsave(&cpufreq_driver_lock, flags);
+ 		list_add(&policy->policy_list, &cpufreq_policy_list);
+@@ -1325,6 +1339,10 @@ static int cpufreq_online(unsigned int cpu)
+ 	if (cpufreq_driver->ready)
+ 		cpufreq_driver->ready(policy);
+ 
++	if (IS_ENABLED(CONFIG_CPU_THERMAL) &&
++	    cpufreq_driver->flags & CPUFREQ_IS_COOLING_DEV)
++		policy->cdev = of_cpufreq_cooling_register(policy);
++
+ 	pr_debug("initialization complete\n");
+ 
+ 	return 0;
+@@ -1412,6 +1430,12 @@ static int cpufreq_offline(unsigned int cpu)
+ 		goto unlock;
+ 	}
+ 
++	if (IS_ENABLED(CONFIG_CPU_THERMAL) &&
++	    cpufreq_driver->flags & CPUFREQ_IS_COOLING_DEV) {
++		cpufreq_cooling_unregister(policy->cdev);
++		policy->cdev = NULL;
++	}
++
+ 	if (cpufreq_driver->stop_cpu)
+ 		cpufreq_driver->stop_cpu(policy);
+ 
+@@ -1864,9 +1888,15 @@ EXPORT_SYMBOL(cpufreq_unregister_notifier);
+ unsigned int cpufreq_driver_fast_switch(struct cpufreq_policy *policy,
+ 					unsigned int target_freq)
+ {
++	int ret;
++
+ 	target_freq = clamp_val(target_freq, policy->min, policy->max);
+ 
+-	return cpufreq_driver->fast_switch(policy, target_freq);
++	ret = cpufreq_driver->fast_switch(policy, target_freq);
++	if (ret)
++		cpufreq_times_record_transition(policy, ret);
++
++	return ret;
+ }
+ EXPORT_SYMBOL_GPL(cpufreq_driver_fast_switch);
+ 
+@@ -1963,6 +1993,9 @@ int __cpufreq_driver_target(struct cpufreq_policy *policy,
+ 	if (cpufreq_disabled())
+ 		return -ENODEV;
+ 
++#ifdef CONFIG_ARM_ROCKCHIP_CPUFREQ
++	target_freq = rockchip_cpufreq_adjust_target(policy->cpu, target_freq);
++#endif
+ 	/* Make sure that target_freq is within supported range */
+ 	target_freq = clamp_val(target_freq, policy->min, policy->max);
+ 
+@@ -2246,6 +2279,8 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
+ 	policy->max = new_policy->max;
+ 	trace_cpu_frequency_limits(policy);
+ 
++	arch_set_max_freq_scale(policy->cpus, policy->max);
++
+ 	policy->cached_target_freq = UINT_MAX;
+ 
+ 	pr_debug("new min and max freqs are %u - %u kHz\n",
+diff --git a/drivers/cpufreq/cpufreq_userspace.c b/drivers/cpufreq/cpufreq_userspace.c
+index bd897e3e1..7d4bf4152 100644
+--- a/drivers/cpufreq/cpufreq_userspace.c
++++ b/drivers/cpufreq/cpufreq_userspace.c
+@@ -82,20 +82,18 @@ static int cpufreq_userspace_policy_start(struct cpufreq_policy *policy)
+ 
+ 	mutex_lock(&userspace_mutex);
+ 	per_cpu(cpu_is_managed, policy->cpu) = 1;
+-	*setspeed = policy->cur;
++	if (!*setspeed)
++		*setspeed = policy->cur;
+ 	mutex_unlock(&userspace_mutex);
+ 	return 0;
+ }
+ 
+ static void cpufreq_userspace_policy_stop(struct cpufreq_policy *policy)
+ {
+-	unsigned int *setspeed = policy->governor_data;
+-
+ 	pr_debug("managing cpu %u stopped\n", policy->cpu);
+ 
+ 	mutex_lock(&userspace_mutex);
+ 	per_cpu(cpu_is_managed, policy->cpu) = 0;
+-	*setspeed = 0;
+ 	mutex_unlock(&userspace_mutex);
+ }
+ 
+diff --git a/drivers/cpufreq/scmi-cpufreq.c b/drivers/cpufreq/scmi-cpufreq.c
+index 3f0693439..800011207 100644
+--- a/drivers/cpufreq/scmi-cpufreq.c
++++ b/drivers/cpufreq/scmi-cpufreq.c
+@@ -12,6 +12,7 @@
+ #include <linux/cpufreq.h>
+ #include <linux/cpumask.h>
+ #include <linux/cpu_cooling.h>
++#include <linux/energy_model.h>
+ #include <linux/export.h>
+ #include <linux/module.h>
+ #include <linux/pm_opp.h>
+@@ -103,13 +104,42 @@ scmi_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
+ 	return 0;
+ }
+ 
++static int __maybe_unused
++scmi_get_cpu_power(unsigned long *power, unsigned long *KHz, int cpu)
++{
++	struct device *cpu_dev = get_cpu_device(cpu);
++	unsigned long Hz;
++	int ret, domain;
++
++	if (!cpu_dev) {
++		pr_err("failed to get cpu%d device\n", cpu);
++		return -ENODEV;
++	}
++
++	domain = handle->perf_ops->device_domain_id(cpu_dev);
++	if (domain < 0)
++		return domain;
++
++	/* Get the power cost of the performance domain. */
++	Hz = *KHz * 1000;
++	ret = handle->perf_ops->est_power_get(handle, domain, &Hz, power);
++	if (ret)
++		return ret;
++
++	/* The EM framework specifies the frequency in KHz. */
++	*KHz = Hz / 1000;
++
++	return 0;
++}
++
+ static int scmi_cpufreq_init(struct cpufreq_policy *policy)
+ {
+-	int ret;
++	int ret, nr_opp;
+ 	unsigned int latency;
+ 	struct device *cpu_dev;
+ 	struct scmi_data *priv;
+ 	struct cpufreq_frequency_table *freq_table;
++	struct em_data_callback em_cb = EM_DATA_CB(scmi_get_cpu_power);
+ 
+ 	cpu_dev = get_cpu_device(policy->cpu);
+ 	if (!cpu_dev) {
+@@ -142,6 +172,7 @@ static int scmi_cpufreq_init(struct cpufreq_policy *policy)
+ 		ret = -EPROBE_DEFER;
+ 		goto out_free_opp;
+ 	}
++	nr_opp = ret;
+ 
+ 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+ 	if (!priv) {
+@@ -171,6 +202,9 @@ static int scmi_cpufreq_init(struct cpufreq_policy *policy)
+ 	policy->cpuinfo.transition_latency = latency;
+ 
+ 	policy->fast_switch_possible = true;
++
++	em_register_perf_domain(policy->cpus, nr_opp, &em_cb);
++
+ 	return 0;
+ 
+ out_free_priv:
+diff --git a/drivers/cpufreq/scpi-cpufreq.c b/drivers/cpufreq/scpi-cpufreq.c
+index 033888533..667fc0618 100644
+--- a/drivers/cpufreq/scpi-cpufreq.c
++++ b/drivers/cpufreq/scpi-cpufreq.c
+@@ -23,6 +23,7 @@
+ #include <linux/cpufreq.h>
+ #include <linux/cpumask.h>
+ #include <linux/cpu_cooling.h>
++#include <linux/energy_model.h>
+ #include <linux/export.h>
+ #include <linux/module.h>
+ #include <linux/of_platform.h>
+@@ -98,11 +99,12 @@ scpi_get_sharing_cpus(struct device *cpu_dev, struct cpumask *cpumask)
+ 
+ static int scpi_cpufreq_init(struct cpufreq_policy *policy)
+ {
+-	int ret;
++	int ret, nr_opp;
+ 	unsigned int latency;
+ 	struct device *cpu_dev;
+ 	struct scpi_data *priv;
+ 	struct cpufreq_frequency_table *freq_table;
++	struct em_data_callback em_cb = EM_DATA_CB(of_dev_pm_opp_get_cpu_power);
+ 
+ 	cpu_dev = get_cpu_device(policy->cpu);
+ 	if (!cpu_dev) {
+@@ -135,6 +137,7 @@ static int scpi_cpufreq_init(struct cpufreq_policy *policy)
+ 		ret = -EPROBE_DEFER;
+ 		goto out_free_opp;
+ 	}
++	nr_opp = ret;
+ 
+ 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+ 	if (!priv) {
+@@ -170,6 +173,9 @@ static int scpi_cpufreq_init(struct cpufreq_policy *policy)
+ 	policy->cpuinfo.transition_latency = latency;
+ 
+ 	policy->fast_switch_possible = false;
++
++	em_register_perf_domain(policy->cpus, nr_opp, &em_cb);
++
+ 	return 0;
+ 
+ out_free_cpufreq_table:
+diff --git a/drivers/cpuidle/cpuidle.c b/drivers/cpuidle/cpuidle.c
+index 2d182dc1b..5a38eb002 100644
+--- a/drivers/cpuidle/cpuidle.c
++++ b/drivers/cpuidle/cpuidle.c
+@@ -28,6 +28,7 @@
+ 
+ DEFINE_PER_CPU(struct cpuidle_device *, cpuidle_devices);
+ DEFINE_PER_CPU(struct cpuidle_device, cpuidle_dev);
++EXPORT_SYMBOL_GPL(cpuidle_dev);
+ 
+ DEFINE_MUTEX(cpuidle_lock);
+ LIST_HEAD(cpuidle_detected_devices);
+@@ -222,7 +223,7 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
+ 	}
+ 
+ 	/* Take note of the planned idle state. */
+-	sched_idle_set_state(target_state);
++	sched_idle_set_state(target_state, index);
+ 
+ 	trace_cpu_idle_rcuidle(index, dev->cpu);
+ 	time_start = ns_to_ktime(local_clock());
+@@ -236,7 +237,7 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
+ 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, dev->cpu);
+ 
+ 	/* The cpu is no longer idle or about to enter idle. */
+-	sched_idle_set_state(NULL);
++	sched_idle_set_state(NULL, -1);
+ 
+ 	if (broadcast) {
+ 		if (WARN_ON_ONCE(!irqs_disabled()))
+diff --git a/drivers/cpuidle/governor.c b/drivers/cpuidle/governor.c
+index 9fed1b829..e3321b9cf 100644
+--- a/drivers/cpuidle/governor.c
++++ b/drivers/cpuidle/governor.c
+@@ -95,6 +95,7 @@ int cpuidle_register_governor(struct cpuidle_governor *gov)
+ 
+ 	return ret;
+ }
++EXPORT_SYMBOL_GPL(cpuidle_register_governor);
+ 
+ /**
+  * cpuidle_governor_latency_req - Compute a latency constraint for CPU
+diff --git a/drivers/cpuidle/governors/menu.c b/drivers/cpuidle/governors/menu.c
+index 6d7f6b9bb..2ee86c90e 100644
+--- a/drivers/cpuidle/governors/menu.c
++++ b/drivers/cpuidle/governors/menu.c
+@@ -131,10 +131,6 @@ struct menu_device {
+ 	int		interval_ptr;
+ };
+ 
+-
+-#define LOAD_INT(x) ((x) >> FSHIFT)
+-#define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
+-
+ static inline int get_loadavg(unsigned long load)
+ {
+ 	return LOAD_INT(load) * 10 + LOAD_FRAC(load) / 10;
+diff --git a/drivers/devfreq/Kconfig b/drivers/devfreq/Kconfig
+index 4c4ec68b0..2f400d8d7 100644
+--- a/drivers/devfreq/Kconfig
++++ b/drivers/devfreq/Kconfig
+@@ -101,18 +101,32 @@ config ARM_TEGRA_DEVFREQ
+ 	  It reads ACTMON counters of memory controllers and adjusts the
+ 	  operating frequencies and voltages with OPP support.
+ 
+-config ARM_RK3399_DMC_DEVFREQ
+-	tristate "ARM RK3399 DMC DEVFREQ Driver"
++config ARM_ROCKCHIP_BUS_DEVFREQ
++	tristate "ARM ROCKCHIP BUS DEVFREQ Driver"
++	depends on ARCH_ROCKCHIP
++	help
++	  This adds the DEVFREQ driver for the ROCKCHIP BUS.
++
++config ARM_ROCKCHIP_DMC_DEVFREQ
++	tristate "ARM ROCKCHIP DMC DEVFREQ Driver"
++	depends on ARCH_ROCKCHIP
+ 	depends on (ARCH_ROCKCHIP && HAVE_ARM_SMCCC) || \
+ 		(COMPILE_TEST && HAVE_ARM_SMCCC)
+ 	select DEVFREQ_EVENT_ROCKCHIP_DFI
+-	select DEVFREQ_GOV_SIMPLE_ONDEMAND
+ 	select PM_DEVFREQ_EVENT
+ 	select PM_OPP
+ 	help
+-          This adds the DEVFREQ driver for the RK3399 DMC(Dynamic Memory Controller).
+-          It sets the frequency for the memory controller and reads the usage counts
+-          from hardware.
++	  This adds the DEVFREQ driver for the ROCKCHIP DMC(Dynamic Memory Controller).
++	  It sets the frequency for the memory controller and reads the usage counts
++	  from hardware.
++
++config ARM_ROCKCHIP_DMC_DEBUG
++	tristate "ARM ROCKCHIP DMC DEBUG Driver"
++	depends on ARCH_ROCKCHIP
++	depends on (ARCH_ROCKCHIP && HAVE_ARM_SMCCC) || \
++		(COMPILE_TEST && HAVE_ARM_SMCCC)
++	help
++	  This adds the dmc debug driver for the ROCKCHIP DMC.
+ 
+ source "drivers/devfreq/event/Kconfig"
+ 
+diff --git a/drivers/devfreq/Makefile b/drivers/devfreq/Makefile
+index 32b8d4d3f..053c6145d 100644
+--- a/drivers/devfreq/Makefile
++++ b/drivers/devfreq/Makefile
+@@ -9,7 +9,9 @@ obj-$(CONFIG_DEVFREQ_GOV_PASSIVE)	+= governor_passive.o
+ 
+ # DEVFREQ Drivers
+ obj-$(CONFIG_ARM_EXYNOS_BUS_DEVFREQ)	+= exynos-bus.o
+-obj-$(CONFIG_ARM_RK3399_DMC_DEVFREQ)	+= rk3399_dmc.o
++obj-$(CONFIG_ARM_ROCKCHIP_BUS_DEVFREQ)	+= rockchip_bus.o
++obj-$(CONFIG_ARM_ROCKCHIP_DMC_DEVFREQ)	+= rockchip_dmc.o
++obj-$(CONFIG_ARM_ROCKCHIP_DMC_DEBUG)	+= rockchip_dmc_dbg.o
+ obj-$(CONFIG_ARM_TEGRA_DEVFREQ)		+= tegra-devfreq.o
+ 
+ # DEVFREQ Event Drivers
+diff --git a/drivers/devfreq/devfreq.c b/drivers/devfreq/devfreq.c
+index 06a981c72..87feef912 100644
+--- a/drivers/devfreq/devfreq.c
++++ b/drivers/devfreq/devfreq.c
+@@ -29,9 +29,6 @@
+ #include <linux/of.h>
+ #include "governor.h"
+ 
+-#define MAX(a,b)	((a > b) ? a : b)
+-#define MIN(a,b)	((a < b) ? a : b)
+-
+ static struct class *devfreq_class;
+ 
+ /*
+@@ -300,6 +297,7 @@ static int devfreq_notify_transition(struct devfreq *devfreq,
+  */
+ int update_devfreq(struct devfreq *devfreq)
+ {
++	struct devfreq_policy *policy = &devfreq->policy;
+ 	struct devfreq_freqs freqs;
+ 	unsigned long freq, cur_freq, min_freq, max_freq;
+ 	int err = 0;
+@@ -313,6 +311,11 @@ int update_devfreq(struct devfreq *devfreq)
+ 	if (!devfreq->governor)
+ 		return -EINVAL;
+ 
++	policy->max = devfreq->scaling_max_freq;
++	policy->min = devfreq->scaling_min_freq;
++	srcu_notifier_call_chain(&devfreq->policy_notifier_list, DEVFREQ_ADJUST,
++				 policy);
++
+ 	/* Reevaluate the proper frequency */
+ 	err = devfreq->governor->get_target_freq(devfreq, &freq);
+ 	if (err)
+@@ -325,8 +328,8 @@ int update_devfreq(struct devfreq *devfreq)
+ 	 * max_freq
+ 	 * min_freq
+ 	 */
+-	max_freq = MIN(devfreq->scaling_max_freq, devfreq->max_freq);
+-	min_freq = MAX(devfreq->scaling_min_freq, devfreq->min_freq);
++	max_freq = min(policy->max, devfreq->max_freq);
++	min_freq = max(policy->min, devfreq->min_freq);
+ 
+ 	if (freq < min_freq) {
+ 		freq = min_freq;
+@@ -543,8 +546,6 @@ static int devfreq_notifier_call(struct notifier_block *nb, unsigned long type,
+ 	mutex_lock(&devfreq->lock);
+ 
+ 	devfreq->scaling_min_freq = find_available_min_freq(devfreq);
+-	if (!devfreq->scaling_min_freq)
+-		goto out;
+ 
+ 	devfreq->scaling_max_freq = find_available_max_freq(devfreq);
+ 	if (!devfreq->scaling_max_freq) {
+@@ -582,6 +583,7 @@ static void devfreq_dev_release(struct device *dev)
+ 		devfreq->profile->exit(devfreq->dev.parent);
+ 
+ 	mutex_destroy(&devfreq->lock);
++	mutex_destroy(&devfreq->event_lock);
+ 	kfree(devfreq);
+ }
+ 
+@@ -624,6 +626,7 @@ struct devfreq *devfreq_add_device(struct device *dev,
+ 	}
+ 
+ 	mutex_init(&devfreq->lock);
++	mutex_init(&devfreq->event_lock);
+ 	mutex_lock(&devfreq->lock);
+ 	devfreq->dev.parent = dev;
+ 	devfreq->dev.class = devfreq_class;
+@@ -645,12 +648,8 @@ struct devfreq *devfreq_add_device(struct device *dev,
+ 	}
+ 
+ 	devfreq->scaling_min_freq = find_available_min_freq(devfreq);
+-	if (!devfreq->scaling_min_freq) {
+-		mutex_unlock(&devfreq->lock);
+-		err = -EINVAL;
+-		goto err_dev;
+-	}
+ 	devfreq->min_freq = devfreq->scaling_min_freq;
++	devfreq->policy.min = devfreq->min_freq;
+ 
+ 	devfreq->scaling_max_freq = find_available_max_freq(devfreq);
+ 	if (!devfreq->scaling_max_freq) {
+@@ -659,6 +658,7 @@ struct devfreq *devfreq_add_device(struct device *dev,
+ 		goto err_dev;
+ 	}
+ 	devfreq->max_freq = devfreq->scaling_max_freq;
++	devfreq->policy.max = devfreq->max_freq;
+ 
+ 	dev_set_name(&devfreq->dev, "%s", dev_name(dev));
+ 	err = device_register(&devfreq->dev);
+@@ -681,6 +681,7 @@ struct devfreq *devfreq_add_device(struct device *dev,
+ 	devfreq->last_stat_updated = jiffies;
+ 
+ 	srcu_init_notifier_head(&devfreq->transition_notifier_list);
++	srcu_init_notifier_head(&devfreq->policy_notifier_list);
+ 
+ 	mutex_unlock(&devfreq->lock);
+ 
+@@ -860,14 +861,19 @@ EXPORT_SYMBOL(devm_devfreq_remove_device);
+  */
+ int devfreq_suspend_device(struct devfreq *devfreq)
+ {
++	int ret;
++
+ 	if (!devfreq)
+ 		return -EINVAL;
+ 
+ 	if (!devfreq->governor)
+ 		return 0;
+ 
+-	return devfreq->governor->event_handler(devfreq,
++	mutex_lock(&devfreq->event_lock);
++	ret = devfreq->governor->event_handler(devfreq,
+ 				DEVFREQ_GOV_SUSPEND, NULL);
++	mutex_unlock(&devfreq->event_lock);
++	return ret;
+ }
+ EXPORT_SYMBOL(devfreq_suspend_device);
+ 
+@@ -881,14 +887,18 @@ EXPORT_SYMBOL(devfreq_suspend_device);
+  */
+ int devfreq_resume_device(struct devfreq *devfreq)
+ {
++	int ret;
+ 	if (!devfreq)
+ 		return -EINVAL;
+ 
+ 	if (!devfreq->governor)
+ 		return 0;
+ 
+-	return devfreq->governor->event_handler(devfreq,
++	mutex_lock(&devfreq->event_lock);
++	ret = devfreq->governor->event_handler(devfreq,
+ 				DEVFREQ_GOV_RESUME, NULL);
++	mutex_unlock(&devfreq->event_lock);
++	return ret;
+ }
+ EXPORT_SYMBOL(devfreq_resume_device);
+ 
+@@ -1035,7 +1045,7 @@ static ssize_t governor_store(struct device *dev, struct device_attribute *attr,
+ 	struct devfreq *df = to_devfreq(dev);
+ 	int ret;
+ 	char str_governor[DEVFREQ_NAME_LEN + 1];
+-	struct devfreq_governor *governor;
++	const struct devfreq_governor *governor, *prev_gov;
+ 
+ 	ret = sscanf(buf, "%" __stringify(DEVFREQ_NAME_LEN) "s", str_governor);
+ 	if (ret != 1)
+@@ -1056,20 +1066,33 @@ static ssize_t governor_store(struct device *dev, struct device_attribute *attr,
+ 		goto out;
+ 	}
+ 
++	mutex_lock(&df->event_lock);
+ 	if (df->governor) {
+ 		ret = df->governor->event_handler(df, DEVFREQ_GOV_STOP, NULL);
+ 		if (ret) {
+ 			dev_warn(dev, "%s: Governor %s not stopped(%d)\n",
+ 				 __func__, df->governor->name, ret);
+-			goto out;
++			goto gov_stop_out;
+ 		}
+ 	}
++	prev_gov = df->governor;
+ 	df->governor = governor;
+ 	strncpy(df->governor_name, governor->name, DEVFREQ_NAME_LEN);
+ 	ret = df->governor->event_handler(df, DEVFREQ_GOV_START, NULL);
+-	if (ret)
++	if (ret) {
+ 		dev_warn(dev, "%s: Governor %s not started(%d)\n",
+ 			 __func__, df->governor->name, ret);
++		if (prev_gov) {
++			df->governor = prev_gov;
++			strlcpy(df->governor_name, prev_gov->name,
++				DEVFREQ_NAME_LEN);
++			df->governor->event_handler(df, DEVFREQ_GOV_START,
++						    NULL);
++		}
++	}
++
++gov_stop_out:
++	mutex_unlock(&df->event_lock);
+ out:
+ 	mutex_unlock(&devfreq_list_lock);
+ 
+@@ -1164,8 +1187,10 @@ static ssize_t polling_interval_store(struct device *dev,
+ 	if (ret != 1)
+ 		return -EINVAL;
+ 
++	mutex_lock(&df->event_lock);
+ 	df->governor->event_handler(df, DEVFREQ_GOV_INTERVAL, &value);
+ 	ret = count;
++	mutex_unlock(&df->event_lock);
+ 
+ 	return ret;
+ }
+@@ -1182,6 +1207,7 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
+ 	if (ret != 1)
+ 		return -EINVAL;
+ 
++	mutex_lock(&df->event_lock);
+ 	mutex_lock(&df->lock);
+ 
+ 	if (value) {
+@@ -1204,6 +1230,7 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
+ 	ret = count;
+ unlock:
+ 	mutex_unlock(&df->lock);
++	mutex_unlock(&df->event_lock);
+ 	return ret;
+ }
+ 
+@@ -1212,7 +1239,7 @@ static ssize_t min_freq_show(struct device *dev, struct device_attribute *attr,
+ {
+ 	struct devfreq *df = to_devfreq(dev);
+ 
+-	return sprintf(buf, "%lu\n", MAX(df->scaling_min_freq, df->min_freq));
++	return sprintf(buf, "%lu\n", max(df->policy.min, df->min_freq));
+ }
+ 
+ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
+@@ -1226,6 +1253,7 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
+ 	if (ret != 1)
+ 		return -EINVAL;
+ 
++	mutex_lock(&df->event_lock);
+ 	mutex_lock(&df->lock);
+ 
+ 	if (value) {
+@@ -1248,6 +1276,7 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
+ 	ret = count;
+ unlock:
+ 	mutex_unlock(&df->lock);
++	mutex_unlock(&df->event_lock);
+ 	return ret;
+ }
+ static DEVICE_ATTR_RW(min_freq);
+@@ -1257,7 +1286,7 @@ static ssize_t max_freq_show(struct device *dev, struct device_attribute *attr,
+ {
+ 	struct devfreq *df = to_devfreq(dev);
+ 
+-	return sprintf(buf, "%lu\n", MIN(df->scaling_max_freq, df->max_freq));
++	return sprintf(buf, "%lu\n", min(df->policy.max, df->max_freq));
+ }
+ static DEVICE_ATTR_RW(max_freq);
+ 
+@@ -1335,6 +1364,40 @@ static ssize_t trans_stat_show(struct device *dev,
+ }
+ static DEVICE_ATTR_RO(trans_stat);
+ 
++static ssize_t load_show(struct device *dev, struct device_attribute *attr,
++			 char *buf)
++{
++	int err;
++	struct devfreq *devfreq = to_devfreq(dev);
++	struct devfreq_dev_status stat = devfreq->last_status;
++	unsigned long freq;
++	ssize_t len;
++
++	err = devfreq_update_stats(devfreq);
++	if (err)
++		return err;
++
++	if (stat.total_time < stat.busy_time) {
++		err = devfreq_update_stats(devfreq);
++		if (err)
++			return err;
++	};
++
++	if (!stat.total_time)
++		return 0;
++
++	len = sprintf(buf, "%lu", stat.busy_time * 100 / stat.total_time);
++
++	if (devfreq->profile->get_cur_freq &&
++		!devfreq->profile->get_cur_freq(devfreq->dev.parent, &freq))
++			len += sprintf(buf + len, "@%luHz\n", freq);
++	else
++		len += sprintf(buf + len, "@%luHz\n", devfreq->previous_freq);
++
++	return len;
++}
++static DEVICE_ATTR_RO(load);
++
+ static struct attribute *devfreq_attrs[] = {
+ 	&dev_attr_name.attr,
+ 	&dev_attr_governor.attr,
+@@ -1346,6 +1409,7 @@ static struct attribute *devfreq_attrs[] = {
+ 	&dev_attr_min_freq.attr,
+ 	&dev_attr_max_freq.attr,
+ 	&dev_attr_trans_stat.attr,
++	&dev_attr_load.attr,
+ 	NULL,
+ };
+ ATTRIBUTE_GROUPS(devfreq);
+@@ -1492,7 +1556,7 @@ EXPORT_SYMBOL(devm_devfreq_unregister_opp_notifier);
+  * devfreq_register_notifier() - Register a driver with devfreq
+  * @devfreq:	The devfreq object.
+  * @nb:		The notifier block to register.
+- * @list:	DEVFREQ_TRANSITION_NOTIFIER.
++ * @list:	DEVFREQ_TRANSITION_NOTIFIER or DEVFREQ_POLICY_NOTIFIER.
+  */
+ int devfreq_register_notifier(struct devfreq *devfreq,
+ 				struct notifier_block *nb,
+@@ -1508,6 +1572,10 @@ int devfreq_register_notifier(struct devfreq *devfreq,
+ 		ret = srcu_notifier_chain_register(
+ 				&devfreq->transition_notifier_list, nb);
+ 		break;
++	case DEVFREQ_POLICY_NOTIFIER:
++		ret = srcu_notifier_chain_register(
++				&devfreq->policy_notifier_list, nb);
++		break;
+ 	default:
+ 		ret = -EINVAL;
+ 	}
+@@ -1520,7 +1588,7 @@ EXPORT_SYMBOL(devfreq_register_notifier);
+  * devfreq_unregister_notifier() - Unregister a driver with devfreq
+  * @devfreq:	The devfreq object.
+  * @nb:		The notifier block to be unregistered.
+- * @list:	DEVFREQ_TRANSITION_NOTIFIER.
++ * @list:	DEVFREQ_TRANSITION_NOTIFIER or DEVFREQ_POLICY_NOTIFIER.
+  */
+ int devfreq_unregister_notifier(struct devfreq *devfreq,
+ 				struct notifier_block *nb,
+@@ -1536,6 +1604,10 @@ int devfreq_unregister_notifier(struct devfreq *devfreq,
+ 		ret = srcu_notifier_chain_unregister(
+ 				&devfreq->transition_notifier_list, nb);
+ 		break;
++	case DEVFREQ_POLICY_NOTIFIER:
++		ret = srcu_notifier_chain_unregister(
++				&devfreq->policy_notifier_list, nb);
++		break;
+ 	default:
+ 		ret = -EINVAL;
+ 	}
+diff --git a/drivers/devfreq/event/Kconfig b/drivers/devfreq/event/Kconfig
+index 8851bc4e8..fffb14932 100644
+--- a/drivers/devfreq/event/Kconfig
++++ b/drivers/devfreq/event/Kconfig
+@@ -38,4 +38,11 @@ config DEVFREQ_EVENT_ROCKCHIP_DFI
+ 	  This add the devfreq-event driver for Rockchip SoC. It provides DFI
+ 	  (DDR Monitor Module) driver to count ddr load.
+ 
++config DEVFREQ_EVENT_ROCKCHIP_NOCP
++	tristate "ROCKCHIP NoC (Network On Chip) Probe DEVFREQ event Driver"
++	depends on ARCH_ROCKCHIP
++	help
++	  This add the devfreq-event driver for Rockchip SoC. It provides NoC
++	  (Network on Chip) Probe counters to monitor traffic statistics.
++
+ endif # PM_DEVFREQ_EVENT
+diff --git a/drivers/devfreq/event/Makefile b/drivers/devfreq/event/Makefile
+index dda7090a4..d474318a9 100644
+--- a/drivers/devfreq/event/Makefile
++++ b/drivers/devfreq/event/Makefile
+@@ -3,3 +3,4 @@
+ obj-$(CONFIG_DEVFREQ_EVENT_EXYNOS_NOCP) += exynos-nocp.o
+ obj-$(CONFIG_DEVFREQ_EVENT_EXYNOS_PPMU) += exynos-ppmu.o
+ obj-$(CONFIG_DEVFREQ_EVENT_ROCKCHIP_DFI) += rockchip-dfi.o
++obj-$(CONFIG_DEVFREQ_EVENT_ROCKCHIP_NOCP) += rockchip-nocp.o
+diff --git a/drivers/devfreq/event/rockchip-dfi.c b/drivers/devfreq/event/rockchip-dfi.c
+index 22b113363..a5ccecb88 100644
+--- a/drivers/devfreq/event/rockchip-dfi.c
++++ b/drivers/devfreq/event/rockchip-dfi.c
+@@ -26,17 +26,51 @@
+ #include <linux/list.h>
+ #include <linux/of.h>
+ 
+-#define RK3399_DMC_NUM_CH	2
+-
++#define PX30_PMUGRF_OS_REG2		0x208
++#define PX30_PMUGRF_OS_REG3		0x20c
++
++#define RK3128_GRF_SOC_CON0		0x140
++#define RK3128_GRF_OS_REG1		0x1cc
++#define RK3128_GRF_DFI_WRNUM		0x220
++#define RK3128_GRF_DFI_RDNUM		0x224
++#define RK3128_GRF_DFI_TIMERVAL		0x22c
++#define RK3128_DDR_MONITOR_EN		((1 << (16 + 6)) + (1 << 6))
++#define RK3128_DDR_MONITOR_DISB		((1 << (16 + 6)) + (0 << 6))
++
++#define RK3288_PMU_SYS_REG2		0x9c
++#define RK3288_GRF_SOC_CON4		0x254
++#define RK3288_GRF_SOC_STATUS(n)	(0x280 + (n) * 4)
++#define RK3288_DFI_EN			(0x30003 << 14)
++#define RK3288_DFI_DIS			(0x30000 << 14)
++#define RK3288_LPDDR_SEL		(0x10001 << 13)
++#define RK3288_DDR3_SEL			(0x10000 << 13)
++
++#define RK3328_GRF_OS_REG2		0x5d0
++
++#define RK3368_GRF_DDRC0_CON0		0x600
++#define RK3368_GRF_SOC_STATUS5		0x494
++#define RK3368_GRF_SOC_STATUS6		0x498
++#define RK3368_GRF_SOC_STATUS8		0x4a0
++#define RK3368_GRF_SOC_STATUS9		0x4a4
++#define RK3368_GRF_SOC_STATUS10		0x4a8
++#define RK3368_DFI_EN			(0x30003 << 5)
++#define RK3368_DFI_DIS			(0x30000 << 5)
++
++#define MAX_DMC_NUM_CH			2
++#define READ_DRAMTYPE_INFO(n)		(((n) >> 13) & 0x7)
++#define READ_CH_INFO(n)			(((n) >> 28) & 0x3)
++#define READ_DRAMTYPE_INFO_V3(n, m)	((((n) >> 13) & 0x7) | ((((m) >> 12) & 0x3) << 3))
++#define READ_SYSREG_VERSION(m)		(((m) >> 28) & 0xf)
+ /* DDRMON_CTRL */
+-#define DDRMON_CTRL	0x04
+-#define CLR_DDRMON_CTRL	(0x1f0000 << 0)
+-#define LPDDR4_EN	(0x10001 << 4)
+-#define HARDWARE_EN	(0x10001 << 3)
+-#define LPDDR3_EN	(0x10001 << 2)
+-#define SOFTWARE_EN	(0x10001 << 1)
+-#define SOFTWARE_DIS	(0x10000 << 1)
+-#define TIME_CNT_EN	(0x10001 << 0)
++#define DDRMON_CTRL			0x04
++#define CLR_DDRMON_CTRL			(0x3f0000 << 0)
++#define DDR4_EN				(0x10001 << 5)
++#define LPDDR4_EN			(0x10001 << 4)
++#define HARDWARE_EN			(0x10001 << 3)
++#define LPDDR2_3_EN			(0x10001 << 2)
++#define SOFTWARE_EN			(0x10001 << 1)
++#define SOFTWARE_DIS			(0x10000 << 1)
++#define TIME_CNT_EN			(0x10001 << 0)
+ 
+ #define DDRMON_CH0_COUNT_NUM		0x28
+ #define DDRMON_CH0_DFI_ACCESS_NUM	0x2c
+@@ -44,14 +78,15 @@
+ #define DDRMON_CH1_DFI_ACCESS_NUM	0x40
+ 
+ /* pmu grf */
+-#define PMUGRF_OS_REG2	0x308
+-#define DDRTYPE_SHIFT	13
+-#define DDRTYPE_MASK	7
++#define PMUGRF_OS_REG2			0x308
+ 
+ enum {
++	DDR4 = 0,
+ 	DDR3 = 3,
++	LPDDR2 = 5,
+ 	LPDDR3 = 6,
+ 	LPDDR4 = 7,
++	LPDDR4X = 8,
+ 	UNUSED = 0xFF
+ };
+ 
+@@ -68,32 +103,261 @@ struct dmc_usage {
+ struct rockchip_dfi {
+ 	struct devfreq_event_dev *edev;
+ 	struct devfreq_event_desc *desc;
+-	struct dmc_usage ch_usage[RK3399_DMC_NUM_CH];
++	struct dmc_usage ch_usage[MAX_DMC_NUM_CH];
+ 	struct device *dev;
+ 	void __iomem *regs;
+ 	struct regmap *regmap_pmu;
++	struct regmap *regmap_grf;
++	struct regmap *regmap_pmugrf;
+ 	struct clk *clk;
++	u32 dram_type;
++	/*
++	 * available mask, 1: available, 0: not available
++	 * each bit represent a channel
++	 */
++	u32 ch_msk;
++};
++
++static void rk3128_dfi_start_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf,
++		     RK3128_GRF_SOC_CON0,
++		     RK3128_DDR_MONITOR_EN);
++}
++
++static void rk3128_dfi_stop_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf,
++		     RK3128_GRF_SOC_CON0,
++		     RK3128_DDR_MONITOR_DISB);
++}
++
++static int rk3128_dfi_disable(struct devfreq_event_dev *edev)
++{
++	rk3128_dfi_stop_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3128_dfi_enable(struct devfreq_event_dev *edev)
++{
++	rk3128_dfi_start_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3128_dfi_set_event(struct devfreq_event_dev *edev)
++{
++	return 0;
++}
++
++static int rk3128_dfi_get_event(struct devfreq_event_dev *edev,
++				struct devfreq_event_data *edata)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++	unsigned long flags;
++	u32 dfi_wr, dfi_rd, dfi_timer;
++
++	local_irq_save(flags);
++
++	rk3128_dfi_stop_hardware_counter(edev);
++
++	regmap_read(info->regmap_grf, RK3128_GRF_DFI_WRNUM, &dfi_wr);
++	regmap_read(info->regmap_grf, RK3128_GRF_DFI_RDNUM, &dfi_rd);
++	regmap_read(info->regmap_grf, RK3128_GRF_DFI_TIMERVAL, &dfi_timer);
++
++	edata->load_count = (dfi_wr + dfi_rd) * 4;
++	edata->total_count = dfi_timer;
++
++	rk3128_dfi_start_hardware_counter(edev);
++
++	local_irq_restore(flags);
++
++	return 0;
++}
++
++static const struct devfreq_event_ops rk3128_dfi_ops = {
++	.disable = rk3128_dfi_disable,
++	.enable = rk3128_dfi_enable,
++	.get_event = rk3128_dfi_get_event,
++	.set_event = rk3128_dfi_set_event,
++};
++
++static void rk3288_dfi_start_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf, RK3288_GRF_SOC_CON4, RK3288_DFI_EN);
++}
++
++static void rk3288_dfi_stop_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf, RK3288_GRF_SOC_CON4, RK3288_DFI_DIS);
++}
++
++static int rk3288_dfi_disable(struct devfreq_event_dev *edev)
++{
++	rk3288_dfi_stop_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3288_dfi_enable(struct devfreq_event_dev *edev)
++{
++	rk3288_dfi_start_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3288_dfi_set_event(struct devfreq_event_dev *edev)
++{
++	return 0;
++}
++
++static int rk3288_dfi_get_busier_ch(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++	u32 tmp, max = 0;
++	u32 i, busier_ch = 0;
++	u32 rd_count, wr_count, total_count;
++
++	rk3288_dfi_stop_hardware_counter(edev);
++
++	/* Find out which channel is busier */
++	for (i = 0; i < MAX_DMC_NUM_CH; i++) {
++		if (!(info->ch_msk & BIT(i)))
++			continue;
++		regmap_read(info->regmap_grf,
++			    RK3288_GRF_SOC_STATUS(11 + i * 4), &wr_count);
++		regmap_read(info->regmap_grf,
++			    RK3288_GRF_SOC_STATUS(12 + i * 4), &rd_count);
++		regmap_read(info->regmap_grf,
++			    RK3288_GRF_SOC_STATUS(14 + i * 4), &total_count);
++		info->ch_usage[i].access = (wr_count + rd_count) * 4;
++		info->ch_usage[i].total = total_count;
++		tmp = info->ch_usage[i].access;
++		if (tmp > max) {
++			busier_ch = i;
++			max = tmp;
++		}
++	}
++	rk3288_dfi_start_hardware_counter(edev);
++
++	return busier_ch;
++}
++
++static int rk3288_dfi_get_event(struct devfreq_event_dev *edev,
++				struct devfreq_event_data *edata)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++	int busier_ch;
++	unsigned long flags;
++
++	local_irq_save(flags);
++	busier_ch = rk3288_dfi_get_busier_ch(edev);
++	local_irq_restore(flags);
++
++	edata->load_count = info->ch_usage[busier_ch].access;
++	edata->total_count = info->ch_usage[busier_ch].total;
++
++	return 0;
++}
++
++static const struct devfreq_event_ops rk3288_dfi_ops = {
++	.disable = rk3288_dfi_disable,
++	.enable = rk3288_dfi_enable,
++	.get_event = rk3288_dfi_get_event,
++	.set_event = rk3288_dfi_set_event,
++};
++
++static void rk3368_dfi_start_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf, RK3368_GRF_DDRC0_CON0, RK3368_DFI_EN);
++}
++
++static void rk3368_dfi_stop_hardware_counter(struct devfreq_event_dev *edev)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++
++	regmap_write(info->regmap_grf, RK3368_GRF_DDRC0_CON0, RK3368_DFI_DIS);
++}
++
++static int rk3368_dfi_disable(struct devfreq_event_dev *edev)
++{
++	rk3368_dfi_stop_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3368_dfi_enable(struct devfreq_event_dev *edev)
++{
++	rk3368_dfi_start_hardware_counter(edev);
++
++	return 0;
++}
++
++static int rk3368_dfi_set_event(struct devfreq_event_dev *edev)
++{
++	return 0;
++}
++
++static int rk3368_dfi_get_event(struct devfreq_event_dev *edev,
++				struct devfreq_event_data *edata)
++{
++	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
++	unsigned long flags;
++	u32 dfi0_wr, dfi0_rd, dfi1_wr, dfi1_rd, dfi_timer;
++
++	local_irq_save(flags);
++
++	rk3368_dfi_stop_hardware_counter(edev);
++
++	regmap_read(info->regmap_grf, RK3368_GRF_SOC_STATUS5, &dfi0_wr);
++	regmap_read(info->regmap_grf, RK3368_GRF_SOC_STATUS6, &dfi0_rd);
++	regmap_read(info->regmap_grf, RK3368_GRF_SOC_STATUS9, &dfi1_wr);
++	regmap_read(info->regmap_grf, RK3368_GRF_SOC_STATUS10, &dfi1_rd);
++	regmap_read(info->regmap_grf, RK3368_GRF_SOC_STATUS8, &dfi_timer);
++
++	edata->load_count = (dfi0_wr + dfi0_rd + dfi1_wr + dfi1_rd) * 2;
++	edata->total_count = dfi_timer;
++
++	rk3368_dfi_start_hardware_counter(edev);
++
++	local_irq_restore(flags);
++
++	return 0;
++}
++
++static const struct devfreq_event_ops rk3368_dfi_ops = {
++	.disable = rk3368_dfi_disable,
++	.enable = rk3368_dfi_enable,
++	.get_event = rk3368_dfi_get_event,
++	.set_event = rk3368_dfi_set_event,
+ };
+ 
+ static void rockchip_dfi_start_hardware_counter(struct devfreq_event_dev *edev)
+ {
+ 	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
+ 	void __iomem *dfi_regs = info->regs;
+-	u32 val;
+-	u32 ddr_type;
+-
+-	/* get ddr type */
+-	regmap_read(info->regmap_pmu, PMUGRF_OS_REG2, &val);
+-	ddr_type = (val >> DDRTYPE_SHIFT) & DDRTYPE_MASK;
+ 
+ 	/* clear DDRMON_CTRL setting */
+ 	writel_relaxed(CLR_DDRMON_CTRL, dfi_regs + DDRMON_CTRL);
+ 
+ 	/* set ddr type to dfi */
+-	if (ddr_type == LPDDR3)
+-		writel_relaxed(LPDDR3_EN, dfi_regs + DDRMON_CTRL);
+-	else if (ddr_type == LPDDR4)
++	if (info->dram_type == LPDDR3 || info->dram_type == LPDDR2)
++		writel_relaxed(LPDDR2_3_EN, dfi_regs + DDRMON_CTRL);
++	else if (info->dram_type == LPDDR4 || info->dram_type == LPDDR4X)
+ 		writel_relaxed(LPDDR4_EN, dfi_regs + DDRMON_CTRL);
++	else if (info->dram_type == DDR4)
++		writel_relaxed(DDR4_EN, dfi_regs + DDRMON_CTRL);
+ 
+ 	/* enable count, use software mode */
+ 	writel_relaxed(SOFTWARE_EN, dfi_regs + DDRMON_CTRL);
+@@ -117,12 +381,22 @@ static int rockchip_dfi_get_busier_ch(struct devfreq_event_dev *edev)
+ 	rockchip_dfi_stop_hardware_counter(edev);
+ 
+ 	/* Find out which channel is busier */
+-	for (i = 0; i < RK3399_DMC_NUM_CH; i++) {
+-		info->ch_usage[i].access = readl_relaxed(dfi_regs +
+-				DDRMON_CH0_DFI_ACCESS_NUM + i * 20) * 4;
++	for (i = 0; i < MAX_DMC_NUM_CH; i++) {
++		if (!(info->ch_msk & BIT(i)))
++			continue;
++
+ 		info->ch_usage[i].total = readl_relaxed(dfi_regs +
+ 				DDRMON_CH0_COUNT_NUM + i * 20);
+-		tmp = info->ch_usage[i].access;
++
++		/* LPDDR4 and LPDDR4X BL = 16,other DDR type BL = 8 */
++		tmp = readl_relaxed(dfi_regs +
++				DDRMON_CH0_DFI_ACCESS_NUM + i * 20);
++		if (info->dram_type == LPDDR4 || info->dram_type == LPDDR4X)
++			tmp *= 8;
++		else
++			tmp *= 4;
++		info->ch_usage[i].access = tmp;
++
+ 		if (tmp > max) {
+ 			busier_ch = i;
+ 			max = tmp;
+@@ -138,7 +412,8 @@ static int rockchip_dfi_disable(struct devfreq_event_dev *edev)
+ 	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
+ 
+ 	rockchip_dfi_stop_hardware_counter(edev);
+-	clk_disable_unprepare(info->clk);
++	if (info->clk)
++		clk_disable_unprepare(info->clk);
+ 
+ 	return 0;
+ }
+@@ -148,10 +423,13 @@ static int rockchip_dfi_enable(struct devfreq_event_dev *edev)
+ 	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
+ 	int ret;
+ 
+-	ret = clk_prepare_enable(info->clk);
+-	if (ret) {
+-		dev_err(&edev->dev, "failed to enable dfi clk: %d\n", ret);
+-		return ret;
++	if (info->clk) {
++		ret = clk_prepare_enable(info->clk);
++		if (ret) {
++			dev_err(&edev->dev, "failed to enable dfi clk: %d\n",
++				ret);
++			return ret;
++		}
+ 	}
+ 
+ 	rockchip_dfi_start_hardware_counter(edev);
+@@ -168,8 +446,11 @@ static int rockchip_dfi_get_event(struct devfreq_event_dev *edev,
+ {
+ 	struct rockchip_dfi *info = devfreq_event_get_drvdata(edev);
+ 	int busier_ch;
++	unsigned long flags;
+ 
++	local_irq_save(flags);
+ 	busier_ch = rockchip_dfi_get_busier_ch(edev);
++	local_irq_restore(flags);
+ 
+ 	edata->load_count = info->ch_usage[busier_ch].access;
+ 	edata->total_count = info->ch_usage[busier_ch].total;
+@@ -184,23 +465,121 @@ static const struct devfreq_event_ops rockchip_dfi_ops = {
+ 	.set_event = rockchip_dfi_set_event,
+ };
+ 
+-static const struct of_device_id rockchip_dfi_id_match[] = {
+-	{ .compatible = "rockchip,rk3399-dfi" },
+-	{ },
+-};
+-MODULE_DEVICE_TABLE(of, rockchip_dfi_id_match);
++static __maybe_unused __init int px30_dfi_init(struct platform_device *pdev,
++					       struct rockchip_dfi *data,
++					       struct devfreq_event_desc *desc)
++{
++	struct device_node *np = pdev->dev.of_node, *node;
++	struct resource *res;
++	u32 val_2, val_3;
+ 
+-static int rockchip_dfi_probe(struct platform_device *pdev)
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	data->regs = devm_ioremap_resource(&pdev->dev, res);
++	if (IS_ERR(data->regs))
++		return PTR_ERR(data->regs);
++
++	node = of_parse_phandle(np, "rockchip,pmugrf", 0);
++	if (node) {
++		data->regmap_pmugrf = syscon_node_to_regmap(node);
++		if (IS_ERR(data->regmap_pmugrf))
++			return PTR_ERR(data->regmap_pmugrf);
++	}
++
++	regmap_read(data->regmap_pmugrf, PX30_PMUGRF_OS_REG2, &val_2);
++	regmap_read(data->regmap_pmugrf, PX30_PMUGRF_OS_REG3, &val_3);
++	if (READ_SYSREG_VERSION(val_3) >= 0x3)
++		data->dram_type = READ_DRAMTYPE_INFO_V3(val_2, val_3);
++	else
++		data->dram_type = READ_DRAMTYPE_INFO(val_2);
++	data->ch_msk = 1;
++	data->clk = NULL;
++
++	desc->ops = &rockchip_dfi_ops;
++
++	return 0;
++}
++
++static __maybe_unused __init int rk3128_dfi_init(struct platform_device *pdev,
++						 struct rockchip_dfi *data,
++						 struct devfreq_event_desc *desc)
++{
++	struct device_node *np = pdev->dev.of_node, *node;
++
++	node = of_parse_phandle(np, "rockchip,grf", 0);
++	if (node) {
++		data->regmap_grf = syscon_node_to_regmap(node);
++		if (IS_ERR(data->regmap_grf))
++			return PTR_ERR(data->regmap_grf);
++	}
++
++	desc->ops = &rk3128_dfi_ops;
++
++	return 0;
++}
++
++static __maybe_unused __init int rk3288_dfi_init(struct platform_device *pdev,
++						 struct rockchip_dfi *data,
++						 struct devfreq_event_desc *desc)
++{
++	struct device_node *np = pdev->dev.of_node, *node;
++	u32 val;
++
++	node = of_parse_phandle(np, "rockchip,pmu", 0);
++	if (node) {
++		data->regmap_pmu = syscon_node_to_regmap(node);
++		if (IS_ERR(data->regmap_pmu))
++			return PTR_ERR(data->regmap_pmu);
++	}
++
++	node = of_parse_phandle(np, "rockchip,grf", 0);
++	if (node) {
++		data->regmap_grf = syscon_node_to_regmap(node);
++		if (IS_ERR(data->regmap_grf))
++			return PTR_ERR(data->regmap_grf);
++	}
++
++	regmap_read(data->regmap_pmu, RK3288_PMU_SYS_REG2, &val);
++	data->dram_type = READ_DRAMTYPE_INFO(val);
++	data->ch_msk = READ_CH_INFO(val);
++
++	if (data->dram_type == DDR3)
++		regmap_write(data->regmap_grf, RK3288_GRF_SOC_CON4,
++			     RK3288_DDR3_SEL);
++	else
++		regmap_write(data->regmap_grf, RK3288_GRF_SOC_CON4,
++			     RK3288_LPDDR_SEL);
++
++	desc->ops = &rk3288_dfi_ops;
++
++	return 0;
++}
++
++static __maybe_unused __init int rk3368_dfi_init(struct platform_device *pdev,
++						 struct rockchip_dfi *data,
++						 struct devfreq_event_desc *desc)
++{
++	struct device *dev = &pdev->dev;
++
++	if (!dev->parent || !dev->parent->of_node)
++		return -EINVAL;
++
++	data->regmap_grf = syscon_node_to_regmap(dev->parent->of_node);
++	if (IS_ERR(data->regmap_grf))
++		return PTR_ERR(data->regmap_grf);
++
++	desc->ops = &rk3368_dfi_ops;
++
++	return 0;
++}
++
++static __maybe_unused __init int rockchip_dfi_init(struct platform_device *pdev,
++						   struct rockchip_dfi *data,
++						   struct devfreq_event_desc *desc)
+ {
+ 	struct device *dev = &pdev->dev;
+-	struct rockchip_dfi *data;
+ 	struct resource *res;
+-	struct devfreq_event_desc *desc;
+ 	struct device_node *np = pdev->dev.of_node, *node;
+-
+-	data = devm_kzalloc(dev, sizeof(struct rockchip_dfi), GFP_KERNEL);
+-	if (!data)
+-		return -ENOMEM;
++	u32 val;
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+ 	data->regs = devm_ioremap_resource(&pdev->dev, res);
+@@ -211,7 +590,7 @@ static int rockchip_dfi_probe(struct platform_device *pdev)
+ 	if (IS_ERR(data->clk)) {
+ 		dev_err(dev, "Cannot get the clk dmc_clk\n");
+ 		return PTR_ERR(data->clk);
+-	};
++	}
+ 
+ 	/* try to find the optional reference to the pmu syscon */
+ 	node = of_parse_phandle(np, "rockchip,pmu", 0);
+@@ -220,23 +599,118 @@ static int rockchip_dfi_probe(struct platform_device *pdev)
+ 		if (IS_ERR(data->regmap_pmu))
+ 			return PTR_ERR(data->regmap_pmu);
+ 	}
+-	data->dev = dev;
++
++	regmap_read(data->regmap_pmu, PMUGRF_OS_REG2, &val);
++	data->dram_type = READ_DRAMTYPE_INFO(val);
++	data->ch_msk = READ_CH_INFO(val);
++
++	desc->ops = &rockchip_dfi_ops;
++
++	return 0;
++}
++
++static __maybe_unused __init int rk3328_dfi_init(struct platform_device *pdev,
++						 struct rockchip_dfi *data,
++						 struct devfreq_event_desc *desc)
++{
++	struct device_node *np = pdev->dev.of_node, *node;
++	struct resource *res;
++	u32 val;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	data->regs = devm_ioremap_resource(&pdev->dev, res);
++	if (IS_ERR(data->regs))
++		return PTR_ERR(data->regs);
++
++	node = of_parse_phandle(np, "rockchip,grf", 0);
++	if (node) {
++		data->regmap_grf = syscon_node_to_regmap(node);
++		if (IS_ERR(data->regmap_grf))
++			return PTR_ERR(data->regmap_grf);
++	}
++
++	regmap_read(data->regmap_grf, RK3328_GRF_OS_REG2, &val);
++	data->dram_type = READ_DRAMTYPE_INFO(val);
++	data->ch_msk = 1;
++	data->clk = NULL;
++
++	desc->ops = &rockchip_dfi_ops;
++
++	return 0;
++}
++
++static const struct of_device_id rockchip_dfi_id_match[] = {
++#ifdef CONFIG_CPU_PX30
++	{ .compatible = "rockchip,px30-dfi", .data = px30_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK1808
++	{ .compatible = "rockchip,rk1808-dfi", .data = px30_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK312X
++	{ .compatible = "rockchip,rk3128-dfi", .data = rk3128_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK3288
++	{ .compatible = "rockchip,rk3288-dfi", .data = rk3288_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK3328
++	{ .compatible = "rockchip,rk3328-dfi", .data = rk3328_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK3368
++	{ .compatible = "rockchip,rk3368-dfi", .data = rk3368_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK3399
++	{ .compatible = "rockchip,rk3399-dfi", .data = rockchip_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RK3568
++	{ .compatible = "rockchip,rk3568-dfi", .data = px30_dfi_init },
++#endif
++#ifdef CONFIG_CPU_RV1126
++	{ .compatible = "rockchip,rv1126-dfi", .data = px30_dfi_init },
++#endif
++	{ },
++};
++
++static int rockchip_dfi_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct rockchip_dfi *data;
++	struct devfreq_event_desc *desc;
++	struct device_node *np = pdev->dev.of_node;
++	const struct of_device_id *match;
++	int (*init)(struct platform_device *pdev, struct rockchip_dfi *data,
++		    struct devfreq_event_desc *desc);
++
++	data = devm_kzalloc(dev, sizeof(struct rockchip_dfi), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
+ 
+ 	desc = devm_kzalloc(dev, sizeof(*desc), GFP_KERNEL);
+ 	if (!desc)
+ 		return -ENOMEM;
+ 
+-	desc->ops = &rockchip_dfi_ops;
++	match = of_match_node(rockchip_dfi_id_match, pdev->dev.of_node);
++	if (match) {
++		init = match->data;
++		if (init) {
++			if (init(pdev, data, desc))
++				return -EINVAL;
++		} else {
++			return 0;
++		}
++	} else {
++		return 0;
++	}
++
+ 	desc->driver_data = data;
+ 	desc->name = np->name;
+-	data->desc = desc;
+ 
+-	data->edev = devm_devfreq_event_add_edev(&pdev->dev, desc);
++	data->edev = devm_devfreq_event_add_edev(dev, desc);
+ 	if (IS_ERR(data->edev)) {
+-		dev_err(&pdev->dev,
+-			"failed to add devfreq-event device\n");
++		dev_err(dev, "failed to add devfreq-event device\n");
+ 		return PTR_ERR(data->edev);
+ 	}
++	data->desc = desc;
++	data->dev = &pdev->dev;
+ 
+ 	platform_set_drvdata(pdev, data);
+ 
+diff --git a/drivers/devfreq/governor.h b/drivers/devfreq/governor.h
+index cfc50a61a..b81700244 100644
+--- a/drivers/devfreq/governor.h
++++ b/drivers/devfreq/governor.h
+@@ -25,6 +25,9 @@
+ #define DEVFREQ_GOV_SUSPEND			0x4
+ #define DEVFREQ_GOV_RESUME			0x5
+ 
++#define DEVFREQ_MIN_FREQ			0
++#define DEVFREQ_MAX_FREQ			ULONG_MAX
++
+ /**
+  * struct devfreq_governor - Devfreq policy governor
+  * @node:		list node - contains registered devfreq governors
+diff --git a/drivers/devfreq/governor_performance.c b/drivers/devfreq/governor_performance.c
+index 4d23ecfbd..b1384e4d2 100644
+--- a/drivers/devfreq/governor_performance.c
++++ b/drivers/devfreq/governor_performance.c
+@@ -20,10 +20,7 @@ static int devfreq_performance_func(struct devfreq *df,
+ 	 * target callback should be able to get floor value as
+ 	 * said in devfreq.h
+ 	 */
+-	if (!df->max_freq)
+-		*freq = UINT_MAX;
+-	else
+-		*freq = df->max_freq;
++	*freq = DEVFREQ_MAX_FREQ;
+ 	return 0;
+ }
+ 
+@@ -36,6 +33,9 @@ static int devfreq_performance_handler(struct devfreq *devfreq,
+ 		mutex_lock(&devfreq->lock);
+ 		ret = update_devfreq(devfreq);
+ 		mutex_unlock(&devfreq->lock);
++		devfreq->last_status.update = true;
++	} else if (event == DEVFREQ_GOV_STOP) {
++		devfreq->last_status.update = false;
+ 	}
+ 
+ 	return ret;
+diff --git a/drivers/devfreq/governor_powersave.c b/drivers/devfreq/governor_powersave.c
+index 0c42f2324..2ede31974 100644
+--- a/drivers/devfreq/governor_powersave.c
++++ b/drivers/devfreq/governor_powersave.c
+@@ -20,7 +20,7 @@ static int devfreq_powersave_func(struct devfreq *df,
+ 	 * target callback should be able to get ceiling value as
+ 	 * said in devfreq.h
+ 	 */
+-	*freq = df->min_freq;
++	*freq = DEVFREQ_MIN_FREQ;
+ 	return 0;
+ }
+ 
+@@ -33,6 +33,9 @@ static int devfreq_powersave_handler(struct devfreq *devfreq,
+ 		mutex_lock(&devfreq->lock);
+ 		ret = update_devfreq(devfreq);
+ 		mutex_unlock(&devfreq->lock);
++		devfreq->last_status.update = true;
++	} else {
++		devfreq->last_status.update = false;
+ 	}
+ 
+ 	return ret;
+diff --git a/drivers/devfreq/governor_simpleondemand.c b/drivers/devfreq/governor_simpleondemand.c
+index 28e0f2de7..d2c500277 100644
+--- a/drivers/devfreq/governor_simpleondemand.c
++++ b/drivers/devfreq/governor_simpleondemand.c
+@@ -27,7 +27,7 @@ static int devfreq_simple_ondemand_func(struct devfreq *df,
+ 	unsigned int dfso_upthreshold = DFSO_UPTHRESHOLD;
+ 	unsigned int dfso_downdifferential = DFSO_DOWNDIFFERENCTIAL;
+ 	struct devfreq_simple_ondemand_data *data = df->data;
+-	unsigned long max = (df->max_freq) ? df->max_freq : UINT_MAX;
++	unsigned long min = (df->min_freq) ? df->min_freq : DEVFREQ_MIN_FREQ;
+ 
+ 	err = devfreq_update_stats(df);
+ 	if (err)
+@@ -45,28 +45,40 @@ static int devfreq_simple_ondemand_func(struct devfreq *df,
+ 	    dfso_upthreshold < dfso_downdifferential)
+ 		return -EINVAL;
+ 
+-	/* Assume MAX if it is going to be divided by zero */
+-	if (stat->total_time == 0) {
+-		*freq = max;
+-		return 0;
+-	}
+-
+ 	/* Prevent overflow */
+ 	if (stat->busy_time >= (1 << 24) || stat->total_time >= (1 << 24)) {
+ 		stat->busy_time >>= 7;
+ 		stat->total_time >>= 7;
+ 	}
+ 
++	if (data && data->simple_scaling) {
++		if (stat->busy_time * 100 >
++		    stat->total_time * dfso_upthreshold)
++			*freq = DEVFREQ_MAX_FREQ;
++		else if (stat->busy_time * 100 <
++		    stat->total_time * dfso_downdifferential)
++			*freq = min;
++		else
++			*freq = df->previous_freq;
++		return 0;
++	}
++
++	/* Assume MAX if it is going to be divided by zero */
++	if (stat->total_time == 0) {
++		*freq = DEVFREQ_MAX_FREQ;
++		return 0;
++	}
++
+ 	/* Set MAX if it's busy enough */
+ 	if (stat->busy_time * 100 >
+ 	    stat->total_time * dfso_upthreshold) {
+-		*freq = max;
++		*freq = DEVFREQ_MAX_FREQ;
+ 		return 0;
+ 	}
+ 
+ 	/* Set MAX if we do not know the initial frequency */
+ 	if (stat->current_frequency == 0) {
+-		*freq = max;
++		*freq = DEVFREQ_MAX_FREQ;
+ 		return 0;
+ 	}
+ 
+@@ -85,11 +97,6 @@ static int devfreq_simple_ondemand_func(struct devfreq *df,
+ 	b = div_u64(b, (dfso_upthreshold - dfso_downdifferential / 2));
+ 	*freq = (unsigned long) b;
+ 
+-	if (df->min_freq && *freq < df->min_freq)
+-		*freq = df->min_freq;
+-	if (df->max_freq && *freq > df->max_freq)
+-		*freq = df->max_freq;
+-
+ 	return 0;
+ }
+ 
+diff --git a/drivers/devfreq/governor_userspace.c b/drivers/devfreq/governor_userspace.c
+index 080607c3f..7c2745eb0 100644
+--- a/drivers/devfreq/governor_userspace.c
++++ b/drivers/devfreq/governor_userspace.c
+@@ -26,19 +26,11 @@ static int devfreq_userspace_func(struct devfreq *df, unsigned long *freq)
+ {
+ 	struct userspace_data *data = df->data;
+ 
+-	if (data->valid) {
+-		unsigned long adjusted_freq = data->user_frequency;
+-
+-		if (df->max_freq && adjusted_freq > df->max_freq)
+-			adjusted_freq = df->max_freq;
+-
+-		if (df->min_freq && adjusted_freq < df->min_freq)
+-			adjusted_freq = df->min_freq;
+-
+-		*freq = adjusted_freq;
+-	} else {
++	if (data->valid)
++		*freq = data->user_frequency;
++	else
+ 		*freq = df->previous_freq; /* No user freq specified yet */
+-	}
++
+ 	return 0;
+ }
+ 
+@@ -130,9 +122,11 @@ static int devfreq_userspace_handler(struct devfreq *devfreq,
+ 	switch (event) {
+ 	case DEVFREQ_GOV_START:
+ 		ret = userspace_init(devfreq);
++		devfreq->last_status.update = true;
+ 		break;
+ 	case DEVFREQ_GOV_STOP:
+ 		userspace_exit(devfreq);
++		devfreq->last_status.update = false;
+ 		break;
+ 	default:
+ 		break;
+diff --git a/drivers/devfreq/rk3399_dmc.c b/drivers/devfreq/rk3399_dmc.c
+deleted file mode 100644
+index e795ad2b3..000000000
+--- a/drivers/devfreq/rk3399_dmc.c
++++ /dev/null
+@@ -1,442 +0,0 @@
+-/*
+- * Copyright (c) 2016, Fuzhou Rockchip Electronics Co., Ltd.
+- * Author: Lin Huang <hl@rock-chips.com>
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms and conditions of the GNU General Public License,
+- * version 2, as published by the Free Software Foundation.
+- *
+- * This program is distributed in the hope it will be useful, but WITHOUT
+- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+- * more details.
+- */
+-
+-#include <linux/arm-smccc.h>
+-#include <linux/clk.h>
+-#include <linux/delay.h>
+-#include <linux/devfreq.h>
+-#include <linux/devfreq-event.h>
+-#include <linux/interrupt.h>
+-#include <linux/module.h>
+-#include <linux/of.h>
+-#include <linux/platform_device.h>
+-#include <linux/pm_opp.h>
+-#include <linux/regulator/consumer.h>
+-#include <linux/rwsem.h>
+-#include <linux/suspend.h>
+-
+-#include <soc/rockchip/rockchip_sip.h>
+-
+-struct dram_timing {
+-	unsigned int ddr3_speed_bin;
+-	unsigned int pd_idle;
+-	unsigned int sr_idle;
+-	unsigned int sr_mc_gate_idle;
+-	unsigned int srpd_lite_idle;
+-	unsigned int standby_idle;
+-	unsigned int auto_pd_dis_freq;
+-	unsigned int dram_dll_dis_freq;
+-	unsigned int phy_dll_dis_freq;
+-	unsigned int ddr3_odt_dis_freq;
+-	unsigned int ddr3_drv;
+-	unsigned int ddr3_odt;
+-	unsigned int phy_ddr3_ca_drv;
+-	unsigned int phy_ddr3_dq_drv;
+-	unsigned int phy_ddr3_odt;
+-	unsigned int lpddr3_odt_dis_freq;
+-	unsigned int lpddr3_drv;
+-	unsigned int lpddr3_odt;
+-	unsigned int phy_lpddr3_ca_drv;
+-	unsigned int phy_lpddr3_dq_drv;
+-	unsigned int phy_lpddr3_odt;
+-	unsigned int lpddr4_odt_dis_freq;
+-	unsigned int lpddr4_drv;
+-	unsigned int lpddr4_dq_odt;
+-	unsigned int lpddr4_ca_odt;
+-	unsigned int phy_lpddr4_ca_drv;
+-	unsigned int phy_lpddr4_ck_cs_drv;
+-	unsigned int phy_lpddr4_dq_drv;
+-	unsigned int phy_lpddr4_odt;
+-};
+-
+-struct rk3399_dmcfreq {
+-	struct device *dev;
+-	struct devfreq *devfreq;
+-	struct devfreq_simple_ondemand_data ondemand_data;
+-	struct clk *dmc_clk;
+-	struct devfreq_event_dev *edev;
+-	struct mutex lock;
+-	struct dram_timing timing;
+-	struct regulator *vdd_center;
+-	unsigned long rate, target_rate;
+-	unsigned long volt, target_volt;
+-};
+-
+-static int rk3399_dmcfreq_target(struct device *dev, unsigned long *freq,
+-				 u32 flags)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(dev);
+-	struct dev_pm_opp *opp;
+-	unsigned long old_clk_rate = dmcfreq->rate;
+-	unsigned long target_volt, target_rate;
+-	int err;
+-
+-	opp = devfreq_recommended_opp(dev, freq, flags);
+-	if (IS_ERR(opp))
+-		return PTR_ERR(opp);
+-
+-	target_rate = dev_pm_opp_get_freq(opp);
+-	target_volt = dev_pm_opp_get_voltage(opp);
+-	dev_pm_opp_put(opp);
+-
+-	if (dmcfreq->rate == target_rate)
+-		return 0;
+-
+-	mutex_lock(&dmcfreq->lock);
+-
+-	/*
+-	 * If frequency scaling from low to high, adjust voltage first.
+-	 * If frequency scaling from high to low, adjust frequency first.
+-	 */
+-	if (old_clk_rate < target_rate) {
+-		err = regulator_set_voltage(dmcfreq->vdd_center, target_volt,
+-					    target_volt);
+-		if (err) {
+-			dev_err(dev, "Cannot set voltage %lu uV\n",
+-				target_volt);
+-			goto out;
+-		}
+-	}
+-
+-	err = clk_set_rate(dmcfreq->dmc_clk, target_rate);
+-	if (err) {
+-		dev_err(dev, "Cannot set frequency %lu (%d)\n", target_rate,
+-			err);
+-		regulator_set_voltage(dmcfreq->vdd_center, dmcfreq->volt,
+-				      dmcfreq->volt);
+-		goto out;
+-	}
+-
+-	/*
+-	 * Check the dpll rate,
+-	 * There only two result we will get,
+-	 * 1. Ddr frequency scaling fail, we still get the old rate.
+-	 * 2. Ddr frequency scaling sucessful, we get the rate we set.
+-	 */
+-	dmcfreq->rate = clk_get_rate(dmcfreq->dmc_clk);
+-
+-	/* If get the incorrect rate, set voltage to old value. */
+-	if (dmcfreq->rate != target_rate) {
+-		dev_err(dev, "Got wrong frequency, Request %lu, Current %lu\n",
+-			target_rate, dmcfreq->rate);
+-		regulator_set_voltage(dmcfreq->vdd_center, dmcfreq->volt,
+-				      dmcfreq->volt);
+-		goto out;
+-	} else if (old_clk_rate > target_rate)
+-		err = regulator_set_voltage(dmcfreq->vdd_center, target_volt,
+-					    target_volt);
+-	if (err)
+-		dev_err(dev, "Cannot set voltage %lu uV\n", target_volt);
+-
+-	dmcfreq->rate = target_rate;
+-	dmcfreq->volt = target_volt;
+-
+-out:
+-	mutex_unlock(&dmcfreq->lock);
+-	return err;
+-}
+-
+-static int rk3399_dmcfreq_get_dev_status(struct device *dev,
+-					 struct devfreq_dev_status *stat)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(dev);
+-	struct devfreq_event_data edata;
+-	int ret = 0;
+-
+-	ret = devfreq_event_get_event(dmcfreq->edev, &edata);
+-	if (ret < 0)
+-		return ret;
+-
+-	stat->current_frequency = dmcfreq->rate;
+-	stat->busy_time = edata.load_count;
+-	stat->total_time = edata.total_count;
+-
+-	return ret;
+-}
+-
+-static int rk3399_dmcfreq_get_cur_freq(struct device *dev, unsigned long *freq)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(dev);
+-
+-	*freq = dmcfreq->rate;
+-
+-	return 0;
+-}
+-
+-static struct devfreq_dev_profile rk3399_devfreq_dmc_profile = {
+-	.polling_ms	= 200,
+-	.target		= rk3399_dmcfreq_target,
+-	.get_dev_status	= rk3399_dmcfreq_get_dev_status,
+-	.get_cur_freq	= rk3399_dmcfreq_get_cur_freq,
+-};
+-
+-static __maybe_unused int rk3399_dmcfreq_suspend(struct device *dev)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(dev);
+-	int ret = 0;
+-
+-	ret = devfreq_event_disable_edev(dmcfreq->edev);
+-	if (ret < 0) {
+-		dev_err(dev, "failed to disable the devfreq-event devices\n");
+-		return ret;
+-	}
+-
+-	ret = devfreq_suspend_device(dmcfreq->devfreq);
+-	if (ret < 0) {
+-		dev_err(dev, "failed to suspend the devfreq devices\n");
+-		return ret;
+-	}
+-
+-	return 0;
+-}
+-
+-static __maybe_unused int rk3399_dmcfreq_resume(struct device *dev)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(dev);
+-	int ret = 0;
+-
+-	ret = devfreq_event_enable_edev(dmcfreq->edev);
+-	if (ret < 0) {
+-		dev_err(dev, "failed to enable the devfreq-event devices\n");
+-		return ret;
+-	}
+-
+-	ret = devfreq_resume_device(dmcfreq->devfreq);
+-	if (ret < 0) {
+-		dev_err(dev, "failed to resume the devfreq devices\n");
+-		return ret;
+-	}
+-	return ret;
+-}
+-
+-static SIMPLE_DEV_PM_OPS(rk3399_dmcfreq_pm, rk3399_dmcfreq_suspend,
+-			 rk3399_dmcfreq_resume);
+-
+-static int of_get_ddr_timings(struct dram_timing *timing,
+-			      struct device_node *np)
+-{
+-	int ret = 0;
+-
+-	ret = of_property_read_u32(np, "rockchip,ddr3_speed_bin",
+-				   &timing->ddr3_speed_bin);
+-	ret |= of_property_read_u32(np, "rockchip,pd_idle",
+-				    &timing->pd_idle);
+-	ret |= of_property_read_u32(np, "rockchip,sr_idle",
+-				    &timing->sr_idle);
+-	ret |= of_property_read_u32(np, "rockchip,sr_mc_gate_idle",
+-				    &timing->sr_mc_gate_idle);
+-	ret |= of_property_read_u32(np, "rockchip,srpd_lite_idle",
+-				    &timing->srpd_lite_idle);
+-	ret |= of_property_read_u32(np, "rockchip,standby_idle",
+-				    &timing->standby_idle);
+-	ret |= of_property_read_u32(np, "rockchip,auto_pd_dis_freq",
+-				    &timing->auto_pd_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,dram_dll_dis_freq",
+-				    &timing->dram_dll_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,phy_dll_dis_freq",
+-				    &timing->phy_dll_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,ddr3_odt_dis_freq",
+-				    &timing->ddr3_odt_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,ddr3_drv",
+-				    &timing->ddr3_drv);
+-	ret |= of_property_read_u32(np, "rockchip,ddr3_odt",
+-				    &timing->ddr3_odt);
+-	ret |= of_property_read_u32(np, "rockchip,phy_ddr3_ca_drv",
+-				    &timing->phy_ddr3_ca_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_ddr3_dq_drv",
+-				    &timing->phy_ddr3_dq_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_ddr3_odt",
+-				    &timing->phy_ddr3_odt);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr3_odt_dis_freq",
+-				    &timing->lpddr3_odt_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr3_drv",
+-				    &timing->lpddr3_drv);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr3_odt",
+-				    &timing->lpddr3_odt);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr3_ca_drv",
+-				    &timing->phy_lpddr3_ca_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr3_dq_drv",
+-				    &timing->phy_lpddr3_dq_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr3_odt",
+-				    &timing->phy_lpddr3_odt);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr4_odt_dis_freq",
+-				    &timing->lpddr4_odt_dis_freq);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr4_drv",
+-				    &timing->lpddr4_drv);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr4_dq_odt",
+-				    &timing->lpddr4_dq_odt);
+-	ret |= of_property_read_u32(np, "rockchip,lpddr4_ca_odt",
+-				    &timing->lpddr4_ca_odt);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr4_ca_drv",
+-				    &timing->phy_lpddr4_ca_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr4_ck_cs_drv",
+-				    &timing->phy_lpddr4_ck_cs_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr4_dq_drv",
+-				    &timing->phy_lpddr4_dq_drv);
+-	ret |= of_property_read_u32(np, "rockchip,phy_lpddr4_odt",
+-				    &timing->phy_lpddr4_odt);
+-
+-	return ret;
+-}
+-
+-static int rk3399_dmcfreq_probe(struct platform_device *pdev)
+-{
+-	struct arm_smccc_res res;
+-	struct device *dev = &pdev->dev;
+-	struct device_node *np = pdev->dev.of_node;
+-	struct rk3399_dmcfreq *data;
+-	int ret, index, size;
+-	uint32_t *timing;
+-	struct dev_pm_opp *opp;
+-
+-	data = devm_kzalloc(dev, sizeof(struct rk3399_dmcfreq), GFP_KERNEL);
+-	if (!data)
+-		return -ENOMEM;
+-
+-	mutex_init(&data->lock);
+-
+-	data->vdd_center = devm_regulator_get(dev, "center");
+-	if (IS_ERR(data->vdd_center)) {
+-		if (PTR_ERR(data->vdd_center) == -EPROBE_DEFER)
+-			return -EPROBE_DEFER;
+-
+-		dev_err(dev, "Cannot get the regulator \"center\"\n");
+-		return PTR_ERR(data->vdd_center);
+-	}
+-
+-	data->dmc_clk = devm_clk_get(dev, "dmc_clk");
+-	if (IS_ERR(data->dmc_clk)) {
+-		if (PTR_ERR(data->dmc_clk) == -EPROBE_DEFER)
+-			return -EPROBE_DEFER;
+-
+-		dev_err(dev, "Cannot get the clk dmc_clk\n");
+-		return PTR_ERR(data->dmc_clk);
+-	};
+-
+-	data->edev = devfreq_event_get_edev_by_phandle(dev, 0);
+-	if (IS_ERR(data->edev))
+-		return -EPROBE_DEFER;
+-
+-	ret = devfreq_event_enable_edev(data->edev);
+-	if (ret < 0) {
+-		dev_err(dev, "failed to enable devfreq-event devices\n");
+-		return ret;
+-	}
+-
+-	/*
+-	 * Get dram timing and pass it to arm trust firmware,
+-	 * the dram drvier in arm trust firmware will get these
+-	 * timing and to do dram initial.
+-	 */
+-	if (!of_get_ddr_timings(&data->timing, np)) {
+-		timing = &data->timing.ddr3_speed_bin;
+-		size = sizeof(struct dram_timing) / 4;
+-		for (index = 0; index < size; index++) {
+-			arm_smccc_smc(ROCKCHIP_SIP_DRAM_FREQ, *timing++, index,
+-				      ROCKCHIP_SIP_CONFIG_DRAM_SET_PARAM,
+-				      0, 0, 0, 0, &res);
+-			if (res.a0) {
+-				dev_err(dev, "Failed to set dram param: %ld\n",
+-					res.a0);
+-				return -EINVAL;
+-			}
+-		}
+-	}
+-
+-	arm_smccc_smc(ROCKCHIP_SIP_DRAM_FREQ, 0, 0,
+-		      ROCKCHIP_SIP_CONFIG_DRAM_INIT,
+-		      0, 0, 0, 0, &res);
+-
+-	/*
+-	 * We add a devfreq driver to our parent since it has a device tree node
+-	 * with operating points.
+-	 */
+-	if (dev_pm_opp_of_add_table(dev)) {
+-		dev_err(dev, "Invalid operating-points in device tree.\n");
+-		return -EINVAL;
+-	}
+-
+-	of_property_read_u32(np, "upthreshold",
+-			     &data->ondemand_data.upthreshold);
+-	of_property_read_u32(np, "downdifferential",
+-			     &data->ondemand_data.downdifferential);
+-
+-	data->rate = clk_get_rate(data->dmc_clk);
+-
+-	opp = devfreq_recommended_opp(dev, &data->rate, 0);
+-	if (IS_ERR(opp)) {
+-		ret = PTR_ERR(opp);
+-		goto err_free_opp;
+-	}
+-
+-	data->rate = dev_pm_opp_get_freq(opp);
+-	data->volt = dev_pm_opp_get_voltage(opp);
+-	dev_pm_opp_put(opp);
+-
+-	rk3399_devfreq_dmc_profile.initial_freq = data->rate;
+-
+-	data->devfreq = devm_devfreq_add_device(dev,
+-					   &rk3399_devfreq_dmc_profile,
+-					   DEVFREQ_GOV_SIMPLE_ONDEMAND,
+-					   &data->ondemand_data);
+-	if (IS_ERR(data->devfreq)) {
+-		ret = PTR_ERR(data->devfreq);
+-		goto err_free_opp;
+-	}
+-
+-	devm_devfreq_register_opp_notifier(dev, data->devfreq);
+-
+-	data->dev = dev;
+-	platform_set_drvdata(pdev, data);
+-
+-	return 0;
+-
+-err_free_opp:
+-	dev_pm_opp_of_remove_table(&pdev->dev);
+-	return ret;
+-}
+-
+-static int rk3399_dmcfreq_remove(struct platform_device *pdev)
+-{
+-	struct rk3399_dmcfreq *dmcfreq = dev_get_drvdata(&pdev->dev);
+-
+-	/*
+-	 * Before remove the opp table we need to unregister the opp notifier.
+-	 */
+-	devm_devfreq_unregister_opp_notifier(dmcfreq->dev, dmcfreq->devfreq);
+-	dev_pm_opp_of_remove_table(dmcfreq->dev);
+-
+-	return 0;
+-}
+-
+-static const struct of_device_id rk3399dmc_devfreq_of_match[] = {
+-	{ .compatible = "rockchip,rk3399-dmc" },
+-	{ },
+-};
+-MODULE_DEVICE_TABLE(of, rk3399dmc_devfreq_of_match);
+-
+-static struct platform_driver rk3399_dmcfreq_driver = {
+-	.probe	= rk3399_dmcfreq_probe,
+-	.remove = rk3399_dmcfreq_remove,
+-	.driver = {
+-		.name	= "rk3399-dmc-freq",
+-		.pm	= &rk3399_dmcfreq_pm,
+-		.of_match_table = rk3399dmc_devfreq_of_match,
+-	},
+-};
+-module_platform_driver(rk3399_dmcfreq_driver);
+-
+-MODULE_LICENSE("GPL v2");
+-MODULE_AUTHOR("Lin Huang <hl@rock-chips.com>");
+-MODULE_DESCRIPTION("RK3399 dmcfreq driver with devfreq framework");
+diff --git a/drivers/thermal/of-thermal.c b/drivers/thermal/of-thermal.c
+index 4f2816559..25c3c423a 100644
+--- a/drivers/thermal/of-thermal.c
++++ b/drivers/thermal/of-thermal.c
+@@ -13,6 +13,10 @@
+ #include <linux/err.h>
+ #include <linux/export.h>
+ #include <linux/string.h>
++#include <linux/list.h>
++
++#define CREATE_TRACE_POINTS
++#include <trace/events/thermal_virtual.h>
+ 
+ #include "thermal_core.h"
+ 
+@@ -35,6 +39,23 @@ struct __thermal_bind_params {
+ 	unsigned long max;
+ };
+ 
++/**
++ * struct __sensor_param - Holds individual sensor data
++ * @sensor_data: sensor driver private data passed as input argument
++ * @ops: sensor driver ops
++ * @trip_high: last trip high value programmed in the sensor driver
++ * @trip_low: last trip low value programmed in the sensor driver
++ * @lock: mutex lock acquired before updating the trip temperatures
++ * @first_tz: list head pointing the first thermal zone
++ */
++struct __sensor_param {
++	void *sensor_data;
++	const struct thermal_zone_of_device_ops *ops;
++	int trip_high, trip_low;
++	struct mutex lock;
++	struct list_head first_tz;
++};
++
+ /**
+  * struct __thermal_zone - internal representation of a thermal zone
+  * @mode: current thermal zone device mode (enabled/disabled)
+@@ -42,12 +63,15 @@ struct __thermal_bind_params {
+  * @polling_delay: zone polling interval
+  * @slope: slope of the temperature adjustment curve
+  * @offset: offset of the temperature adjustment curve
++ * @default_disable: Keep the thermal zone disabled by default
++ * @is_wakeable: Ignore post suspend thermal zone re-evaluation
++ * @tzd: thermal zone device pointer for this sensor
+  * @ntrips: number of trip points
+  * @trips: an array of trip points (0..ntrips - 1)
+  * @num_tbps: number of thermal bind params
+  * @tbps: an array of thermal bind params (0..num_tbps - 1)
+- * @sensor_data: sensor private data used while reading temperature and trend
+- * @ops: set of callbacks to handle the thermal zone based on DT
++ * @senps: sensor related parameters
++ * @list: sibling thermal zone
+  */
+ 
+ struct __thermal_zone {
+@@ -56,6 +80,9 @@ struct __thermal_zone {
+ 	int polling_delay;
+ 	int slope;
+ 	int offset;
++	struct thermal_zone_device *tzd;
++	bool default_disable;
++	bool is_wakeable;
+ 
+ 	/* trip data */
+ 	int ntrips;
+@@ -65,22 +92,101 @@ struct __thermal_zone {
+ 	int num_tbps;
+ 	struct __thermal_bind_params *tbps;
+ 
++	struct list_head list;
+ 	/* sensor interface */
+-	void *sensor_data;
+-	const struct thermal_zone_of_device_ops *ops;
++	struct __sensor_param *senps;
+ };
+ 
++/**
++ * struct virtual_sensor - internal representation of a virtual thermal zone
++ * @num_sensors - number of sensors this virtual sensor will reference to
++ *		  estimate temperature
++ * @tz - Array of thermal zones of the sensors this virtual sensor will use
++ *	 to estimate temperature
++ * @virt_tz - Virtual thermal zone pointer
++ * @logic - aggregation logic to be used to estimate the temperature
++ * @last_reading - last estimated temperature
++ * @coefficients - array of coefficients to be used for weighted aggregation
++ *		       logic
++ * @avg_offset - offset value to be used for the weighted aggregation logic
++ * @avg_denominator - denominator value to be used for the weighted aggregation
++ *			logic
++ */
++struct virtual_sensor {
++	int                        num_sensors;
++	struct thermal_zone_device *tz[THERMAL_MAX_VIRT_SENSORS];
++	struct thermal_zone_device *virt_tz;
++	enum aggregation_logic     logic;
++	int                        last_reading;
++	int                        coefficients[THERMAL_MAX_VIRT_SENSORS];
++	int                        avg_offset;
++	int                        avg_denominator;
++};
++
++
+ /***   DT thermal zone device callbacks   ***/
+ 
++static int virt_sensor_read_temp(void *data, int *val)
++{
++	struct virtual_sensor *sens = data;
++	int idx, temp = 0, ret = 0;
++
++	for (idx = 0; idx < sens->num_sensors; idx++) {
++		int sens_temp = 0;
++
++		ret = thermal_zone_get_temp(sens->tz[idx], &sens_temp);
++		if (ret) {
++			pr_err("virt zone: sensor[%s] read error:%d\n",
++				sens->tz[idx]->type, ret);
++			return ret;
++		}
++		switch (sens->logic) {
++		case VIRT_COUNT_THRESHOLD:
++			if ((sens->coefficients[idx] < 0 &&
++			     sens_temp < -sens->coefficients[idx]) ||
++			    (sens->coefficients[idx] > 0 &&
++			     sens_temp >= sens->coefficients[idx]))
++				temp += 1;
++			break;
++		case VIRT_WEIGHTED_AVG:
++			temp += sens_temp * sens->coefficients[idx];
++			if (idx == (sens->num_sensors - 1))
++				temp = (temp + sens->avg_offset)
++					/ sens->avg_denominator;
++			break;
++		case VIRT_MAXIMUM:
++			if (idx == 0)
++				temp = INT_MIN;
++			if (sens_temp > temp)
++				temp = sens_temp;
++			break;
++		case VIRT_MINIMUM:
++			if (idx == 0)
++				temp = INT_MAX;
++			if (sens_temp < temp)
++				temp = sens_temp;
++			break;
++		default:
++			break;
++		}
++		trace_virtual_temperature(sens->virt_tz, sens->tz[idx],
++					sens_temp, temp);
++	}
++
++	sens->last_reading = *val = temp;
++
++	return 0;
++}
++
+ static int of_thermal_get_temp(struct thermal_zone_device *tz,
+ 			       int *temp)
+ {
+ 	struct __thermal_zone *data = tz->devdata;
+ 
+-	if (!data->ops->get_temp)
++	if (!data->senps || !data->senps->ops->get_temp)
+ 		return -EINVAL;
+ 
+-	return data->ops->get_temp(data->sensor_data, temp);
++	return data->senps->ops->get_temp(data->senps->sensor_data, temp);
+ }
+ 
+ static int of_thermal_set_trips(struct thermal_zone_device *tz,
+@@ -88,10 +194,10 @@ static int of_thermal_set_trips(struct thermal_zone_device *tz,
+ {
+ 	struct __thermal_zone *data = tz->devdata;
+ 
+-	if (!data->ops || !data->ops->set_trips)
++	if (!data->senps || !data->senps->ops->set_trips)
+ 		return -EINVAL;
+ 
+-	return data->ops->set_trips(data->sensor_data, low, high);
++	return data->senps->ops->set_trips(data->senps->sensor_data, low, high);
+ }
+ 
+ /**
+@@ -174,7 +280,10 @@ static int of_thermal_set_emul_temp(struct thermal_zone_device *tz,
+ {
+ 	struct __thermal_zone *data = tz->devdata;
+ 
+-	return data->ops->set_emul_temp(data->sensor_data, temp);
++	if (!data->senps || !data->senps->ops->set_emul_temp)
++		return -EINVAL;
++
++	return data->senps->ops->set_emul_temp(data->senps->sensor_data, temp);
+ }
+ 
+ static int of_thermal_get_trend(struct thermal_zone_device *tz, int trip,
+@@ -182,10 +291,11 @@ static int of_thermal_get_trend(struct thermal_zone_device *tz, int trip,
+ {
+ 	struct __thermal_zone *data = tz->devdata;
+ 
+-	if (!data->ops->get_trend)
++	if (!data->senps || !data->senps->ops->get_trend)
+ 		return -EINVAL;
+ 
+-	return data->ops->get_trend(data->sensor_data, trip, trend);
++	return data->senps->ops->get_trend(data->senps->sensor_data,
++					   trip, trend);
+ }
+ 
+ static int of_thermal_bind(struct thermal_zone_device *thermal,
+@@ -297,11 +407,63 @@ static int of_thermal_get_trip_temp(struct thermal_zone_device *tz, int trip,
+ 	if (trip >= data->ntrips || trip < 0)
+ 		return -EDOM;
+ 
+-	*temp = data->trips[trip].temperature;
++	if (data->senps && data->senps->ops &&
++	    data->senps->ops->get_trip_temp) {
++		int ret;
++
++		ret = data->senps->ops->get_trip_temp(data->senps->sensor_data,
++						      trip, temp);
++		if (ret)
++			return ret;
++	} else {
++		*temp = data->trips[trip].temperature;
++	}
+ 
+ 	return 0;
+ }
+ 
++static bool of_thermal_is_trips_triggered(struct thermal_zone_device *tz,
++		int temp)
++{
++	int tt, th, trip, last_temp;
++	struct __thermal_zone *data = tz->devdata;
++	bool triggered = false;
++
++	if (!tz->tzp)
++		return triggered;
++
++	mutex_lock(&tz->lock);
++	last_temp = tz->temperature;
++	for (trip = 0; trip < data->ntrips; trip++) {
++		if (!tz->tzp->tracks_low) {
++			tt = data->trips[trip].temperature;
++			if (temp >= tt && last_temp < tt) {
++				triggered = true;
++				break;
++			}
++			th = tt - data->trips[trip].hysteresis;
++			if (temp <= th && last_temp > th) {
++				triggered = true;
++				break;
++			}
++		} else {
++			tt = data->trips[trip].temperature;
++			if (temp <= tt && last_temp > tt) {
++				triggered = true;
++				break;
++			}
++			th = tt + data->trips[trip].hysteresis;
++			if (temp >= th && last_temp < th) {
++				triggered = true;
++				break;
++			}
++		}
++	}
++	mutex_unlock(&tz->lock);
++
++	return triggered;
++}
++
+ static int of_thermal_set_trip_temp(struct thermal_zone_device *tz, int trip,
+ 				    int temp)
+ {
+@@ -310,10 +472,11 @@ static int of_thermal_set_trip_temp(struct thermal_zone_device *tz, int trip,
+ 	if (trip >= data->ntrips || trip < 0)
+ 		return -EDOM;
+ 
+-	if (data->ops->set_trip_temp) {
++	if (data->senps && data->senps->ops->set_trip_temp) {
+ 		int ret;
+ 
+-		ret = data->ops->set_trip_temp(data->sensor_data, trip, temp);
++		ret = data->senps->ops->set_trip_temp(data->senps->sensor_data,
++						      trip, temp);
+ 		if (ret)
+ 			return ret;
+ 	}
+@@ -366,6 +529,70 @@ static int of_thermal_get_crit_temp(struct thermal_zone_device *tz,
+ 	return -EINVAL;
+ }
+ 
++static bool of_thermal_is_wakeable(struct thermal_zone_device *tz)
++{
++	struct __thermal_zone *data = tz->devdata;
++
++	return data->is_wakeable;
++}
++
++static void handle_thermal_trip(struct thermal_zone_device *tz,
++		bool temp_valid, int trip_temp)
++{
++	struct thermal_zone_device *zone;
++	struct __thermal_zone *data;
++	struct list_head *head;
++
++	if (!tz || !tz->devdata)
++		return;
++
++	data = tz->devdata;
++
++	if (!data->senps)
++		return;
++
++	head = &data->senps->first_tz;
++
++	list_for_each_entry(data, head, list) {
++		zone = data->tzd;
++		if (data->mode == THERMAL_DEVICE_DISABLED)
++			continue;
++		if (!temp_valid) {
++			thermal_zone_device_update(zone,
++				THERMAL_EVENT_UNSPECIFIED);
++		} else {
++			if (!of_thermal_is_trips_triggered(zone, trip_temp))
++				continue;
++			thermal_zone_device_update_temp(zone,
++				THERMAL_EVENT_UNSPECIFIED, trip_temp);
++		}
++	}
++}
++
++/*
++ * of_thermal_handle_trip_temp - Handle thermal trip from sensors
++ *
++ * @tz: pointer to the primary thermal zone.
++ * @trip_temp: The temperature
++ */
++void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
++		int trip_temp)
++{
++	return handle_thermal_trip(tz, true, trip_temp);
++}
++EXPORT_SYMBOL_GPL(of_thermal_handle_trip_temp);
++
++/*
++ * of_thermal_handle_trip - Handle thermal trip from sensors
++ *
++ * @tz: pointer to the primary thermal zone.
++ */
++void of_thermal_handle_trip(struct thermal_zone_device *tz)
++{
++	return handle_thermal_trip(tz, false, 0);
++}
++EXPORT_SYMBOL_GPL(of_thermal_handle_trip);
++
+ static struct thermal_zone_device_ops of_thermal_ops = {
+ 	.get_mode = of_thermal_get_mode,
+ 	.set_mode = of_thermal_set_mode,
+@@ -379,14 +606,20 @@ static struct thermal_zone_device_ops of_thermal_ops = {
+ 
+ 	.bind = of_thermal_bind,
+ 	.unbind = of_thermal_unbind,
++
++	.is_wakeable = of_thermal_is_wakeable,
++};
++
++static struct thermal_zone_of_device_ops of_virt_ops = {
++	.get_temp = virt_sensor_read_temp,
+ };
+ 
+ /***   sensor API   ***/
+ 
+ static struct thermal_zone_device *
+ thermal_zone_of_add_sensor(struct device_node *zone,
+-			   struct device_node *sensor, void *data,
+-			   const struct thermal_zone_of_device_ops *ops)
++			   struct device_node *sensor,
++			   struct __sensor_param *sens_param)
+ {
+ 	struct thermal_zone_device *tzd;
+ 	struct __thermal_zone *tz;
+@@ -397,12 +630,11 @@ thermal_zone_of_add_sensor(struct device_node *zone,
+ 
+ 	tz = tzd->devdata;
+ 
+-	if (!ops)
++	if (!sens_param->ops)
+ 		return ERR_PTR(-EINVAL);
+ 
+ 	mutex_lock(&tzd->lock);
+-	tz->ops = ops;
+-	tz->sensor_data = data;
++	tz->senps = sens_param;
+ 
+ 	tzd->ops->get_temp = of_thermal_get_temp;
+ 	tzd->ops->get_trend = of_thermal_get_trend;
+@@ -411,12 +643,13 @@ thermal_zone_of_add_sensor(struct device_node *zone,
+ 	 * The thermal zone core will calculate the window if they have set the
+ 	 * optional set_trips pointer.
+ 	 */
+-	if (ops->set_trips)
++	if (sens_param->ops->set_trips)
+ 		tzd->ops->set_trips = of_thermal_set_trips;
+ 
+-	if (ops->set_emul_temp)
++	if (sens_param->ops->set_emul_temp)
+ 		tzd->ops->set_emul_temp = of_thermal_set_emul_temp;
+ 
++	list_add_tail(&tz->list, &sens_param->first_tz);
+ 	mutex_unlock(&tzd->lock);
+ 
+ 	return tzd;
+@@ -451,7 +684,9 @@ thermal_zone_of_add_sensor(struct device_node *zone,
+  * that refer to it.
+  *
+  * Return: On success returns a valid struct thermal_zone_device,
+- * otherwise, it returns a corresponding ERR_PTR(). Caller must
++ * otherwise, it returns a corresponding ERR_PTR(). Incase there are multiple
++ * thermal zones referencing the same sensor, the return value will be
++ * thermal_zone_device pointer of the first thermal zone. Caller must
+  * check the return value with help of IS_ERR() helper.
+  */
+ struct thermal_zone_device *
+@@ -460,6 +695,8 @@ thermal_zone_of_sensor_register(struct device *dev, int sensor_id, void *data,
+ {
+ 	struct device_node *np, *child, *sensor_np;
+ 	struct thermal_zone_device *tzd = ERR_PTR(-ENODEV);
++	struct thermal_zone_device *first_tzd = NULL;
++	struct __sensor_param *sens_param = NULL;
+ 
+ 	np = of_find_node_by_name(NULL, "thermal-zones");
+ 	if (!np)
+@@ -470,11 +707,23 @@ thermal_zone_of_sensor_register(struct device *dev, int sensor_id, void *data,
+ 		return ERR_PTR(-EINVAL);
+ 	}
+ 
++	sens_param = kzalloc(sizeof(*sens_param), GFP_KERNEL);
++	if (!sens_param) {
++		of_node_put(np);
++		return ERR_PTR(-ENOMEM);
++	}
++	sens_param->sensor_data = data;
++	sens_param->ops = ops;
++	INIT_LIST_HEAD(&sens_param->first_tz);
++	sens_param->trip_high = INT_MAX;
++	sens_param->trip_low = INT_MIN;
++	mutex_init(&sens_param->lock);
+ 	sensor_np = of_node_get(dev->of_node);
+ 
+ 	for_each_available_child_of_node(np, child) {
+ 		struct of_phandle_args sensor_specs;
+ 		int ret, id;
++		struct __thermal_zone *tz;
+ 
+ 		/* For now, thermal framework supports only 1 sensor per zone */
+ 		ret = of_parse_phandle_with_args(child, "thermal-sensors",
+@@ -494,21 +743,26 @@ thermal_zone_of_sensor_register(struct device *dev, int sensor_id, void *data,
+ 
+ 		if (sensor_specs.np == sensor_np && id == sensor_id) {
+ 			tzd = thermal_zone_of_add_sensor(child, sensor_np,
+-							 data, ops);
+-			if (!IS_ERR(tzd))
+-				tzd->ops->set_mode(tzd, THERMAL_DEVICE_ENABLED);
+-
+-			of_node_put(sensor_specs.np);
+-			of_node_put(child);
+-			goto exit;
++							 sens_param);
++			if (!IS_ERR(tzd)) {
++				if (!first_tzd)
++					first_tzd = tzd;
++				tz = tzd->devdata;
++				if (!tz->default_disable)
++					tzd->ops->set_mode(tzd,
++						THERMAL_DEVICE_ENABLED);
++			}
+ 		}
+ 		of_node_put(sensor_specs.np);
+ 	}
+-exit:
+ 	of_node_put(sensor_np);
+ 	of_node_put(np);
+ 
+-	return tzd;
++	if (!first_tzd) {
++		first_tzd = ERR_PTR(-ENODEV);
++		kfree(sens_param);
++	}
++	return first_tzd;
+ }
+ EXPORT_SYMBOL_GPL(thermal_zone_of_sensor_register);
+ 
+@@ -530,7 +784,9 @@ EXPORT_SYMBOL_GPL(thermal_zone_of_sensor_register);
+ void thermal_zone_of_sensor_unregister(struct device *dev,
+ 				       struct thermal_zone_device *tzd)
+ {
+-	struct __thermal_zone *tz;
++	struct __thermal_zone *tz, *next;
++	struct thermal_zone_device *pos;
++	struct list_head *head;
+ 
+ 	if (!dev || !tzd || !tzd->devdata)
+ 		return;
+@@ -541,14 +797,20 @@ void thermal_zone_of_sensor_unregister(struct device *dev,
+ 	if (!tz)
+ 		return;
+ 
+-	mutex_lock(&tzd->lock);
+-	tzd->ops->get_temp = NULL;
+-	tzd->ops->get_trend = NULL;
+-	tzd->ops->set_emul_temp = NULL;
+-
+-	tz->ops = NULL;
+-	tz->sensor_data = NULL;
+-	mutex_unlock(&tzd->lock);
++	head = &tz->senps->first_tz;
++	list_for_each_entry_safe(tz, next, head, list) {
++		pos = tz->tzd;
++		mutex_lock(&pos->lock);
++		pos->ops->get_temp = NULL;
++		pos->ops->get_trend = NULL;
++		pos->ops->set_emul_temp = NULL;
++
++		list_del(&tz->list);
++		if (list_empty(&tz->senps->first_tz))
++			kfree(tz->senps);
++		tz->senps = NULL;
++		mutex_unlock(&pos->lock);
++	}
+ }
+ EXPORT_SYMBOL_GPL(thermal_zone_of_sensor_unregister);
+ 
+@@ -633,6 +895,138 @@ void devm_thermal_zone_of_sensor_unregister(struct device *dev,
+ }
+ EXPORT_SYMBOL_GPL(devm_thermal_zone_of_sensor_unregister);
+ 
++/**
++ * devm_thermal_of_virtual_sensor_register - Register a virtual sensor.
++ *	Three types of virtual sensors are supported.
++ *	1. Weighted aggregation type:
++ *		Virtual sensor of this type calculates the weighted aggregation
++ *		of sensor temperatures using the below formula,
++ *		temp = (sensor_1_temp * coeff_1 + ... + sensor_n_temp * coeff_n)
++ *			+ avg_offset / avg_denominator
++ *		So the sensor drivers has to specify n+2 coefficients.
++ *	2. Maximum type:
++ *		Virtual sensors of this type will report the maximum of all
++ *		sensor temperatures.
++ *	3. Minimum type:
++ *		Virtual sensors of this type will report the minimum of all
++ *		sensor temperatures.
++ *
++ * @input arguments:
++ * @dev: Virtual sensor driver device pointer.
++ * @sensor_data: Virtual sensor data supported for the device.
++ *
++ * @return: Returns a virtual thermal zone pointer. Returns error if thermal
++ * zone is not created. Returns -EAGAIN, if the sensor that is required for
++ * this virtual sensor temperature estimation is not registered yet. The
++ * sensor driver can try again later.
++ */
++struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
++		struct device *dev,
++		const struct virtual_sensor_data *sensor_data)
++{
++	int sens_idx = 0;
++	struct virtual_sensor *sens;
++	struct __thermal_zone *tz;
++	struct thermal_zone_device **ptr;
++	struct thermal_zone_device *tzd;
++	struct __sensor_param *sens_param = NULL;
++	enum thermal_device_mode mode;
++
++	if (!dev || !sensor_data)
++		return ERR_PTR(-EINVAL);
++
++	tzd = thermal_zone_get_zone_by_name(
++				sensor_data->virt_zone_name);
++	if (IS_ERR(tzd)) {
++		dev_dbg(dev, "sens:%s not available err: %ld\n",
++				sensor_data->virt_zone_name,
++				PTR_ERR(tzd));
++		return tzd;
++	}
++
++	mutex_lock(&tzd->lock);
++	/*
++	 * Check if the virtual zone is registered and enabled.
++	 * If so return the registered thermal zone.
++	 */
++	tzd->ops->get_mode(tzd, &mode);
++	mutex_unlock(&tzd->lock);
++	if (mode == THERMAL_DEVICE_ENABLED)
++		return tzd;
++
++	sens = devm_kzalloc(dev, sizeof(*sens), GFP_KERNEL);
++	if (!sens)
++		return ERR_PTR(-ENOMEM);
++
++	sens->virt_tz = tzd;
++	sens->logic = sensor_data->logic;
++	sens->num_sensors = sensor_data->num_sensors;
++	if ((sens->logic == VIRT_WEIGHTED_AVG) ||
++	    (sens->logic == VIRT_COUNT_THRESHOLD)) {
++		int coeff_ct = sensor_data->coefficient_ct;
++
++		/*
++		 * For weighted aggregation, sensor drivers has to specify
++		 * n+2 coefficients.
++		 */
++		if (coeff_ct != sens->num_sensors) {
++			dev_err(dev, "sens:%s invalid coefficient\n",
++					sensor_data->virt_zone_name);
++			return ERR_PTR(-EINVAL);
++		}
++		memcpy(sens->coefficients, sensor_data->coefficients,
++			       coeff_ct * sizeof(*sens->coefficients));
++		sens->avg_offset = sensor_data->avg_offset;
++		sens->avg_denominator = sensor_data->avg_denominator;
++	}
++
++	for (sens_idx = 0; sens_idx < sens->num_sensors; sens_idx++) {
++		sens->tz[sens_idx] = thermal_zone_get_zone_by_name(
++					sensor_data->sensor_names[sens_idx]);
++		if (IS_ERR(sens->tz[sens_idx])) {
++			dev_err(dev, "sens:%s sensor[%s] fetch err:%ld\n",
++				     sensor_data->virt_zone_name,
++				     sensor_data->sensor_names[sens_idx],
++				     PTR_ERR(sens->tz[sens_idx]));
++			break;
++		}
++	}
++	if (sens->num_sensors != sens_idx)
++		return ERR_PTR(-EAGAIN);
++
++	sens_param = kzalloc(sizeof(*sens_param), GFP_KERNEL);
++	if (!sens_param)
++		return ERR_PTR(-ENOMEM);
++	sens_param->sensor_data = sens;
++	sens_param->ops = &of_virt_ops;
++	INIT_LIST_HEAD(&sens_param->first_tz);
++	sens_param->trip_high = INT_MAX;
++	sens_param->trip_low = INT_MIN;
++	mutex_init(&sens_param->lock);
++
++	mutex_lock(&tzd->lock);
++	tz = tzd->devdata;
++	tz->senps = sens_param;
++	tzd->ops->get_temp = of_thermal_get_temp;
++	list_add_tail(&tz->list, &sens_param->first_tz);
++	mutex_unlock(&tzd->lock);
++
++	ptr = devres_alloc(devm_thermal_zone_of_sensor_release, sizeof(*ptr),
++			   GFP_KERNEL);
++	if (!ptr)
++		return ERR_PTR(-ENOMEM);
++
++	*ptr = tzd;
++	devres_add(dev, ptr);
++
++	if (!tz->default_disable)
++		tzd->ops->set_mode(tzd, THERMAL_DEVICE_ENABLED);
++
++	return tzd;
++}
++EXPORT_SYMBOL(devm_thermal_of_virtual_sensor_register);
++
++
+ /***   functions parsing device tree nodes   ***/
+ 
+ /**
+@@ -817,6 +1211,7 @@ __init *thermal_of_build_thermal_zone(struct device_node *np)
+ 	if (!tz)
+ 		return ERR_PTR(-ENOMEM);
+ 
++	INIT_LIST_HEAD(&tz->list);
+ 	ret = of_property_read_u32(np, "polling-delay-passive", &prop);
+ 	if (ret < 0) {
+ 		pr_err("missing polling-delay-passive property\n");
+@@ -831,6 +1226,10 @@ __init *thermal_of_build_thermal_zone(struct device_node *np)
+ 	}
+ 	tz->polling_delay = prop;
+ 
++	tz->is_wakeable = of_property_read_bool(np,
++					"wake-capable-sensor");
++	tz->default_disable = of_property_read_bool(np,
++					"disable-thermal-zone");
+ 	/*
+ 	 * REVIST: for now, the thermal framework supports only
+ 	 * one sensor per thermal zone. Thus, we are considering
+@@ -984,6 +1383,18 @@ int __init of_parse_thermal_zones(void)
+ 
+ 		if (!of_property_read_u32(child, "sustainable-power", &prop))
+ 			tzp->sustainable_power = prop;
++		if (!of_property_read_u32(child, "k_pu", &prop)) {
++			tzp->k_pu = prop;
++			tzp->is_k_pu_available = true;
++		}
++		if (!of_property_read_u32(child, "k_po", &prop)) {
++			tzp->k_po = prop;
++			tzp->is_k_po_available = true;
++		}
++		if (!of_property_read_u32(child, "k_i", &prop)) {
++			tzp->k_i = prop;
++			tzp->is_k_i_available = true;
++		}
+ 
+ 		for (i = 0; i < tz->ntrips; i++)
+ 			mask |= 1 << i;
+@@ -992,6 +1403,9 @@ int __init of_parse_thermal_zones(void)
+ 		tzp->slope = tz->slope;
+ 		tzp->offset = tz->offset;
+ 
++		if (of_property_read_bool(child, "tracks-low"))
++			tzp->tracks_low = true;
++
+ 		zone = thermal_zone_device_register(child->name, tz->ntrips,
+ 						    mask, tz,
+ 						    ops, tzp,
+@@ -1004,7 +1418,9 @@ int __init of_parse_thermal_zones(void)
+ 			kfree(ops);
+ 			of_thermal_free_zone(tz);
+ 			/* attempting to build remaining zones still */
++			continue;
+ 		}
++		tz->tzd = zone;
+ 	}
+ 	of_node_put(np);
+ 
+diff --git a/drivers/thermal/power_allocator.c b/drivers/thermal/power_allocator.c
+index 3055f9a12..cbf293b44 100644
+--- a/drivers/thermal/power_allocator.c
++++ b/drivers/thermal/power_allocator.c
+@@ -19,6 +19,9 @@
+ #include <linux/slab.h>
+ #include <linux/thermal.h>
+ 
++#ifdef CONFIG_ARCH_ROCKCHIP
++#include <soc/rockchip/rockchip_system_monitor.h>
++#endif
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/thermal_power_allocator.h>
+ 
+@@ -155,15 +158,15 @@ static void estimate_pid_constants(struct thermal_zone_device *tz,
+ 	if (!temperature_threshold)
+ 		return;
+ 
+-	if (!tz->tzp->k_po || force)
++	if (!tz->tzp->is_k_po_available || force)
+ 		tz->tzp->k_po = int_to_frac(sustainable_power) /
+ 			temperature_threshold;
+ 
+-	if (!tz->tzp->k_pu || force)
++	if (!tz->tzp->is_k_pu_available || force)
+ 		tz->tzp->k_pu = int_to_frac(2 * sustainable_power) /
+ 			temperature_threshold;
+ 
+-	if (!tz->tzp->k_i || force)
++	if (!tz->tzp->is_k_i_available || force)
+ 		tz->tzp->k_i = int_to_frac(10) / 1000;
+ 	/*
+ 	 * The default for k_d and integral_cutoff is 0, so we can
+@@ -530,6 +533,11 @@ static void allow_maximum_power(struct thermal_zone_device *tz)
+ 			continue;
+ 
+ 		instance->target = 0;
++#ifdef CONFIG_ARCH_ROCKCHIP
++		rockchip_system_monitor_adjust_cdev_state(instance->cdev,
++							  tz->temperature,
++							  &instance->target);
++#endif
+ 		mutex_lock(&instance->cdev->lock);
+ 		instance->cdev->updated = false;
+ 		mutex_unlock(&instance->cdev->lock);
+diff --git a/drivers/thermal/rockchip_thermal.c b/drivers/thermal/rockchip_thermal.c
+index f36375d5a..f1ed41b04 100644
+--- a/drivers/thermal/rockchip_thermal.c
++++ b/drivers/thermal/rockchip_thermal.c
+@@ -23,9 +23,11 @@
+ #include <linux/platform_device.h>
+ #include <linux/regmap.h>
+ #include <linux/reset.h>
++#include <linux/rockchip/cpu.h>
+ #include <linux/thermal.h>
+ #include <linux/mfd/syscon.h>
+ #include <linux/pinctrl/consumer.h>
++#include <linux/nvmem-consumer.h>
+ 
+ /**
+  * If the temperature over a period of time High,
+@@ -34,7 +36,7 @@
+  */
+ enum tshut_mode {
+ 	TSHUT_MODE_CRU = 0,
+-	TSHUT_MODE_GPIO,
++	TSHUT_MODE_OTP,
+ };
+ 
+ /**
+@@ -83,6 +85,9 @@ struct chip_tsadc_table {
+ 	const struct tsadc_table *id;
+ 	unsigned int length;
+ 	u32 data_mask;
++	/* Tsadc is linear, using linear parameters */
++	int kNum;
++	int bNum;
+ 	enum adc_sort_mode mode;
+ };
+ 
+@@ -90,6 +95,7 @@ struct chip_tsadc_table {
+  * struct rockchip_tsadc_chip - hold the private data of tsadc chip
+  * @chn_id[SOC_MAX_SENSORS]: the sensor id of chip correspond to the channel
+  * @chn_num: the channel number of tsadc chip
++ * @conversion_time: the conversion time of tsadc
+  * @tshut_temp: the hardware-controlled shutdown temperature value
+  * @tshut_mode: the hardware-controlled shutdown mode (0:CRU 1:GPIO)
+  * @tshut_polarity: the hardware-controlled active polarity (0:LOW 1:HIGH)
+@@ -99,6 +105,9 @@ struct chip_tsadc_table {
+  * @set_alarm_temp: set the high temperature interrupt
+  * @set_tshut_temp: set the hardware-controlled shutdown temperature
+  * @set_tshut_mode: set the hardware-controlled shutdown mode
++ * @get_trim_code: get the trim code by otp value
++ * @trim_temp: get trim temp by trim code
++ * @set_clk_rate: set clock rate
+  * @table: the chip-specific conversion table
+  */
+ struct rockchip_tsadc_chip {
+@@ -106,6 +115,9 @@ struct rockchip_tsadc_chip {
+ 	int chn_id[SOC_MAX_SENSORS];
+ 	int chn_num;
+ 
++	/* The sensor electrical characteristics */
++	int conversion_time;
++
+ 	/* The hardware-controlled tshut property */
+ 	int tshut_temp;
+ 	enum tshut_mode tshut_mode;
+@@ -124,7 +136,12 @@ struct rockchip_tsadc_chip {
+ 			      int chn, void __iomem *reg, int temp);
+ 	int (*set_tshut_temp)(const struct chip_tsadc_table *table,
+ 			      int chn, void __iomem *reg, int temp);
+-	void (*set_tshut_mode)(int chn, void __iomem *reg, enum tshut_mode m);
++	void (*set_tshut_mode)(struct regmap *grf, int chn,
++			       void __iomem *reg, enum tshut_mode m);
++	int (*get_trim_code)(struct platform_device *pdev,
++			     int code, int trim_base);
++	int (*trim_temp)(struct platform_device *pdev);
++	int (*set_clk_rate)(struct platform_device *pdev);
+ 
+ 	/* Per-table methods */
+ 	struct chip_tsadc_table table;
+@@ -163,15 +180,21 @@ struct rockchip_thermal_data {
+ 
+ 	struct rockchip_thermal_sensor sensors[SOC_MAX_SENSORS];
+ 
+-	struct clk *clk;
+-	struct clk *pclk;
++	struct clk_bulk_data *clks;
++	int num_clks;
+ 
+ 	struct regmap *grf;
+ 	void __iomem *regs;
+ 
+ 	int tshut_temp;
++	int trim;
+ 	enum tshut_mode tshut_mode;
+ 	enum tshut_polarity tshut_polarity;
++	struct pinctrl *pinctrl;
++	struct pinctrl_state *gpio_state;
++	struct pinctrl_state *otp_state;
++
++	struct notifier_block panic_nb;
+ };
+ 
+ /**
+@@ -215,18 +238,54 @@ struct rockchip_thermal_data {
+ #define TSADCV2_AUTO_PERIOD_HT_TIME		50  /* 50ms */
+ #define TSADCV3_AUTO_PERIOD_TIME		1875 /* 2.5ms */
+ #define TSADCV3_AUTO_PERIOD_HT_TIME		1875 /* 2.5ms */
++#define TSADCV5_AUTO_PERIOD_TIME		1622 /* 2.5ms */
++#define TSADCV5_AUTO_PERIOD_HT_TIME		1622 /* 2.5ms */
+ 
+ #define TSADCV2_USER_INTER_PD_SOC		0x340 /* 13 clocks */
++#define TSADCV5_USER_INTER_PD_SOC		0xfc0 /* 97us, at least 90us */
+ 
+ #define GRF_SARADC_TESTBIT			0x0e644
+ #define GRF_TSADC_TESTBIT_L			0x0e648
+ #define GRF_TSADC_TESTBIT_H			0x0e64c
+ 
++#define PX30_GRF_SOC_CON0			0x0400
++#define PX30_GRF_SOC_CON2			0x0408
++
++#define RK1808_BUS_GRF_SOC_CON0			0x0400
++
++#define RK3568_GRF_TSADC_CON			0x0600
++#define RK3568_GRF_TSADC_ANA_REG0		(0x10001 << 0)
++#define RK3568_GRF_TSADC_ANA_REG1		(0x10001 << 1)
++#define RK3568_GRF_TSADC_ANA_REG2		(0x10001 << 2)
++#define RK3568_GRF_TSADC_TSEN			(0x10001 << 8)
++
++#define RV1126_GRF0_TSADC_CON			0x0100
++
++#define RV1126_GRF0_TSADC_TRM			(0xff0077 << 0)
++#define RV1126_GRF0_TSADC_SHUT_2CRU		(0x30003 << 10)
++#define RV1126_GRF0_TSADC_SHUT_2GPIO		(0x70007 << 12)
++
+ #define GRF_SARADC_TESTBIT_ON			(0x10001 << 2)
+ #define GRF_TSADC_TESTBIT_H_ON			(0x10001 << 2)
++#define GRF_TSADC_BANDGAP_CHOPPER_EN		(0x10001 << 2)
+ #define GRF_TSADC_VCM_EN_L			(0x10001 << 7)
+ #define GRF_TSADC_VCM_EN_H			(0x10001 << 7)
+ 
++#define GRF_CON_TSADC_CH_INV			(0x10001 << 1)
++#define PX30S_TSADC_TDC_MODE			(0x10001 << 4)
++#define PX30S_TSADC_TRIM			(0xf0007 << 0)
++
++#define MIN_TEMP				(-40000)
++#define LOWEST_TEMP				(-273000)
++#define MAX_TEMP				(125000)
++#define MAX_ENV_TEMP				(85000)
++
++#define BASE					(1024)
++#define BASE_SHIFT				(10)
++#define START_DEBOUNCE_COUNT			(100)
++#define HIGHER_DEBOUNCE_TEMP			(30000)
++#define LOWER_DEBOUNCE_TEMP			(15000)
++
+ /**
+  * struct tsadc_table - code to temperature conversion table
+  * @code: the value of adc channel
+@@ -242,6 +301,7 @@ struct tsadc_table {
+ 	int temp;
+ };
+ 
++
+ static const struct tsadc_table rv1108_table[] = {
+ 	{0, -40000},
+ 	{374, -40000},
+@@ -281,6 +341,45 @@ static const struct tsadc_table rv1108_table[] = {
+ 	{TSADCV2_DATA_MASK, 125000},
+ };
+ 
++static const struct tsadc_table rk1808_code_table[] = {
++	{0, -40000},
++	{3455, -40000},
++	{3463, -35000},
++	{3471, -30000},
++	{3479, -25000},
++	{3487, -20000},
++	{3495, -15000},
++	{3503, -10000},
++	{3511, -5000},
++	{3519, 0},
++	{3527, 5000},
++	{3535, 10000},
++	{3543, 15000},
++	{3551, 20000},
++	{3559, 25000},
++	{3567, 30000},
++	{3576, 35000},
++	{3584, 40000},
++	{3592, 45000},
++	{3600, 50000},
++	{3609, 55000},
++	{3617, 60000},
++	{3625, 65000},
++	{3633, 70000},
++	{3642, 75000},
++	{3650, 80000},
++	{3659, 85000},
++	{3667, 90000},
++	{3675, 95000},
++	{3684, 100000},
++	{3692, 105000},
++	{3701, 110000},
++	{3709, 115000},
++	{3718, 120000},
++	{3726, 125000},
++	{TSADCV2_DATA_MASK, 125000},
++};
++
+ static const struct tsadc_table rk3228_code_table[] = {
+ 	{0, -40000},
+ 	{588, -40000},
+@@ -475,6 +574,45 @@ static const struct tsadc_table rk3399_code_table[] = {
+ 	{TSADCV3_DATA_MASK, 125000},
+ };
+ 
++static const struct tsadc_table rk3568_code_table[] = {
++	{0, -40000},
++	{1584, -40000},
++	{1620, -35000},
++	{1652, -30000},
++	{1688, -25000},
++	{1720, -20000},
++	{1756, -15000},
++	{1788, -10000},
++	{1824, -5000},
++	{1856, 0},
++	{1892, 5000},
++	{1924, 10000},
++	{1956, 15000},
++	{1992, 20000},
++	{2024, 25000},
++	{2060, 30000},
++	{2092, 35000},
++	{2128, 40000},
++	{2160, 45000},
++	{2196, 50000},
++	{2228, 55000},
++	{2264, 60000},
++	{2300, 65000},
++	{2332, 70000},
++	{2368, 75000},
++	{2400, 80000},
++	{2436, 85000},
++	{2468, 90000},
++	{2500, 95000},
++	{2536, 100000},
++	{2572, 105000},
++	{2604, 110000},
++	{2636, 115000},
++	{2672, 120000},
++	{2704, 125000},
++	{TSADCV2_DATA_MASK, 125000},
++};
++
+ static u32 rk_tsadcv2_temp_to_code(const struct chip_tsadc_table *table,
+ 				   int temp)
+ {
+@@ -483,6 +621,9 @@ static u32 rk_tsadcv2_temp_to_code(const struct chip_tsadc_table *table,
+ 	unsigned int denom;
+ 	u32 error = table->data_mask;
+ 
++	if (table->kNum)
++		return (((temp / 1000) * table->kNum) / 1000 + table->bNum);
++
+ 	low = 0;
+ 	high = (table->length - 1) - 1; /* ignore the last check for table */
+ 	mid = (high + low) / 2;
+@@ -536,6 +677,13 @@ static int rk_tsadcv2_code_to_temp(const struct chip_tsadc_table *table,
+ 	unsigned int num;
+ 	unsigned long denom;
+ 
++	if (table->kNum) {
++		*temp = (((int)code - table->bNum) * 10000 / table->kNum) * 100;
++		if (*temp < MIN_TEMP || *temp > MAX_TEMP)
++			return -EAGAIN;
++		return 0;
++	}
++
+ 	WARN_ON(table->length < 2);
+ 
+ 	switch (table->mode) {
+@@ -689,6 +837,88 @@ static void rk_tsadcv3_initialize(struct regmap *grf, void __iomem *regs,
+ 			       regs + TSADCV2_AUTO_CON);
+ }
+ 
++static void rk_tsadcv4_initialize(struct regmap *grf, void __iomem *regs,
++				  enum tshut_polarity tshut_polarity)
++{
++	rk_tsadcv2_initialize(grf, regs, tshut_polarity);
++	if (!IS_ERR(grf))
++		regmap_write(grf, PX30_GRF_SOC_CON2, GRF_CON_TSADC_CH_INV);
++}
++
++static void rk_tsadcv5_initialize(struct regmap *grf, void __iomem *regs,
++				  enum tshut_polarity tshut_polarity)
++{
++	if (tshut_polarity == TSHUT_HIGH_ACTIVE)
++		writel_relaxed(0U | TSADCV2_AUTO_TSHUT_POLARITY_HIGH,
++			       regs + TSADCV2_AUTO_CON);
++	else
++		writel_relaxed(0U & ~TSADCV2_AUTO_TSHUT_POLARITY_HIGH,
++			       regs + TSADCV2_AUTO_CON);
++
++	writel_relaxed(TSADCV5_USER_INTER_PD_SOC, regs + TSADCV2_USER_CON);
++
++	writel_relaxed(TSADCV5_AUTO_PERIOD_TIME, regs + TSADCV2_AUTO_PERIOD);
++	writel_relaxed(TSADCV2_HIGHT_INT_DEBOUNCE_COUNT,
++		       regs + TSADCV2_HIGHT_INT_DEBOUNCE);
++	writel_relaxed(TSADCV5_AUTO_PERIOD_HT_TIME,
++		       regs + TSADCV2_AUTO_PERIOD_HT);
++	writel_relaxed(TSADCV2_HIGHT_TSHUT_DEBOUNCE_COUNT,
++		       regs + TSADCV2_HIGHT_TSHUT_DEBOUNCE);
++
++	if (!IS_ERR(grf))
++		regmap_write(grf, RK1808_BUS_GRF_SOC_CON0,
++			     GRF_TSADC_BANDGAP_CHOPPER_EN);
++}
++
++static void rk_tsadcv6_initialize(struct regmap *grf, void __iomem *regs,
++				  enum tshut_polarity tshut_polarity)
++{
++	rk_tsadcv2_initialize(grf, regs, tshut_polarity);
++
++	if (!IS_ERR(grf))
++		regmap_write(grf, RV1126_GRF0_TSADC_CON,
++			     RV1126_GRF0_TSADC_TRM);
++}
++
++static void rk_tsadcv7_initialize(struct regmap *grf, void __iomem *regs,
++				  enum tshut_polarity tshut_polarity)
++{
++	writel_relaxed(TSADCV5_USER_INTER_PD_SOC, regs + TSADCV2_USER_CON);
++	writel_relaxed(TSADCV5_AUTO_PERIOD_TIME, regs + TSADCV2_AUTO_PERIOD);
++	writel_relaxed(TSADCV2_HIGHT_INT_DEBOUNCE_COUNT,
++		       regs + TSADCV2_HIGHT_INT_DEBOUNCE);
++	writel_relaxed(TSADCV5_AUTO_PERIOD_HT_TIME,
++		       regs + TSADCV2_AUTO_PERIOD_HT);
++	writel_relaxed(TSADCV2_HIGHT_TSHUT_DEBOUNCE_COUNT,
++		       regs + TSADCV2_HIGHT_TSHUT_DEBOUNCE);
++
++	if (tshut_polarity == TSHUT_HIGH_ACTIVE)
++		writel_relaxed(0U | TSADCV2_AUTO_TSHUT_POLARITY_HIGH,
++			       regs + TSADCV2_AUTO_CON);
++	else
++		writel_relaxed(0U & ~TSADCV2_AUTO_TSHUT_POLARITY_HIGH,
++			       regs + TSADCV2_AUTO_CON);
++
++	if (!IS_ERR(grf)) {
++		regmap_write(grf, RK3568_GRF_TSADC_CON, RK3568_GRF_TSADC_TSEN);
++		udelay(15);
++		regmap_write(grf, RK3568_GRF_TSADC_CON, RK3568_GRF_TSADC_ANA_REG0);
++		regmap_write(grf, RK3568_GRF_TSADC_CON, RK3568_GRF_TSADC_ANA_REG1);
++		regmap_write(grf, RK3568_GRF_TSADC_CON, RK3568_GRF_TSADC_ANA_REG2);
++		usleep_range(100, 200);
++	}
++}
++
++static void rk_tsadcv9_initialize(struct regmap *grf, void __iomem *regs,
++				  enum tshut_polarity tshut_polarity)
++{
++	rk_tsadcv2_initialize(grf, regs, tshut_polarity);
++	if (!IS_ERR(grf)) {
++		regmap_write(grf, PX30_GRF_SOC_CON0, PX30S_TSADC_TDC_MODE);
++		regmap_write(grf, PX30_GRF_SOC_CON0, PX30S_TSADC_TRIM);
++	}
++}
++
+ static void rk_tsadcv2_irq_ack(void __iomem *regs)
+ {
+ 	u32 val;
+@@ -748,6 +978,91 @@ static int rk_tsadcv2_get_temp(const struct chip_tsadc_table *table,
+ 	return rk_tsadcv2_code_to_temp(table, val, temp);
+ }
+ 
++static int predict_temp(int temp)
++{
++	/*
++	 * The deviation of prediction. the temperature will not change rapidly,
++	 * so this cov_q is small
++	 */
++	int cov_q = 18;
++	/*
++	 * The deviation of tsadc's reading, deviation of tsadc is very big when
++	 * abnormal temperature is get
++	 */
++	int cov_r = 542;
++
++	int gain;
++	int temp_mid;
++	int temp_now;
++	int prob_mid;
++	int prob_now;
++	static int temp_last = LOWEST_TEMP;
++	static int prob_last = 160;
++	static int bounding_cnt;
++
++	/*
++	 * init temp_last with a more suitable value, which mostly equals to
++	 * temp reading from tsadc, but not higher than MAX_ENV_TEMP. If the
++	 * temp is higher than MAX_ENV_TEMP, it is assumed to be abnormal
++	 * value and temp_last is adjusted to MAX_ENV_TEMP.
++	 */
++	if (temp_last == LOWEST_TEMP)
++		temp_last = min(temp, MAX_ENV_TEMP);
++
++	/*
++	 * Before START_DEBOUNCE_COUNT's samples of temperature, we consider
++	 * tsadc is stable, i.e. after that, the temperature may be not stable
++	 * and may have abnormal reading, so we set a bounding temperature. If
++	 * the reading from tsadc is too big, we set the delta temperature of
++	 * DEBOUNCE_TEMP/3 comparing to the last temperature.
++	 */
++
++	if (bounding_cnt++ > START_DEBOUNCE_COUNT) {
++		bounding_cnt = START_DEBOUNCE_COUNT;
++		if (temp - temp_last > HIGHER_DEBOUNCE_TEMP)
++			temp = temp_last + HIGHER_DEBOUNCE_TEMP / 3;
++		if (temp_last - temp > LOWER_DEBOUNCE_TEMP)
++			temp = temp_last - LOWER_DEBOUNCE_TEMP / 3;
++	}
++
++	temp_mid = temp_last;
++
++	/* calculate the probability of this time's prediction */
++	prob_mid = prob_last + cov_q;
++
++	/* calculate the Kalman Gain */
++	gain = (prob_mid * BASE) / (prob_mid + cov_r);
++
++	/* calculate the prediction of temperature */
++	temp_now = (temp_mid * BASE + gain * (temp - temp_mid)) >> BASE_SHIFT;
++
++	/*
++	 * Base on this time's Kalman Gain, ajust our probability of prediction
++	 * for next time calculation
++	 */
++	prob_now = ((BASE - gain) * prob_mid) >> BASE_SHIFT;
++
++	prob_last = prob_now;
++	temp_last = temp_now;
++
++	return temp_last;
++}
++
++static int rk_tsadcv3_get_temp(const struct chip_tsadc_table *table,
++			       int chn, void __iomem *regs, int *temp)
++{
++	u32 val;
++	int ret;
++
++	val = readl_relaxed(regs + TSADCV2_DATA(chn));
++
++	ret = rk_tsadcv2_code_to_temp(table, val, temp);
++	if (!ret)
++		*temp = predict_temp(*temp);
++
++	return ret;
++}
++
+ static int rk_tsadcv2_alarm_temp(const struct chip_tsadc_table *table,
+ 				 int chn, void __iomem *regs, int temp)
+ {
+@@ -801,28 +1116,97 @@ static int rk_tsadcv2_tshut_temp(const struct chip_tsadc_table *table,
+ 	return 0;
+ }
+ 
+-static void rk_tsadcv2_tshut_mode(int chn, void __iomem *regs,
++static void rk_tsadcv2_tshut_mode(struct regmap *grf, int chn,
++				  void __iomem *regs,
++				  enum tshut_mode mode)
++{
++	u32 val;
++
++	val = readl_relaxed(regs + TSADCV2_INT_EN);
++	if (mode == TSHUT_MODE_OTP) {
++		val &= ~TSADCV2_SHUT_2CRU_SRC_EN(chn);
++		val |= TSADCV2_SHUT_2GPIO_SRC_EN(chn);
++	} else {
++		val &= ~TSADCV2_SHUT_2GPIO_SRC_EN(chn);
++		val |= TSADCV2_SHUT_2CRU_SRC_EN(chn);
++	}
++
++	writel_relaxed(val, regs + TSADCV2_INT_EN);
++}
++
++static void rk_tsadcv3_tshut_mode(struct regmap *grf, int chn,
++				  void __iomem *regs,
+ 				  enum tshut_mode mode)
+ {
+ 	u32 val;
+ 
+ 	val = readl_relaxed(regs + TSADCV2_INT_EN);
+-	if (mode == TSHUT_MODE_GPIO) {
++	if (mode == TSHUT_MODE_OTP) {
+ 		val &= ~TSADCV2_SHUT_2CRU_SRC_EN(chn);
+ 		val |= TSADCV2_SHUT_2GPIO_SRC_EN(chn);
++		if (!IS_ERR(grf))
++			regmap_write(grf, RV1126_GRF0_TSADC_CON,
++				     RV1126_GRF0_TSADC_SHUT_2GPIO);
+ 	} else {
+ 		val &= ~TSADCV2_SHUT_2GPIO_SRC_EN(chn);
+ 		val |= TSADCV2_SHUT_2CRU_SRC_EN(chn);
++		if (!IS_ERR(grf))
++			regmap_write(grf, RV1126_GRF0_TSADC_CON,
++				     RV1126_GRF0_TSADC_SHUT_2CRU);
+ 	}
+ 
+ 	writel_relaxed(val, regs + TSADCV2_INT_EN);
+ }
+ 
++static int rk_tsadcv1_get_trim_code(struct platform_device *pdev,
++				    int code, int trim_base)
++{
++	struct rockchip_thermal_data *thermal = platform_get_drvdata(pdev);
++	const struct chip_tsadc_table *table = &thermal->chip->table;
++	u32 base_code;
++	int trim_code;
++
++	base_code = trim_base * table->kNum / 1000 + table->bNum;
++	trim_code = code - base_code;
++
++	return trim_code;
++}
++
++static int rk_tsadcv1_trim_temp(struct platform_device *pdev)
++{
++	struct rockchip_thermal_data *thermal = platform_get_drvdata(pdev);
++
++	return thermal->trim * 500;
++}
++
++static int rk_tsadcv1_set_clk_rate(struct platform_device *pdev)
++{
++	struct clk *clk;
++	int error;
++
++	clk = devm_clk_get(&pdev->dev, "tsadc");
++	if (IS_ERR(clk)) {
++		error = PTR_ERR(clk);
++		dev_err(&pdev->dev, "failed to get tsadc clock\n");
++		return error;
++	}
++	error = clk_set_rate(clk, 4000000);
++	if (error < 0) {
++		devm_clk_put(&pdev->dev, clk);
++		dev_err(&pdev->dev,
++			"failed to set tsadc clk rate to 4000000Hz\n");
++		return error;
++	}
++	devm_clk_put(&pdev->dev, clk);
++
++	return 0;
++}
++
+ static const struct rockchip_tsadc_chip rv1108_tsadc_data = {
+ 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
+ 	.chn_num = 1, /* one channel for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+@@ -842,11 +1226,61 @@ static const struct rockchip_tsadc_chip rv1108_tsadc_data = {
+ 	},
+ };
+ 
++static const struct rockchip_tsadc_chip rv1126_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_num = 1, /* one channel for tsadc */
++
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv6_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv2_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv3_tshut_mode,
++	.get_trim_code = rk_tsadcv1_get_trim_code,
++	.trim_temp = rk_tsadcv1_trim_temp,
++
++	.table = {
++		.kNum = 2263,
++		.bNum = 2704,
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
++static const struct rockchip_tsadc_chip rk1808_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_num = 1, /* one channel for tsadc */
++
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
++	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv5_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv3_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++
++	.table = {
++		.id = rk1808_code_table,
++		.length = ARRAY_SIZE(rk1808_code_table),
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
+ static const struct rockchip_tsadc_chip rk3228_tsadc_data = {
+ 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
+ 	.chn_num = 1, /* one channel for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+@@ -871,14 +1305,14 @@ static const struct rockchip_tsadc_chip rk3288_tsadc_data = {
+ 	.chn_id[SENSOR_GPU] = 2, /* gpu sensor is channel 2 */
+ 	.chn_num = 2, /* two channels for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+ 	.initialize = rk_tsadcv2_initialize,
+ 	.irq_ack = rk_tsadcv2_irq_ack,
+ 	.control = rk_tsadcv2_control,
+-	.get_temp = rk_tsadcv2_get_temp,
++	.get_temp = rk_tsadcv3_get_temp,
+ 	.set_alarm_temp = rk_tsadcv2_alarm_temp,
+ 	.set_tshut_temp = rk_tsadcv2_tshut_temp,
+ 	.set_tshut_mode = rk_tsadcv2_tshut_mode,
+@@ -891,6 +1325,77 @@ static const struct rockchip_tsadc_chip rk3288_tsadc_data = {
+ 	},
+ };
+ 
++static const struct rockchip_tsadc_chip rk3308_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
++	.chn_num = 2, /* 2 channels for tsadc */
++
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv4_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv3_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++
++	.table = {
++		.id = rk3328_code_table,
++		.length = ARRAY_SIZE(rk3328_code_table),
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
++static const struct rockchip_tsadc_chip px30_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
++	.chn_num = 2, /* 2 channels for tsadc */
++
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv4_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv3_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++
++	.table = {
++		.id = rk3328_code_table,
++		.length = ARRAY_SIZE(rk3328_code_table),
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
++static const struct rockchip_tsadc_chip px30s_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
++	.chn_num = 2, /* 1 channels for tsadc */
++	.conversion_time = 2100, /* us */
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_temp = 95000,
++	.initialize = rk_tsadcv9_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv2_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++	.set_clk_rate = rk_tsadcv1_set_clk_rate,
++	.table = {
++		.kNum = 2699,
++		.bNum = 2796,
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
+ static const struct rockchip_tsadc_chip rk3328_tsadc_data = {
+ 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
+ 	.chn_num = 1, /* one channels for tsadc */
+@@ -919,7 +1424,7 @@ static const struct rockchip_tsadc_chip rk3366_tsadc_data = {
+ 	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
+ 	.chn_num = 2, /* two channels for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+@@ -944,7 +1449,7 @@ static const struct rockchip_tsadc_chip rk3368_tsadc_data = {
+ 	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
+ 	.chn_num = 2, /* two channels for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+@@ -969,7 +1474,7 @@ static const struct rockchip_tsadc_chip rk3399_tsadc_data = {
+ 	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
+ 	.chn_num = 2, /* two channels for tsadc */
+ 
+-	.tshut_mode = TSHUT_MODE_GPIO, /* default TSHUT via GPIO give PMIC */
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
+ 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+ 	.tshut_temp = 95000,
+ 
+@@ -989,35 +1494,106 @@ static const struct rockchip_tsadc_chip rk3399_tsadc_data = {
+ 	},
+ };
+ 
++static const struct rockchip_tsadc_chip rk3568_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
++	.chn_num = 2, /* two channels for tsadc */
++
++	.tshut_mode = TSHUT_MODE_OTP, /* default TSHUT via GPIO give PMIC */
++	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv7_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv3_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++
++	.table = {
++		.id = rk3568_code_table,
++		.length = ARRAY_SIZE(rk3568_code_table),
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
+ static const struct of_device_id of_rockchip_thermal_match[] = {
++#ifdef CONFIG_CPU_RV110X
+ 	{
+ 		.compatible = "rockchip,rv1108-tsadc",
+ 		.data = (void *)&rv1108_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RV1126
++	{
++		.compatible = "rockchip,rv1126-tsadc",
++		.data = (void *)&rv1126_tsadc_data,
++	},
++#endif
++#ifdef CONFIG_CPU_PX30
++	{	.compatible = "rockchip,px30-tsadc",
++		.data = (void *)&px30_tsadc_data,
++	},
++	{	.compatible = "rockchip,px30s-tsadc",
++		.data = (void *)&px30s_tsadc_data,
++	},
++#endif
++#ifdef CONFIG_CPU_RK1808
++	{
++		.compatible = "rockchip,rk1808-tsadc",
++		.data = (void *)&rk1808_tsadc_data,
++	},
++#endif
++#ifdef CONFIG_CPU_RK322X
+ 	{
+ 		.compatible = "rockchip,rk3228-tsadc",
+ 		.data = (void *)&rk3228_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3288
+ 	{
+ 		.compatible = "rockchip,rk3288-tsadc",
+ 		.data = (void *)&rk3288_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3308
++	{
++		.compatible = "rockchip,rk3308-tsadc",
++		.data = (void *)&rk3308_tsadc_data,
++	},
++#endif
++#ifdef CONFIG_CPU_RK3328
+ 	{
+ 		.compatible = "rockchip,rk3328-tsadc",
+ 		.data = (void *)&rk3328_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3366
+ 	{
+ 		.compatible = "rockchip,rk3366-tsadc",
+ 		.data = (void *)&rk3366_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3368
+ 	{
+ 		.compatible = "rockchip,rk3368-tsadc",
+ 		.data = (void *)&rk3368_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3399
+ 	{
+ 		.compatible = "rockchip,rk3399-tsadc",
+ 		.data = (void *)&rk3399_tsadc_data,
+ 	},
++#endif
++#ifdef CONFIG_CPU_RK3568
++	{
++		.compatible = "rockchip,rk3568-tsadc",
++		.data = (void *)&rk3568_tsadc_data,
++	},
++#endif
+ 	{ /* end */ },
+ };
+ MODULE_DEVICE_TABLE(of, of_rockchip_thermal_match);
+@@ -1056,6 +1632,9 @@ static int rockchip_thermal_set_trips(void *_sensor, int low, int high)
+ 	dev_dbg(&thermal->pdev->dev, "%s: sensor %d: low: %d, high %d\n",
+ 		__func__, sensor->id, low, high);
+ 
++	if (tsadc->trim_temp)
++		high += tsadc->trim_temp(thermal->pdev);
++
+ 	return tsadc->set_alarm_temp(&tsadc->table,
+ 				     sensor->id, thermal->regs, high);
+ }
+@@ -1069,6 +1648,8 @@ static int rockchip_thermal_get_temp(void *_sensor, int *out_temp)
+ 
+ 	retval = tsadc->get_temp(&tsadc->table,
+ 				 sensor->id, thermal->regs, out_temp);
++	if (tsadc->trim_temp)
++		*out_temp -= tsadc->trim_temp(thermal->pdev);
+ 	dev_dbg(&thermal->pdev->dev, "sensor %d - temp: %d, retval: %d\n",
+ 		sensor->id, *out_temp, retval);
+ 
+@@ -1080,11 +1661,52 @@ static const struct thermal_zone_of_device_ops rockchip_of_thermal_ops = {
+ 	.set_trips = rockchip_thermal_set_trips,
+ };
+ 
++static void thermal_pinctrl_select_otp(struct rockchip_thermal_data *thermal)
++{
++	if (!IS_ERR(thermal->pinctrl) && !IS_ERR_OR_NULL(thermal->otp_state))
++		pinctrl_select_state(thermal->pinctrl,
++				     thermal->otp_state);
++}
++
++static void thermal_pinctrl_select_gpio(struct rockchip_thermal_data *thermal)
++{
++	if (!IS_ERR(thermal->pinctrl) && !IS_ERR_OR_NULL(thermal->gpio_state))
++		pinctrl_select_state(thermal->pinctrl,
++				     thermal->gpio_state);
++}
++
++static int rockchip_get_efuse_value(struct device_node *np, char *porp_name,
++				    int *value)
++{
++	struct nvmem_cell *cell;
++	unsigned char *buf;
++	size_t len;
++
++	cell = of_nvmem_cell_get(np, porp_name);
++	if (IS_ERR(cell))
++		return PTR_ERR(cell);
++
++	buf = (unsigned char *)nvmem_cell_read(cell, &len);
++
++	nvmem_cell_put(cell);
++
++	if (IS_ERR(buf))
++		return PTR_ERR(buf);
++
++	*value = buf[0];
++
++	kfree(buf);
++
++	return 0;
++}
++
+ static int rockchip_configure_from_dt(struct device *dev,
+ 				      struct device_node *np,
+ 				      struct rockchip_thermal_data *thermal)
+ {
++	const struct rockchip_tsadc_chip *tsadc = thermal->chip;
+ 	u32 shut_temp, tshut_mode, tshut_polarity;
++	int trim_l = 0, trim_h = 0, trim_bsae = 0;
+ 
+ 	if (of_property_read_u32(np, "rockchip,hw-tshut-temp", &shut_temp)) {
+ 		dev_warn(dev,
+@@ -1103,7 +1725,7 @@ static int rockchip_configure_from_dt(struct device *dev,
+ 	if (of_property_read_u32(np, "rockchip,hw-tshut-mode", &tshut_mode)) {
+ 		dev_warn(dev,
+ 			 "Missing tshut mode property, using default (%s)\n",
+-			 thermal->chip->tshut_mode == TSHUT_MODE_GPIO ?
++			 thermal->chip->tshut_mode == TSHUT_MODE_OTP ?
+ 				"gpio" : "cru");
+ 		thermal->tshut_mode = thermal->chip->tshut_mode;
+ 	} else {
+@@ -1140,6 +1762,29 @@ static int rockchip_configure_from_dt(struct device *dev,
+ 	if (IS_ERR(thermal->grf))
+ 		dev_warn(dev, "Missing rockchip,grf property\n");
+ 
++	if (tsadc->trim_temp && tsadc->get_trim_code) {
++		/* The tsadc wont to handle the error in here
++		 * since some SoCs didn't need this property.
++		 * rv1126 need trim tsadc.
++		 */
++		if (rockchip_get_efuse_value(np, "trim_l", &trim_l))
++			dev_warn(dev, "Missing trim_l property\n");
++		if (rockchip_get_efuse_value(np, "trim_h", &trim_h))
++			dev_warn(dev, "Missing trim_h property\n");
++		if (rockchip_get_efuse_value(np, "trim_base", &trim_bsae))
++			dev_warn(dev, "Missing trim_base property\n");
++
++		if (trim_l && trim_h && trim_bsae) {
++			thermal->trim = tsadc->get_trim_code(thermal->pdev,
++							     (trim_h << 8) |
++							     trim_l,
++							     trim_bsae);
++			dev_info(dev, "tsadc trimmed value = %d\n",
++				 thermal->trim);
++			thermal->tshut_temp += tsadc->trim_temp(thermal->pdev);
++		}
++	}
++
+ 	return 0;
+ }
+ 
+@@ -1152,7 +1797,8 @@ rockchip_thermal_register_sensor(struct platform_device *pdev,
+ 	const struct rockchip_tsadc_chip *tsadc = thermal->chip;
+ 	int error;
+ 
+-	tsadc->set_tshut_mode(id, thermal->regs, thermal->tshut_mode);
++	tsadc->set_tshut_mode(thermal->grf, id, thermal->regs,
++			      thermal->tshut_mode);
+ 
+ 	error = tsadc->set_tshut_temp(&tsadc->table, id, thermal->regs,
+ 			      thermal->tshut_temp);
+@@ -1184,6 +1830,43 @@ static void rockchip_thermal_reset_controller(struct reset_control *reset)
+ 	reset_control_deassert(reset);
+ }
+ 
++static void rockchip_dump_temperature(struct rockchip_thermal_data *thermal)
++{
++	struct platform_device *pdev;
++	int i;
++
++	if (!thermal)
++		return;
++
++	pdev = thermal->pdev;
++
++	for (i = 0; i < thermal->chip->chn_num; i++) {
++		struct rockchip_thermal_sensor *sensor = &thermal->sensors[i];
++		struct thermal_zone_device *tz = sensor->tzd;
++
++		if (tz->temperature != THERMAL_TEMP_INVALID)
++			dev_warn(&pdev->dev, "channal %d: temperature(%d C)\n",
++				 i, tz->temperature / 1000);
++	}
++
++	if (thermal->regs) {
++		pr_warn("THERMAL REGS:\n");
++		print_hex_dump(KERN_WARNING, "", DUMP_PREFIX_OFFSET,
++			       32, 4, thermal->regs, 0x88, false);
++	}
++}
++
++static int rockchip_thermal_panic(struct notifier_block *this,
++				  unsigned long ev, void *ptr)
++{
++	struct rockchip_thermal_data *thermal;
++
++	thermal = container_of(this, struct rockchip_thermal_data, panic_nb);
++	rockchip_dump_temperature(thermal);
++
++	return NOTIFY_DONE;
++}
++
+ static int rockchip_thermal_probe(struct platform_device *pdev)
+ {
+ 	struct device_node *np = pdev->dev.of_node;
+@@ -1214,46 +1897,37 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 	thermal->chip = (const struct rockchip_tsadc_chip *)match->data;
+ 	if (!thermal->chip)
+ 		return -EINVAL;
++	if (soc_is_px30s())
++		thermal->chip = &px30s_tsadc_data;
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+ 	thermal->regs = devm_ioremap_resource(&pdev->dev, res);
+ 	if (IS_ERR(thermal->regs))
+ 		return PTR_ERR(thermal->regs);
+ 
+-	thermal->reset = devm_reset_control_get(&pdev->dev, "tsadc-apb");
++	thermal->reset = devm_reset_control_array_get(&pdev->dev, false, false);
+ 	if (IS_ERR(thermal->reset)) {
+-		error = PTR_ERR(thermal->reset);
+-		dev_err(&pdev->dev, "failed to get tsadc reset: %d\n", error);
+-		return error;
++		if (PTR_ERR(thermal->reset) != -EPROBE_DEFER)
++			dev_err(&pdev->dev, "failed to get tsadc reset lines\n");
++		return PTR_ERR(thermal->reset);
+ 	}
+ 
+-	thermal->clk = devm_clk_get(&pdev->dev, "tsadc");
+-	if (IS_ERR(thermal->clk)) {
+-		error = PTR_ERR(thermal->clk);
+-		dev_err(&pdev->dev, "failed to get tsadc clock: %d\n", error);
+-		return error;
+-	}
+-
+-	thermal->pclk = devm_clk_get(&pdev->dev, "apb_pclk");
+-	if (IS_ERR(thermal->pclk)) {
+-		error = PTR_ERR(thermal->pclk);
+-		dev_err(&pdev->dev, "failed to get apb_pclk clock: %d\n",
+-			error);
+-		return error;
+-	}
++	thermal->num_clks = devm_clk_bulk_get_all(&pdev->dev, &thermal->clks);
++	if (thermal->num_clks < 1)
++		return -ENODEV;
+ 
+-	error = clk_prepare_enable(thermal->clk);
++	error = clk_bulk_prepare_enable(thermal->num_clks, thermal->clks);
+ 	if (error) {
+-		dev_err(&pdev->dev, "failed to enable converter clock: %d\n",
++		dev_err(&pdev->dev, "failed to prepare enable tsadc bulk clks: %d\n",
+ 			error);
+ 		return error;
+ 	}
++	platform_set_drvdata(pdev, thermal);
+ 
+-	error = clk_prepare_enable(thermal->pclk);
+-	if (error) {
+-		dev_err(&pdev->dev, "failed to enable pclk: %d\n", error);
+-		goto err_disable_clk;
+-	}
++	if (thermal->chip->set_clk_rate)
++		thermal->chip->set_clk_rate(pdev);
++
++	thermal->chip->control(thermal->regs, false);
+ 
+ 	rockchip_thermal_reset_controller(thermal->reset);
+ 
+@@ -1261,12 +1935,30 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 	if (error) {
+ 		dev_err(&pdev->dev, "failed to parse device tree data: %d\n",
+ 			error);
+-		goto err_disable_pclk;
++		goto err_disable_clocks;
+ 	}
+ 
+ 	thermal->chip->initialize(thermal->grf, thermal->regs,
+ 				  thermal->tshut_polarity);
+ 
++	if (thermal->tshut_mode == TSHUT_MODE_OTP) {
++		thermal->pinctrl = devm_pinctrl_get(&pdev->dev);
++		if (IS_ERR(thermal->pinctrl))
++			dev_err(&pdev->dev, "failed to find thermal pinctrl\n");
++
++		thermal->gpio_state = pinctrl_lookup_state(thermal->pinctrl,
++							   "gpio");
++		if (IS_ERR_OR_NULL(thermal->gpio_state))
++			dev_err(&pdev->dev, "failed to find thermal gpio state\n");
++
++		thermal->otp_state = pinctrl_lookup_state(thermal->pinctrl,
++							  "otpout");
++		if (IS_ERR_OR_NULL(thermal->otp_state))
++			dev_err(&pdev->dev, "failed to find thermal otpout state\n");
++
++		thermal_pinctrl_select_otp(thermal);
++	}
++
+ 	for (i = 0; i < thermal->chip->chn_num; i++) {
+ 		error = rockchip_thermal_register_sensor(pdev, thermal,
+ 						&thermal->sensors[i],
+@@ -1275,7 +1967,7 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 			dev_err(&pdev->dev,
+ 				"failed to register sensor[%d] : error = %d\n",
+ 				i, error);
+-			goto err_disable_pclk;
++			goto err_disable_clocks;
+ 		}
+ 	}
+ 
+@@ -1286,22 +1978,27 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 	if (error) {
+ 		dev_err(&pdev->dev,
+ 			"failed to request tsadc irq: %d\n", error);
+-		goto err_disable_pclk;
++		goto err_disable_clocks;
+ 	}
+ 
+ 	thermal->chip->control(thermal->regs, true);
++	if (thermal->chip->conversion_time)
++		usleep_range(thermal->chip->conversion_time,
++			     thermal->chip->conversion_time + 50);
+ 
+ 	for (i = 0; i < thermal->chip->chn_num; i++)
+ 		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
+ 
+-	platform_set_drvdata(pdev, thermal);
++	thermal->panic_nb.notifier_call = rockchip_thermal_panic;
++	atomic_notifier_chain_register(&panic_notifier_list,
++				       &thermal->panic_nb);
++
++	dev_info(&pdev->dev, "tsadc is probed successfully!\n");
+ 
+ 	return 0;
+ 
+-err_disable_pclk:
+-	clk_disable_unprepare(thermal->pclk);
+-err_disable_clk:
+-	clk_disable_unprepare(thermal->clk);
++err_disable_clocks:
++	clk_bulk_disable_unprepare(thermal->num_clks, thermal->clks);
+ 
+ 	return error;
+ }
+@@ -1319,12 +2016,28 @@ static int rockchip_thermal_remove(struct platform_device *pdev)
+ 
+ 	thermal->chip->control(thermal->regs, false);
+ 
+-	clk_disable_unprepare(thermal->pclk);
+-	clk_disable_unprepare(thermal->clk);
++	clk_bulk_disable_unprepare(thermal->num_clks, thermal->clks);
+ 
+ 	return 0;
+ }
+ 
++static void rockchip_thermal_shutdown(struct platform_device *pdev)
++{
++	struct rockchip_thermal_data *thermal = platform_get_drvdata(pdev);
++	int i;
++
++	for (i = 0; i < thermal->chip->chn_num; i++) {
++		int id = thermal->sensors[i].id;
++
++		if (thermal->tshut_mode != TSHUT_MODE_CRU)
++			thermal->chip->set_tshut_mode(thermal->grf, id,
++						      thermal->regs,
++						      TSHUT_MODE_CRU);
++	}
++	if (thermal->tshut_mode == TSHUT_MODE_OTP)
++		thermal_pinctrl_select_gpio(thermal);
++}
++
+ static int __maybe_unused rockchip_thermal_suspend(struct device *dev)
+ {
+ 	struct platform_device *pdev = to_platform_device(dev);
+@@ -1336,10 +2049,10 @@ static int __maybe_unused rockchip_thermal_suspend(struct device *dev)
+ 
+ 	thermal->chip->control(thermal->regs, false);
+ 
+-	clk_disable(thermal->pclk);
+-	clk_disable(thermal->clk);
++	clk_bulk_disable(thermal->num_clks, thermal->clks);
+ 
+-	pinctrl_pm_select_sleep_state(dev);
++	if (thermal->tshut_mode == TSHUT_MODE_OTP)
++		thermal_pinctrl_select_gpio(thermal);
+ 
+ 	return 0;
+ }
+@@ -1351,13 +2064,10 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+ 	int i;
+ 	int error;
+ 
+-	error = clk_enable(thermal->clk);
+-	if (error)
+-		return error;
+-
+-	error = clk_enable(thermal->pclk);
++	error = clk_bulk_enable(thermal->num_clks, thermal->clks);
+ 	if (error) {
+-		clk_disable(thermal->clk);
++		dev_err(&pdev->dev, "failed to enable tsadc bulk clks: %d\n",
++			error);
+ 		return error;
+ 	}
+ 
+@@ -1369,7 +2079,7 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+ 	for (i = 0; i < thermal->chip->chn_num; i++) {
+ 		int id = thermal->sensors[i].id;
+ 
+-		thermal->chip->set_tshut_mode(id, thermal->regs,
++		thermal->chip->set_tshut_mode(thermal->grf, id, thermal->regs,
+ 					      thermal->tshut_mode);
+ 
+ 		error = thermal->chip->set_tshut_temp(&thermal->chip->table,
+@@ -1381,11 +2091,15 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+ 	}
+ 
+ 	thermal->chip->control(thermal->regs, true);
++	if (thermal->chip->conversion_time)
++		usleep_range(thermal->chip->conversion_time,
++			     thermal->chip->conversion_time + 50);
+ 
+ 	for (i = 0; i < thermal->chip->chn_num; i++)
+ 		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
+ 
+-	pinctrl_pm_select_default_state(dev);
++	if (thermal->tshut_mode == TSHUT_MODE_OTP)
++		thermal_pinctrl_select_otp(thermal);
+ 
+ 	return 0;
+ }
+@@ -1401,6 +2115,7 @@ static struct platform_driver rockchip_thermal_driver = {
+ 	},
+ 	.probe = rockchip_thermal_probe,
+ 	.remove = rockchip_thermal_remove,
++	.shutdown = rockchip_thermal_shutdown,
+ };
+ 
+ module_platform_driver(rockchip_thermal_driver);
+diff --git a/drivers/thermal/thermal_core.c b/drivers/thermal/thermal_core.c
+index 6c7825c58..07e486234 100644
+--- a/drivers/thermal/thermal_core.c
++++ b/drivers/thermal/thermal_core.c
+@@ -22,6 +22,9 @@
+ #include <net/netlink.h>
+ #include <net/genetlink.h>
+ #include <linux/suspend.h>
++#ifdef CONFIG_ARCH_ROCKCHIP
++#include <soc/rockchip/rockchip_system_monitor.h>
++#endif
+ 
+ #define CREATE_TRACE_POINTS
+ #include <trace/events/thermal.h>
+@@ -423,26 +426,16 @@ static void handle_thermal_trip(struct thermal_zone_device *tz, int trip)
+ 	monitor_thermal_zone(tz);
+ }
+ 
+-static void update_temperature(struct thermal_zone_device *tz)
++static void store_temperature(struct thermal_zone_device *tz, int temp)
+ {
+-	int temp, ret;
+-
+-	ret = thermal_zone_get_temp(tz, &temp);
+-	if (ret) {
+-		if (ret != -EAGAIN)
+-			dev_warn(&tz->device,
+-				 "failed to read out thermal zone (%d)\n",
+-				 ret);
+-		return;
+-	}
+-
+ 	mutex_lock(&tz->lock);
+ 	tz->last_temperature = tz->temperature;
+ 	tz->temperature = temp;
+ 	mutex_unlock(&tz->lock);
+ 
+ 	trace_thermal_temperature(tz);
+-	if (tz->last_temperature == THERMAL_TEMP_INVALID)
++	if (tz->last_temperature == THERMAL_TEMP_INVALID ||
++		tz->last_temperature == THERMAL_TEMP_INVALID_LOW)
+ 		dev_dbg(&tz->device, "last_temperature N/A, current_temperature=%d\n",
+ 			tz->temperature);
+ 	else
+@@ -450,6 +443,21 @@ static void update_temperature(struct thermal_zone_device *tz)
+ 			tz->last_temperature, tz->temperature);
+ }
+ 
++static void update_temperature(struct thermal_zone_device *tz)
++{
++	int temp, ret;
++
++	ret = thermal_zone_get_temp(tz, &temp);
++	if (ret) {
++		if (ret != -EAGAIN)
++			dev_warn(&tz->device,
++				 "failed to read out thermal zone (%d)\n",
++				 ret);
++		return;
++	}
++	store_temperature(tz, temp);
++}
++
+ static void thermal_zone_device_init(struct thermal_zone_device *tz)
+ {
+ 	struct thermal_instance *pos;
+@@ -466,12 +474,38 @@ static void thermal_zone_device_reset(struct thermal_zone_device *tz)
+ 	thermal_zone_device_init(tz);
+ }
+ 
++void thermal_zone_device_update_temp(struct thermal_zone_device *tz,
++				enum thermal_notify_event event, int temp)
++{
++	int count;
++
++	if (!tz || !tz->ops)
++		return;
++
++	if (atomic_read(&in_suspend) && (!tz->ops->is_wakeable ||
++					 !(tz->ops->is_wakeable(tz))))
++		return;
++
++	store_temperature(tz, temp);
++
++	thermal_zone_set_trips(tz);
++
++	tz->notify_event = event;
++
++	for (count = 0; count < tz->trips; count++)
++		handle_thermal_trip(tz, count);
++}
++
+ void thermal_zone_device_update(struct thermal_zone_device *tz,
+ 				enum thermal_notify_event event)
+ {
+ 	int count;
+ 
+-	if (atomic_read(&in_suspend))
++	if (!tz || !tz->ops)
++		return;
++
++	if (atomic_read(&in_suspend) && (!tz->ops->is_wakeable ||
++		!(tz->ops->is_wakeable(tz))))
+ 		return;
+ 
+ 	if (!tz->ops->get_temp)
+@@ -592,6 +626,15 @@ int power_actor_set_power(struct thermal_cooling_device *cdev,
+ 		return -EINVAL;
+ 
+ 	ret = cdev->ops->power2state(cdev, instance->tz, power, &state);
++#ifdef CONFIG_ARCH_ROCKCHIP
++	if (ret)
++		state = THERMAL_CSTATE_INVALID;
++	rockchip_system_monitor_adjust_cdev_state(cdev,
++						  instance->tz->temperature,
++						  &state);
++	if (state == THERMAL_CSTATE_INVALID)
++		ret = -EINVAL;
++#endif
+ 	if (ret)
+ 		return ret;
+ 
+@@ -737,8 +780,9 @@ int thermal_zone_bind_cooling_device(struct thermal_zone_device *tz,
+ 	sprintf(dev->attr_name, "cdev%d_trip_point", dev->id);
+ 	sysfs_attr_init(&dev->attr.attr);
+ 	dev->attr.attr.name = dev->attr_name;
+-	dev->attr.attr.mode = 0444;
++	dev->attr.attr.mode = 0644;
+ 	dev->attr.show = trip_point_show;
++	dev->attr.store = trip_point_store;
+ 	result = device_create_file(&tz->device, &dev->attr);
+ 	if (result)
+ 		goto remove_symbol_link;
+@@ -942,7 +986,7 @@ static void bind_cdev(struct thermal_cooling_device *cdev)
+  */
+ static struct thermal_cooling_device *
+ __thermal_cooling_device_register(struct device_node *np,
+-				  char *type, void *devdata,
++				  const char *type, void *devdata,
+ 				  const struct thermal_cooling_device_ops *ops)
+ {
+ 	struct thermal_cooling_device *cdev;
+@@ -1016,7 +1060,7 @@ __thermal_cooling_device_register(struct device_node *np,
+  * ERR_PTR. Caller must check return value with IS_ERR*() helpers.
+  */
+ struct thermal_cooling_device *
+-thermal_cooling_device_register(char *type, void *devdata,
++thermal_cooling_device_register(const char *type, void *devdata,
+ 				const struct thermal_cooling_device_ops *ops)
+ {
+ 	return __thermal_cooling_device_register(NULL, type, devdata, ops);
+@@ -1040,7 +1084,7 @@ EXPORT_SYMBOL_GPL(thermal_cooling_device_register);
+  */
+ struct thermal_cooling_device *
+ thermal_of_cooling_device_register(struct device_node *np,
+-				   char *type, void *devdata,
++				   const char *type, void *devdata,
+ 				   const struct thermal_cooling_device_ops *ops)
+ {
+ 	return __thermal_cooling_device_register(np, type, devdata, ops);
+@@ -1400,6 +1444,43 @@ struct thermal_zone_device *thermal_zone_get_zone_by_name(const char *name)
+ }
+ EXPORT_SYMBOL_GPL(thermal_zone_get_zone_by_name);
+ 
++/**
++ * thermal_zone_get_cdev_by_name() - search for a cooling device and returns
++ * its ref.
++ * @name: thermal cdev name to fetch the temperature
++ *
++ * When only one cdev is found with the passed name, returns a reference to it.
++ *
++ * Return: On success returns a reference to an unique thermal cooling device
++ * with matching name equals to @name, an ERR_PTR otherwise (-EINVAL for
++ * invalid paramenters, -ENODEV for not found and -EEXIST for multiple matches).
++ */
++struct thermal_cooling_device *thermal_zone_get_cdev_by_name(const char *name)
++{
++	struct thermal_cooling_device *pos = NULL, *ref = ERR_PTR(-EINVAL);
++	unsigned int found = 0;
++
++	if (!name)
++		return ref;
++
++	mutex_lock(&thermal_list_lock);
++	list_for_each_entry(pos, &thermal_cdev_list, node)
++		if (!strncasecmp(name, pos->type, THERMAL_NAME_LENGTH)) {
++			found++;
++			ref = pos;
++		}
++	mutex_unlock(&thermal_list_lock);
++
++	/* nothing has been found, thus an error code for it */
++	if (found == 0)
++		return ERR_PTR(-ENODEV);
++	if (found > 1)
++		return ERR_PTR(-EEXIST);
++	return ref;
++
++}
++EXPORT_SYMBOL_GPL(thermal_zone_get_cdev_by_name);
++
+ #ifdef CONFIG_NET
+ static const struct genl_multicast_group thermal_event_mcgrps[] = {
+ 	{ .name = THERMAL_GENL_MCAST_GROUP_NAME, },
+@@ -1507,6 +1588,9 @@ static int thermal_pm_notify(struct notifier_block *nb,
+ 	case PM_POST_SUSPEND:
+ 		atomic_set(&in_suspend, 0);
+ 		list_for_each_entry(tz, &thermal_tz_list, node) {
++			if (tz->ops && tz->ops->is_wakeable &&
++			    tz->ops->is_wakeable(tz))
++				continue;
+ 			thermal_zone_device_init(tz);
+ 			thermal_zone_device_update(tz,
+ 						   THERMAL_EVENT_UNSPECIFIED);
+diff --git a/drivers/thermal/thermal_core.h b/drivers/thermal/thermal_core.h
+index 0df190ed8..ee35e08be 100644
+--- a/drivers/thermal/thermal_core.h
++++ b/drivers/thermal/thermal_core.h
+@@ -61,6 +61,8 @@ void thermal_cooling_device_setup_sysfs(struct thermal_cooling_device *);
+ void thermal_cooling_device_destroy_sysfs(struct thermal_cooling_device *cdev);
+ /* used only at binding time */
+ ssize_t trip_point_show(struct device *, struct device_attribute *, char *);
++ssize_t trip_point_store(struct device *, struct device_attribute *,
++			 const char *, size_t);
+ ssize_t weight_show(struct device *, struct device_attribute *, char *);
+ ssize_t weight_store(struct device *, struct device_attribute *, const char *,
+ 		     size_t);
+@@ -122,6 +124,9 @@ int of_thermal_get_ntrips(struct thermal_zone_device *);
+ bool of_thermal_is_trip_valid(struct thermal_zone_device *, int);
+ const struct thermal_trip *
+ of_thermal_get_trip_points(struct thermal_zone_device *);
++void of_thermal_handle_trip(struct thermal_zone_device *tz);
++void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
++					int trip_temp);
+ #else
+ static inline int of_parse_thermal_zones(void) { return 0; }
+ static inline void of_thermal_destroy_zones(void) { }
+@@ -139,6 +144,13 @@ of_thermal_get_trip_points(struct thermal_zone_device *tz)
+ {
+ 	return NULL;
+ }
++static inline
++void of_thermal_handle_trip(struct thermal_zone_device *tz)
++{ }
++static inline
++void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
++					int trip_temp)
++{ }
+ #endif
+ 
+ #endif /* __THERMAL_CORE_H__ */
+diff --git a/drivers/thermal/thermal_sysfs.c b/drivers/thermal/thermal_sysfs.c
+index 4dce4a8f7..384444f97 100644
+--- a/drivers/thermal/thermal_sysfs.c
++++ b/drivers/thermal/thermal_sysfs.c
+@@ -980,6 +980,26 @@ trip_point_show(struct device *dev, struct device_attribute *attr, char *buf)
+ 		return sprintf(buf, "%d\n", instance->trip);
+ }
+ 
++ssize_t trip_point_store(struct device *dev, struct device_attribute *attr,
++			 const char *buf, size_t count)
++{
++	struct thermal_instance *instance;
++	int ret, trip;
++
++	ret = kstrtoint(buf, 0, &trip);
++	if (ret)
++		return ret;
++
++	instance = container_of(attr, struct thermal_instance, attr);
++
++	if (trip >= instance->tz->trips || trip < THERMAL_TRIPS_NONE)
++		return -EINVAL;
++
++	instance->trip = trip;
++
++	return count;
++}
++
+ ssize_t
+ weight_show(struct device *dev, struct device_attribute *attr, char *buf)
+ {
+diff --git a/include/linux/cpu.h b/include/linux/cpu.h
+index aab427381..26c5087f3 100644
+--- a/include/linux/cpu.h
++++ b/include/linux/cpu.h
+@@ -201,4 +201,11 @@ static inline int cpuhp_smt_disable(enum cpuhp_smt_control ctrlval) { return 0;
+ extern bool cpu_mitigations_off(void);
+ extern bool cpu_mitigations_auto_nosmt(void);
+ 
++#define IDLE_START 1
++#define IDLE_END 2
++
++void idle_notifier_register(struct notifier_block *n);
++void idle_notifier_unregister(struct notifier_block *n);
++void idle_notifier_call_chain(unsigned long val);
++
+ #endif /* _LINUX_CPU_H_ */
+diff --git a/include/linux/cpu_cooling.h b/include/linux/cpu_cooling.h
+index de0dafb93..e2bf9373f 100644
+--- a/include/linux/cpu_cooling.h
++++ b/include/linux/cpu_cooling.h
+@@ -30,6 +30,12 @@
+ 
+ struct cpufreq_policy;
+ 
++typedef int (*plat_mitig_t)(int cpu, u32 clip_freq);
++
++struct cpu_cooling_ops {
++	plat_mitig_t ceil_limit, floor_limit;
++};
++
+ #ifdef CONFIG_CPU_THERMAL
+ /**
+  * cpufreq_cooling_register - function to create cpufreq cooling device.
+@@ -38,6 +44,10 @@ struct cpufreq_policy;
+ struct thermal_cooling_device *
+ cpufreq_cooling_register(struct cpufreq_policy *policy);
+ 
++struct thermal_cooling_device *
++cpufreq_platform_cooling_register(struct cpufreq_policy *policy,
++					struct cpu_cooling_ops *ops);
++
+ /**
+  * cpufreq_cooling_unregister - function to remove cpufreq cooling device.
+  * @cdev: thermal cooling device pointer.
+@@ -51,6 +61,13 @@ cpufreq_cooling_register(struct cpufreq_policy *policy)
+ 	return ERR_PTR(-ENOSYS);
+ }
+ 
++static inline struct thermal_cooling_device *
++cpufreq_platform_cooling_register(struct cpufreq_policy *policy,
++					struct cpu_cooling_ops *ops)
++{
++	return NULL;
++}
++
+ static inline
+ void cpufreq_cooling_unregister(struct thermal_cooling_device *cdev)
+ {
+diff --git a/include/linux/cpufreq.h b/include/linux/cpufreq.h
+index 336166314..4c7068afa 100644
+--- a/include/linux/cpufreq.h
++++ b/include/linux/cpufreq.h
+@@ -151,6 +151,9 @@ struct cpufreq_policy {
+ 
+ 	/* For cpufreq driver's internal use */
+ 	void			*driver_data;
++
++	/* Pointer to the cooling device if used for thermal mitigation */
++	struct thermal_cooling_device *cdev;
+ };
+ 
+ /* Only for ACPI */
+@@ -210,6 +213,7 @@ static inline unsigned int cpufreq_quick_get_max(unsigned int cpu)
+ 	return 0;
+ }
+ static inline void disable_cpufreq(void) { }
++static inline void cpufreq_update_policy(unsigned int cpu) { }
+ #endif
+ 
+ #ifdef CONFIG_CPU_FREQ_STAT
+@@ -377,6 +381,12 @@ struct cpufreq_driver {
+  */
+ #define CPUFREQ_NO_AUTO_DYNAMIC_SWITCHING (1 << 6)
+ 
++/*
++ * Set by drivers that want the core to automatically register the cpufreq
++ * driver as a thermal cooling device.
++ */
++#define CPUFREQ_IS_COOLING_DEV			BIT(7)
++
+ int cpufreq_register_driver(struct cpufreq_driver *driver_data);
+ int cpufreq_unregister_driver(struct cpufreq_driver *driver_data);
+ 
+@@ -931,11 +941,29 @@ static inline bool policy_has_boost_freq(struct cpufreq_policy *policy)
+ }
+ #endif
+ 
++#if defined(CONFIG_ENERGY_MODEL) && defined(CONFIG_CPU_FREQ_GOV_SCHEDUTIL)
++void sched_cpufreq_governor_change(struct cpufreq_policy *policy,
++			struct cpufreq_governor *old_gov);
++#else
++static inline void sched_cpufreq_governor_change(struct cpufreq_policy *policy,
++			struct cpufreq_governor *old_gov) { }
++#endif
++
++#if defined(CONFIG_ARCH_ROCKCHIP) && defined(CONFIG_CPU_FREQ_GOV_INTERACTIVE)
++void cpufreq_task_boost(int cpu, unsigned long util);
++#else
++static inline void cpufreq_task_boost(int cpu, unsigned long util)
++{
++}
++#endif
++
+ extern void arch_freq_prepare_all(void);
+ extern unsigned int arch_freq_get_on_cpu(int cpu);
+ 
+ extern void arch_set_freq_scale(struct cpumask *cpus, unsigned long cur_freq,
+ 				unsigned long max_freq);
++extern void arch_set_max_freq_scale(struct cpumask *cpus,
++				    unsigned long policy_max_freq);
+ 
+ /* the following are really really optional */
+ extern struct freq_attr cpufreq_freq_attr_scaling_available_freqs;
+diff --git a/include/linux/cpuidle.h b/include/linux/cpuidle.h
+index 317aecaed..8ccffba86 100644
+--- a/include/linux/cpuidle.h
++++ b/include/linux/cpuidle.h
+@@ -220,7 +220,7 @@ static inline void cpuidle_use_deepest_state(bool enable)
+ #endif
+ 
+ /* kernel/sched/idle.c */
+-extern void sched_idle_set_state(struct cpuidle_state *idle_state);
++extern void sched_idle_set_state(struct cpuidle_state *idle_state, int index);
+ extern void default_idle_call(void);
+ 
+ #ifdef CONFIG_ARCH_NEEDS_CPU_IDLE_COUPLED
+diff --git a/include/linux/devfreq.h b/include/linux/devfreq.h
+index 3aae5b3af..450130fce 100644
+--- a/include/linux/devfreq.h
++++ b/include/linux/devfreq.h
+@@ -28,11 +28,15 @@
+ 
+ /* DEVFREQ notifier interface */
+ #define DEVFREQ_TRANSITION_NOTIFIER	(0)
++#define DEVFREQ_POLICY_NOTIFIER		(1)
+ 
+ /* Transition notifiers of DEVFREQ_TRANSITION_NOTIFIER */
+ #define	DEVFREQ_PRECHANGE		(0)
+ #define DEVFREQ_POSTCHANGE		(1)
+ 
++/* Policy Notifiers  */
++#define	DEVFREQ_ADJUST			(0)
++
+ struct devfreq;
+ struct devfreq_governor;
+ 
+@@ -45,6 +49,7 @@ struct devfreq_governor;
+  * @busy_time:		The time that the device was working among the
+  *			total_time.
+  * @current_frequency:	The operating frequency.
++ * @update:		Whether need to update total_time and busy_time.
+  * @private_data:	An entry not specified by the devfreq framework.
+  *			A device and a specific governor may have their
+  *			own protocol with private_data. However, because
+@@ -56,6 +61,7 @@ struct devfreq_dev_status {
+ 	unsigned long total_time;
+ 	unsigned long busy_time;
+ 	unsigned long current_frequency;
++	bool update;
+ 	void *private_data;
+ };
+ 
+@@ -109,6 +115,16 @@ struct devfreq_dev_profile {
+ 	unsigned int max_state;
+ };
+ 
++/**
++ * struct devfreq_policy - Devfreq frequency limits
++ * @min_:	minimum frequency (adjustable by policy notifiers)
++ * @max:	maximum frequency (adjustable by policy notifiers)
++ */
++struct devfreq_policy {
++	unsigned long min;
++	unsigned long max;
++};
++
+ /**
+  * struct devfreq - Device devfreq structure
+  * @node:	list node - contains the devices with devfreq that have been
+@@ -126,6 +142,7 @@ struct devfreq_dev_profile {
+  * @previous_freq:	previously configured frequency value.
+  * @data:	Private data of the governor. The devfreq framework does not
+  *		touch this.
++ * @policy:	Frequency limits of the device
+  * @min_freq:	Limit minimum frequency requested by user (0: none)
+  * @max_freq:	Limit maximum frequency requested by user (0: none)
+  * @scaling_min_freq:	Limit minimum frequency requested by OPP interface
+@@ -136,6 +153,7 @@ struct devfreq_dev_profile {
+  * @time_in_state:	Statistics of devfreq states
+  * @last_stat_updated:	The last time stat updated
+  * @transition_notifier_list: list head of DEVFREQ_TRANSITION_NOTIFIER notifier
++ * @policy_notifier_list: list head of DEVFREQ_POLICY_NOTIFIER notifier
+  *
+  * This structure stores the devfreq information for a give device.
+  *
+@@ -149,6 +167,7 @@ struct devfreq {
+ 	struct list_head node;
+ 
+ 	struct mutex lock;
++	struct mutex event_lock;
+ 	struct device dev;
+ 	struct devfreq_dev_profile *profile;
+ 	const struct devfreq_governor *governor;
+@@ -161,6 +180,8 @@ struct devfreq {
+ 
+ 	void *data; /* private data for governors */
+ 
++	struct devfreq_policy policy;
++
+ 	unsigned long min_freq;
+ 	unsigned long max_freq;
+ 	unsigned long scaling_min_freq;
+@@ -174,6 +195,7 @@ struct devfreq {
+ 	unsigned long last_stat_updated;
+ 
+ 	struct srcu_notifier_head transition_notifier_list;
++	struct srcu_notifier_head policy_notifier_list;
+ };
+ 
+ struct devfreq_freqs {
+@@ -226,6 +248,29 @@ extern void devm_devfreq_unregister_notifier(struct device *dev,
+ extern struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+ 						int index);
+ 
++/**
++ * devfreq_verify_within_limits() - Adjust a devfreq policy if needed to make
++ *                                  sure its min/max values are within a
++ *                                  specified range.
++ * @policy:	the policy
++ * @min:	the minimum frequency
++ * @max:	the maximum frequency
++ */
++static inline void devfreq_verify_within_limits(struct devfreq_policy *policy,
++		unsigned int min, unsigned int max)
++{
++	if (policy->min < min)
++		policy->min = min;
++	if (policy->max < min)
++		policy->max = min;
++	if (policy->min > max)
++		policy->min = max;
++	if (policy->max > max)
++		policy->max = max;
++	if (policy->min > policy->max)
++		policy->min = policy->max;
++}
++
+ #if IS_ENABLED(CONFIG_DEVFREQ_GOV_SIMPLE_ONDEMAND)
+ /**
+  * struct devfreq_simple_ondemand_data - void *data fed to struct devfreq
+@@ -236,6 +281,9 @@ extern struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+  *			the governor may consider slowing the frequency down.
+  *			Specify 0 to use the default. Valid value = 0 to 100.
+  *			downdifferential < upthreshold must hold.
++ * @simple_scaling:	Setting this flag will scale the clocks up only if the
++ *			load is above @upthreshold and will scale the clocks
++ *			down only if the load is below @downdifferential.
+  *
+  * If the fed devfreq_simple_ondemand_data pointer is NULL to the governor,
+  * the governor uses the default values.
+@@ -243,6 +291,7 @@ extern struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+ struct devfreq_simple_ondemand_data {
+ 	unsigned int upthreshold;
+ 	unsigned int downdifferential;
++	unsigned int simple_scaling;
+ };
+ #endif
+ 
+@@ -380,6 +429,11 @@ static inline struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
+ 	return ERR_PTR(-ENODEV);
+ }
+ 
++static inline void devfreq_verify_within_limits(struct devfreq_policy *policy,
++		unsigned int min, unsigned int max)
++{
++}
++
+ static inline int devfreq_update_stats(struct devfreq *df)
+ {
+ 	return -EINVAL;
+diff --git a/include/linux/sched/cpufreq.h b/include/linux/sched/cpufreq.h
+index a4530d782..cc6bcc1e9 100644
+--- a/include/linux/sched/cpufreq.h
++++ b/include/linux/sched/cpufreq.h
+@@ -23,6 +23,12 @@ void cpufreq_add_update_util_hook(int cpu, struct update_util_data *data,
+ 				    unsigned int flags));
+ void cpufreq_remove_update_util_hook(int cpu);
+ bool cpufreq_this_cpu_can_update(struct cpufreq_policy *policy);
++
++static inline unsigned long map_util_freq(unsigned long util,
++					unsigned long freq, unsigned long cap)
++{
++	return (freq + (freq >> 2)) * util / cap;
++}
+ #endif /* CONFIG_CPU_FREQ */
+ 
+ #endif /* _LINUX_SCHED_CPUFREQ_H */
+diff --git a/include/linux/sched/loadavg.h b/include/linux/sched/loadavg.h
+index 80bc84ba5..8a1b0880c 100644
+--- a/include/linux/sched/loadavg.h
++++ b/include/linux/sched/loadavg.h
+@@ -26,6 +26,23 @@ extern void get_avenrun(unsigned long *loads, unsigned long offset, int shift);
+ 	load *= exp; \
+ 	load += n*(FIXED_1-exp); \
+ 	load >>= FSHIFT;
++/*
++ * a1 = a0 * e + a * (1 - e)
++ */
++static inline unsigned long
++calc_load(unsigned long load, unsigned long exp, unsigned long active)
++{
++	unsigned long newload;
++
++	newload = load * exp + active * (FIXED_1 - exp);
++	if (active >= load)
++		newload += FIXED_1-1;
++
++	return newload / FIXED_1;
++}
++
++#define LOAD_INT(x) ((x) >> FSHIFT)
++#define LOAD_FRAC(x) LOAD_INT(((x) & (FIXED_1-1)) * 100)
+ 
+ extern void calc_global_load(unsigned long ticks);
+ 
+diff --git a/include/linux/thermal.h b/include/linux/thermal.h
+index 5f4705f46..d3a02bb70 100644
+--- a/include/linux/thermal.h
++++ b/include/linux/thermal.h
+@@ -29,9 +29,18 @@
+ /* Default weight of a bound cooling device */
+ #define THERMAL_WEIGHT_DEFAULT 0
+ 
++/* Max sensors that can be used for a single virtual thermalzone */
++#define THERMAL_MAX_VIRT_SENSORS 10
++
+ /* use value, which < 0K, to indicate an invalid/uninitialized temperature */
+ #define THERMAL_TEMP_INVALID	-274000
+ 
++/*
++ * use a high value for low temp tracking zone,
++ * to indicate an invalid/uninitialized temperature
++ */
++#define THERMAL_TEMP_INVALID_LOW 274000
++
+ /* Unit conversion macros */
+ #define DECI_KELVIN_TO_CELSIUS(t)	({			\
+ 	long _t = (t);						\
+@@ -113,6 +122,7 @@ struct thermal_zone_device_ops {
+ 			  enum thermal_trend *);
+ 	int (*notify) (struct thermal_zone_device *, int,
+ 		       enum thermal_trip_type);
++	bool (*is_wakeable)(struct thermal_zone_device *);
+ };
+ 
+ struct thermal_cooling_device_ops {
+@@ -302,15 +312,21 @@ struct thermal_zone_params {
+ 	 */
+ 	s32 k_po;
+ 
++	bool is_k_po_available;
++
+ 	/*
+ 	 * Proportional parameter of the PID controller when
+ 	 * undershooting
+ 	 */
+ 	s32 k_pu;
+ 
++	bool is_k_pu_available;
++
+ 	/* Integral parameter of the PID controller */
+ 	s32 k_i;
+ 
++	bool is_k_i_available;
++
+ 	/* Derivative parameter of the PID controller */
+ 	s32 k_d;
+ 
+@@ -327,6 +343,12 @@ struct thermal_zone_params {
+ 	 * 		Used by thermal zone drivers (default 0).
+ 	 */
+ 	int offset;
++
++	/*
++	 * @tracks_low:	Indicates that the thermal zone params are for
++	 *		temperatures falling below the thresholds.
++	 */
++	bool tracks_low;
+ };
+ 
+ struct thermal_genl_event {
+@@ -349,6 +371,8 @@ struct thermal_genl_event {
+  *		   temperature.
+  * @set_trip_temp: a pointer to a function that sets the trip temperature on
+  *		   hardware.
++ * @get_trip_temp: a pointer to a function that gets the trip temperature on
++ *		   hardware.
+  */
+ struct thermal_zone_of_device_ops {
+ 	int (*get_temp)(void *, int *);
+@@ -356,6 +380,7 @@ struct thermal_zone_of_device_ops {
+ 	int (*set_trips)(void *, int, int);
+ 	int (*set_emul_temp)(void *, int);
+ 	int (*set_trip_temp)(void *, int, int);
++	int (*get_trip_temp)(void *, int, int *);
+ };
+ 
+ /**
+@@ -373,6 +398,40 @@ struct thermal_trip {
+ 	enum thermal_trip_type type;
+ };
+ 
++/* Different aggregation logic supported for virtual sensors */
++enum aggregation_logic {
++	VIRT_WEIGHTED_AVG,
++	VIRT_MAXIMUM,
++	VIRT_MINIMUM,
++	VIRT_COUNT_THRESHOLD,
++	VIRT_AGGREGATION_NR,
++};
++
++/*
++ * struct virtual_sensor_data - Data structure used to provide
++ *			      information about the virtual zone.
++ * @virt_zone_name - Virtual thermal zone name
++ * @num_sensors - Number of sensors this virtual zone uses to compute
++ *		  temperature
++ * @sensor_names - Array of sensor names
++ * @logic - Temperature aggregation logic to be used
++ * @coefficients - Coefficients to be used for weighted average logic
++ * @coefficient_ct - number of coefficients provided as input
++ * @avg_offset - offset value to be used for the weighted aggregation logic
++ * @avg_denominator - denominator value to be used for the weighted aggregation
++ *			logic
++ */
++struct virtual_sensor_data {
++	int                    num_sensors;
++	char                   virt_zone_name[THERMAL_NAME_LENGTH];
++	char                   *sensor_names[THERMAL_MAX_VIRT_SENSORS];
++	enum aggregation_logic logic;
++	int                    coefficients[THERMAL_MAX_VIRT_SENSORS];
++	int                    coefficient_ct;
++	int                    avg_offset;
++	int                    avg_denominator;
++};
++
+ /* Function declarations */
+ #ifdef CONFIG_THERMAL_OF
+ struct thermal_zone_device *
+@@ -385,6 +444,9 @@ struct thermal_zone_device *devm_thermal_zone_of_sensor_register(
+ 		const struct thermal_zone_of_device_ops *ops);
+ void devm_thermal_zone_of_sensor_unregister(struct device *dev,
+ 					    struct thermal_zone_device *tz);
++struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
++		struct device *dev,
++		const struct virtual_sensor_data *sensor_data);
+ #else
+ static inline struct thermal_zone_device *
+ thermal_zone_of_sensor_register(struct device *dev, int id, void *data,
+@@ -412,6 +474,14 @@ void devm_thermal_zone_of_sensor_unregister(struct device *dev,
+ {
+ }
+ 
++static inline
++struct thermal_zone_device *devm_thermal_of_virtual_sensor_register(
++		struct device *dev,
++		const struct virtual_sensor_data *sensor_data)
++{
++	return ERR_PTR(-ENODEV);
++}
++
+ #endif
+ 
+ #if IS_ENABLED(CONFIG_THERMAL)
+@@ -440,12 +510,14 @@ int thermal_zone_unbind_cooling_device(struct thermal_zone_device *, int,
+ 				       struct thermal_cooling_device *);
+ void thermal_zone_device_update(struct thermal_zone_device *,
+ 				enum thermal_notify_event);
++void thermal_zone_device_update_temp(struct thermal_zone_device *tz,
++				enum thermal_notify_event event, int temp);
+ void thermal_zone_set_trips(struct thermal_zone_device *);
+ 
+-struct thermal_cooling_device *thermal_cooling_device_register(char *, void *,
+-		const struct thermal_cooling_device_ops *);
++struct thermal_cooling_device *thermal_cooling_device_register(const char *,
++		void *, const struct thermal_cooling_device_ops *);
+ struct thermal_cooling_device *
+-thermal_of_cooling_device_register(struct device_node *np, char *, void *,
++thermal_of_cooling_device_register(struct device_node *np, const char *, void *,
+ 				   const struct thermal_cooling_device_ops *);
+ void thermal_cooling_device_unregister(struct thermal_cooling_device *);
+ struct thermal_zone_device *thermal_zone_get_zone_by_name(const char *name);
+@@ -493,6 +565,10 @@ static inline int thermal_zone_unbind_cooling_device(
+ static inline void thermal_zone_device_update(struct thermal_zone_device *tz,
+ 					      enum thermal_notify_event event)
+ { }
++static inline void thermal_zone_device_update_temp(
++		struct thermal_zone_device *tz, enum thermal_notify_event event,
++		int temp)
++{ }
+ static inline void thermal_zone_set_trips(struct thermal_zone_device *tz)
+ { }
+ static inline struct thermal_cooling_device *
+diff --git a/kernel/cpu.c b/kernel/cpu.c
+index 52603e75c..c664ec4c3 100644
+--- a/kernel/cpu.c
++++ b/kernel/cpu.c
+@@ -2317,6 +2317,9 @@ EXPORT_SYMBOL(__cpu_present_mask);
+ struct cpumask __cpu_active_mask __read_mostly;
+ EXPORT_SYMBOL(__cpu_active_mask);
+ 
++struct cpumask __cpu_isolated_mask __read_mostly;
++EXPORT_SYMBOL(__cpu_isolated_mask);
++
+ void init_cpu_present(const struct cpumask *src)
+ {
+ 	cpumask_copy(&__cpu_present_mask, src);
+@@ -2403,3 +2406,23 @@ bool cpu_mitigations_auto_nosmt(void)
+ 	return cpu_mitigations == CPU_MITIGATIONS_AUTO_NOSMT;
+ }
+ EXPORT_SYMBOL_GPL(cpu_mitigations_auto_nosmt);
++
++static ATOMIC_NOTIFIER_HEAD(idle_notifier);
++
++void idle_notifier_register(struct notifier_block *n)
++{
++	atomic_notifier_chain_register(&idle_notifier, n);
++}
++EXPORT_SYMBOL_GPL(idle_notifier_register);
++
++void idle_notifier_unregister(struct notifier_block *n)
++{
++	atomic_notifier_chain_unregister(&idle_notifier, n);
++}
++EXPORT_SYMBOL_GPL(idle_notifier_unregister);
++
++void idle_notifier_call_chain(unsigned long val)
++{
++	atomic_notifier_call_chain(&idle_notifier, val, NULL);
++}
++EXPORT_SYMBOL_GPL(idle_notifier_call_chain);
+diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
+index 84e7efda9..737635686 100644
+--- a/kernel/sched/fair.c
++++ b/kernel/sched/fair.c
+@@ -6395,6 +6395,18 @@ static unsigned long cpu_util_without(int cpu, struct task_struct *p)
+ 	return min_t(unsigned long, util, capacity_orig_of(cpu));
+ }
+ 
++/*
++ * Returns the current capacity of cpu after applying both
++ * cpu and freq scaling.
++ */
++unsigned long capacity_curr_of(int cpu)
++{
++	unsigned long max_cap = cpu_rq(cpu)->cpu_capacity_orig;
++	unsigned long scale_freq = arch_scale_freq_capacity(cpu);
++
++	return cap_scale(max_cap, scale_freq);
++}
++
+ /*
+  * Disable WAKE_AFFINE in the case where task @p doesn't fit in the
+  * capacity of either the waking CPU @cpu or the previous CPU @prev_cpu.
+diff --git a/kernel/sched/idle.c b/kernel/sched/idle.c
+index 44a17366c..336ee5a6e 100644
+--- a/kernel/sched/idle.c
++++ b/kernel/sched/idle.c
+@@ -16,9 +16,10 @@ extern char __cpuidle_text_start[], __cpuidle_text_end[];
+  * sched_idle_set_state - Record idle state for the current CPU.
+  * @idle_state: State to record.
+  */
+-void sched_idle_set_state(struct cpuidle_state *idle_state)
++void sched_idle_set_state(struct cpuidle_state *idle_state, int index)
+ {
+ 	idle_set_state(this_rq(), idle_state);
++	idle_set_state_idx(this_rq(), index);
+ }
+ 
+ static int __read_mostly cpu_idle_force_poll;
+diff --git a/kernel/sched/loadavg.c b/kernel/sched/loadavg.c
+index a171c1258..54fbdfb2d 100644
+--- a/kernel/sched/loadavg.c
++++ b/kernel/sched/loadavg.c
+@@ -91,21 +91,6 @@ long calc_load_fold_active(struct rq *this_rq, long adjust)
+ 	return delta;
+ }
+ 
+-/*
+- * a1 = a0 * e + a * (1 - e)
+- */
+-static unsigned long
+-calc_load(unsigned long load, unsigned long exp, unsigned long active)
+-{
+-	unsigned long newload;
+-
+-	newload = load * exp + active * (FIXED_1 - exp);
+-	if (active >= load)
+-		newload += FIXED_1-1;
+-
+-	return newload / FIXED_1;
+-}
+-
+ #ifdef CONFIG_NO_HZ_COMMON
+ /*
+  * Handle NO_HZ for the global load-average.
+diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
+index 55e695080..96956d7bd 100644
+--- a/kernel/sched/sched.h
++++ b/kernel/sched/sched.h
+@@ -914,6 +914,7 @@ struct rq {
+ #ifdef CONFIG_CPU_IDLE
+ 	/* Must be inspected within a rcu lock section */
+ 	struct cpuidle_state	*idle_state;
++	int			idle_state_idx;
+ #endif
+ };
+ 
+@@ -1615,6 +1616,17 @@ static inline struct cpuidle_state *idle_get_state(struct rq *rq)
+ 
+ 	return rq->idle_state;
+ }
++
++static inline void idle_set_state_idx(struct rq *rq, int idle_state_idx)
++{
++	rq->idle_state_idx = idle_state_idx;
++}
++
++static inline int idle_get_state_idx(struct rq *rq)
++{
++	WARN_ON(!rcu_read_lock_held());
++	return rq->idle_state_idx;
++}
+ #else
+ static inline void idle_set_state(struct rq *rq,
+ 				  struct cpuidle_state *idle_state)
+@@ -1625,6 +1637,15 @@ static inline struct cpuidle_state *idle_get_state(struct rq *rq)
+ {
+ 	return NULL;
+ }
++
++static inline void idle_set_state_idx(struct rq *rq, int idle_state_idx)
++{
++}
++
++static inline int idle_get_state_idx(struct rq *rq)
++{
++	return -1;
++}
+ #endif
+ 
+ extern void schedule_idle(void);
+-- 
+2.37.0 (Apple Git-136)
+

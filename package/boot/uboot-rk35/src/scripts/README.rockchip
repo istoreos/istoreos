@@ -1,0 +1,55 @@
+#
+# Copyright (c) 2019 Fuzhou Rockchip Electronics Co., Ltd
+#
+# SPDX-License-Identifier: GPL-2.0
+#
+
+Example usage of scripts/tools for Rockchip
+
+- Here only shows the typical example usage, but not all
+- Mainly for providing developers with a quick reference
+- Get more detail information by scripts/tools help
+========================================================
+
+[scripts]
+	# pack_resource.sh
+		./scripts/pack_resource.sh resource.img
+
+	# unpack_resource.sh
+		./scripts/unpack_resource.sh resource.img  out/
+
+	# mkbootimg
+		./scripts/mkbootimg --kernel zImage --second resource.img --ramdisk ramdisk.img --out boot.img
+
+	# unpack_bootimg
+		./scripts/unpack_bootimg --boot_img boot.img --out out/
+
+	# repack-bootimg
+		./scripts/repack-bootimg --boot_img boot.img --kernel zImage -o boot_repack.img
+
+	# stacktrace.sh
+		./scripts/stacktrace.sh dump.txt
+		./scripts/stacktrace.sh dump.txt spl
+		./scripts/stacktrace.sh dump.txt tpl
+
+[tools]
+	# resource_tool
+		./tools/resource_tool rk-kernel.dtb logo_kernel.bmp logo.bmp
+		./tools/resource_tool --unpack --image=resource.img out/
+
+	# trust_merger
+		./tools/trust_merger ./RKTRUST/RK3399TRUST.ini
+		./tools/trust_merger --unpack trust.img
+
+	# boot_merger
+		./tools/boot_merger ./RKBOOT/RK3399MINIALL.ini
+		./tools/boot_merger --unpack rk3399_loader_v1.17.115.bin
+
+	# loaderimage
+		./tools/loaderimage --pack --uboot ./u-boot.bin uboot.img 0x60000000 --size 1024 2
+		./tools/loaderimage --unpack --uboot uboot.img uboot.bin
+
+		./tools/loaderimage --pack --trustos ./bin/rk32/rk322x_tee_v2.00.bin trust.img 0x80000000  --size 1024 2
+		./tools/loaderimage --unpack --trustos trust.img tee.bin
+	# bmp2gray16
+		./tools/bmp2gray16 --uboot-logo uboot.bmp --charge-logo charging.bmp --lowpower-logo lowpower.bmp --kernel-logo kernel.bmp --output ./logo.img

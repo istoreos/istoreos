@@ -1,21 +1,21 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Copyright (C) 2021 ImmortalWrt.org
+# Copyright (C) 2022 ImmortalWrt.org
 
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=arm-trusted-firmware-rockchip-vendor
 PKG_RELEASE:=$(AUTORELEASE)
 
-PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL=https://github.com/rockchip-linux/rkbin.git
-PKG_SOURCE_DATE:=2021-06-01
-PKG_SOURCE_VERSION:=7d631e0d5b2d373b54d4533580d08fb9bd2eaad4
-PKG_MIRROR_HASH:=3a4794d1d00890401b032a573fca3121935ea036468a67228f203d68b007d916
+PKG_SOURCE_VERSION:=b0c100f1a260d807df450019774993c761beb79d
+PKG_SOURCE:=rkbin-$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL_FILE:=$(PKG_SOURCE_VERSION).tar.gz
+PKG_SOURCE_URL:=https://github.com/rockchip-linux/rkbin/archive/
+PKG_HASH:=c6ebf8ab556e071e3b067540e95aecff650143f0c97e129cd40c837a4f11a881
 
 PKG_MAINTAINER:=Tianling Shen <cnsztl@immortalwrt.org>
 
-MAKE_PATH:=$(PKG_NAME)
+PKG_BUILD_DIR:=$(BUILD_DIR)/rkbin-$(PKG_SOURCE_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -35,6 +35,18 @@ define Package/arm-trusted-firmware-rk3399
     $(Package/arm-trusted-firmware-rockchip-vendor)
     DEPENDS:=@TARGET_rockchip_armv8
     VARIANT:=rk3399
+endef
+
+define Package/arm-trusted-firmware-rk3568
+    $(Package/arm-trusted-firmware-rockchip-vendor)
+    DEPENDS:=@TARGET_rockchip_rk3568
+    VARIANT:=rk3568
+endef
+
+define Package/arm-trusted-firmware-rk3588
+    $(Package/arm-trusted-firmware-rockchip-vendor)
+    DEPENDS:=@TARGET_rockchip_armv8
+    VARIANT:=rk3588
 endef
 
 define Build/Configure
@@ -57,5 +69,13 @@ endef
 define Package/arm-trusted-firmware-rk3399/install
 endef
 
+define Package/arm-trusted-firmware-rk3568/install
+endef
+
+define Package/arm-trusted-firmware-rk3588/install
+endef
+
 $(eval $(call BuildPackage,arm-trusted-firmware-rk3328))
 $(eval $(call BuildPackage,arm-trusted-firmware-rk3399))
+$(eval $(call BuildPackage,arm-trusted-firmware-rk3568))
+$(eval $(call BuildPackage,arm-trusted-firmware-rk3588))

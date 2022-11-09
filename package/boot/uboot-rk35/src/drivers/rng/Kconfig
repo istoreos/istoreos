@@ -1,0 +1,19 @@
+config DM_RNG
+	bool "Driver support for Random Number Generator devices"
+	depends on DM
+	help
+	  Enable driver model for random number generator(rng) devices.
+	  This interface is used to initialise the rng device and to
+	  read the random seed from the device.
+
+if DM_RNG
+
+config RNG_ROCKCHIP
+	bool "Enable random number generator for rockchip crypto rng"
+	depends on ARCH_ROCKCHIP && DM_RNG
+	default n
+	help
+	  Enable random number generator for rockchip.This driver is
+	  support rng module of crypto v1 and crypto v2.
+
+endif
