@@ -1,0 +1,31 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+
+#include "rk3568-fastrhino-core.dtsi"
+
+/ {
+	model = "FastRhino R66s";
+	compatible = "fastrhino,r66s", "rockchip,rk3568";
+
+};
+
+/ {
+	/delete-node/ adc-keys;
+};
+
+&sdmmc0 {
+	status = "okay";
+};
+
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	status = "disabled";
+};

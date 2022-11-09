@@ -173,7 +173,7 @@ define KernelPackage/crypto-des
   KCONFIG:=CONFIG_CRYPTO_DES
   FILES:= \
 	$(LINUX_DIR)/crypto/des_generic.ko \
-	$(LINUX_DIR)/lib/crypto/libdes.ko@gt4.14
+	$(LINUX_DIR)/lib/crypto/libdes.ko@gt4.19
   AUTOLOAD:=$(call AutoLoad,09,des_generic)
   $(call AddDepends/crypto)
 endef
@@ -890,7 +890,7 @@ define KernelPackage/crypto-sha256
 	CONFIG_CRYPTO_SHA256_SSSE3
   FILES:= \
 	$(LINUX_DIR)/crypto/sha256_generic.ko \
-	$(LINUX_DIR)/lib/crypto/libsha256.ko@gt4.14
+	$(LINUX_DIR)/lib/crypto/libsha256.ko@gt4.19
   AUTOLOAD:=$(call AutoLoad,09,sha256_generic)
   $(call AddDepends/crypto)
 endef

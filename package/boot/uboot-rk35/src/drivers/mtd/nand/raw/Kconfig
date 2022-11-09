@@ -1,0 +1,419 @@
+
+menuconfig NAND
+	bool "Raw NAND Device Support"
+if NAND
+
+config SYS_NAND_SELF_INIT
+	bool
+	help
+	  This option, if enabled, provides more flexible and linux-like
+	  NAND initialization process.
+
+config SYS_NAND_DRIVER_ECC_LAYOUT
+	bool
+	help
+	  Omit standard ECC layouts to safe space. Select this if your driver
+	  is known to provide its own ECC layout.
+
+config NAND_ATMEL
+	bool "Support Atmel NAND controller"
+	imply SYS_NAND_USE_FLASH_BBT
+	help
+	  Enable this driver for NAND flash platforms using an Atmel NAND
+	  controller.
+
+if NAND_ATMEL
+
+config ATMEL_NAND_HWECC
+	bool "Atmel Hardware ECC"
+	default n
+
+config ATMEL_NAND_HW_PMECC
+	bool "Atmel Programmable Multibit ECC (PMECC)"
+	select ATMEL_NAND_HWECC
+	default n
+	help
+	  The Programmable Multibit ECC (PMECC) controller is a programmable
+	  binary BCH(Bose, Chaudhuri and Hocquenghem) encoder and decoder.
+
+config PMECC_CAP
+	int "PMECC Correctable ECC Bits"
+	depends on ATMEL_NAND_HW_PMECC
+	default 2
+	help
+	  Correctable ECC bits, can be 2, 4, 8, 12, and 24.
+
+config PMECC_SECTOR_SIZE
+	int "PMECC Sector Size"
+	depends on ATMEL_NAND_HW_PMECC
+	default 512
+	help
+	  Sector size, in bytes, can be 512 or 1024.
+
+config SPL_GENERATE_ATMEL_PMECC_HEADER
+	bool "Atmel PMECC Header Generation"
+	select ATMEL_NAND_HWECC
+	select ATMEL_NAND_HW_PMECC
+	default n
+	help
+	  Generate Programmable Multibit ECC (PMECC) header for SPL image.
+
+endif
+
+config NAND_BRCMNAND
+	bool "Support Broadcom NAND controller"
+	depends on OF_CONTROL && DM && MTD
+	help
+	  Enable the driver for NAND flash on platforms using a Broadcom NAND
+	  controller.
+
+config NAND_BRCMNAND_6838
+       bool "Support Broadcom NAND controller on bcm6838"
+       depends on NAND_BRCMNAND && ARCH_BMIPS && SOC_BMIPS_BCM6838
+       help
+         Enable support for broadcom nand driver on bcm6838.
+
+config NAND_BRCMNAND_6858
+       bool "Support Broadcom NAND controller on bcm6858"
+       depends on NAND_BRCMNAND && ARCH_BCM6858
+       help
+         Enable support for broadcom nand driver on bcm6858.
+
+config NAND_BRCMNAND_63158
+       bool "Support Broadcom NAND controller on bcm63158"
+       depends on NAND_BRCMNAND && ARCH_BCM63158
+       help
+         Enable support for broadcom nand driver on bcm63158.
+
+config NAND_DAVINCI
+	bool "Support TI Davinci NAND controller"
+	help
+	  Enable this driver for NAND flash controllers available in TI Davinci
+	  and Keystone2 platforms
+
+config NAND_DENALI
+	bool
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+
+config NAND_DENALI_DT
+	bool "Support Denali NAND controller as a DT device"
+	select NAND_DENALI
+	depends on OF_CONTROL && DM
+	help
+	  Enable the driver for NAND flash on platforms using a Denali NAND
+	  controller as a DT device.
+
+config NAND_DENALI_SPARE_AREA_SKIP_BYTES
+	int "Number of bytes skipped in OOB area"
+	depends on NAND_DENALI
+	range 0 63
+	help
+	  This option specifies the number of bytes to skip from the beginning
+	  of OOB area before last ECC sector data starts.  This is potentially
+	  used to preserve the bad block marker in the OOB area.
+
+config NAND_LPC32XX_SLC
+	bool "Support LPC32XX_SLC controller"
+	help
+	  Enable the LPC32XX SLC NAND controller.
+
+config NAND_OMAP_GPMC
+	bool "Support OMAP GPMC NAND controller"
+	depends on ARCH_OMAP2PLUS
+	help
+	  Enables omap_gpmc.c driver for OMAPx and AMxxxx platforms.
+	  GPMC controller is used for parallel NAND flash devices, and can
+	  do ECC calculation (not ECC error detection) for HAM1, BCH4, BCH8
+	  and BCH16 ECC algorithms.
+
+config NAND_OMAP_GPMC_PREFETCH
+	bool "Enable GPMC Prefetch"
+	depends on NAND_OMAP_GPMC
+	default y
+	help
+	  On OMAP platforms that use the GPMC controller
+	  (CONFIG_NAND_OMAP_GPMC_PREFETCH), this options enables the code that
+	  uses the prefetch mode to speed up read operations.
+
+config NAND_OMAP_ELM
+	bool "Enable ELM driver for OMAPxx and AMxx platforms."
+	depends on NAND_OMAP_GPMC && !OMAP34XX
+	help
+	  ELM controller is used for ECC error detection (not ECC calculation)
+	  of BCH4, BCH8 and BCH16 ECC algorithms.
+	  Some legacy platforms like OMAP3xx do not have in-built ELM h/w engine,
+	  thus such SoC platforms need to depend on software library for ECC error
+	  detection. However ECC calculation on such plaforms would still be
+	  done by GPMC controller.
+
+config NAND_VF610_NFC
+	bool "Support for Freescale NFC for VF610"
+	select SYS_NAND_SELF_INIT
+	select SYS_NAND_DRIVER_ECC_LAYOUT
+	imply CMD_NAND
+	help
+	  Enables support for NAND Flash Controller on some Freescale
+	  processors like the VF610, MCF54418 or Kinetis K70.
+	  The driver supports a maximum 2k page size. The driver
+	  currently does not support hardware ECC.
+
+if NAND_VF610_NFC
+
+config NAND_VF610_NFC_DT
+        bool "Support Vybrid's vf610 NAND controller as a DT device"
+        depends on OF_CONTROL && MTD
+        help
+          Enable the driver for Vybrid's vf610 NAND flash on platforms
+	  using device tree.
+
+choice
+	prompt "Hardware ECC strength"
+	depends on NAND_VF610_NFC
+	default SYS_NAND_VF610_NFC_45_ECC_BYTES
+	help
+	  Select the ECC strength used in the hardware BCH ECC block.
+
+config SYS_NAND_VF610_NFC_45_ECC_BYTES
+	bool "24-error correction (45 ECC bytes)"
+
+config SYS_NAND_VF610_NFC_60_ECC_BYTES
+	bool "32-error correction (60 ECC bytes)"
+
+endchoice
+
+endif
+
+config NAND_PXA3XX
+	bool "Support for NAND on PXA3xx and Armada 370/XP/38x"
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+	help
+	  This enables the driver for the NAND flash device found on
+	  PXA3xx processors (NFCv1) and also on Armada 370/XP (NFCv2).
+
+config NAND_SUNXI
+	bool "Support for NAND on Allwinner SoCs"
+	default ARCH_SUNXI
+	depends on MACH_SUN4I || MACH_SUN5I || MACH_SUN7I || MACH_SUN8I
+	select SYS_NAND_SELF_INIT
+	select SYS_NAND_U_BOOT_LOCATIONS
+	select SPL_NAND_SUPPORT
+	imply CMD_NAND
+	---help---
+	Enable support for NAND. This option enables the standard and
+	SPL drivers.
+	The SPL driver only supports reading from the NAND using DMA
+	transfers.
+
+if NAND_SUNXI
+
+config NAND_SUNXI_SPL_ECC_STRENGTH
+	int "Allwinner NAND SPL ECC Strength"
+	default 64
+
+config NAND_SUNXI_SPL_ECC_SIZE
+	int "Allwinner NAND SPL ECC Step Size"
+	default 1024
+
+config NAND_SUNXI_SPL_USABLE_PAGE_SIZE
+	int "Allwinner NAND SPL Usable Page Size"
+	default 1024
+
+endif
+
+config NAND_ARASAN
+	bool "Configure Arasan Nand"
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+	help
+	  This enables Nand driver support for Arasan nand flash
+	  controller. This uses the hardware ECC for read and
+	  write operations.
+
+config NAND_MXC
+	bool "MXC NAND support"
+	depends on CPU_ARM926EJS || CPU_ARM1136 || MX5
+	imply CMD_NAND
+	help
+	  This enables the NAND driver for the NAND flash controller on the
+	  i.MX27 / i.MX31 / i.MX5 rocessors.
+
+config NAND_MXS
+	bool "MXS NAND support"
+	depends on MX23 || MX28 || MX6 || MX7
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+	select APBH_DMA
+	select APBH_DMA_BURST if ARCH_MX6 || ARCH_MX7
+	select APBH_DMA_BURST8 if ARCH_MX6 || ARCH_MX7
+	help
+	  This enables NAND driver for the NAND flash controller on the
+	  MXS processors.
+
+if NAND_MXS
+
+config NAND_MXS_DT
+	bool "Support MXS NAND controller as a DT device"
+	depends on OF_CONTROL && MTD
+	help
+	  Enable the driver for MXS NAND flash on platforms using
+	  device tree.
+
+config NAND_MXS_USE_MINIMUM_ECC
+	bool "Use minimum ECC strength supported by the controller"
+	default false
+
+endif
+
+config NAND_ROCKCHIP
+	bool "Support for NAND on Rockchip SoCs"
+	select SYS_NAND_SELF_INIT
+	default n
+	help
+	  Enable support for Rockchip nand.
+
+config NAND_ROCKCHIP_V9
+	bool "Support for NAND V9 on Rockchip SoCs"
+	select SYS_NAND_SELF_INIT
+	default n
+	help
+	  Enable support for Rockchip nand v9.
+
+if NAND_ROCKCHIP || NAND_ROCKCHIP_V9
+config NAND_ROCKCHIP_DT
+	bool "Support Rockchip NAND controller as a DT device"
+	default y
+	help
+	  Enable the driver for Rockchip NAND flash on platforms
+	  using device tree.
+endif
+
+config NAND_ZYNQ
+	bool "Support for Zynq Nand controller"
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+	help
+	  This enables Nand driver support for Nand flash controller
+	  found on Zynq SoC.
+
+config NAND_ZYNQ_USE_BOOTLOADER1_TIMINGS
+	bool "Enable use of 1st stage bootloader timing for NAND"
+	depends on NAND_ZYNQ
+	help
+	  This flag prevent U-boot reconfigure NAND flash controller and reuse
+	  the NAND timing from 1st stage bootloader.
+
+config NAND_STM32_FMC2
+	bool "Support for NAND controller on STM32MP SoCs"
+	depends on ARCH_STM32MP
+	select SYS_NAND_SELF_INIT
+	imply CMD_NAND
+	help
+	  Enables support for NAND Flash chips on SoCs containing the FMC2
+	  NAND controller. This controller is found on STM32MP SoCs.
+	  The controller supports a maximum 8k page size and supports
+	  a maximum 8-bit correction error per sector of 512 bytes.
+
+comment "Generic NAND options"
+
+config SYS_NAND_BLOCK_SIZE
+	hex "NAND chip eraseblock size"
+	depends on ARCH_SUNXI
+	help
+	  Number of data bytes in one eraseblock for the NAND chip on the
+	  board. This is the multiple of NAND_PAGE_SIZE and the number of
+	  pages.
+
+config SYS_NAND_PAGE_SIZE
+	hex "NAND chip page size"
+	depends on ARCH_SUNXI
+	help
+	  Number of data bytes in one page for the NAND chip on the
+	  board, not including the OOB area.
+
+config SYS_NAND_OOBSIZE
+	hex "NAND chip OOB size"
+	depends on ARCH_SUNXI
+	help
+	  Number of bytes in the Out-Of-Band area for the NAND chip on
+	  the board.
+
+# Enhance depends when converting drivers to Kconfig which use this config
+# option (mxc_nand, ndfc, omap_gpmc).
+config SYS_NAND_BUSWIDTH_16BIT
+	bool "Use 16-bit NAND interface"
+	depends on NAND_VF610_NFC || NAND_OMAP_GPMC || NAND_MXC || ARCH_DAVINCI
+	help
+	  Indicates that NAND device has 16-bit wide data-bus. In absence of this
+	  config, bus-width of NAND device is assumed to be either 8-bit and later
+	  determined by reading ONFI params.
+	  Above config is useful when NAND device's bus-width information cannot
+	  be determined from on-chip ONFI params, like in following scenarios:
+	  - SPL boot does not support reading of ONFI parameters. This is done to
+	    keep SPL code foot-print small.
+	  - In current U-Boot flow using nand_init(), driver initialization
+	    happens in board_nand_init() which is called before any device probe
+	    (nand_scan_ident + nand_scan_tail), thus device's ONFI parameters are
+	    not available while configuring controller. So a static CONFIG_NAND_xx
+	    is needed to know the device's bus-width in advance.
+
+config SYS_NAND_MAX_CHIPS
+	int "NAND max chips"
+	default 1
+	depends on NAND_ARASAN
+	help
+	  The maximum number of NAND chips per device to be supported.
+
+if SPL
+
+config SYS_NAND_U_BOOT_LOCATIONS
+	bool "Define U-boot binaries locations in NAND"
+	help
+	Enable CONFIG_SYS_NAND_U_BOOT_OFFS though Kconfig.
+	This option should not be enabled when compiling U-boot for boards
+	defining CONFIG_SYS_NAND_U_BOOT_OFFS in their include/configs/<board>.h
+	file.
+
+config SYS_NAND_U_BOOT_OFFS
+	hex "Location in NAND to read U-Boot from"
+	default 0x800000 if NAND_SUNXI
+	depends on SYS_NAND_U_BOOT_LOCATIONS
+	help
+	Set the offset from the start of the nand where u-boot should be
+	loaded from.
+
+config SYS_NAND_U_BOOT_OFFS_REDUND
+	hex "Location in NAND to read U-Boot from"
+	default SYS_NAND_U_BOOT_OFFS
+	depends on SYS_NAND_U_BOOT_LOCATIONS
+	help
+	Set the offset from the start of the nand where the redundant u-boot
+	should be loaded from.
+
+config SPL_NAND_AM33XX_BCH
+	bool "Enables SPL-NAND driver which supports ELM based"
+	depends on NAND_OMAP_GPMC && !OMAP34XX
+	default y
+        help
+	  Hardware ECC correction. This is useful for platforms which have ELM
+	  hardware engine and use NAND boot mode.
+	  Some legacy platforms like OMAP3xx do not have in-built ELM h/w engine,
+	  so those platforms should use CONFIG_SPL_NAND_SIMPLE for enabling
+          SPL-NAND driver with software ECC correction support.
+
+config SPL_NAND_DENALI
+	bool "Support Denali NAND controller for SPL"
+	help
+	  This is a small implementation of the Denali NAND controller
+	  for use on SPL.
+
+config SPL_NAND_SIMPLE
+	bool "Use simple SPL NAND driver"
+	depends on !SPL_NAND_AM33XX_BCH
+	help
+	  Support for NAND boot using simple NAND drivers that
+	  expose the cmd_ctrl() interface.
+endif
+
+endif   # if NAND

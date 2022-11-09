@@ -1,0 +1,33 @@
+/*
+ * Test device tree file for dtoc
+ *
+ * Copyright 2017 Google, Inc
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ */
+
+ /dts-v1/;
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <2>;
+
+	test1 {
+		u-boot,dm-pre-reloc;
+		compatible = "test1";
+		reg = <0x1234 0x5678 0x0>;
+	};
+
+	test2 {
+		u-boot,dm-pre-reloc;
+		compatible = "test2";
+		reg = <0x12345678 0x98765432 0x10987654>;
+	};
+
+	test3 {
+		u-boot,dm-pre-reloc;
+		compatible = "test3";
+		reg = <0x12345678 0x98765432 0x10987654 2 0 3>;
+	};
+
+};

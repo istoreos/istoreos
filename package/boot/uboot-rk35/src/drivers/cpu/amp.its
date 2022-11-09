@@ -1,0 +1,89 @@
+/*
+ * Copyright (C) 2021 Fuzhou Rockchip Electronics Co., Ltd
+ * SPDX-License-Identifier: GPL-2.0
+ */
+
+/dts-v1/;
+/ {
+	description = "FIT source file for rockchip AMP";
+	#address-cells = <1>;
+
+	images {
+		amp1 {
+			description  = "bare-mental-core1";
+			data         = /incbin/("./amp1.bin");
+			type         = "firmware";
+			compression  = "none";
+			arch         = "arm";		// "arm64" or "arm"
+			cpu          = <0x100>;		// mpidr
+			thumb        = <0>;		// 0: arm or thumb2; 1: thumb
+			hyp          = <0>;		// 0: el1/svc; 1: el2/hyp
+			load         = <0x01800000>;
+			udelay       = <1000000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+
+		amp2 {
+			description  = "bare-mental-core2";
+			data         = /incbin/("./amp2.bin");
+			type         = "firmware";
+			compression  = "none";
+			arch         = "arm";
+			cpu          = <0x200>;
+			thumb        = <0>;
+			hyp          = <0>;
+			load         = <0x03800000>;
+			udelay       = <1000000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+
+		amp3 {
+			description  = "bare-mental-core3";
+			data         = /incbin/("./amp3.bin");
+			type         = "firmware";
+			compression  = "none";
+			arch         = "arm";
+			cpu          = <0x300>;
+			thumb        = <0>;
+			hyp          = <0>;
+			load         = <0x05800000>;
+			udelay       = <1000000>;
+			hash {
+				algo = "sha256";
+			};
+		};
+	};
+
+	configurations {
+		default = "conf";
+		conf {
+			description = "Rockchip AMP images";
+			rollback-index = <0x0>;
+			loadables = "amp1", "amp2", "amp3";
+
+			signature {
+				algo = "sha256,rsa2048";
+				padding = "pss";
+				key-name-hint = "dev";
+				sign-images = "loadables";
+			};
+
+			/* - run linux on cpu0
+			 * - it is brought up by amp(that run on U-Boot)
+			 * - it is boot entry depends on U-Boot
+			 */
+			linux {
+				description  = "linux-os";
+				arch         = "arm64";
+				cpu          = <0x000>;
+				thumb        = <0>;
+				hyp          = <0>;
+				udelay       = <1000000>;
+			};
+		};
+	};
+};

@@ -1,0 +1,15 @@
+if TARGET_EVB_RV1126
+
+config SYS_BOARD
+	default "evb_rv1126"
+
+config SYS_VENDOR
+	default "rockchip"
+
+config SYS_CONFIG_NAME
+	default "evb_rv1126"
+
+config BOARD_SPECIFIC_OPTIONS # dummy
+	def_bool y
+
+endif

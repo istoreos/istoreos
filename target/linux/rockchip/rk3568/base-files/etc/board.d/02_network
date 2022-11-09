@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Copyright (C) 2013-2015 OpenWrt.org
+#
+
+. /lib/functions/uci-defaults.sh
+. /lib/functions/system.sh
+
+rockchip_setup_interfaces()
+{
+	local board="$1"
+
+	case "$board" in
+	hinlink,opc-h68k-a|\
+	mrkaio,m68s)
+		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
+		;;
+	firefly,rk3568-roc-pc|\
+	fastrhino,r66s)
+		ucidef_set_interfaces_lan_wan 'eth0' 'eth1'
+		;;
+	fastrhino,r68s)
+		ucidef_set_interfaces_lan_wan 'eth0 eth2 eth3' 'eth1'
+		;;
+	friendlyelec,nanopi-r5s)
+		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
+		;;
+	*)
+		ucidef_set_interface_lan 'eth0'
+		;;
+	esac
+}
+
+generate_mac_from_mmc()
+{
+	local sd_hash=$(sha256sum /sys/class/block/mmcblk*/device/cid | head -n 1)
+	local mac_base=$(macaddr_canonicalize "$(echo "${sd_hash}" | dd bs=1 count=12 2>/dev/null)")
+	echo "$(macaddr_unsetbit_mc "$(macaddr_setbit_la "${mac_base}")")"
+}
+
+rockchip_setup_macs()
+{
+	local board="$1"
+	local lan_mac=""
+	local wan_mac=""
+	local label_mac=""
+
+	case "$board" in
+	firefly,rk3568-roc-pc|\
+	friendlyelec,nanopi-r5s|\
+	fastrhino,r66s|\
+	rockchip,rk3568-lunzn-r68s|\
+	fastrhino,r68s)
+		lan_mac=$(generate_mac_from_mmc)
+		wan_mac=$(macaddr_add "$lan_mac" +1)
+		;;
+	esac
+
+	[ -n "$lan_mac" ] && ucidef_set_interface_macaddr "lan" $lan_mac
+	[ -n "$wan_mac" ] && ucidef_set_interface_macaddr "wan" $wan_mac
+	[ -n "$label_mac" ] && ucidef_set_label_macaddr $label_mac
+}
+
+board_config_update
+board=$(board_name)
+rockchip_setup_interfaces $board
+rockchip_setup_macs $board
+board_config_flush

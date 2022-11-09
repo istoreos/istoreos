@@ -1,0 +1,146 @@
+From f74cd72314b264c45f0e717f792eda507ddc8e7e Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:13:41 +0800
+Subject: [PATCH 16/46] random
+
+---
+ drivers/char/hw_random/Kconfig  | 13 +++++++++++++
+ drivers/char/hw_random/Makefile |  1 +
+ include/linux/random.h          | 26 ++++++++++----------------
+ include/trace/events/random.h   | 13 +++++--------
+ 4 files changed, 29 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/char/hw_random/Kconfig b/drivers/char/hw_random/Kconfig
+index dac895dc0..8ddd46bbe 100644
+--- a/drivers/char/hw_random/Kconfig
++++ b/drivers/char/hw_random/Kconfig
+@@ -424,6 +424,19 @@ config HW_RANDOM_EXYNOS
+ 	  will be called exynos-trng.
+ 
+ 	  If unsure, say Y.
++
++config HW_RANDOM_ROCKCHIP
++	tristate "Rockchip Random Number Generator support"
++	depends on ARCH_ROCKCHIP
++	help
++	  This driver provides kernel-side support for the Random Number
++	  Generator hardware found on Rockchip cpus.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called rockchip-rng.
++
++	  If unsure, say Y.
++
+ endif # HW_RANDOM
+ 
+ config UML_RANDOM
+diff --git a/drivers/char/hw_random/Makefile b/drivers/char/hw_random/Makefile
+index e35ec3ce3..957fc4b19 100644
+--- a/drivers/char/hw_random/Makefile
++++ b/drivers/char/hw_random/Makefile
+@@ -38,3 +38,4 @@ obj-$(CONFIG_HW_RANDOM_CAVIUM) += cavium-rng.o cavium-rng-vf.o
+ obj-$(CONFIG_HW_RANDOM_MTK)	+= mtk-rng.o
+ obj-$(CONFIG_HW_RANDOM_S390) += s390-trng.o
+ obj-$(CONFIG_HW_RANDOM_KEYSTONE) += ks-sa-rng.o
++obj-$(CONFIG_HW_RANDOM_ROCKCHIP) += rockchip-rng.o
+diff --git a/include/linux/random.h b/include/linux/random.h
+index 37209b3b2..04e4ee93c 100644
+--- a/include/linux/random.h
++++ b/include/linux/random.h
+@@ -19,6 +19,7 @@ struct random_ready_callback {
+ };
+ 
+ extern void add_device_randomness(const void *, unsigned int);
++extern void add_bootloader_randomness(const void *, unsigned int);
+ 
+ #if defined(CONFIG_GCC_PLUGIN_LATENT_ENTROPY) && !defined(__CHECKER__)
+ static inline void add_latent_entropy(void)
+@@ -36,6 +37,7 @@ extern void add_interrupt_randomness(int irq, int irq_flags) __latent_entropy;
+ 
+ extern void get_random_bytes(void *buf, int nbytes);
+ extern int wait_for_random_bytes(void);
++extern int __init rand_initialize(void);
+ extern bool rng_is_initialized(void);
+ extern int add_random_ready_callback(struct random_ready_callback *rdy);
+ extern void del_random_ready_callback(struct random_ready_callback *rdy);
+@@ -116,29 +118,21 @@ unsigned long randomize_page(unsigned long start, unsigned long range);
+ #ifdef CONFIG_ARCH_RANDOM
+ # include <asm/archrandom.h>
+ #else
+-static inline bool arch_get_random_long(unsigned long *v)
++static inline bool __must_check arch_get_random_long(unsigned long *v)
+ {
+-	return 0;
++	return false;
+ }
+-static inline bool arch_get_random_int(unsigned int *v)
++static inline bool __must_check arch_get_random_int(unsigned int *v)
+ {
+-	return 0;
++	return false;
+ }
+-static inline bool arch_has_random(void)
++static inline bool __must_check arch_get_random_seed_long(unsigned long *v)
+ {
+-	return 0;
++	return false;
+ }
+-static inline bool arch_get_random_seed_long(unsigned long *v)
++static inline bool __must_check arch_get_random_seed_int(unsigned int *v)
+ {
+-	return 0;
+-}
+-static inline bool arch_get_random_seed_int(unsigned int *v)
+-{
+-	return 0;
+-}
+-static inline bool arch_has_random_seed(void)
+-{
+-	return 0;
++	return false;
+ }
+ #endif
+ 
+diff --git a/include/trace/events/random.h b/include/trace/events/random.h
+index 0560dfc33..32c10a515 100644
+--- a/include/trace/events/random.h
++++ b/include/trace/events/random.h
+@@ -62,15 +62,14 @@ DEFINE_EVENT(random__mix_pool_bytes, mix_pool_bytes_nolock,
+ 
+ TRACE_EVENT(credit_entropy_bits,
+ 	TP_PROTO(const char *pool_name, int bits, int entropy_count,
+-		 int entropy_total, unsigned long IP),
++		 unsigned long IP),
+ 
+-	TP_ARGS(pool_name, bits, entropy_count, entropy_total, IP),
++	TP_ARGS(pool_name, bits, entropy_count, IP),
+ 
+ 	TP_STRUCT__entry(
+ 		__field( const char *,	pool_name		)
+ 		__field(	  int,	bits			)
+ 		__field(	  int,	entropy_count		)
+-		__field(	  int,	entropy_total		)
+ 		__field(unsigned long,	IP			)
+ 	),
+ 
+@@ -78,14 +77,12 @@ TRACE_EVENT(credit_entropy_bits,
+ 		__entry->pool_name	= pool_name;
+ 		__entry->bits		= bits;
+ 		__entry->entropy_count	= entropy_count;
+-		__entry->entropy_total	= entropy_total;
+ 		__entry->IP		= IP;
+ 	),
+ 
+-	TP_printk("%s pool: bits %d entropy_count %d entropy_total %d "
+-		  "caller %pS", __entry->pool_name, __entry->bits,
+-		  __entry->entropy_count, __entry->entropy_total,
+-		  (void *)__entry->IP)
++	TP_printk("%s pool: bits %d entropy_count %d caller %pS",
++		  __entry->pool_name, __entry->bits,
++		  __entry->entropy_count, (void *)__entry->IP)
+ );
+ 
+ TRACE_EVENT(push_to_pool,
+-- 
+2.37.0 (Apple Git-136)
+

@@ -1,0 +1,27 @@
+config SCMI_FIRMWARE
+	bool "Enable SCMI support"
+	select FIRMWARE
+	select OF_TRANSLATE
+	depends on SANDBOX || DM_MAILBOX || ARM_SMCCC
+	help
+	  System Control and Management Interface (SCMI) is a communication
+	  protocol that defines standard interfaces for power, performance
+	  and system management. The SCMI specification is available at
+	  https://developer.arm.com/architectures/system-architectures/software-standards/scmi
+
+	  An SCMI agent communicates with a related SCMI server firmware
+	  located in another sub-system, as a companion micro controller
+	  or a companion host in the CPU system.
+
+	  Communications between agent (client) and the SCMI server are
+	  based on message exchange. Messages can be exchange over tranport
+	  channels as a mailbox device or an Arm SMCCC service with some
+	  piece of identified shared memory.
+
+config SPL_SCMI_FIRMWARE
+	bool "Enable SPL SCMI support"
+	select FIRMWARE
+	select OF_TRANSLATE
+	depends on SANDBOX || DM_MAILBOX || ARM_SMCCC
+	help
+	  Ditto as SCMI_FIRMWARE.

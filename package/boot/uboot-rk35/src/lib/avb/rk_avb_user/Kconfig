@@ -1,0 +1,29 @@
+config RK_AVB_LIBAVB_USER
+	bool "Rockchip AVB support"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+	  to fastboot and kernel.
+
+config SPL_RK_AVB_LIBAVB_USER
+	bool "Rockchip AVB support for spl"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+	  to fastboot and kernel.
+
+config TPL_RK_AVB_LIBAVB_USER
+	bool "Rockchip AVB support for tpl"
+	help
+	  This config support the android things system to
+	  read/write hardware image, like vbmeta, misc, and
+	  so on. And it can provide some a/b and avb information
+
+config ROCKCHIP_PRELOADER_PUB_KEY
+	bool "Rockchip AVB use pre-loader public key"
+	depends on AVB_LIBAVB_USER
+	select CRYPTO_ROCKCHIP
+	help
+	  Use pre-loader public key to decode in avb.

@@ -1,0 +1,6 @@
+config ROCKCHIP_CLK_PLL
+	bool "Rockchip PLL clock drivers"
+	depends on CLK
+	default y if !ROCKCHIP_IMAGE_TINY
+	help
+	  Enable support for pll clocks on Rockchip SoCs.

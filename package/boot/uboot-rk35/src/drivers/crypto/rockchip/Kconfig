@@ -1,0 +1,75 @@
+config ROCKCHIP_RSA
+	bool "Enable rockchip RSA support"
+	depends on ROCKCHIP_CRYPTO_V1 || ROCKCHIP_CRYPTO_V2
+	default y
+	help
+	  This enable RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto module.
+
+config SPL_ROCKCHIP_RSA
+	bool "Enable rockchip RSA support in spl"
+	depends on SPL_ROCKCHIP_CRYPTO_V1 || SPL_ROCKCHIP_CRYPTO_V2
+	default y
+	help
+	  This enable RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto module.
+
+config ROCKCHIP_CIPHER
+	bool "Enable rockchip cipher support"
+	depends on ROCKCHIP_CRYPTO_V1 || ROCKCHIP_CRYPTO_V2
+	default n
+	help
+	  This enable DES/AES/SM4 algorithm support for
+	  rockchip crypto module.
+
+config SPL_ROCKCHIP_CIPHER
+	bool "Enable rockchip cipher support in spl"
+	depends on SPL_ROCKCHIP_CRYPTO_V1 || SPL_ROCKCHIP_CRYPTO_V2
+	default n
+	help
+	  This enable DES/AES/SM4 algorithm support for
+	  rockchip crypto module.
+
+config ROCKCHIP_HMAC
+	bool "Enable rockchip hmac support"
+	depends on ROCKCHIP_CRYPTO_V1 || ROCKCHIP_CRYPTO_V2
+	default n
+	help
+	  This enable HMAC algorithm support for
+	  rockchip crypto module.
+
+config SPL_ROCKCHIP_HMAC
+	bool "Enable rockchip hmac support in spl"
+	depends on SPL_ROCKCHIP_CRYPTO_V1 || SPL_ROCKCHIP_CRYPTO_V2
+	default n
+	help
+	  This enable HMAC algorithm support for
+	  rockchip crypto module.
+
+config ROCKCHIP_CRYPTO_V1
+	bool "Enable rockchip crypto v1 support"
+	depends on DM_CRYPTO
+	help
+	  This enable MD5/SHA1/SHA256/RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto v1 on platforms: rk3399/rk3368/rk3328/rk3229/rk3288/rk3128.
+
+config SPL_ROCKCHIP_CRYPTO_V1
+	bool "Enable rockchip crypto v1 support in spl"
+	depends on SPL_DM_CRYPTO
+	help
+	  This enable MD5/SHA1/SHA256/RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto v1 on platforms: rk3399/rk3368/rk3328/rk3229/rk3288/rk3128.
+
+config ROCKCHIP_CRYPTO_V2
+	bool "Enable rockchip crypto v2 support"
+	depends on DM_CRYPTO
+	help
+	  This enable MD5/SHA1/SHA256/RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto v2 on platforms: px30/rk3326/rk1808/rk3308.
+
+config SPL_ROCKCHIP_CRYPTO_V2
+	bool "Enable rockchip crypto v2 support in spl"
+	depends on SPL_DM_CRYPTO
+	help
+	  This enable MD5/SHA1/SHA256/RSA512/RSA1024/RSA2048 algorithm support for
+	  rockchip crypto v2 on platforms: px30/rk3326/rk1808/rk3308.

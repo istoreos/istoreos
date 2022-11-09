@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: GPL-2.0
+# common clock support for ROCKCHIP SoC family.
+
+config COMMON_CLK_ROCKCHIP
+	tristate "Rockchip clock controller common support"
+	depends on ARCH_ROCKCHIP
+	default ARCH_ROCKCHIP
+	help
+	  Say y here to enable common clock controller for Rockchip platforms.
+
+if COMMON_CLK_ROCKCHIP
+config ROCKCHIP_CLK_COMPENSATION
+	bool "Rockchip Clk Compensation"
+	help
+	  Say y here to enable clk compensation(+/- 1000 ppm).
+
+config ROCKCHIP_CLK_BOOST
+	bool "Rockchip Clk Boost"
+	default y if CPU_PX30
+	help
+	  Say y here to enable clk boost.
+
+config ROCKCHIP_CLK_INV
+	bool "Rockchip Clk Inverter"
+	default y if !CPU_RV1126
+	help
+	  Say y here to enable clk Inverter.
+
+config ROCKCHIP_CLK_PVTM
+	bool "Rockchip Clk Pvtm"
+	default y if !CPU_RV1126
+	help
+	  Say y here to enable clk pvtm.
+
+config ROCKCHIP_DCLK_DIV
+	bool "Rockchip Dclk Divider"
+	default y if !CPU_RV1126
+	help
+	  Say y here to enable dclk divider.
+
+config ROCKCHIP_DDRCLK_SCPI
+	bool "Rockchip DDR Clk SCPI"
+	default y if RK3368_SCPI_PROTOCOL
+	help
+	  Say y here to enable ddr clk scpi.
+
+config ROCKCHIP_DDRCLK_SIP
+	bool "Rockchip DDR Clk SIP"
+	default y if CPU_RK3399
+	help
+	  Say y here to enable ddr clk sip.
+
+config ROCKCHIP_PLL_RK3066
+	bool "Rockchip PLL Type RK3066"
+	default y if CPU_RK30XX || CPU_RK3188 || \
+		CPU_RK3288 || CPU_RK3368
+	help
+	  Say y here to enable pll type is rk3066.
+
+config ROCKCHIP_PLL_RK3399
+	bool "Rockchip PLL Type RK3399"
+	default y if CPU_RK3399 || CPU_RV110X
+	help
+	  Say y here to enable pll type is rk3399.
+endif
+
+source "drivers/clk/rockchip/regmap/Kconfig"

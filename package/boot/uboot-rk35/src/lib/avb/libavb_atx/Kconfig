@@ -1,0 +1,20 @@
+config AVB_LIBAVB_ATX
+	bool "support vbmeta public key verify"
+	help
+	  Android Things requires specific public key
+	  metadata and verification logic to correctly
+	  verify vbmeta public keys.
+
+config SPL_AVB_LIBAVB_ATX
+	bool "support vbmeta public key verify for SPL"
+	help
+	  Android Things requires specific public key
+	  metadata and verification logic to correctly
+	  verify vbmeta public keys.
+
+config TPL_AVB_LIBAVB_ATX
+	bool "support vbmeta public key verify for TPL"
+	help
+	  Android Things requires specific public key
+	  metadata and verification logic to correctly
+	  verify vbmeta public keys.

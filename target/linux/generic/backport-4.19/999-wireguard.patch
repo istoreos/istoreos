@@ -1,0 +1,39 @@
+From 77e6c67b6201776de2807aa9f4f666cb78998cab Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 16:44:22 +0800
+Subject: [PATCH] wireguard
+
+---
+ drivers/net/Kconfig  | 2 ++
+ drivers/net/Makefile | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/drivers/net/Kconfig b/drivers/net/Kconfig
+index 3070de516..e3a427750 100644
+--- a/drivers/net/Kconfig
++++ b/drivers/net/Kconfig
+@@ -618,6 +618,8 @@ config THUNDERBOLT_NET
+ 
+ source "drivers/net/hyperv/Kconfig"
+ 
++source "drivers/net/wireguard/Kconfig"
++
+ config NETDEVSIM
+ 	tristate "Simulated networking device"
+ 	depends on DEBUG_FS
+diff --git a/drivers/net/Makefile b/drivers/net/Makefile
+index 8235a78ce..14ae3c5de 100644
+--- a/drivers/net/Makefile
++++ b/drivers/net/Makefile
+@@ -76,6 +76,8 @@ obj-$(CONFIG_NTB_NETDEV) += ntb_netdev.o
+ 
+ obj-$(CONFIG_FUJITSU_ES) += fjes/
+ 
++obj-$(CONFIG_WIREGUARD) += wireguard/
++
+ thunderbolt-net-y += thunderbolt.o
+ obj-$(CONFIG_THUNDERBOLT_NET) += thunderbolt-net.o
+ obj-$(CONFIG_NETDEVSIM) += netdevsim/
+-- 
+2.31.0
+

@@ -1,0 +1,17 @@
+if ARCH_ROCKCHIP
+
+config PINCTRL_ROCKCHIP
+	bool "Rockchip pin control drivers"
+	depends on ARCH_ROCKCHIP && PINCTRL_GENERIC
+	default y
+	help
+	  Enable support pin control functions for Rockchip SoCs.
+
+config SPL_PINCTRL_ROCKCHIP
+	bool "Support Rockchip pin controllers in SPL"
+	depends on ARCH_ROCKCHIP && SPL_PINCTRL_GENERIC
+	default y
+	help
+	  This option is an SPL-variant of the PINCTRL_ROCKCHIP option.
+
+endif

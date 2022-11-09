@@ -1,0 +1,11 @@
+config DM_DVFS
+	bool "Enable Driver Model for DVFS drivers (UCLASS_DVFS)"
+	depends on DM
+	---help---
+	This config enables the driver-model DVFS support.
+
+config ROCKCHIP_WTEMP_DVFS
+	bool "Enable rockchip wide temperature dvfs policy"
+	depends on DM_DVFS && ROCKCHIP_THERMAL && USING_KERNEL_DTB
+	help
+	  This enable support wide temperature dvfs for rockchip platforms.

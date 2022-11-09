@@ -1,0 +1,47 @@
+From ace698c6bb5e5f19b231c4abe76409d7e3d2646f Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 10:54:14 +0800
+Subject: [PATCH 07/46] reset
+
+---
+ drivers/reset/Kconfig  | 11 +++++++++++
+ drivers/reset/Makefile |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/reset/Kconfig b/drivers/reset/Kconfig
+index 13d28fdbd..2c7b889d9 100644
+--- a/drivers/reset/Kconfig
++++ b/drivers/reset/Kconfig
+@@ -98,6 +98,17 @@ config RESET_QCOM_AOSS
+ 	  reset signals provided by AOSS for Modem, Venus, ADSP,
+ 	  GPU, Camera, Wireless, Display subsystem. Otherwise, say N.
+ 
++config RESET_SCMI
++	tristate "Reset driver controlled via ARM SCMI interface"
++	depends on ARM_SCMI_PROTOCOL || COMPILE_TEST
++	default ARM_SCMI_PROTOCOL
++	help
++	  This driver provides support for reset signal/domains that are
++	  controlled by firmware that implements the SCMI interface.
++
++	  This driver uses SCMI Message Protocol to interact with the
++	  firmware controlling all the reset signals.
++
+ config RESET_SIMPLE
+ 	bool "Simple Reset Controller Driver" if COMPILE_TEST
+ 	default ARCH_SOCFPGA || ARCH_STM32 || ARCH_STRATIX10 || ARCH_SUNXI || ARCH_ZX || ARCH_ASPEED
+diff --git a/drivers/reset/Makefile b/drivers/reset/Makefile
+index 4243c3822..aa98dfb24 100644
+--- a/drivers/reset/Makefile
++++ b/drivers/reset/Makefile
+@@ -16,6 +16,7 @@ obj-$(CONFIG_RESET_MESON_AUDIO_ARB) += reset-meson-audio-arb.o
+ obj-$(CONFIG_RESET_OXNAS) += reset-oxnas.o
+ obj-$(CONFIG_RESET_PISTACHIO) += reset-pistachio.o
+ obj-$(CONFIG_RESET_QCOM_AOSS) += reset-qcom-aoss.o
++obj-$(CONFIG_RESET_SCMI) += reset-scmi.o
+ obj-$(CONFIG_RESET_SIMPLE) += reset-simple.o
+ obj-$(CONFIG_RESET_STM32MP157) += reset-stm32mp1.o
+ obj-$(CONFIG_RESET_SUNXI) += reset-sunxi.o
+-- 
+2.37.0 (Apple Git-136)
+

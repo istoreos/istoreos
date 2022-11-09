@@ -1,0 +1,209 @@
+From 9c67d95f2f7c966145f267f41ded4f230c41a454 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:47:44 +0800
+Subject: [PATCH 37/46] driver base
+
+---
+ drivers/base/platform.c         | 18 +++++++++++++++++
+ include/linux/device.h          | 35 +++++++++++++++++++++++++++++++++
+ include/linux/of_fdt.h          | 24 ++++++++++++++++++++++
+ include/linux/platform_device.h |  3 +++
+ 4 files changed, 80 insertions(+)
+
+diff --git a/drivers/base/platform.c b/drivers/base/platform.c
+index 349c2754e..ea83c279b 100644
+--- a/drivers/base/platform.c
++++ b/drivers/base/platform.c
+@@ -80,6 +80,24 @@ struct resource *platform_get_resource(struct platform_device *dev,
+ }
+ EXPORT_SYMBOL_GPL(platform_get_resource);
+ 
++/**
++ * devm_platform_ioremap_resource - call devm_ioremap_resource() for a platform
++ *				    device
++ *
++ * @pdev: platform device to use both for memory resource lookup as well as
++ *        resource managemend
++ * @index: resource index
++ */
++void __iomem *devm_platform_ioremap_resource(struct platform_device *pdev,
++					     unsigned int index)
++{
++	struct resource *res;
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, index);
++	return devm_ioremap_resource(&pdev->dev, res);
++}
++EXPORT_SYMBOL_GPL(devm_platform_ioremap_resource);
++
+ /**
+  * platform_get_irq - get an IRQ for a device
+  * @dev: platform device
+diff --git a/include/linux/device.h b/include/linux/device.h
+index 37e359d81..c5b5fb3e0 100644
+--- a/include/linux/device.h
++++ b/include/linux/device.h
+@@ -79,6 +79,13 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
+  *		that generate uevents to add the environment variables.
+  * @probe:	Called when a new device or driver add to this bus, and callback
+  *		the specific driver's probe to initial the matched device.
++ * @sync_state:	Called to sync device state to software state after all the
++ *		state tracking consumers linked to this device (present at
++ *		the time of late_initcall) have successfully bound to a
++ *		driver. If the device has no consumers, this function will
++ *		be called at late_initcall_sync level. If the device has
++ *		consumers that are never bound to a driver, this function
++ *		will never get called until they do.
+  * @remove:	Called when a device removed from this bus.
+  * @shutdown:	Called at shut-down time to quiesce the device.
+  *
+@@ -122,6 +129,7 @@ struct bus_type {
+ 	int (*match)(struct device *dev, struct device_driver *drv);
+ 	int (*uevent)(struct device *dev, struct kobj_uevent_env *env);
+ 	int (*probe)(struct device *dev);
++	void (*sync_state)(struct device *dev);
+ 	int (*remove)(struct device *dev);
+ 	void (*shutdown)(struct device *dev);
+ 
+@@ -251,6 +259,13 @@ enum probe_type {
+  * @probe:	Called to query the existence of a specific device,
+  *		whether this driver can work with it, and bind the driver
+  *		to a specific device.
++ * @sync_state:	Called to sync device state to software state after all the
++ *		state tracking consumers linked to this device (present at
++ *		the time of late_initcall) have successfully bound to a
++ *		driver. If the device has no consumers, this function will
++ *		be called at late_initcall_sync level. If the device has
++ *		consumers that are never bound to a driver, this function
++ *		will never get called until they do.
+  * @remove:	Called when the device is removed from the system to
+  *		unbind a device from this driver.
+  * @shutdown:	Called at shut-down time to quiesce the device.
+@@ -288,6 +303,7 @@ struct device_driver {
+ 	const struct acpi_device_id	*acpi_match_table;
+ 
+ 	int (*probe) (struct device *dev);
++	void (*sync_state)(struct device *dev);
+ 	int (*remove) (struct device *dev);
+ 	void (*shutdown) (struct device *dev);
+ 	int (*suspend) (struct device *dev, pm_message_t state);
+@@ -827,6 +843,7 @@ enum device_link_state {
+  * AUTOREMOVE_SUPPLIER: Remove the link automatically on supplier driver unbind.
+  * AUTOPROBE_CONSUMER: Probe consumer driver automatically after supplier binds.
+  * MANAGED: The core tracks presence of supplier/consumer drivers (internal).
++ * SYNC_STATE_ONLY: Link only affects sync_state() behavior.
+  */
+ #define DL_FLAG_STATELESS		BIT(0)
+ #define DL_FLAG_AUTOREMOVE_CONSUMER	BIT(1)
+@@ -835,6 +852,7 @@ enum device_link_state {
+ #define DL_FLAG_AUTOREMOVE_SUPPLIER	BIT(4)
+ #define DL_FLAG_AUTOPROBE_CONSUMER	BIT(5)
+ #define DL_FLAG_MANAGED			BIT(6)
++#define DL_FLAG_SYNC_STATE_ONLY		BIT(7)
+ 
+ /**
+  * struct device_link - Device link representation.
+@@ -958,6 +976,9 @@ struct dev_links_info {
+  * @offline:	Set after successful invocation of bus type's .offline().
+  * @of_node_reused: Set if the device-tree node is shared with an ancestor
+  *              device.
++ * @state_synced: The hardware state of this device has been synced to match
++ *		  the software state of this device by calling the driver/bus
++ *		  sync_state() callback.
+  *
+  * At the lowest level, every device in a Linux system is represented by an
+  * instance of struct device. The device structure contains the information
+@@ -1048,6 +1069,7 @@ struct device {
+ 	bool			offline_disabled:1;
+ 	bool			offline:1;
+ 	bool			of_node_reused:1;
++	bool			state_synced:1;
+ };
+ 
+ static inline struct device *kobj_to_dev(struct kobject *kobj)
+@@ -1201,6 +1223,17 @@ static inline struct device_node *dev_of_node(struct device *dev)
+ 	return dev->of_node;
+ }
+ 
++static inline bool dev_has_sync_state(struct device *dev)
++{
++	if (!dev)
++		return false;
++	if (dev->driver && dev->driver->sync_state)
++		return true;
++	if (dev->bus && dev->bus->sync_state)
++		return true;
++	return false;
++}
++
+ void driver_init(void);
+ 
+ /*
+@@ -1363,6 +1396,8 @@ struct device_link *device_link_add(struct device *consumer,
+ 				    struct device *supplier, u32 flags);
+ void device_link_del(struct device_link *link);
+ void device_link_remove(void *consumer, struct device *supplier);
++void device_links_supplier_sync_state_pause(void);
++void device_links_supplier_sync_state_resume(void);
+ 
+ #ifndef dev_fmt
+ #define dev_fmt(fmt) fmt
+diff --git a/include/linux/of_fdt.h b/include/linux/of_fdt.h
+index b9cd9ebdf..280bffadd 100644
+--- a/include/linux/of_fdt.h
++++ b/include/linux/of_fdt.h
+@@ -47,6 +47,9 @@ extern char __dtb_end[];
+ /* Other Prototypes */
+ extern u64 of_flat_dt_translate_address(unsigned long node);
+ extern void of_fdt_limit_memory(int limit);
++extern int of_fdt_get_ddrtype(void);
++extern int of_fdt_get_ddrrank(int channel);
++extern int of_fdt_get_ddrhbb(int channel, int rank);
+ #endif /* CONFIG_OF_FLATTREE */
+ 
+ #ifdef CONFIG_OF_EARLY_FLATTREE
+@@ -69,6 +72,27 @@ extern unsigned long of_get_flat_dt_root(void);
+ extern int of_get_flat_dt_size(void);
+ extern uint32_t of_get_flat_dt_phandle(unsigned long node);
+ 
++/*
++ * early_init_dt_scan_chosen - scan the device tree for ramdisk and bootargs
++ *
++ * The boot arguments will be placed into the memory pointed to by @data.
++ * That memory should be COMMAND_LINE_SIZE big and initialized to be a valid
++ * (possibly empty) string.  Logic for what will be in @data after this
++ * function finishes:
++ *
++ * - CONFIG_CMDLINE_FORCE=true
++ *     CONFIG_CMDLINE
++ * - CONFIG_CMDLINE_EXTEND=true, @data is non-empty string
++ *     @data + dt bootargs (even if dt bootargs are empty)
++ * - CONFIG_CMDLINE_EXTEND=true, @data is empty string
++ *     CONFIG_CMDLINE + dt bootargs (even if dt bootargs are empty)
++ * - CMDLINE_FROM_BOOTLOADER=true, dt bootargs=non-empty:
++ *     dt bootargs
++ * - CMDLINE_FROM_BOOTLOADER=true, dt bootargs=empty, @data is non-empty string
++ *     @data is left unchanged
++ * - CMDLINE_FROM_BOOTLOADER=true, dt bootargs=empty, @data is empty string
++ *     CONFIG_CMDLINE (or "" if that's not defined)
++ */
+ extern int early_init_dt_scan_chosen(unsigned long node, const char *uname,
+ 				     int depth, void *data);
+ extern int early_init_dt_scan_memory(unsigned long node, const char *uname,
+diff --git a/include/linux/platform_device.h b/include/linux/platform_device.h
+index 1a9f38f27..9e5c98fce 100644
+--- a/include/linux/platform_device.h
++++ b/include/linux/platform_device.h
+@@ -51,6 +51,9 @@ extern struct device platform_bus;
+ extern void arch_setup_pdev_archdata(struct platform_device *);
+ extern struct resource *platform_get_resource(struct platform_device *,
+ 					      unsigned int, unsigned int);
++extern void __iomem *
++devm_platform_ioremap_resource(struct platform_device *pdev,
++			       unsigned int index);
+ extern int platform_get_irq(struct platform_device *, unsigned int);
+ extern int platform_irq_count(struct platform_device *);
+ extern struct resource *platform_get_resource_byname(struct platform_device *,
+-- 
+2.37.0 (Apple Git-136)
+

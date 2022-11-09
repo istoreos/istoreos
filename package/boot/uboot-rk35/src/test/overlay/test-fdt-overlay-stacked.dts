@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) 2016 NextThing Co
+ * Copyright (c) 2016 Free Electrons
+ * Copyright (c) 2018 Konsulko Group
+ *
+ * SPDX-License-Identifier:	GPL-2.0+
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	/* Test that we can reference an overlay symbol */
+	fragment@0 {
+		target = <&local>;
+
+		__overlay__ {
+			stacked-test-int-property = <43>;
+		};
+	};
+};

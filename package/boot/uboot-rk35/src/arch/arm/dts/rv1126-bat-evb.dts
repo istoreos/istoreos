@@ -1,0 +1,109 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2021 Fuzhou Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+#include "rv1126.dtsi"
+#include "rv1126-u-boot.dtsi"
+#include <dt-bindings/input/input.h>
+
+/ {
+	model = "Rockchip RV1126 Battery Evaluation Board";
+	compatible = "rockchip,rv1126-bat-evb", "rockchip,rv1126";
+
+	chosen {
+		stdout-path = &uart2;
+		u-boot,spl-boot-order = &spi_nor, &emmc;
+	};
+
+	adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1800000>;
+		u-boot,dm-spl;
+		status = "okay";
+
+		volumeup-key {
+			u-boot,dm-spl;
+			linux,code = <KEY_VOLUMEUP>;
+			label = "volume up";
+			press-threshold-microvolt = <60000>;
+		};
+	};
+};
+
+&clk_out_ethernetm1_pins {
+	status = "disabled";
+};
+
+&emmc {
+	bus-width = <8>;
+	mmc-hs200-1_8v;
+	status = "okay";
+};
+
+&gpio1 {
+	status = "disabled";
+};
+
+&gpio3 {
+	status = "disabled";
+};
+
+&gmac {
+	status = "disabled";
+};
+
+&gmac_clkin_m0 {
+	status = "disabled";
+};
+
+&gmac_clkini_m1 {
+	status = "disabled";
+};
+
+&i2c0 {
+	status = "disabled";
+};
+
+&mdio {
+	status = "disabled";
+};
+
+&mtl_rx_setup {
+	status = "disabled";
+};
+
+&mtl_tx_setup {
+	status = "disabled";
+};
+
+&nandc {
+	status = "disabled";
+};
+
+&sdmmc {
+	status = "disabled";
+};
+
+&spi_nor {
+	spi-max-frequency = <148500000>;
+};
+
+&stmmac_axi_setup {
+	status = "disabled";
+};
+
+&rgmiim1_pins {
+	status = "disabled";
+};
+
+&rng {
+	status = "disabled";
+};
+
+&uart2 {
+	status = "okay";
+};

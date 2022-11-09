@@ -1,0 +1,102 @@
+# SPDX-License-Identifier: GPL-2.0
+#
+# Copyright (C) 2015-2019 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+
+kbuild-dir := $(if $(filter /%,$(src)),$(src),$(srctree)/$(src))
+
+ccflags-y += -include $(kbuild-dir)/compat/compat.h
+asflags-y += -include $(kbuild-dir)/compat/compat-asm.h
+
+ifeq ($(wildcard $(srctree)/include/linux/ptr_ring.h),)
+ccflags-y += -I$(kbuild-dir)/compat/ptr_ring/include
+endif
+
+ifeq ($(wildcard $(srctree)/include/linux/siphash.h),)
+ccflags-y += -I$(kbuild-dir)/compat/siphash/include
+wireguard-y += compat/siphash/siphash.o
+endif
+
+ifeq ($(wildcard $(srctree)/include/net/dst_cache.h),)
+ccflags-y += -I$(kbuild-dir)/compat/dst_cache/include
+wireguard-y += compat/dst_cache/dst_cache.o
+endif
+
+ifeq ($(wildcard $(srctree)/arch/x86/include/asm/intel-family.h)$(CONFIG_X86),y)
+ccflags-y += -I$(kbuild-dir)/compat/intel-family-x86/include
+endif
+
+ifeq ($(wildcard $(srctree)/arch/x86/include/asm/fpu/api.h)$(CONFIG_X86),y)
+ccflags-y += -I$(kbuild-dir)/compat/fpu-x86/include
+endif
+
+ifeq ($(wildcard $(srctree)/arch/$(SRCARCH)/include/asm/simd.h)$(shell grep -s -F "generic-y += simd.h" "$(srctree)/arch/$(SRCARCH)/Kbuild" "$(srctree)/arch/$(SRCARCH)/Makefile"),)
+ccflags-y += -I$(kbuild-dir)/compat/simd-asm/include
+endif
+
+ifeq ($(wildcard $(srctree)/include/linux/simd.h),)
+ccflags-y += -I$(kbuild-dir)/compat/simd/include
+endif
+
+ifeq ($(wildcard $(srctree)/include/net/udp_tunnel.h),)
+ccflags-y += -I$(kbuild-dir)/compat/udp_tunnel/include
+wireguard-y += compat/udp_tunnel/udp_tunnel.o
+endif
+
+ifeq ($(shell grep -s -F "int crypto_memneq" "$(srctree)/include/crypto/algapi.h"),)
+ccflags-y += -include $(kbuild-dir)/compat/memneq/include.h
+wireguard-y += compat/memneq/memneq.o
+endif
+
+ifeq ($(shell grep -s -F "addr_gen_mode" "$(srctree)/include/linux/ipv6.h"),)
+ccflags-y += -DCOMPAT_CANNOT_USE_DEV_CNF
+endif
+
+ifdef CONFIG_HZ
+ifeq ($(wildcard $(CURDIR)/include/generated/timeconst.h),)
+ccflags-y += $(shell bash -c '((a=$(CONFIG_HZ), b=1000000)); while ((b > 0)); do ((t=b, b=a%b, a=t)); done; echo "-DHZ_TO_USEC_NUM=$$((1000000/a)) -DHZ_TO_USEC_DEN=$$(($(CONFIG_HZ)/a))";')
+endif
+endif
+
+ifeq ($(wildcard $(srctree)/arch/arm/include/asm/neon.h)$(CONFIG_ARM),y)
+ccflags-y += -I$(kbuild-dir)/compat/neon-arm/include
+endif
+ifeq ($(wildcard $(srctree)/arch/arm64/include/asm/neon.h)$(CONFIG_ARM64),y)
+ccflags-y += -I$(kbuild-dir)/compat/neon-arm/include
+endif
+
+ifeq ($(CONFIG_X86_64),y)
+	ifeq ($(ssse3_instr),)
+		ssse3_instr := $(call as-instr,pshufb %xmm0$(comma)%xmm0,-DCONFIG_AS_SSSE3=1)
+		ccflags-y += $(ssse3_instr)
+		asflags-y += $(ssse3_instr)
+	endif
+	ifeq ($(avx_instr),)
+		avx_instr := $(call as-instr,vxorps %ymm0$(comma)%ymm1$(comma)%ymm2,-DCONFIG_AS_AVX=1)
+		ccflags-y += $(avx_instr)
+		asflags-y += $(avx_instr)
+	endif
+	ifeq ($(avx2_instr),)
+		avx2_instr := $(call as-instr,vpbroadcastb %xmm0$(comma)%ymm1,-DCONFIG_AS_AVX2=1)
+		ccflags-y += $(avx2_instr)
+		asflags-y += $(avx2_instr)
+	endif
+	ifeq ($(avx512_instr),)
+		avx512_instr := $(call as-instr,vpmovm2b %k1$(comma)%zmm5,-DCONFIG_AS_AVX512=1)
+		ccflags-y += $(avx512_instr)
+		asflags-y += $(avx512_instr)
+	endif
+	ifeq ($(bmi2_instr),)
+		bmi2_instr :=$(call as-instr,mulx %rax$(comma)%rax$(comma)%rax,-DCONFIG_AS_BMI2=1)
+		ccflags-y += $(bmi2_instr)
+		asflags-y += $(bmi2_instr)
+	endif
+	ifeq ($(adx_instr),)
+		adx_instr :=$(call as-instr,adcx %rax$(comma)%rax,-DCONFIG_AS_ADX=1)
+		ccflags-y += $(adx_instr)
+		asflags-y += $(adx_instr)
+	endif
+endif
+
+ifneq ($(shell grep -s -F "\#define LINUX_PACKAGE_ID \" Debian " "$(CURDIR)/include/generated/package.h"),)
+ccflags-y += -DISDEBIAN
+endif

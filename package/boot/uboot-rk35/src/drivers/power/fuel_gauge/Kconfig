@@ -1,0 +1,69 @@
+config DM_FUEL_GAUGE
+	bool "Enable driver model fuel gauge support"
+	depends on DM
+	help
+	  This adds a simple uclass for fuel gauge.
+
+config SPL_DM_FUEL_GAUGE
+	bool "Enable driver model fuel gauge support"
+	depends on SPL_DM
+	help
+	  This adds a simple uclass for fuel gauge.
+
+config POWER_FG_CW201X
+	bool "CW201X Fuel gauge support"
+	depends on DM_FUEL_GAUGE
+	help
+	  This adds support for CW201X fuel gauge support.
+
+config SPL_POWER_FG_CW201X
+	bool "CW201X Fuel gauge support"
+	depends on SPL_DM_FUEL_GAUGE
+	help
+	  This adds support for CW201X fuel gauge support.
+
+config POWER_FG_RK818
+	bool "RK818 Fuel gauge support"
+	depends on DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK818 fuel gauge support.
+
+config SPL_POWER_FG_RK818
+	bool "RK818 Fuel gauge support"
+	depends on SPL_DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK818 fuel gauge support.
+
+config POWER_FG_RK817
+	bool "RK817 Fuel gauge support"
+	depends on DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK817 fuel gauge support.
+
+config SPL_POWER_FG_RK817
+	bool "RK817 Fuel gauge support"
+	depends on SPL_DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK817 fuel gauge support.
+
+config POWER_FG_RK816
+	bool "RK816 Fuel gauge support"
+	depends on DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK816 fuel gauge support.
+
+config SPL_POWER_FG_RK816
+	bool "RK816 Fuel gauge support"
+	depends on DM_FUEL_GAUGE && PMIC_RK8XX
+	help
+	  This adds support for RK816 fuel gauge support.
+
+config SPL_POWER_LOW_VOLTAGE_THRESHOLD
+	int "Set the low voltage threshold"
+	default 3400
+	depends on SPL_DM_FUEL_GAUGE
+	help
+	  Set the low voltage threshold. If the voltage, which is detected,
+	  is lower than the low voltage threshold, load and boot the U-Boot
+	  and goto charge the power.
+

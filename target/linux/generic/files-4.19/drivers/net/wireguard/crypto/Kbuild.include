@@ -1,0 +1,57 @@
+ifeq ($(CONFIG_X86_64)$(if $(CONFIG_UML),y,n),yn)
+CONFIG_ZINC_ARCH_X86_64 := y
+endif
+ifeq ($(CONFIG_ARM)$(if $(CONFIG_CPU_32v3),y,n),yn)
+CONFIG_ZINC_ARCH_ARM := y
+endif
+ifeq ($(CONFIG_ARM64),y)
+CONFIG_ZINC_ARCH_ARM64 := y
+endif
+ifeq ($(CONFIG_MIPS)$(CONFIG_CPU_MIPS32_R2),yy)
+CONFIG_ZINC_ARCH_MIPS := y
+endif
+ifeq ($(CONFIG_MIPS)$(CONFIG_64BIT),yy)
+CONFIG_ZINC_ARCH_MIPS64 := y
+endif
+
+zinc-y += chacha20/chacha20.o
+zinc-$(CONFIG_ZINC_ARCH_X86_64) += chacha20/chacha20-x86_64.o
+zinc-$(CONFIG_ZINC_ARCH_ARM) += chacha20/chacha20-arm.o chacha20/chacha20-unrolled-arm.o
+zinc-$(CONFIG_ZINC_ARCH_ARM64) += chacha20/chacha20-arm64.o
+zinc-$(CONFIG_ZINC_ARCH_MIPS) += chacha20/chacha20-mips.o
+AFLAGS_chacha20-mips.o += -O2 # This is required to fill the branch delay slots
+
+zinc-y += poly1305/poly1305.o
+zinc-$(CONFIG_ZINC_ARCH_X86_64) += poly1305/poly1305-x86_64.o
+zinc-$(CONFIG_ZINC_ARCH_ARM) += poly1305/poly1305-arm.o
+zinc-$(CONFIG_ZINC_ARCH_ARM64) += poly1305/poly1305-arm64.o
+zinc-$(CONFIG_ZINC_ARCH_MIPS) += poly1305/poly1305-mips.o
+AFLAGS_poly1305-mips.o += -O2 # This is required to fill the branch delay slots
+zinc-$(CONFIG_ZINC_ARCH_MIPS64) += poly1305/poly1305-mips64.o
+
+zinc-y += chacha20poly1305.o
+
+zinc-y += blake2s/blake2s.o
+zinc-$(CONFIG_ZINC_ARCH_X86_64) += blake2s/blake2s-x86_64.o
+
+zinc-y += curve25519/curve25519.o
+zinc-$(CONFIG_ZINC_ARCH_ARM) += curve25519/curve25519-arm.o
+
+quiet_cmd_perlasm = PERLASM $@
+      cmd_perlasm = $(PERL) $< > $@
+$(obj)/%.S: $(src)/%.pl FORCE
+	$(call if_changed,perlasm)
+kbuild-dir := $(if $(filter /%,$(src)),$(src),$(srctree)/$(src))
+targets := $(patsubst $(kbuild-dir)/%.pl,%.S,$(wildcard $(patsubst %.o,$(kbuild-dir)/crypto/zinc/%.pl,$(zinc-y) $(zinc-m) $(zinc-))))
+
+# Old kernels don't set this, which causes trouble.
+.SECONDARY:
+
+wireguard-y += $(addprefix crypto/zinc/,$(zinc-y))
+ccflags-y += -I$(kbuild-dir)/crypto/include
+ccflags-$(CONFIG_ZINC_ARCH_X86_64) += -DCONFIG_ZINC_ARCH_X86_64
+ccflags-$(CONFIG_ZINC_ARCH_ARM) += -DCONFIG_ZINC_ARCH_ARM
+ccflags-$(CONFIG_ZINC_ARCH_ARM64) += -DCONFIG_ZINC_ARCH_ARM64
+ccflags-$(CONFIG_ZINC_ARCH_MIPS) += -DCONFIG_ZINC_ARCH_MIPS
+ccflags-$(CONFIG_ZINC_ARCH_MIPS64) += -DCONFIG_ZINC_ARCH_MIPS64
+ccflags-$(CONFIG_WIREGUARD_DEBUG) += -DCONFIG_ZINC_SELFTEST

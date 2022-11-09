@@ -1,0 +1,58 @@
+From d04bc61794fc5642601de8431af9cf441b9007b1 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:50:05 +0800
+Subject: [PATCH 42/46] reboot
+
+---
+ include/linux/reboot.h |  4 ++++
+ kernel/reboot.c        | 19 +++++++++++++++++++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/include/linux/reboot.h b/include/linux/reboot.h
+index e63799a6e..e1e109655 100644
+--- a/include/linux/reboot.h
++++ b/include/linux/reboot.h
+@@ -47,6 +47,10 @@ extern int register_restart_handler(struct notifier_block *);
+ extern int unregister_restart_handler(struct notifier_block *);
+ extern void do_kernel_restart(char *cmd);
+ 
++extern int register_pre_restart_handler(struct notifier_block *);
++extern int unregister_pre_restart_handler(struct notifier_block *);
++extern void do_kernel_pre_restart(char *cmd);
++
+ /*
+  * Architecture-specific implementations of sys_reboot commands.
+  */
+diff --git a/kernel/reboot.c b/kernel/reboot.c
+index 45bea54f9..d705a9ea5 100644
+--- a/kernel/reboot.c
++++ b/kernel/reboot.c
+@@ -212,6 +212,25 @@ void do_kernel_restart(char *cmd)
+ 	atomic_notifier_call_chain(&restart_handler_list, reboot_mode, cmd);
+ }
+ 
++static ATOMIC_NOTIFIER_HEAD(pre_restart_handler_list);
++
++int register_pre_restart_handler(struct notifier_block *nb)
++{
++	return atomic_notifier_chain_register(&pre_restart_handler_list, nb);
++}
++EXPORT_SYMBOL(register_pre_restart_handler);
++
++int unregister_pre_restart_handler(struct notifier_block *nb)
++{
++	return atomic_notifier_chain_unregister(&pre_restart_handler_list, nb);
++}
++EXPORT_SYMBOL(unregister_pre_restart_handler);
++
++void do_kernel_pre_restart(char *cmd)
++{
++	atomic_notifier_call_chain(&pre_restart_handler_list, reboot_mode, cmd);
++}
++
+ void migrate_to_reboot_cpu(void)
+ {
+ 	/* The boot cpu is always logical cpu 0 */
+-- 
+2.37.0 (Apple Git-136)
+

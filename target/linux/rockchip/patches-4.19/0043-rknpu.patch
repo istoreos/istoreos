@@ -1,0 +1,33 @@
+From 45b2b5c0ee4a5148e54d4ea6d44854d641c867e6 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:50:27 +0800
+Subject: [PATCH 43/46] rknpu
+
+---
+ drivers/Kconfig  | 2 ++
+ drivers/Makefile | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+index ab4d43923..f6fca3742 100644
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -219,4 +219,6 @@ source "drivers/siox/Kconfig"
+ 
+ source "drivers/slimbus/Kconfig"
+ 
++source "drivers/rknpu/Kconfig"
++
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+index 578f469f7..d42456332 100644
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -186,3 +186,4 @@ obj-$(CONFIG_MULTIPLEXER)	+= mux/
+ obj-$(CONFIG_UNISYS_VISORBUS)	+= visorbus/
+ obj-$(CONFIG_SIOX)		+= siox/
+ obj-$(CONFIG_GNSS)		+= gnss/
++obj-$(CONFIG_ROCKCHIP_RKNPU)	+= rknpu/
+-- 
+2.37.0 (Apple Git-136)
+

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: GPL-2.0
+menu "IEP"
+	depends on ARCH_ROCKCHIP
+
+config IEP
+	tristate "ROCKCHIP IEP driver"
+	help
+	  rockchip iep module.
+
+config IEP_MMU
+	tristate "ROCKCHIP IEP MMU driver"
+	depends on ARCH_ROCKCHIP
+	help
+	  rockchip iep mmu
+
+endmenu

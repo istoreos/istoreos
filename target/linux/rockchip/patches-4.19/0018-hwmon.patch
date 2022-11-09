@@ -1,0 +1,94 @@
+From 92a2aa11efbf989ec3feadc5e1e5511435ae3c05 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 28 Oct 2022 11:16:36 +0800
+Subject: [PATCH 18/46] hwmon
+
+---
+ drivers/hwmon/pwm-fan.c    |  2 +-
+ drivers/hwmon/scmi-hwmon.c | 50 +++++++++++++++++++++++++++++++++++++-
+ 2 files changed, 50 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/hwmon/pwm-fan.c b/drivers/hwmon/pwm-fan.c
+index 65de80bd6..db0d15c9b 100644
+--- a/drivers/hwmon/pwm-fan.c
++++ b/drivers/hwmon/pwm-fan.c
+@@ -321,7 +321,7 @@ static int pwm_fan_resume(struct device *dev)
+ 		return 0;
+ 
+ 	pwm_get_args(ctx->pwm, &pargs);
+-	duty = DIV_ROUND_UP(ctx->pwm_value * (pargs.period - 1), MAX_PWM);
++	duty = DIV_ROUND_UP_ULL(ctx->pwm_value * (pargs.period - 1), MAX_PWM);
+ 	ret = pwm_config(ctx->pwm, duty, pargs.period);
+ 	if (ret)
+ 		return ret;
+diff --git a/drivers/hwmon/scmi-hwmon.c b/drivers/hwmon/scmi-hwmon.c
+index 91bfecdb3..30586b1a5 100644
+--- a/drivers/hwmon/scmi-hwmon.c
++++ b/drivers/hwmon/scmi-hwmon.c
+@@ -18,6 +18,50 @@ struct scmi_sensors {
+ 	const struct scmi_sensor_info **info[hwmon_max];
+ };
+ 
++static inline u64 __pow10(u8 x)
++{
++	u64 r = 1;
++
++	while (x--)
++		r *= 10;
++
++	return r;
++}
++
++static int scmi_hwmon_scale(const struct scmi_sensor_info *sensor, u64 *value)
++{
++	s8 scale = sensor->scale;
++	u64 f;
++
++	switch (sensor->type) {
++	case TEMPERATURE_C:
++	case VOLTAGE:
++	case CURRENT:
++		scale += 3;
++		break;
++	case POWER:
++	case ENERGY:
++		scale += 6;
++		break;
++	default:
++		break;
++	}
++
++	if (scale == 0)
++		return 0;
++
++	if (abs(scale) > 19)
++		return -E2BIG;
++
++	f = __pow10(abs(scale));
++	if (scale > 0)
++		*value *= f;
++	else
++		*value = div64_u64(*value, f);
++
++	return 0;
++}
++
+ static int scmi_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
+ 			   u32 attr, int channel, long *val)
+ {
+@@ -28,7 +72,11 @@ static int scmi_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
+ 	const struct scmi_handle *h = scmi_sensors->handle;
+ 
+ 	sensor = *(scmi_sensors->info[type] + channel);
+-	ret = h->sensor_ops->reading_get(h, sensor->id, false, &value);
++	ret = h->sensor_ops->reading_get(h, sensor->id, &value);
++	if (ret)
++		return ret;
++
++	ret = scmi_hwmon_scale(sensor, &value);
+ 	if (!ret)
+ 		*val = value;
+ 
+-- 
+2.37.0 (Apple Git-136)
+
