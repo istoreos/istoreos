@@ -1,0 +1,56 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "OTA"
+msgstr ""
+
+msgid "Already the latest firmware"
+msgstr ""
+
+msgid "Check update"
+msgstr ""
+
+msgid "Found new firmware"
+msgstr ""
+
+msgid "Download firmware"
+msgstr ""
+
+msgid "Cancel download"
+msgstr ""
+
+msgid "Firmware downloaded"
+msgstr ""
+
+msgid "Flash image..."
+msgstr ""
+
+msgid "Checking..."
+msgstr ""
+
+msgid "Check failed"
+msgstr ""
+
+msgid "Downloading"
+msgstr ""
+
+msgid "Download canceled"
+msgstr ""
+
+msgid "Download failed"
+msgstr ""
+
+msgid "Upgrade firmware On the Air"
+msgstr ""
+
+msgid "Check and upgrade firmware from the Internet"
+msgstr ""
+
+msgid "The latest firmware"
+msgstr ""
+
+msgid "The image file does not contain a supported format. Maybe try again later."
+msgstr ""
+
+msgid "History Log"
+msgstr ""

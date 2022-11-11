@@ -1,0 +1,224 @@
+<%#
+ Licensed to the public under the Apache License 2.0.
+-%>
+
+<%+header%>
+
+<%
+	local fs = require "nixio.fs"
+-%>
+
+<h2 name="content"><%:OTA%></h2>
+
+<style>
+.state-ctl .state {
+	display: none;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: 0 !important;
+}
+
+.state-ctl.state-ctl-unchecked .state.state-unchecked,
+.state-ctl.state-ctl-checked .state.state-checked,
+.state-ctl.state-ctl-downloading .state.state-downloading,
+.state-ctl.state-ctl-downloaded .state.state-downloaded
+{
+	display: inherit;
+}
+
+</style>
+<fieldset class="cbi-section">
+	<fieldset class="cbi-section state-ctl state-ctl-unchecked">
+		<legend><%:Upgrade firmware On the Air%></legend>
+		<div class="cbi-section-descr"><%:Check and upgrade firmware from the Internet%></div>
+		<% if image_invalid then %>
+			<div class="cbi-section-error"><%:The image file does not contain a supported format. Maybe try again later.%></div>
+		<% end %>
+		<div class="cbi-section-node">
+			<div class="state state-unchecked">
+				<form>
+					<div class="cbi-value">
+						<label class="cbi-value-title" id="check_result"></label>
+						<div class="cbi-value-field">
+							<input class="cbi-button cbi-button-reload" type="button" name="check" value="<%:Check update%>" />
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="state state-checked">
+				<form>
+					<div class="cbi-value">
+						<label class="cbi-value-title" id="download_result"><%:Found new firmware%></label>
+						<div class="cbi-value-field">
+							<input class="cbi-button cbi-button-apply" type="button" name="download" value="<%:Download firmware%>" />
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="state state-downloading">
+				<form>
+					<div class="cbi-value">
+						<label class="cbi-value-title" id="download_progress">0%</label>
+						<div class="cbi-value-field">
+							<input class="cbi-button cbi-button-reset" type="button" name="cancel" value="<%:Cancel download%>" />
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="state state-downloaded">
+				<% if fs.access("/usr/lib/lua/luci/controller/admin/system.lua") then %>
+				<form method="post" action="<%=url('admin/system/flashops/sysupgrade')%>" enctype="multipart/form-data">
+					<input type="hidden" name="token" value="<%=token%>" />
+					<input type="hidden" name="step" value="1" />
+					<div class="cbi-value">
+						<label class="cbi-value-title"><%:Firmware downloaded%></label>
+						<div class="cbi-value-field">
+							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image...%>" />
+						</div>
+					</div>
+				</form>
+				<% else %>
+				<form method="post" action="<%=url('admin/system/ota')%>">
+					<input type="hidden" name="apply" value="1" />
+					<input type="hidden" name="token" value="<%=token%>" />
+					<div class="cbi-value">
+						<label class="cbi-value-title" for="keep"><%:Keep settings and retain the current configuration%></label>
+						<div class="cbi-value-field">
+							<input type="checkbox" name="keep" value="1" id="keep" checked="checked" />
+						</div>
+					</div>
+					<div class="cbi-value cbi-value-last">
+						<label class="cbi-value-title"><%:Firmware downloaded%></label>
+						<div class="cbi-value-field">
+							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image...%>" />
+						</div>
+					</div>
+				</form>
+				<% end %>
+			</div>
+		</div>
+		<div class="state state-checked state-downloading state-downloaded">
+			<div class="cbi-section-descr">
+				<h2><%:The latest firmware%>:</h2>
+				<div id="upgrade_log"></div>
+			</div>
+		</div>
+		<div class="state state-unchecked">
+			<div class="cbi-section-descr">
+				<div id="history_log"></div>
+			</div>
+		</div>
+	</fieldset>
+
+	<script>
+		(function(){
+			var csrfToken = "<%=token%>";
+			var check = document.querySelector('input[name="check"]');
+			var download = document.querySelector('input[name="download"]');
+			var cancel = document.querySelector('input[name="cancel"]');
+			var state_ctl = document.querySelector('.state-ctl');
+			var check_result = document.querySelector('#check_result');
+			var download_result = document.querySelector('#download_result');
+			var download_progress = document.querySelector('#download_progress');
+			var upgrade_log = document.querySelector('#upgrade_log');
+			var history_log = document.querySelector('#history_log');
+
+			var xhr_post = function(url, data, cb) {
+				data = data || {};
+				data.token = '<%=token%>';
+				new XHR().post(url, data, function(x, d){
+					cb && cb(x, x.status==200?JSON.parse(x.responseText):{code:500,msg:x.responseText});
+				});
+			};
+			var state_switch = function(from, to) {
+				state_ctl.classList.remove("state-ctl-" + from);
+				state_ctl.classList.add("state-ctl-" + to);
+			};
+			check.onclick = function(){
+				check.disabled = 'disabled';
+				check_result.innerText = "<%:Checking...%>";
+				xhr_post("<%=url('admin/system/ota/check')%>", {}, function(x, d){
+					check.disabled = undefined;
+					switch(d.code){
+					case 0:
+						check_result.innerText = "";
+						upgrade_log.innerHTML = d.msg;
+						state_switch("unchecked", "checked");
+						break;
+					case 1:
+						check_result.innerText = "<%:Already the latest firmware%>";
+						history_log.innerHTML = '<h2><%:History Log%>:</h2>' + d.msg;
+						break;
+					default:
+						check_result.innerText = "<%:Check failed%>";
+						alert("<%:Check failed%>:\n"+d.msg);
+					}
+				});
+			};
+			var refresh_download_progress_paused = false;
+			var refresh_download_progress_timer = null;
+			var refresh_download_progress = function() {
+				if (refresh_download_progress_paused) {
+					refresh_download_progress_timer = setTimeout(refresh_download_progress, 500);
+					return;
+				}
+				XHR.get("<%=url('admin/system/ota/progress')%>", {}, function(x, d){
+					refresh_download_progress_timer = null;
+					switch(d.code){
+					case 0:
+						download_progress.innerText = "";
+						state_switch("downloading", "downloaded");
+						break;
+					case 1:
+						if (d.msg.startsWith('#')) {
+							if (!refresh_download_progress_paused)
+								cancel.disabled = undefined;
+							download_progress.innerText = "<%:Downloading%>: "+d.msg.replaceAll(/[# ]/g, '');
+						} else {
+							if (!refresh_download_progress_paused)
+								cancel.disabled = 'disabled';
+							download_progress.innerText = d.msg;
+						}
+						refresh_download_progress_timer = setTimeout(refresh_download_progress, 500);
+						break;
+					case 2:
+						download_result.innerText = "<%:Download canceled%>";
+						state_switch("downloading", "checked");
+						break;
+					default:
+						download_result.innerText = "<%:Download failed%>";
+						state_switch("downloading", "checked");
+						alert("<%:Download failed%>:"+d.msg);
+					}
+				});
+			};
+			download.onclick = function(){
+				download.disabled = 'disabled';
+				xhr_post("<%=url('admin/system/ota/download')%>", {}, function(x, d){
+					download.disabled = undefined;
+					switch(d.code){
+					case 0:
+						download_progress.innerText = "<%:Downloading%>: ...";
+						cancel.disabled = 'disabled';
+						state_switch("checked", "downloading");
+						refresh_download_progress_timer = setTimeout(refresh_download_progress, 500);
+						break;
+					default:
+						alert("<%:Download failed%>:"+d.msg);
+					}
+				});
+			};
+			cancel.onclick = function() {
+				cancel.disabled = 'disabled';
+				refresh_download_progress_paused = true;
+
+				xhr_post("<%=url('admin/system/ota/cancel')%>", {}, function(x, d){
+					refresh_download_progress_paused = false;
+				});
+			};
+		})();
+	</script>
+
+</fieldset>
+
+<%+footer%>

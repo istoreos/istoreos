@@ -1,0 +1,187 @@
+#!/bin/sh
+# author jjm2473
+if [ -f /lib/upgrade/ota.sh ]; then
+    . /lib/upgrade/ota.sh
+    export_ota_url
+fi
+
+if [ -z "$OTA_URL_BASE" ]; then
+    echo "Unsupported device." >&2
+    exit 255
+fi
+
+WRLOCK=/var/lock/ota_background.lock
+
+action=${1}
+shift
+
+sha256() {
+    sha256sum $1 | cut -d' ' -f1
+}
+
+fcurl() {
+    curl --fail --show-error "$@"
+}
+
+download() {
+    local img=$1
+    local sum=$2
+    touch /tmp/firmware.img.part
+    echo >/tmp/firmware.img.progress
+    rm -f /tmp/firmware.img.sha256sum
+    if [ -f /tmp/firmware.img ]; then
+        echo "Checking existed firmware.img..." >> /tmp/firmware.img.progress
+        if [ "`sha256 /tmp/firmware.img`" = "$sum" ]; then
+            echo $sum > /tmp/firmware.img.sha256sum;
+            rm -f /tmp/firmware.img.part
+            rm -f /tmp/firmware.img.progress
+            return 0;
+        else
+            echo "Check failed, redownload" >> /tmp/firmware.img.progress
+            rm -f /tmp/firmware.img
+        fi
+    fi
+    curl --fail --show-error --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
+    echo "$!" > /var/run/ota/download.pid
+    if wait $!; then
+        rm -f /var/run/ota/download.pid
+        echo "Checking new firmware.img.part..." > /tmp/firmware.img.progress
+        if [ "`sha256 /tmp/firmware.img.part`" = "$sum" ]; then
+            mv /tmp/firmware.img.part /tmp/firmware.img && echo $sum > /tmp/firmware.img.sha256sum
+            rm -f /tmp/firmware.img.progress
+            return 0
+        else
+            echo "Checksum failed!" >>/tmp/firmware.img.progress
+        fi
+    fi
+    rm -f /var/run/ota/download.pid
+    rm -f /tmp/firmware.img.part
+    return 1
+}
+
+lock_download() {
+    local lock="$WRLOCK"
+    exec 200>$lock
+    flock -n 200 || return
+    download $1 $2
+    flock -u 200
+}
+
+prepare_check() {
+    local line
+    local release=`grep 'DISTRIB_RELEASE=' /etc/openwrt_release | sed -E "s/.*'(.+)'.*/\1/"`
+    local revision=`grep 'DISTRIB_REVISION=' /etc/openwrt_release | sed -E "s/.*'(.+)'.*/\1/" | cut -d'-' -f1`
+    local current="$release-$revision"
+    local latest=0
+    cat /dev/null > /var/run/ota/ota.log
+    fcurl --connect-timeout 5 -o /var/run/ota/ota.latest "$OTA_URL_BASE/version.latest" || { rm -f /var/run/ota/ota.latest ; return 255; }
+    if grep -Fq "$current" /var/run/ota/ota.latest; then
+        latest=1
+        current=""
+    fi
+    fcurl --connect-timeout 5 -o /var/run/ota/ota.index "$OTA_URL_BASE/version.index" || return 255;
+    head -5 /var/run/ota/ota.index | while read line; do
+        if [ -z "$line" -o "$line" = "$current" ]; then
+            break
+        fi
+        echo "<h3>`echo $line | sed 's/-/ /'`</h3><pre>" >> /var/run/ota/ota.log
+        fcurl --connect-timeout 1 "$OTA_URL_BASE/log/$line.log" >> /var/run/ota/ota.log
+        echo "</pre>" >> /var/run/ota/ota.log
+    done
+    [ "`wc -l /var/run/ota/ota.log | cut -d' ' -f1`" -eq 0 ] && return 1
+    [ "`wc -l /var/run/ota/ota.index | cut -d' ' -f1`" -gt 5 ] && echo "<a href=\"$OTA_URL_BASE/\" onclick=\"void(0)\" target=\"_blank\">More</a>" >> /var/run/ota/ota.log
+
+    return $latest
+}
+
+# 0: found newer fw, 1: already newest fw, *: err
+do_check() {
+    local ret=0
+    local lock="$WRLOCK"
+    exec 200>$lock
+    flock -n 200 || return 255
+    prepare_check
+    ret=$?
+    flock -u 200 >/dev/null 2>&1
+
+    if [ "$ret" -eq 0 ]; then
+        # output
+        echo "<pre>"
+        sed -E 's/.*\((.+)\).*/\1/' /var/run/ota/ota.latest
+        echo "</pre>"
+        echo "<br><h2>ChangeLog:</h2>"
+    fi
+    [ "$ret" -eq 0 -o "$ret" -eq 1 ] && cat /var/run/ota/ota.log
+    return $ret
+}
+
+# async download
+do_download(){
+    local img=`head -1 /var/run/ota/ota.latest | sed -E 's/.*\((.+)\).*/\1/'`
+    local sum=`grep 'SHA256: ' /var/run/ota/ota.latest | cut -d' ' -f2`
+    [ -z "$img" -o -z "$sum" ] && { echo "do check first" >&2 ; return 254; }
+    lock_download $img $sum &
+    return 0
+}
+
+# 0: done, 1: downloading, 2: failed, *: err
+do_progress() {
+    local sum=`grep 'SHA256: ' /var/run/ota/ota.latest | cut -d' ' -f2`
+    [ -z "$sum" ] && { echo "do check first" >&2 ; return 254; }
+    [ -f /tmp/firmware.img.sha256sum ] && [ "`cat /tmp/firmware.img.sha256sum`" = "$sum" ] && return 0
+    [ -f /tmp/firmware.img.progress ] || { echo "download not in progress" >&2 ; return 254; }
+    [ -f /tmp/firmware.img.part ] && { cat /tmp/firmware.img.progress | tr '\r' '\n' | tail -n1; return 1; }
+    tail -1 /tmp/firmware.img.progress | grep -Fq 'Canceled!' && { echo "Canceled"; return 2; }
+    grep -v '\r' /tmp/firmware.img.progress >&2
+    return 3
+}
+
+do_cancel() {
+    if [ -f /var/run/ota/download.pid ]; then
+        local pid=`cat /var/run/ota/download.pid`
+        if [ -n "$pid" ]; then
+            kill -TERM $pid;
+            while kill -0 $pid >/dev/null 2>&1; do
+                if ! sleep 1; then
+                    break
+                fi
+            done
+            echo "" >> /tmp/firmware.img.progress
+            echo "Canceled!" >> /tmp/firmware.img.progress
+        fi
+    fi
+    return 0
+}
+
+ota_init(){
+    mkdir -p /var/run/ota >/dev/null 2>&1 || true
+}
+
+usage() {
+    echo "usage: ota sub-command"
+    echo "where sub-command is one of:"
+    echo "      check                  Check firmware upgrade"
+    echo "      download               Download latest firmware"
+    echo "      progress               Download progress"
+    echo "      cancel                 Cancel download"
+}
+
+ota_init || exit 255
+
+case $action in
+    "check")
+        do_check
+    ;;
+    "download")
+        do_download
+    ;;
+    "progress")
+        do_progress
+    ;;
+    "cancel")
+        do_cancel
+    ;;
+    *)
+        usage
+    ;;
+esac
