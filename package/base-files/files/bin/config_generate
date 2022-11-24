@@ -2,7 +2,7 @@
 
 CFG=/etc/board.json
 
-. /usr/share/libubox/jshn.sh
+. /lib/functions/system.sh
 
 [ -s $CFG ] || /bin/board_detect || exit 1
 [ -s /etc/config/network -a -s /etc/config/system ] && exit 0
@@ -123,6 +123,7 @@ generate_network() {
 					set network.@device[-1].name='$port'
 					set network.@device[-1].macaddr='$macaddr'
 				EOF
+				macaddr=$(macaddr_add "$macaddr" 2)
 			done
 		}
 		device=br-$1
