@@ -16,7 +16,7 @@ fixup_iface_name() {
     case $(board_name) in
     fastrhino,r66s)
         device="$(get_iface_device eth0)"
-        if [[ "$device" != "0002:21:00.0" ]]; then
+        if [[ "$device" != "0001:11:00.0" ]]; then
             rename_iface eth0 lan1
             rename_iface eth1 eth0
             rename_iface lan1 eth1
