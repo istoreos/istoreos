@@ -51,7 +51,7 @@ rockchip_setup_macs()
 	rockchip,rk3568-lunzn-r68s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)
-		lan_mac=$(macaddr_add "$lan_mac" 1)
+		lan_mac=$(macaddr_add "$wan_mac" 1)
 		;;
 	esac
 
@@ -64,3 +64,5 @@ board=$(board_name)
 rockchip_setup_interfaces $board
 rockchip_setup_macs $board
 board_config_flush
+
+exit 0
