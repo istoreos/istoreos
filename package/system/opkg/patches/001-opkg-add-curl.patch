@@ -20,7 +20,7 @@
  	char *signature_ca_path;
 --- a/libopkg/opkg_download.c	2021-06-14 05:27:37.000000000 +0800
 +++ b/libopkg/opkg_download.c	2022-06-20 20:33:40.769112117 +0800
-@@ -146,8 +146,38 @@
+@@ -146,8 +146,41 @@
  			 conf->no_proxy);
  		setenv("no_proxy", conf->no_proxy, 1);
  	}
@@ -28,11 +28,14 @@
 -	{
 +    if (conf->use_curl) {
 +		int res;
-+		const char *argv[11];
++		const char *argv[14];
 +		int i = 0;
 +
 +		argv[i++] = "curl";
 +		argv[i++] = "-s";
++		argv[i++] = "--fail";
++		argv[i++] = "--show-error";
++		argv[i++] = "-L";
 +		if (conf->no_check_certificate) {
 +			argv[i++] = "-k";
 +		}
