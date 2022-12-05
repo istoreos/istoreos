@@ -1,6 +1,6 @@
 --- a/defaults.c
 +++ b/defaults.c
-@@ -48,6 +48,8 @@
+@@ -48,6 +48,8 @@ const struct fw3_option fw3_flag_opts[]
  	FW3_OPT("synflood_protect",    bool,     defaults, syn_flood),
  	FW3_OPT("synflood_rate",       limit,    defaults, syn_flood_rate),
  	FW3_OPT("synflood_burst",      int,      defaults, syn_flood_rate.burst),
@@ -9,10 +9,9 @@
  
  	FW3_OPT("tcp_syncookies",      bool,     defaults, tcp_syncookies),
  	FW3_OPT("tcp_ecn",             int,      defaults, tcp_ecn),
-diff --git a/options.h b/options.h
 --- a/options.h
 +++ b/options.h
-@@ -297,6 +297,7 @@
+@@ -297,6 +297,7 @@ struct fw3_defaults
  	enum fw3_reject_code any_reject_code;
  
  	bool syn_flood;
@@ -20,10 +19,9 @@ diff --git a/options.h b/options.h
  	struct fw3_limit syn_flood_rate;
  
  	bool tcp_syncookies;
-diff --git a/zones.c b/zones.c
 --- a/zones.c
 +++ b/zones.c
-@@ -627,6 +627,7 @@
+@@ -670,6 +670,7 @@ print_zone_rule(struct fw3_ipt_handle *h
  	struct fw3_address *msrc;
  	struct fw3_address *mdest;
  	struct fw3_ipt_rule *r;
@@ -31,7 +29,7 @@ diff --git a/zones.c b/zones.c
  
  	if (!fw3_is_family(zone, handle->family))
  		return;
-@@ -712,8 +713,22 @@
+@@ -755,8 +756,22 @@ print_zone_rule(struct fw3_ipt_handle *h
  				{
  					r = fw3_ipt_rule_new(handle);
  					fw3_ipt_rule_src_dest(r, msrc, mdest);
