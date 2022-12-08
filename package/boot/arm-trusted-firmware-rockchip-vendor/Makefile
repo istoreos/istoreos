@@ -15,7 +15,7 @@ PKG_HASH:=c6ebf8ab556e071e3b067540e95aecff650143f0c97e129cd40c837a4f11a881
 
 PKG_MAINTAINER:=Tianling Shen <cnsztl@immortalwrt.org>
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/rkbin-$(PKG_SOURCE_VERSION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/rkbin-$(BUILD_VARIANT)/rkbin-$(PKG_SOURCE_VERSION)
 
 include $(INCLUDE_DIR)/package.mk
 
