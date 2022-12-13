@@ -167,9 +167,10 @@ $(BIN_DIR)/$(SDK_NAME).tar.xz: clean
 	find $(SDK_BUILD_DIR) -name CVS | $(XARGS) rm -rf
 	-make -C $(SDK_BUILD_DIR)/scripts/config clean
 
-	rm -f $(SDK_BUILD_DIR)/target/linux/realtek/image/blob/private.key
-
-	echo > $(SDK_BUILD_DIR)/target/linux/realtek/image/rescue.mk
+	if [ -d $(SDK_BUILD_DIR)/target/linux/realtek ]; then \
+		rm -f $(SDK_BUILD_DIR)/target/linux/realtek/image/blob/private.key; \
+		echo > $(SDK_BUILD_DIR)/target/linux/realtek/image/rescue.mk; \
+	fi
 
 	(cd $(BUILD_DIR); \
 		tar -I '$(STAGING_DIR_HOST)/bin/xz -7e -T$(if $(filter 1,$(NPROC)),2,0)' -cf $@ $(SDK_NAME) \
