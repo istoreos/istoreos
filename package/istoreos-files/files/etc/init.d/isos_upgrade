@@ -18,9 +18,9 @@ split_opkg_status() {
 			exec 3>/dev/null
 			gap=1
 		else
-			if [ "x1" = "x$gap" ] && echo "$line" | grep -q "^Package: "; then
+			if [[ "x1" = "x$gap" && "$line" = "Package: *" ]]; then
 				exec 3>&-
-				exec 3>$2/`echo "$line"|cut -d' ' -f2`
+				exec 3>$2/${line##Package: }
 				gap=0
 			fi
 			echo "$line" >&3
@@ -36,26 +36,19 @@ split_both_status() {
 }
 
 ls_all_pkgs() {
-	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' | grep -v '^kmod-' | grep -v '^kernel$' )
-}
-
-ls_all_kmods() {
-	[ -f /tmp/romopkgstatus/kernel ] && echo kernel
-	( cd /rom/usr/lib/opkg/info ; find . -maxdepth 1 -name 'kmod-*.control' | sed -E 's#./(.*).control#\1#g' )
+	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' | grep -v '^kernel$' )
 }
 
 rebuild_opkg_status() {
 	local line
-	ls_all_kmods | while read line; do
-		cat /tmp/romopkgstatus/$line
-	done
+	[ -f /tmp/romopkgstatus/kernel ] && cat /tmp/romopkgstatus/kernel
 	ls_all_pkgs | while read line; do
 		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control -o -f /ext_overlay/upper/usr/lib/opkg/info/$line.control ]; then
-			cat /tmp/newopkgstatus/$line
+			echo /tmp/newopkgstatus/$line
 		else
-			cat /tmp/romopkgstatus/$line
+			echo /tmp/romopkgstatus/$line
 		fi
-	done
+	done | xargs cat
 }
 
 clean_tmp_files() {

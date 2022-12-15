@@ -140,6 +140,28 @@ clean_overlayfs_origin() {
 	cd - >/dev/null 2>&1
 }
 
+clean_kmods()
+{
+	if [ -d $1/upper/usr/lib/opkg/info ]; then
+		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`
+		if [ -n "$compat" ]; then
+			cd $1/upper/usr/lib/opkg/info
+			grep -LFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' > /tmp/del_kmods.txt
+			cat /tmp/del_kmods.txt | sed 's/$/.list/' | xargs cat | sed "s#^/#$1/upper/#" | xargs rm -f
+			cat /tmp/del_kmods.txt | xargs -rn1 sh -c 'rm -f $0.*'
+			rm -f /tmp/del_kmods.txt
+			cd - >/dev/null 2>&1
+			return 0
+		fi
+	else
+		return 0
+	fi
+
+	# rm -rf $1/upper/lib/modules $1/upper/etc/modules-boot.d \
+	# 	$1/upper/etc/modules.d $1/upper/usr/lib/opkg/info/kmod-* \
+	# 	$1/upper/usr/lib/opkg/info/kernel.* 2>/dev/null
+}
+
 prepare_primary_overlay()
 {
 	if [ -f /overlay/.reset ]; then
@@ -151,9 +173,7 @@ prepare_primary_overlay()
 			clean_overlayfs_origin /overlay/upper
 		fi
 		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
-			rm -rf /overlay/upper/lib/modules /overlay/upper/etc/modules-boot.d \
-				/overlay/upper/etc/modules.d /overlay/upper/usr/lib/opkg/info/kmod-* \
-				/overlay/upper/usr/lib/opkg/info/kernel.* 2>/dev/null
+			clean_kmods /overlay
 		fi
 	fi
 
@@ -211,9 +231,7 @@ prepare_ext_overlay()
 		rm -f $newoverlaydir/.commit $newoverlaydir/.reset
 	else
 		if [ -f $overlaydir/upper/usr/lib/opkg/.upgrading ]; then
-			rm -rf $newoverlaydir/upper/lib/modules $newoverlaydir/upper/etc/modules-boot.d \
-				$newoverlaydir/upper/etc/modules.d $newoverlaydir/upper/usr/lib/opkg/info/kmod-* \
-				$newoverlaydir/upper/usr/lib/opkg/info/kernel.* 2>/dev/null
+			clean_kmods $newoverlaydir
 		fi
 		if is_overlayfs_use_xattr && [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
 			clean_overlayfs_origin "$newoverlaydir/upper"
