@@ -150,6 +150,15 @@ export_bootdevice() {
 	local cmdline bootdisk rootpart uuid blockdev uevent line class
 	local MAJOR MINOR DEVNAME DEVTYPE
 
+	if [ -f /tmp/.bootdisk ]; then
+		while read line; do
+			export -n "$line"
+		done < /tmp/.bootdisk
+		export BOOTDEV_MAJOR=$MAJOR
+		export BOOTDEV_MINOR=$MINOR
+		return 0
+	fi
+
 	if read cmdline < /proc/cmdline; then
 		case "$cmdline" in
 			*root=*)
