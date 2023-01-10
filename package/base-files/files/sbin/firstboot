@@ -41,10 +41,10 @@ do_reset_nofs()
     echo "Already resetted" >&2
     return 1
   fi
-  if ! blkid -o device -t LABEL=$OVERLAY_LABEL "$OVERLAY_DEV" >/dev/null; then
-    echo "Overlay partition $OVERLAY_DEV not labeled $OVERLAY_LABEL" >&2
-    return 1
-  fi
+  # if ! blkid -o device -t LABEL=$OVERLAY_LABEL "$OVERLAY_DEV" >/dev/null; then
+  #   echo "Overlay partition $OVERLAY_DEV not labeled $OVERLAY_LABEL" >&2
+  #   return 1
+  # fi
 
   echo "RESET000" | dd of="$OVERLAY_DEV" bs=512 count=1 conv=notrunc,sync,fsync 2>/dev/null
   echo 3 > /proc/sys/vm/drop_caches
@@ -53,6 +53,7 @@ do_reset_nofs()
 
 do_reset_ext_overlay()
 {
+  [ -d /ext_overlay ] && mountpoint -q /ext_overlay || return 0
   rm -f /ext_overlay/etc/.extroot-uuid
   touch /ext_overlay/.reset
   sync /ext_overlay
