@@ -2,14 +2,14 @@
 # mmcblk0
 _getbootdisk()
 {
-    local rootpart="`grep -Fm1 ' - squashfs /dev/root ' /proc/self/mountinfo | cut -d' ' -f3`"
-    [ -z "$rootpart" ] && return 1
-    local devpath="`readlink /sys/dev/block/$rootpart`"
-    [ -z "$devpath" ] && return 1
-    rootpart="${devpath##*/}"
-    devpath="${devpath%%/$rootpart}"
-    local rootdisk="${devpath##*/}"
-    echo $rootdisk
+	local rootpart="`grep -Fm1 ' - squashfs /dev/root ' /proc/self/mountinfo | cut -d' ' -f3`"
+	[ -z "$rootpart" ] && return 1
+	local devpath="`readlink /sys/dev/block/$rootpart`"
+	[ -z "$devpath" ] && return 1
+	rootpart="${devpath##*/}"
+	devpath="${devpath%%/$rootpart}"
+	local rootdisk="${devpath##*/}"
+	echo "$rootdisk"
 }
 
 # > getpartofdisk sda 3
@@ -18,15 +18,16 @@ _getbootdisk()
 # mmcblk0p3
 _getpartofdisk()
 {
-    local disk="$1"
-    local part="$2"
-    local dev="`cat /sys/block/$disk/dev`"
-    [ -z "$dev" ] && return 1
-    local major="${dev%%:*}"
-    local minor="${dev##*:}"
-    local devpath="`readlink /sys/dev/block/$major:$(($minor + $part))`"
-    [ -z "$devpath" ] && return 1
-    echo "${devpath##*/}"
+	local disk="$1" offset="$2" part
+	if [[ "$offset" = 0 ]]; then
+		echo "$disk"
+	else
+		part="$disk"
+		echo "$part" | grep -q '^.*\d$' && part="${part}p"
+		part="${part}"$(( ${offset} ))
+		echo "$part"
+	fi
+	return 0
 }
 
 _get_overlay_partition_default()

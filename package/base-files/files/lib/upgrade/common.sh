@@ -156,6 +156,7 @@ export_bootdevice() {
 		done < /tmp/.bootdisk
 		export BOOTDEV_MAJOR=$MAJOR
 		export BOOTDEV_MINOR=$MINOR
+		export BOOTDEV_DEVNAME=$DEVNAME
 		return 0
 	fi
 
@@ -219,6 +220,7 @@ export_bootdevice() {
 			done < "$uevent"
 			export BOOTDEV_MAJOR=$MAJOR
 			export BOOTDEV_MINOR=$MINOR
+			export BOOTDEV_DEVNAME=$DEVNAME
 			return 0
 		fi
 	fi
@@ -227,18 +229,20 @@ export_bootdevice() {
 }
 
 export_partdevice() {
-	local var="$1" offset="$2"
-	local uevent line MAJOR MINOR DEVNAME DEVTYPE
-
-	for uevent in /sys/class/block/*/uevent; do
-		while read line; do
-			export -n "$line"
-		done < "$uevent"
-		if [ $BOOTDEV_MAJOR = $MAJOR -a $(($BOOTDEV_MINOR + $offset)) = $MINOR -a -b "/dev/$DEVNAME" ]; then
-			export "$var=$DEVNAME"
+	local var="$1" offset="$2" part
+	offset=$(( ${offset} ))
+	if [[ "$offset" = 0 ]]; then
+		export "$var=$BOOTDEV_DEVNAME"
+		return 0
+	else
+		part="$BOOTDEV_DEVNAME"
+		echo "$part" | grep -q '^.*\d$' && part="${part}p"
+		part="${part}${offset}"
+		if [ -b "/dev/$part" ]; then
+			export "$var=$part"
 			return 0
 		fi
-	done
+	fi
 
 	return 1
 }
