@@ -83,11 +83,8 @@ function action_check()
     code = 500,
     msg = "Unknown"
   }
-  if r == 0 then
-    ret.code = 0
-    ret.msg = o
-  elseif r == 1 then
-    ret.code = 1
+  if r == 0 or r == 1 or r == 2 then
+    ret.code = r
     ret.msg = o
   else
     ret.code = 500
@@ -123,7 +120,7 @@ function action_progress()
   if r == 0 then
     ret.code = 0
     ret.msg = "done"
-  elseif r == 1 or r == 2 then
+  elseif r == 1 or r == 2 or r == 254 then
     ret.code = r
     ret.msg = o
   else

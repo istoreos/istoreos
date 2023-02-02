@@ -41,6 +41,7 @@
 						<label class="cbi-value-title" id="check_result"></label>
 						<div class="cbi-value-field">
 							<input class="cbi-button cbi-button-reload" type="button" name="check" value="<%:Check update%>" />
+							<div class="cbi-value-description">Step 1/3: <%:Check update%></div>
 						</div>
 					</div>
 				</form>
@@ -51,6 +52,7 @@
 						<label class="cbi-value-title" id="download_result"><%:Found new firmware%></label>
 						<div class="cbi-value-field">
 							<input class="cbi-button cbi-button-apply" type="button" name="download" value="<%:Download firmware%>" />
+							<div class="cbi-value-description">Step 2/3: <%:Download firmware%></div>
 						</div>
 					</div>
 				</form>
@@ -61,6 +63,7 @@
 						<label class="cbi-value-title" id="download_progress">0%</label>
 						<div class="cbi-value-field">
 							<input class="cbi-button cbi-button-reset" type="button" name="cancel" value="<%:Cancel download%>" />
+							<div class="cbi-value-description">Step 2/3: <%:Download firmware%></div>
 						</div>
 					</div>
 				</form>
@@ -74,6 +77,7 @@
 						<label class="cbi-value-title"><%:Firmware downloaded%></label>
 						<div class="cbi-value-field">
 							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image...%>" />
+							<div class="cbi-value-description">Step 3/3: <%:Flash image...%></div>
 						</div>
 					</div>
 				</form>
@@ -90,7 +94,8 @@
 					<div class="cbi-value cbi-value-last">
 						<label class="cbi-value-title"><%:Firmware downloaded%></label>
 						<div class="cbi-value-field">
-							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image...%>" />
+							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image%>" />
+							<div class="cbi-value-description">Step 3/3: <%:Flash image%></div>
 						</div>
 					</div>
 				</form>
@@ -141,9 +146,18 @@
 					check.disabled = undefined;
 					switch(d.code){
 					case 0:
+					case 2:
 						check_result.innerText = "";
 						upgrade_log.innerHTML = d.msg;
-						state_switch("unchecked", "checked");
+						if (d.code == 0) {
+							state_switch("unchecked", "checked");
+						} else {
+							alert("<%:Found downloading firmware, will show progress%>");
+							download_progress.innerText = "<%:Downloading%>: ...";
+							cancel.disabled = 'disabled';
+							state_switch("unchecked", "downloading");
+							refresh_download_progress_timer = setTimeout(refresh_download_progress, 500);	
+						}
 						break;
 					case 1:
 						check_result.innerText = "<%:Already the latest firmware%>";
@@ -184,6 +198,9 @@
 					case 2:
 						download_result.innerText = "<%:Download canceled%>";
 						state_switch("downloading", "checked");
+						break;
+					case 254:
+						state_switch("downloading", "unchecked");
 						break;
 					default:
 						download_result.innerText = "<%:Download failed%>";

@@ -25,6 +25,9 @@ msgstr ""
 msgid "Flash image..."
 msgstr ""
 
+msgid "Flash image"
+msgstr ""
+
 msgid "Checking..."
 msgstr ""
 
@@ -53,4 +56,7 @@ msgid "The image file does not contain a supported format. Maybe try again later
 msgstr ""
 
 msgid "History Log"
+msgstr ""
+
+msgid "Found downloading firmware, will show progress"
 msgstr ""

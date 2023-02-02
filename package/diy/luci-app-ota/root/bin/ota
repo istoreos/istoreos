@@ -94,24 +94,30 @@ prepare_check() {
     return $latest
 }
 
-# 0: found newer fw, 1: already newest fw, *: err
+# 0: found newer fw, 1: already newest fw, 2: found running task, *: err
 do_check() {
     local ret=0
     local lock="$WRLOCK"
     exec 200>$lock
-    flock -n 200 || return 255
-    prepare_check
-    ret=$?
-    flock -u 200 >/dev/null 2>&1
+    if flock -n 200; then
+        prepare_check
+        ret=$?
+        flock -u 200 >/dev/null 2>&1
+    elif [ -f /tmp/firmware.img.progress -o -f /tmp/firmware.img.sha256sum ]; then
+        ret=2
+    else
+        echo "lock failed!" >&2
+        return 255
+    fi
 
-    if [ "$ret" -eq 0 ]; then
+    if [ "$ret" -eq 0 -o "$ret" -eq 2 ]; then
         # output
         echo "<pre>"
         sed -E 's/.*\((.+)\).*/\1/' /var/run/ota/ota.latest
         echo "</pre>"
         echo "<br><h2>ChangeLog:</h2>"
     fi
-    [ "$ret" -eq 0 -o "$ret" -eq 1 ] && cat /var/run/ota/ota.log
+    [ "$ret" -eq 0 -o "$ret" -eq 1 -o "$ret" -eq 2 ] && cat /var/run/ota/ota.log
     return $ret
 }
 
@@ -124,7 +130,7 @@ do_download(){
     return 0
 }
 
-# 0: done, 1: downloading, 2: failed, *: err
+# 0: done, 1: downloading, 2: failed, 254: wrong state, *: err
 do_progress() {
     local sum=`grep 'SHA256: ' /var/run/ota/ota.latest | cut -d' ' -f2`
     [ -z "$sum" ] && { echo "do check first" >&2 ; return 254; }

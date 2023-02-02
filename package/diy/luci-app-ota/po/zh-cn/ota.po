@@ -25,6 +25,9 @@ msgstr "固件已下载"
 msgid "Flash image..."
 msgstr "刷写固件..."
 
+msgid "Flash image"
+msgstr "刷写固件"
+
 msgid "Checking..."
 msgstr "检查中..."
 
@@ -54,3 +57,6 @@ msgstr "镜像文件格式不支持或损坏。也许稍候再试试"
 
 msgid "History Log"
 msgstr "历史更新日志"
+
+msgid "Found downloading firmware, will show progress"
+msgstr "发现下载中的固件，将显示当前进度"
