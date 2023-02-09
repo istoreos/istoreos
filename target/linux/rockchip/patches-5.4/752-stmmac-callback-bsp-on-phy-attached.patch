@@ -1,0 +1,48 @@
+From a5c8c7853ce56fef7c820c2670b99f40b757a78e Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 9 Feb 2023 01:01:13 +0800
+Subject: [PATCH] drivers/net/stmmac: add callback to bsp when phy attached
+
+---
+ drivers/net/ethernet/stmicro/stmmac/stmmac_main.c | 5 +++++
+ include/linux/stmmac.h                            | 2 ++
+ 2 files changed, 7 insertions(+)
+
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+index 9cbc0179d..04526788f 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+@@ -2651,6 +2651,11 @@ static int stmmac_open(struct net_device *dev)
+ 		}
+ 	}
+ 
++	if (priv->plat->fix_phy) {
++		// callback bsp when phy attached
++		priv->plat->fix_phy(priv->plat->bsp_priv, phylink_get_phy(priv->phylink));
++	}
++
+ 	/* Extra statistics */
+ 	memset(&priv->xstats, 0, sizeof(struct stmmac_extra_stats));
+ 	priv->xstats.threshold = tc;
+diff --git a/include/linux/stmmac.h b/include/linux/stmmac.h
+index dc60d03c4..04aa2c238 100644
+--- a/include/linux/stmmac.h
++++ b/include/linux/stmmac.h
+@@ -13,6 +13,7 @@
+ #define __STMMAC_PLATFORM_DATA
+ 
+ #include <linux/platform_device.h>
++#include <linux/phy.h>
+ 
+ #define MTL_MAX_RX_QUEUES	8
+ #define MTL_MAX_TX_QUEUES	8
+@@ -179,5 +180,6 @@ struct plat_stmmacenet_data {
+ 	int mac_port_sel_speed;
+ 	bool en_tx_lpi_clockgating;
+ 	int has_xgmac;
++	void (*fix_phy)(void *priv, struct phy_device *phy);
+ };
+ #endif
+-- 
+2.31.0
+
