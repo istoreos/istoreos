@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright (C) 2010 OpenWrt.org
-# Copyright (C) 2020-2022 jjm2473@gmail.com
+# Copyright (C) 2020-2023 jjm2473@gmail.com
 
 DEFAULT_OVERLAY_FS="ext4"
 OVERLAY_LABEL="etc"
@@ -140,12 +140,25 @@ clean_overlayfs_origin() {
 	cd - >/dev/null 2>&1
 }
 
+clean_overlayfs_redundant_whiteout_marker()
+{
+	local line
+	cd "$1"
+	find upper ! -path 'upper/opt/*' -type c -perm 0 -user 0 -group 0 | sed 's#^upper/#/#g' | while read; do
+		line="$REPLY"
+		[ ! -e "$line" -a \( -z "$2" -o ! -e "$2/upper$line" \) ] && \
+			busybox ls -l "upper$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
+			rm -f "upper$line"
+	done
+	cd - >/dev/null 2>&1
+}
+
 clean_kmods()
 {
-	if [ -d $1/upper/usr/lib/opkg/info ]; then
+	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
 		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`
 		if [ -n "$compat" ]; then
-			cd $1/upper/usr/lib/opkg/info
+			cd "$1/upper/usr/lib/opkg/info"
 			grep -LFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' > /tmp/del_kmods.txt
 			cat /tmp/del_kmods.txt | sed 's/$/.list/' | xargs cat | sed "s#^/#$1/upper/#" | xargs rm -f
 			cat /tmp/del_kmods.txt | xargs -rn1 sh -c 'rm -f $0.*'
@@ -169,8 +182,9 @@ prepare_primary_overlay()
 		rm -f /overlay/.reset
 		sync /overlay
 	else
-		if is_overlayfs_use_xattr && [ -d /overlay/upper ] && update_overlay_lower_uuid /overlay; then
-			clean_overlayfs_origin /overlay/upper
+		if [ -d /overlay/upper ] && update_overlay_lower_uuid /overlay; then
+			is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
+			clean_overlayfs_redundant_whiteout_marker /overlay
 		fi
 		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
 			clean_kmods /overlay
@@ -226,26 +240,28 @@ prepare_ext_overlay()
 	local newoverlaydir=$1
 	local overlaydir=$2
 
-	if [ -f $newoverlaydir/.reset ]; then
-		rm -rf $newoverlaydir/upper
-		rm -f $newoverlaydir/.commit $newoverlaydir/.reset
+	if [ -f "$newoverlaydir/.reset" ]; then
+		rm -rf "$newoverlaydir/upper"
+		rm -f "$newoverlaydir/.commit" "$newoverlaydir/.reset"
 	else
-		if [ -f $overlaydir/upper/usr/lib/opkg/.upgrading ]; then
-			clean_kmods $newoverlaydir
+		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
+			clean_kmods "$newoverlaydir"
 		fi
-		if is_overlayfs_use_xattr && [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
-			clean_overlayfs_origin "$newoverlaydir/upper"
+		if [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
+			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
+			[ -f "$newoverlaydir/.commit" ] || clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
 		fi
-		if [ -f $newoverlaydir/.commit ]; then
+		if [ -f "$newoverlaydir/.commit" ]; then
 			if [ -d "$newoverlaydir/upper" ]; then
 				apply_overlayfs_opaque "$newoverlaydir" "$overlaydir"
 			fi
-			cp -a $newoverlaydir/upper/. $overlaydir/upper && {
-				rmdir $overlaydir/upper/ext_overlay
-				rm -rf $newoverlaydir/upper
-				mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay
+			cp -a "$newoverlaydir/upper/." "$overlaydir/upper" && {
+				rmdir "$overlaydir/upper/ext_overlay"
+				clean_overlayfs_redundant_whiteout_marker "$overlaydir"
+				rm -rf "$newoverlaydir/upper"
+				mkdir -m 0755 -p "$newoverlaydir/upper/ext_overlay"
 			}
-			rm -f $newoverlaydir/.commit
+			rm -f "$newoverlaydir/.commit"
 		fi
 	fi
 
