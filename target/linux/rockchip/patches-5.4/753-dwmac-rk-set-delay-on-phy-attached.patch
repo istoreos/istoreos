@@ -31,15 +31,15 @@ index 9f9aaa47a..ba2c85213 100644
 +		return;
 +	}
 +	for_each_available_child_of_node(delay_cfg, child) {
-+		ret = of_property_read_u32(dev->of_node, "phy_id", &phy_id);
++		ret = of_property_read_u32(child, "phy_id", &phy_id);
 +		if (ret)
 +			continue;
 +		if (phy_id != phy->phy_id)
 +			continue;
-+		ret = of_property_read_u32(dev->of_node, "tx_delay", &tx_delay);
++		ret = of_property_read_u32(child, "tx_delay", &tx_delay);
 +		if (ret)
 +			break;
-+		ret = of_property_read_u32(dev->of_node, "rx_delay", &rx_delay);
++		ret = of_property_read_u32(child, "rx_delay", &rx_delay);
 +		if (ret)
 +			break;
 +
