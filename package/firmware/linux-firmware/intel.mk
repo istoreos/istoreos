@@ -168,6 +168,13 @@ define Package/iwlwifi-firmware-iwl9260/install
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-iwl9260))
 
+Package/iwlwifi-firmware-ax201 = $(call Package/firmware-default,Intel Wireless AX201 firmware)
+define Package/iwlwifi-firmware-ax201/install
+	$(INSTALL_DIR) $(1)/lib/firmware
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-QuZ-a0-hr-b0-59.ucode $(1)/lib/firmware
+endef
+$(eval $(call BuildPackage,iwlwifi-firmware-ax201))
+
 Package/e100-firmware = $(call Package/firmware-default,Intel e100)
 define Package/e100-firmware/install
 	$(INSTALL_DIR) $(1)/lib/firmware/e100
