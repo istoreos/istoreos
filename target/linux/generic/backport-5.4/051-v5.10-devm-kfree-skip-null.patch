@@ -1,0 +1,28 @@
+From 50db56911fab0083a89bd9f6d3fa1ac9f2607be4 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 14 Feb 2023 17:33:45 +0800
+Subject: [PATCH] drivers/base: devm_kfree skip null ptr
+
+---
+ drivers/base/devres.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/base/devres.c b/drivers/base/devres.c
+index 0bbb328bd..fb62b69fc 100644
+--- a/drivers/base/devres.c
++++ b/drivers/base/devres.c
+@@ -943,9 +943,9 @@ void devm_kfree(struct device *dev, const void *p)
+ 
+ 	/*
+ 	 * Special case: pointer to a string in .rodata returned by
+-	 * devm_kstrdup_const().
++	 * devm_kstrdup_const() or NULL/ZERO ptr.
+ 	 */
+-	if (unlikely(is_kernel_rodata((unsigned long)p)))
++	if (unlikely(is_kernel_rodata((unsigned long)p) || ZERO_OR_NULL_PTR(p)))
+ 		return;
+ 
+ 	rc = devres_destroy(dev, devm_kmalloc_release,
+-- 
+2.31.0
+
