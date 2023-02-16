@@ -1,0 +1,55 @@
+From e03b5f07c18c181f9de0a9d0885b90396e50717f Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 16 Feb 2023 12:18:30 +0800
+Subject: [PATCH] header: linux/module.h: move kallsyms to the end of struct
+
+for better compatible
+---
+ include/linux/module.h | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/include/linux/module.h b/include/linux/module.h
+index 3a21e15fd..ff18fa2b3 100644
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -428,18 +428,6 @@ struct module {
+ 	struct bug_entry *bug_table;
+ #endif
+ 
+-#ifdef CONFIG_KALLSYMS
+-	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
+-	struct mod_kallsyms *kallsyms;
+-	struct mod_kallsyms core_kallsyms;
+-
+-	/* Section attributes */
+-	struct module_sect_attrs *sect_attrs;
+-
+-	/* Notes attributes */
+-	struct module_notes_attrs *notes_attrs;
+-#endif
+-
+ 	/* The command line arguments (may be mangled).  People like
+ 	   keeping pointers to this stuff */
+ 	char *args;
+@@ -511,6 +499,18 @@ struct module {
+ 	struct error_injection_entry *ei_funcs;
+ 	unsigned int num_ei_funcs;
+ #endif
++
++#ifdef CONFIG_KALLSYMS
++	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
++	struct mod_kallsyms *kallsyms;
++	struct mod_kallsyms core_kallsyms;
++
++	/* Section attributes */
++	struct module_sect_attrs *sect_attrs;
++
++	/* Notes attributes */
++	struct module_notes_attrs *notes_attrs;
++#endif
+ } ____cacheline_aligned __randomize_layout;
+ #ifndef MODULE_ARCH_INIT
+ #define MODULE_ARCH_INIT {}
+-- 
+2.31.0
+
