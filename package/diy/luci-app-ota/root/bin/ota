@@ -75,7 +75,7 @@ prepare_check() {
     local latest=0
     cat /dev/null > /var/run/ota/ota.log
     fcurl --connect-timeout 5 -o /var/run/ota/ota.latest "$OTA_URL_BASE/version.latest" || { rm -f /var/run/ota/ota.latest ; return 255; }
-    if grep -Fq "$current" /var/run/ota/ota.latest; then
+    if head -1 /var/run/ota/ota.latest | grep -Fq "$current"; then
         latest=1
         current=""
     fi
@@ -113,7 +113,7 @@ do_check() {
     if [ "$ret" -eq 0 -o "$ret" -eq 2 ]; then
         # output
         echo "<pre>"
-        sed -E 's/.*\((.+)\).*/\1/' /var/run/ota/ota.latest
+        sed -E '1 s/^\[.*\]\((.+)\)\s*$/\1/' /var/run/ota/ota.latest
         echo "</pre>"
         echo "<br><h2>ChangeLog:</h2>"
     fi
@@ -124,7 +124,7 @@ do_check() {
 # async download
 do_download(){
     local img=`head -1 /var/run/ota/ota.latest | sed -E 's/.*\((.+)\).*/\1/'`
-    local sum=`grep 'SHA256: ' /var/run/ota/ota.latest | cut -d' ' -f2`
+    local sum=`head -3 /var/run/ota/ota.latest | grep '^SHA256: ' | cut -d' ' -f2`
     [ -z "$img" -o -z "$sum" ] && { echo "do check first" >&2 ; return 254; }
     lock_download $img $sum &
     return 0
@@ -132,7 +132,7 @@ do_download(){
 
 # 0: done, 1: downloading, 2: failed, 254: wrong state, *: err
 do_progress() {
-    local sum=`grep 'SHA256: ' /var/run/ota/ota.latest | cut -d' ' -f2`
+    local sum=`head -3 /var/run/ota/ota.latest | grep '^SHA256: ' | cut -d' ' -f2`
     [ -z "$sum" ] && { echo "do check first" >&2 ; return 254; }
     [ -f /tmp/firmware.img.sha256sum ] && [ "`cat /tmp/firmware.img.sha256sum`" = "$sum" ] && return 0
     [ -f /tmp/firmware.img.progress ] || { echo "download not in progress" >&2 ; return 254; }
