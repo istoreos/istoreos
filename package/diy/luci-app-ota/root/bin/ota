@@ -42,8 +42,9 @@ download() {
         fi
     fi
     curl --fail --show-error --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
-    echo "$!" > /var/run/ota/download.pid
-    if wait $!; then
+    local pid="$!"
+    echo "$pid" > /var/run/ota/download.pid
+    if wait $pid; then
         rm -f /var/run/ota/download.pid
         echo "Checking new firmware.img.part..." > /tmp/firmware.img.progress
         if [ "`sha256 /tmp/firmware.img.part`" = "$sum" ]; then
@@ -85,12 +86,12 @@ prepare_check() {
             break
         fi
         echo "<h3>`echo $line | sed 's/-/ /'`</h3><pre>" >> /var/run/ota/ota.log
-        fcurl --connect-timeout 1 "$OTA_URL_BASE/log/$line.log" >> /var/run/ota/ota.log
+        fcurl --connect-timeout 1 "$OTA_URL_BASE/log/$line.log" >> /var/run/ota/ota.log 2>/dev/null
         echo "</pre>" >> /var/run/ota/ota.log
     done
     [ "`wc -l /var/run/ota/ota.log | cut -d' ' -f1`" -eq 0 ] && return 1
     [ "`wc -l /var/run/ota/ota.index | cut -d' ' -f1`" -gt 5 ] && echo "<a href=\"$OTA_URL_BASE/\" onclick=\"void(0)\" target=\"_blank\">More</a>" >> /var/run/ota/ota.log
-
+    fcurl --connect-timeout 1 "$OTA_URL_BASE/ota.footer.html" >> /var/run/ota/ota.log 2>/dev/null
     return $latest
 }
 
