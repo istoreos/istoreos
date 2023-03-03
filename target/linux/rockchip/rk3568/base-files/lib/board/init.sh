@@ -11,7 +11,28 @@ get_iface_device() {
     basename $(readlink /sys/class/net/$1/device)
 }
 
-fixup_iface_name() {
+set_iface_cpumask() {
+    local core_mask="$1"
+    local interface="$2"
+    local device="$3"
+    local irq
+    local seconds
+
+    [ -z "${device}" ] && device="$interface"
+
+    ip link set dev "$interface" up
+
+    for seconds in $(seq 0 2); do
+        irq=$(grep -m1 " ${device}\$" /proc/interrupts | sed -n -e 's/^ *\([^ :]\+\):.*$/\1/p')
+        if [ -n "${irq}" ]; then
+            echo "${core_mask}" > /proc/irq/${irq}/smp_affinity
+            return 0
+        fi
+        sleep 1
+    done
+}
+
+board_fixup_iface_name() {
     local device
     case $(board_name) in
     fastrhino,r66s)
@@ -36,6 +57,14 @@ fixup_iface_name() {
             rename_iface lan3 eth3
         fi
         ;;
+    firefly,rk3568-roc-pc)
+        device="$(get_iface_device eth0)"
+        if [[ "$device" != "fe010000.ethernet" ]]; then
+            rename_iface eth0 wan
+            rename_iface eth1 eth0
+            rename_iface wan eth1
+        fi
+        ;;
     friendlyelec,nanopi-r5s)
         device="$(get_iface_device eth1)"
         # r5s lan1 is under pcie2x1
@@ -48,4 +77,22 @@ fixup_iface_name() {
     esac
 }
 
-fixup_iface_name
+board_set_iface_smp_affinity() {
+    case $(board_name) in
+    fastrhino,r68s)
+        set_iface_cpumask 2 eth0
+        set_iface_cpumask 4 eth1
+        ;;
+    firefly,rk3568-roc-pc)
+        set_iface_cpumask 2 eth0
+        set_iface_cpumask 4 eth1
+        ;;
+    friendlyelec,nanopi-r5s)
+        set_iface_cpumask 2 eth0
+        ;;
+    esac
+}
+
+board_fixup_iface_name
+
+board_set_iface_smp_affinity
