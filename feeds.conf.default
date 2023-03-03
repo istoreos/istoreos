@@ -6,3 +6,6 @@ src-git telephony https://git.openwrt.org/feed/telephony.git;openwrt-21.02
 src-git store https://github.com/linkease/istore.git;main
 # argon, etc.
 src-git third https://github.com/jjm2473/openwrt-third.git;main
+
+# compat for 21.02
+src-git compat https://github.com/jjm2473/openwrt-compat.git;21.02
