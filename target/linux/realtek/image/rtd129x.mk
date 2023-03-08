@@ -70,6 +70,14 @@ define Device/gb081
 endef
 TARGET_DEVICES += gb081
 
+define Device/hsa-bh1
+	$(call Device/ars2)
+	DEVICE_TITLE := BH1
+	DEVICE_DTS := bh1
+	UBOOT_DTS := bh1
+endef
+TARGET_DEVICES += hsa-bh1
+
 include rescue.mk
 
 endif

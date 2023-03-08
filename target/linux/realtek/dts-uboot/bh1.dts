@@ -1,0 +1,26 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "BH1";
+	leds {
+		red {
+			gpio = <4 GPIO_ACTIVE_LOW>;
+		};
+		green {
+			gpio = <6 GPIO_ACTIVE_LOW>;
+		};
+	};
+	keys {
+		power {
+			gpio = <106 GPIO_ACTIVE_LOW>;
+		};
+		reboot {
+			gpio = <100 GPIO_ACTIVE_LOW>;
+		};
+	};
+	gpio {
+		gpios = <130 0>;
+	};
+};

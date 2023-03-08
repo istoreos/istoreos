@@ -1,0 +1,13 @@
+/{
+    clk-en@9800708c {
+		ignore-unused-clocks = "clk_en_etn_250m", "clk_en_etn_sys";
+	};
+
+	gmac@98016000 {
+		status = "okay";
+	};
+
+	gmac@98060000 {
+		status = "disabled";
+	};
+};

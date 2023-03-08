@@ -2,6 +2,8 @@
 
 #include "rtd1296-4GB.dtsi"
 
+/include/ "rtd1296-nonat.dtsi"
+
 / {
 	model= "GB081";
 	chosen {
@@ -37,18 +39,9 @@
 		status = "okay";
 	};
 
-	clk-en@9800708c {
-		ignore-unused-clocks = "clk_en_etn_250m", "clk_en_etn_sys";
-	};
-
-	nic: gmac@98016000 {
-		status = "okay";
-	};
-
 	hwnat: gmac@98060000 {
 		led-gpios = <&rtk_iso_gpio 27 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>, <&rtk_iso_gpio 28 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
 		gpio_link_led_pattern = <0 2 2 1>;
-		status = "disabled";
 	};
 
 	rtk_misc_gpio: rtk_misc_gpio@9801b100 {

@@ -1,0 +1,78 @@
+/dts-v1/;
+
+#include "rtd1296-4GB.dtsi"
+
+/include/ "rtd1296-nonat.dtsi"
+
+/ {
+	model= "BH1";
+	chosen {
+		default-hostname = "BH1";
+	};
+
+	aliases {
+		led-boot = &led_green;
+		led-failsafe = &led_red;
+		led-running = &led_green;
+		led-upgrade = &led_red;
+	};
+
+	sata@9803F000 {
+		sata0: sata-port@0 {
+			/delete-property/ gpios; // bh1 SATA power is not assignd to gpio, (original gpio56)
+		};
+		sata1: sata-port@1 {
+			/delete-property/ gpios; // bh1 SATA power is not assignd to gpio, (original igpio15)
+		};
+	};
+	ehci@98013000 {
+		status = "disabled";
+	};
+	ohci@98013400 {
+		status = "disabled";
+	};
+	rtk_dwc3_drd@98013200 {
+		dwc3_drd@98020000 {
+			dr_mode = "host";
+		};
+		rtk_dwc3_drd_type_c@0 {
+			/delete-property/ drd_mode;
+		};
+	};
+	rtk_dwc3_u2host@98013E00 {
+		status = "disabled";
+		dwc3_u2host@98029000 {
+			status = "disabled";
+		};
+	};
+	dwc3_u2host_usb2phy@0 {
+		status = "disabled";
+	};
+	usb_phy_rle0599@0 {
+		status = "disabled";
+	};
+	rtk_usb_power_manager@0 {
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_green: green {
+			label = "green:router";
+			gpios = <&rtk_misc_gpio 6 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+		led_red: red {
+			label = "red:router";
+			gpios = <&rtk_misc_gpio 4 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
