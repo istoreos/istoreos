@@ -19,6 +19,9 @@
 };
 
 &sdmmc0 {
+	no-sdio;
+	no-mmc;
+	/delete-property/ sd-uhs-sdr104;
 	status = "okay";
 };
 
