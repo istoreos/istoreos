@@ -1,0 +1,169 @@
+From 30374c26a10ff628307ba55dde54041592436e2c Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 13 Mar 2023 13:59:27 +0800
+Subject: [PATCH] drivers/dwc3: Added XHCI HCD USB TRB ENT quirk
+
+On some xHCI controllers (e.g. Rockchip RK3399/RK3328/RK1808), they need
+to enable the ENT flag in the TRB data structure to force xHC to
+prefetch the next TRB of a TD.
+
+Ported from Rockchip Linux 4.19
+
+source: https://github.com/armbian/build/pull/2567
+---
+ drivers/usb/dwc3/core.c      |  2 ++
+ drivers/usb/dwc3/core.h      |  4 ++++
+ drivers/usb/dwc3/host.c      |  5 ++++-
+ drivers/usb/host/xhci-plat.c |  3 +++
+ drivers/usb/host/xhci-ring.c | 17 +++++++++++++++++
+ drivers/usb/host/xhci.h      |  5 +++++
+ 6 files changed, 35 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
+index 2c68ec60d..f54f6c44b 100644
+--- a/drivers/usb/dwc3/core.c
++++ b/drivers/usb/dwc3/core.c
+@@ -1314,6 +1314,8 @@ static void dwc3_get_properties(struct dwc3 *dwc)
+ 				"snps,dis-del-phy-power-chg-quirk");
+ 	dwc->dis_tx_ipgap_linecheck_quirk = device_property_read_bool(dev,
+ 				"snps,dis-tx-ipgap-linecheck-quirk");
++	dwc->xhci_trb_ent_quirk = device_property_read_bool(dev,
++				"snps,xhci-trb-ent-quirk");
+ 	dwc->parkmode_disable_ss_quirk = device_property_read_bool(dev,
+ 				"snps,parkmode-disable-ss-quirk");
+ 
+diff --git a/drivers/usb/dwc3/core.h b/drivers/usb/dwc3/core.h
+index da296f888..3693a8139 100644
+--- a/drivers/usb/dwc3/core.h
++++ b/drivers/usb/dwc3/core.h
+@@ -1035,6 +1035,9 @@ struct dwc3_scratchpad_array {
+  *			change quirk.
+  * @dis_tx_ipgap_linecheck_quirk: set if we disable u2mac linestate
+  *			check during HS transmit.
++ * @xhci_trb_ent_quirk: set if need to enable the Evaluate Next TRB(ENT)
++			flag in the TRB data structure to force xHC to
++			pre-fetch the next TRB of a TD.
+  * @parkmode_disable_ss_quirk: set if we need to disable all SuperSpeed
+  *			instances in park mode.
+  * @tx_de_emphasis_quirk: set if we enable Tx de-emphasis quirk
+@@ -1229,6 +1232,7 @@ struct dwc3 {
+ 	unsigned		dis_u2_freeclk_exists_quirk:1;
+ 	unsigned		dis_del_phy_power_chg_quirk:1;
+ 	unsigned		dis_tx_ipgap_linecheck_quirk:1;
++	unsigned		xhci_trb_ent_quirk:1;
+ 	unsigned		parkmode_disable_ss_quirk:1;
+ 
+ 	unsigned		tx_de_emphasis_quirk:1;
+diff --git a/drivers/usb/dwc3/host.c b/drivers/usb/dwc3/host.c
+index fa252870c..63aa52070 100644
+--- a/drivers/usb/dwc3/host.c
++++ b/drivers/usb/dwc3/host.c
+@@ -43,7 +43,7 @@ static int dwc3_host_get_irq(struct dwc3 *dwc)
+ 
+ int dwc3_host_init(struct dwc3 *dwc)
+ {
+-	struct property_entry	props[4];
++	struct property_entry	props[5];
+ 	struct platform_device	*xhci;
+ 	int			ret, irq;
+ 	struct resource		*res;
+@@ -90,6 +90,9 @@ int dwc3_host_init(struct dwc3 *dwc)
+ 	if (dwc->usb3_lpm_capable)
+ 		props[prop_idx++] = PROPERTY_ENTRY_BOOL("usb3-lpm-capable");
+ 
++	if (dwc->xhci_trb_ent_quirk)
++		props[prop_idx++] = PROPERTY_ENTRY_BOOL("xhci-trb-ent-quirk");
++
+ 	if (dwc->usb2_lpm_disable)
+ 		props[prop_idx++] = PROPERTY_ENTRY_BOOL("usb2-lpm-disable");
+ 
+diff --git a/drivers/usb/host/xhci-plat.c b/drivers/usb/host/xhci-plat.c
+index 84cfa8544..0d88cf178 100644
+--- a/drivers/usb/host/xhci-plat.c
++++ b/drivers/usb/host/xhci-plat.c
+@@ -301,6 +301,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
+ 		if (device_property_read_bool(tmpdev, "quirk-broken-port-ped"))
+ 			xhci->quirks |= XHCI_BROKEN_PORT_PED;
+ 
++		if (device_property_read_bool(tmpdev, "xhci-trb-ent-quirk"))
++			xhci->quirks |= XHCI_TRB_ENT_QUIRK;
++
+ 		device_property_read_u32(tmpdev, "imod-interval-ns",
+ 					 &xhci->imod_interval);
+ 	}
+diff --git a/drivers/usb/host/xhci-ring.c b/drivers/usb/host/xhci-ring.c
+index 7fa27b403..c2fd2af7e 100644
+--- a/drivers/usb/host/xhci-ring.c
++++ b/drivers/usb/host/xhci-ring.c
+@@ -3356,6 +3356,7 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+ 	bool more_trbs_coming = true;
+ 	bool need_zero_pkt = false;
+ 	bool first_trb = true;
++	bool en_trb_ent = true;
+ 	unsigned int num_trbs;
+ 	unsigned int start_cycle, num_sgs = 0;
+ 	unsigned int enqd_len, block_len, trb_buff_len, full_len;
+@@ -3392,6 +3393,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+ 	if (urb->transfer_flags & URB_ZERO_PACKET && urb_priv->num_tds > 1)
+ 		need_zero_pkt = true;
+ 
++	/*
++	 * Don't enable the ENT flag in the TRB if
++	 * the EP support bulk streaming protocol.
++	 */
++	if (urb->stream_id)
++		en_trb_ent = false;
++
+ 	td = &urb_priv->td[0];
+ 
+ 	/*
+@@ -3420,6 +3428,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+ 			first_trb = false;
+ 			if (start_cycle == 0)
+ 				field |= TRB_CYCLE;
++			/*
++			 * Don't enable the ENT flag in the TRB if the
++			 * transfer length of the first TRB isn't an
++			 * integer multiple of the EP maxpacket.
++			 */
++			if (trb_buff_len % usb_endpoint_maxp(&urb->ep->desc))
++				en_trb_ent = false;
+ 		} else
+ 			field |= ring->cycle_state;
+ 
+@@ -3428,6 +3443,8 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+ 		 */
+ 		if (enqd_len + trb_buff_len < full_len) {
+ 			field |= TRB_CHAIN;
++			if (xhci->quirks & XHCI_TRB_ENT_QUIRK && en_trb_ent)
++				field |= TRB_ENT;
+ 			if (trb_is_link(ring->enqueue + 1)) {
+ 				if (xhci_align_td(xhci, urb, enqd_len,
+ 						  &trb_buff_len,
+diff --git a/drivers/usb/host/xhci.h b/drivers/usb/host/xhci.h
+index 02df309e4..6babe2fd2 100644
+--- a/drivers/usb/host/xhci.h
++++ b/drivers/usb/host/xhci.h
+@@ -1516,7 +1516,11 @@ static inline const char *xhci_trb_type_string(u8 type)
+ #define TRB_SEGMENT_SIZE	(TRBS_PER_SEGMENT*16)
+ #define TRB_SEGMENT_SHIFT	(ilog2(TRB_SEGMENT_SIZE))
+ /* TRB buffer pointers can't cross 64KB boundaries */
++#ifdef CONFIG_ARCH_ROCKCHIP
++#define TRB_MAX_BUFF_SHIFT		12
++#else
+ #define TRB_MAX_BUFF_SHIFT		16
++#endif
+ #define TRB_MAX_BUFF_SIZE	(1 << TRB_MAX_BUFF_SHIFT)
+ /* How much data is left before the 64KB boundary? */
+ #define TRB_BUFF_LEN_UP_TO_BOUNDARY(addr)	(TRB_MAX_BUFF_SIZE - \
+@@ -1877,6 +1881,7 @@ struct xhci_hcd {
+ #define XHCI_DEFAULT_PM_RUNTIME_ALLOW	BIT_ULL(33)
+ #define XHCI_RESET_PLL_ON_DISCONNECT	BIT_ULL(34)
+ #define XHCI_SNPS_BROKEN_SUSPEND    BIT_ULL(35)
++#define XHCI_TRB_ENT_QUIRK	BIT_ULL(36)
+ #define XHCI_SKIP_PHY_INIT	BIT_ULL(37)
+ #define XHCI_DISABLE_SPARSE	BIT_ULL(38)
+ #define XHCI_NO_SOFT_RETRY	BIT_ULL(40)
+-- 
+2.31.0
+
