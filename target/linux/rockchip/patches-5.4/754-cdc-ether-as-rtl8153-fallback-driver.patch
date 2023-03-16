@@ -1,0 +1,130 @@
+From 42a54e45430d9e8c3423e2581d0cb16e583b6074 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 16 Mar 2023 15:11:16 +0800
+Subject: [PATCH] cdc_ether: as rtl8153 fallback driver
+
+---
+ drivers/net/usb/cdc_ether.c | 107 ------------------------------------
+ 1 file changed, 107 deletions(-)
+
+diff --git a/drivers/net/usb/cdc_ether.c b/drivers/net/usb/cdc_ether.c
+index 251396f84..69ea006b8 100644
+--- a/drivers/net/usb/cdc_ether.c
++++ b/drivers/net/usb/cdc_ether.c
+@@ -740,113 +740,6 @@ static const struct usb_device_id	products[] = {
+ 	.driver_info = 0,
+ },
+ 
+-/* Realtek RTL8153 Based USB 3.0 Ethernet Adapters */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(REALTEK_VENDOR_ID, 0x8153, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Samsung USB Ethernet Adapters */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(SAMSUNG_VENDOR_ID, 0xa101, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-#if IS_ENABLED(CONFIG_USB_RTL8152)
+-/* Linksys USB3GIGV1 Ethernet Adapter */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LINKSYS_VENDOR_ID, 0x0041, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-#endif
+-
+-/* ThinkPad USB-C Dock (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x3062, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* ThinkPad Thunderbolt 3 Dock (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x3069, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Lenovo Thinkpad USB 3.0 Ethernet Adapters (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x7205, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Lenovo USB C to Ethernet Adapter (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x720c, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Lenovo USB-C Travel Hub (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x7214, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Lenovo Powered USB-C Travel Hub (4X90S92381, based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0x721e, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* ThinkPad USB-C Dock Gen 2 (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(LENOVO_VENDOR_ID, 0xa387, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* NVIDIA Tegra USB 3.0 Ethernet Adapters (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(NVIDIA_VENDOR_ID, 0x09ff, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Microsoft Surface 2 dock (based on Realtek RTL8152) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(MICROSOFT_VENDOR_ID, 0x07ab, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Microsoft Surface Ethernet Adapter (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(MICROSOFT_VENDOR_ID, 0x07c6, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* Microsoft Surface Ethernet Adapter (based on Realtek RTL8153B) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(MICROSOFT_VENDOR_ID, 0x0927, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+-/* TP-LINK UE300 USB 3.0 Ethernet Adapters (based on Realtek RTL8153) */
+-{
+-	USB_DEVICE_AND_INTERFACE_INFO(TPLINK_VENDOR_ID, 0x0601, USB_CLASS_COMM,
+-			USB_CDC_SUBCLASS_ETHERNET, USB_CDC_PROTO_NONE),
+-	.driver_info = 0,
+-},
+-
+ /* Aquantia AQtion USB to 5GbE Controller (based on AQC111U) */
+ {
+ 	USB_DEVICE_AND_INTERFACE_INFO(AQUANTIA_VENDOR_ID, 0xc101,
+-- 
+2.31.0
+
