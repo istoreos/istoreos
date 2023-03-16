@@ -29,7 +29,7 @@ $(call Device/rk3568)
   DEVICE_VENDOR := FriendlyARM
   DEVICE_MODEL := NanoPi R5S
   SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyarm,nanopi-r5s
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r5s
 
