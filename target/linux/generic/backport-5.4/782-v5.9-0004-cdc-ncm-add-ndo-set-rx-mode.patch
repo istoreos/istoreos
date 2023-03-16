@@ -1,0 +1,37 @@
+From 0da7e4a985fc2ccdc67aff1ddaa70af51a603e89 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Miguel=20Rodr=C3=ADguez=20P=C3=A9rez?=
+ <miguel@det.uvigo.gal>
+Date: Wed, 15 Jul 2020 20:40:59 +0200
+Subject: [PATCH] net: cdc_ncm: add .ndo_set_rx_mode to cdc_ncm_netdev_ops
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The cdc_ncm driver overrides the net_device_ops structure used by usbnet
+to be able to hook into .ndo_change_mtu. However, the structure was
+missing the .ndo_set_rx_mode field, preventing the driver from
+hooking into usbnet's set_rx_mode. This patch adds the missing callback to
+usbnet_set_rx_mode in net_device_ops.
+
+Signed-off-by: Miguel Rodríguez Pérez <miguel@det.uvigo.gal>
+Signed-off-by: Bjørn Mork <bjorn@mork.no>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/usb/cdc_ncm.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/net/usb/cdc_ncm.c b/drivers/net/usb/cdc_ncm.c
+index 1c9a1b94f..983a91b02 100644
+--- a/drivers/net/usb/cdc_ncm.c
++++ b/drivers/net/usb/cdc_ncm.c
+@@ -761,6 +761,7 @@ static const struct net_device_ops cdc_ncm_netdev_ops = {
+ 	.ndo_stop	     = usbnet_stop,
+ 	.ndo_start_xmit	     = usbnet_start_xmit,
+ 	.ndo_tx_timeout	     = usbnet_tx_timeout,
++	.ndo_set_rx_mode     = usbnet_set_rx_mode,
+ 	.ndo_get_stats64     = usbnet_get_stats64,
+ 	.ndo_change_mtu	     = cdc_ncm_change_mtu,
+ 	.ndo_set_mac_address = eth_mac_addr,
+-- 
+2.31.0
+

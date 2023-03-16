@@ -1,0 +1,51 @@
+From b635f33a8bc91274be85b574b807c0321101d047 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Bj=C3=B8rn=20Mork?= <bjorn@mork.no>
+Date: Wed, 15 Jul 2020 20:40:58 +0200
+Subject: [PATCH] net: usbnet: export usbnet_set_rx_mode()
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This function can be reused by other usbnet minidrivers.
+
+Signed-off-by: Bjørn Mork <bjorn@mork.no>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/usb/usbnet.c   | 3 ++-
+ include/linux/usb/usbnet.h | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/usb/usbnet.c b/drivers/net/usb/usbnet.c
+index 414a9ebf5..b3500d5ef 100644
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
+@@ -1111,12 +1111,13 @@ static void __handle_link_change(struct usbnet *dev)
+ 	clear_bit(EVENT_LINK_CHANGE, &dev->flags);
+ }
+ 
+-static void usbnet_set_rx_mode(struct net_device *net)
++void usbnet_set_rx_mode(struct net_device *net)
+ {
+ 	struct usbnet		*dev = netdev_priv(net);
+ 
+ 	usbnet_defer_kevent(dev, EVENT_SET_RX_MODE);
+ }
++EXPORT_SYMBOL_GPL(usbnet_set_rx_mode);
+ 
+ static void __handle_set_rx_mode(struct usbnet *dev)
+ {
+diff --git a/include/linux/usb/usbnet.h b/include/linux/usb/usbnet.h
+index dc7b69248..7921433d1 100644
+--- a/include/linux/usb/usbnet.h
++++ b/include/linux/usb/usbnet.h
+@@ -276,6 +276,7 @@ extern int usbnet_set_link_ksettings(struct net_device *net,
+ extern u32 usbnet_get_link(struct net_device *net);
+ extern u32 usbnet_get_msglevel(struct net_device *);
+ extern void usbnet_set_msglevel(struct net_device *, u32);
++extern void usbnet_set_rx_mode(struct net_device *net);
+ extern void usbnet_get_drvinfo(struct net_device *, struct ethtool_drvinfo *);
+ extern int usbnet_nway_reset(struct net_device *net);
+ 
+-- 
+2.31.0
+

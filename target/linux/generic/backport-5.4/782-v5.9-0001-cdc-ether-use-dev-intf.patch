@@ -1,0 +1,47 @@
+From f7c6b17c9330c3362b5c90f19aeda90221fbd4a6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Miguel=20Rodr=C3=ADguez=20P=C3=A9rez?=
+ <miguel@det.uvigo.gal>
+Date: Wed, 15 Jul 2020 20:40:56 +0200
+Subject: [PATCH] net: cdc_ether: use dev->intf to get interface information
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+usbnet_cdc_update_filter was getting the interface number from the
+usb_interface struct in cdc_state->control. However, cdc_ncm does
+not initialize that structure in its bind function, but uses
+cdc_ncm_ctx instead. Getting intf directly from struct usbnet solves
+the problem.
+
+Signed-off-by: Miguel Rodríguez Pérez <miguel@det.uvigo.gal>
+Signed-off-by: Bjørn Mork <bjorn@mork.no>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/usb/cdc_ether.c | 4 +---
+ 1 file changed, 1 insertion(+), 3 deletions(-)
+
+diff --git a/drivers/net/usb/cdc_ether.c b/drivers/net/usb/cdc_ether.c
+index eee402a59..0ba1c7b2c 100644
+--- a/drivers/net/usb/cdc_ether.c
++++ b/drivers/net/usb/cdc_ether.c
+@@ -65,8 +65,6 @@ static const u8 mbm_guid[16] = {
+ 
+ static void usbnet_cdc_update_filter(struct usbnet *dev)
+ {
+-	struct cdc_state	*info = (void *) &dev->data;
+-	struct usb_interface	*intf = info->control;
+ 	struct net_device	*net = dev->net;
+ 
+ 	u16 cdc_filter = USB_CDC_PACKET_TYPE_DIRECTED
+@@ -86,7 +84,7 @@ static void usbnet_cdc_update_filter(struct usbnet *dev)
+ 			USB_CDC_SET_ETHERNET_PACKET_FILTER,
+ 			USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+ 			cdc_filter,
+-			intf->cur_altsetting->desc.bInterfaceNumber,
++			dev->intf->cur_altsetting->desc.bInterfaceNumber,
+ 			NULL,
+ 			0,
+ 			USB_CTRL_SET_TIMEOUT
+-- 
+2.31.0
+

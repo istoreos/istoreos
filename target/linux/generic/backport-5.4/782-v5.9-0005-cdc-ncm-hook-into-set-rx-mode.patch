@@ -1,0 +1,52 @@
+From 1e033efbccb3b8422df5a20db211ac32985e7190 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Miguel=20Rodr=C3=ADguez=20P=C3=A9rez?=
+ <miguel@det.uvigo.gal>
+Date: Wed, 15 Jul 2020 20:41:00 +0200
+Subject: [PATCH] net: cdc_ncm: hook into set_rx_mode to admit multicast
+ traffic
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+We set set_rx_mode to usbnet_cdc_update_filter provided
+by cdc_ether that simply admits all multicast traffic
+if there is more than one multicast filter configured.
+
+Signed-off-by: Miguel Rodríguez Pérez <miguel@det.uvigo.gal>
+Signed-off-by: Bjørn Mork <bjorn@mork.no>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/usb/cdc_ncm.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/net/usb/cdc_ncm.c b/drivers/net/usb/cdc_ncm.c
+index 983a91b02..4961e9eca 100644
+--- a/drivers/net/usb/cdc_ncm.c
++++ b/drivers/net/usb/cdc_ncm.c
+@@ -1672,6 +1672,7 @@ static const struct driver_info cdc_ncm_info = {
+ 	.status = cdc_ncm_status,
+ 	.rx_fixup = cdc_ncm_rx_fixup,
+ 	.tx_fixup = cdc_ncm_tx_fixup,
++	.set_rx_mode = usbnet_cdc_update_filter,
+ };
+ 
+ /* Same as cdc_ncm_info, but with FLAG_WWAN */
+@@ -1685,6 +1686,7 @@ static const struct driver_info wwan_info = {
+ 	.status = cdc_ncm_status,
+ 	.rx_fixup = cdc_ncm_rx_fixup,
+ 	.tx_fixup = cdc_ncm_tx_fixup,
++	.set_rx_mode = usbnet_cdc_update_filter,
+ };
+ 
+ /* Same as wwan_info, but with FLAG_NOARP  */
+@@ -1698,6 +1700,7 @@ static const struct driver_info wwan_noarp_info = {
+ 	.status = cdc_ncm_status,
+ 	.rx_fixup = cdc_ncm_rx_fixup,
+ 	.tx_fixup = cdc_ncm_tx_fixup,
++	.set_rx_mode = usbnet_cdc_update_filter,
+ };
+ 
+ static const struct usb_device_id cdc_devs[] = {
+-- 
+2.31.0
+

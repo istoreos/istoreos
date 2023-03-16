@@ -1,0 +1,30 @@
+From 3232773edafa76c65109948024e70531846fa8ae Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 16 Mar 2023 12:08:20 +0800
+Subject: [PATCH] usbnet: support get speed
+
+---
+ drivers/net/usb/usbnet.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/usb/usbnet.c b/drivers/net/usb/usbnet.c
+index b8b9df82f..414a9ebf5 100644
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
+@@ -952,8 +952,11 @@ int usbnet_get_link_ksettings(struct net_device *net,
+ {
+ 	struct usbnet *dev = netdev_priv(net);
+ 
+-	if (!dev->mii.mdio_read)
+-		return -EOPNOTSUPP;
++	if (!dev->mii.mdio_read) {
++		cmd->base.speed = dev->tx_speed/1000000U;
++		cmd->base.duplex = DUPLEX_FULL;
++		return 0;
++	}
+ 
+ 	mii_ethtool_get_link_ksettings(&dev->mii, cmd);
+ 
+-- 
+2.31.0
+

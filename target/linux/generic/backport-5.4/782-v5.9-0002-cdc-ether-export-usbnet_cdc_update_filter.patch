@@ -1,0 +1,56 @@
+From dab43f02d394275ac9f5bde9800ff58863c4f18f Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Miguel=20Rodr=C3=ADguez=20P=C3=A9rez?=
+ <miguel@det.uvigo.gal>
+Date: Wed, 15 Jul 2020 20:40:57 +0200
+Subject: [PATCH] net: cdc_ether: export usbnet_cdc_update_filter
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This makes the function available to other drivers, like cdc_ncm.
+
+Signed-off-by: Miguel Rodríguez Pérez <miguel@det.uvigo.gal>
+Acked-by: Oliver Neukum <oneukum@suse.com>
+Signed-off-by: Bjørn Mork <bjorn@mork.no>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/usb/cdc_ether.c | 3 ++-
+ include/linux/usb/usbnet.h  | 1 +
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/usb/cdc_ether.c b/drivers/net/usb/cdc_ether.c
+index 0ba1c7b2c..251396f84 100644
+--- a/drivers/net/usb/cdc_ether.c
++++ b/drivers/net/usb/cdc_ether.c
+@@ -63,7 +63,7 @@ static const u8 mbm_guid[16] = {
+ 	0xa6, 0x07, 0xc0, 0xff, 0xcb, 0x7e, 0x39, 0x2a,
+ };
+ 
+-static void usbnet_cdc_update_filter(struct usbnet *dev)
++void usbnet_cdc_update_filter(struct usbnet *dev)
+ {
+ 	struct net_device	*net = dev->net;
+ 
+@@ -90,6 +90,7 @@ static void usbnet_cdc_update_filter(struct usbnet *dev)
+ 			USB_CTRL_SET_TIMEOUT
+ 		);
+ }
++EXPORT_SYMBOL_GPL(usbnet_cdc_update_filter);
+ 
+ /* probes control interface, claims data interface, collects the bulk
+  * endpoints, activates data interface (if needed), maybe sets MTU.
+diff --git a/include/linux/usb/usbnet.h b/include/linux/usb/usbnet.h
+index fc6ed1311..dc7b69248 100644
+--- a/include/linux/usb/usbnet.h
++++ b/include/linux/usb/usbnet.h
+@@ -209,6 +209,7 @@ struct cdc_state {
+ 	struct usb_interface		*data;
+ };
+ 
++extern void usbnet_cdc_update_filter(struct usbnet *dev);
+ extern int usbnet_generic_cdc_bind(struct usbnet *, struct usb_interface *);
+ extern int usbnet_ether_cdc_bind(struct usbnet *dev, struct usb_interface *intf);
+ extern int usbnet_cdc_bind(struct usbnet *, struct usb_interface *);
+-- 
+2.31.0
+
