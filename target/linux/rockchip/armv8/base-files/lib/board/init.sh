@@ -31,6 +31,14 @@ wait_for_iface() {
     done
 }
 
+board_fixup_broken_usb() {
+    case $(board_name) in
+    friendlyarm,nanopi-r2s)
+        ethtool -K eth1 tx off
+        ;;
+    esac
+}
+
 board_set_iface_smp_affinity() {
     case $(board_name) in
     friendlyarm,nanopi-r2s)
@@ -48,5 +56,7 @@ board_set_iface_smp_affinity() {
 board_name | grep -qF 'friendlyarm,nanopi-r' || exit 0
 
 wait_for_iface eth1
+
+board_fixup_broken_usb
 
 board_set_iface_smp_affinity
