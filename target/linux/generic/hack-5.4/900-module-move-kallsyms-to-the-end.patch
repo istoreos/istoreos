@@ -3,10 +3,14 @@ From: jjm2473 <1129525450@qq.com>
 Date: Thu, 16 Feb 2023 12:18:30 +0800
 Subject: [PATCH] header: linux/module.h: move kallsyms to the end of struct
 
+kernel: compatible modules without kallsyms on KALLSYMS enabled kernel
+
 for better compatible
 ---
  include/linux/module.h | 24 ++++++++++++------------
- 1 file changed, 12 insertions(+), 12 deletions(-)
+ kernel/module-internal.h |  1 +
+ kernel/module.c          | 37 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 50 insertions(+), 12 deletions(-)
 
 diff --git a/include/linux/module.h b/include/linux/module.h
 index 3a21e15fd..ff18fa2b3 100644
@@ -50,6 +54,94 @@ index 3a21e15fd..ff18fa2b3 100644
  } ____cacheline_aligned __randomize_layout;
  #ifndef MODULE_ARCH_INIT
  #define MODULE_ARCH_INIT {}
+diff --git a/kernel/module-internal.h b/kernel/module-internal.h
+index 33783abc3..228afa415 100644
+--- a/kernel/module-internal.h
++++ b/kernel/module-internal.h
+@@ -22,6 +22,7 @@ struct load_info {
+ 	bool sig_ok;
+ #ifdef CONFIG_KALLSYMS
+ 	unsigned long mod_kallsyms_init_off;
++	unsigned long mod_no_kallsyms_pat;
+ #endif
+ 	struct {
+ 		unsigned int sym, str, mod, vers, info, pcpu;
+diff --git a/kernel/module.c b/kernel/module.c
+index 47ad55318..b1b1af389 100644
+--- a/kernel/module.c
++++ b/kernel/module.c
+@@ -2533,6 +2533,12 @@ static void layout_sections(struct module *mod, struct load_info *info)
+ 			break;
+ 		}
+ 	}
++#ifdef CONFIG_KALLSYMS
++	if (info->mod_no_kallsyms_pat) {
++		info->mod_no_kallsyms_pat = mod->core_layout.size;
++		mod->core_layout.size = debug_align(sizeof(struct module) + mod->core_layout.size);
++	}
++#endif
+ 
+ 	pr_debug("Init section allocation order:\n");
+ 	for (m = 0; m < ARRAY_SIZE(masks); ++m) {
+@@ -3164,6 +3170,10 @@ static int copy_module_from_user(const void __user *umod, unsigned long len,
+ static void free_copy(struct load_info *info)
+ {
+ 	vfree(info->hdr);
++#ifdef CONFIG_KALLSYMS
++	if (info->mod_no_kallsyms_pat)
++		vfree(info->mod);
++#endif
+ }
+ 
+ static int rewrite_section_headers(struct load_info *info, int flags)
+@@ -3205,6 +3215,7 @@ static int rewrite_section_headers(struct load_info *info, int flags)
+ static int setup_load_info(struct load_info *info, int flags)
+ {
+ 	unsigned int i;
++	void *ptr;
+ 
+ 	/* Try to find a name early so we can log errors with a module name */
+ 	info->index.info = find_sec(info, ".modinfo");
+@@ -3244,6 +3255,24 @@ static int setup_load_info(struct load_info *info, int flags)
+ 	if (!info->name)
+ 		info->name = info->mod->name;
+ 
++#ifdef CONFIG_KALLSYMS
++	info->mod_no_kallsyms_pat = 0;
++	if (sizeof(struct module) > info->sechdrs[info->index.mod].sh_size) {
++		pr_warn("%s: module has no kallsyms\n",
++			info->name);
++		ptr = info->mod;
++		info->mod = __vmalloc(sizeof(struct module), GFP_KERNEL | __GFP_NOWARN, PAGE_KERNEL);
++		if (!info->mod) {
++			pr_err("%s: alloc module copy failed\n",
++						info->name);
++			return -ENOMEM;
++		}
++		info->mod_no_kallsyms_pat = 1;
++		memset(info->mod, 0, sizeof(struct module));
++		memcpy(info->mod, ptr, info->sechdrs[info->index.mod].sh_size);
++	}
++#endif
++
+ 	if (flags & MODULE_INIT_IGNORE_MODVERSIONS)
+ 		info->index.vers = 0; /* Pretend no __versions section! */
+ 	else
+@@ -3455,6 +3484,14 @@ static int move_module(struct module *mod, struct load_info *info)
+ 
+ 		if (shdr->sh_type != SHT_NOBITS)
+ 			memcpy(dest, (void *)shdr->sh_addr, shdr->sh_size);
++
++#ifdef CONFIG_KALLSYMS
++		if (info->mod_no_kallsyms_pat && i == info->index.mod) {
++			dest = mod->core_layout.base + info->mod_no_kallsyms_pat;
++			memcpy(dest, mod, sizeof(struct module));
++		}
++#endif
++
+ 		/* Update sh_addr to point to copy in image. */
+ 		shdr->sh_addr = (unsigned long)dest;
+ 		pr_debug("\t0x%lx %s\n",
 -- 
 2.31.0
 
