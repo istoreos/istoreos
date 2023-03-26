@@ -20,7 +20,7 @@ sha256() {
 }
 
 fcurl() {
-    curl --fail --show-error "$@"
+    curl -L --fail --show-error "$@"
 }
 
 download() {
@@ -41,7 +41,7 @@ download() {
             rm -f /tmp/firmware.img
         fi
     fi
-    curl --fail --show-error --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
+    fcurl --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
     local pid="$!"
     echo "$pid" > /var/run/ota/download.pid
     if wait $pid; then

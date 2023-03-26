@@ -7,29 +7,27 @@
 <%
 	local fs = require "nixio.fs"
 -%>
+<div class="cbi-map" id="cbi-ota">
+	<style>
+	#cbi-ota .state-ctl .state {
+		display: none !important;
+		padding: 0 !important;
+		margin: 0 !important;
+		border: 0 !important;
+	}
 
-<h2 name="content"><%:OTA%></h2>
+	#cbi-ota .state-ctl.state-ctl-unchecked .state.state-unchecked,
+	#cbi-ota .state-ctl.state-ctl-checked .state.state-checked,
+	#cbi-ota .state-ctl.state-ctl-downloading .state.state-downloading,
+	#cbi-ota .state-ctl.state-ctl-downloaded .state.state-downloaded
+	{
+		display: inherit !important;
+	}
 
-<style>
-.state-ctl .state {
-	display: none;
-	padding: 0 !important;
-	margin: 0 !important;
-	border: 0 !important;
-}
+	</style>
 
-.state-ctl.state-ctl-unchecked .state.state-unchecked,
-.state-ctl.state-ctl-checked .state.state-checked,
-.state-ctl.state-ctl-downloading .state.state-downloading,
-.state-ctl.state-ctl-downloaded .state.state-downloaded
-{
-	display: inherit;
-}
-
-</style>
-<fieldset class="cbi-section">
-	<fieldset class="cbi-section state-ctl state-ctl-unchecked">
-		<legend><%:Upgrade firmware On the Air%></legend>
+	<h2 name="content"><%:OTA%></h2>
+	<div class="cbi-section state-ctl state-ctl-unchecked">
 		<div class="cbi-section-descr"><%:Check and upgrade firmware from the Internet%></div>
 		<% if image_invalid then %>
 			<div class="cbi-section-error"><%:The image file does not contain a supported format. Maybe try again later.%></div>
@@ -40,7 +38,7 @@
 					<div class="cbi-value">
 						<label class="cbi-value-title" id="check_result"></label>
 						<div class="cbi-value-field">
-							<input class="cbi-button cbi-button-reload" type="button" name="check" value="<%:Check update%>" />
+							<button type="button" class="cbi-button cbi-button-reload" name="check"><%:Check update%></button>
 							<div class="cbi-value-description">Step 1/3: <%:Check update%></div>
 						</div>
 					</div>
@@ -51,7 +49,7 @@
 					<div class="cbi-value">
 						<label class="cbi-value-title" id="download_result"><%:Found new firmware%></label>
 						<div class="cbi-value-field">
-							<input class="cbi-button cbi-button-apply" type="button" name="download" value="<%:Download firmware%>" />
+							<button type="button" class="cbi-button cbi-button-apply" name="download"><%:Download firmware%></button>
 							<div class="cbi-value-description">Step 2/3: <%:Download firmware%></div>
 						</div>
 					</div>
@@ -62,7 +60,7 @@
 					<div class="cbi-value">
 						<label class="cbi-value-title" id="download_progress">0%</label>
 						<div class="cbi-value-field">
-							<input class="cbi-button cbi-button-reset" type="button" name="cancel" value="<%:Cancel download%>" />
+							<button type="button" class="cbi-button cbi-button-reset" name="cancel"><%:Cancel download%></button>
 							<div class="cbi-value-description">Step 2/3: <%:Download firmware%></div>
 						</div>
 					</div>
@@ -94,7 +92,7 @@
 					<div class="cbi-value cbi-value-last">
 						<label class="cbi-value-title"><%:Firmware downloaded%></label>
 						<div class="cbi-value-field">
-							<input type="submit" class="cbi-button cbi-input-apply" value="<%:Flash image%>" />
+							<button type="submit" class="cbi-button cbi-input-apply"><%:Flash image%></button>
 							<div class="cbi-value-description">Step 3/3: <%:Flash image%></div>
 						</div>
 					</div>
@@ -113,14 +111,14 @@
 				<div id="history_log"></div>
 			</div>
 		</div>
-	</fieldset>
+	</div>
 
 	<script>
 		(function(){
 			var csrfToken = "<%=token%>";
-			var check = document.querySelector('input[name="check"]');
-			var download = document.querySelector('input[name="download"]');
-			var cancel = document.querySelector('input[name="cancel"]');
+			var check = document.querySelector('button[name="check"]');
+			var download = document.querySelector('button[name="download"]');
+			var cancel = document.querySelector('button[name="cancel"]');
 			var state_ctl = document.querySelector('.state-ctl');
 			var check_result = document.querySelector('#check_result');
 			var download_result = document.querySelector('#download_result');
@@ -235,7 +233,5 @@
 			};
 		})();
 	</script>
-
-</fieldset>
-
+</div>
 <%+footer%>
