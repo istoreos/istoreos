@@ -7,7 +7,7 @@ export_ota_url() {
 	friendlyarm,nanopi-r2s|\
 	friendlyarm,nanopi-r4s|\
 	friendlyarm,nanopi-r4se)
-		export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/${board##*-}"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*-}"
 		;;
 	*)
 		return 1

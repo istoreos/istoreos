@@ -6,7 +6,7 @@ export_ota_url() {
     local model="$(cat /tmp/sysinfo/model)"
     case "$model" in
     ARS2)
-        export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/ars2"
+        export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/ars2"
         ;;
     *)
         return 1

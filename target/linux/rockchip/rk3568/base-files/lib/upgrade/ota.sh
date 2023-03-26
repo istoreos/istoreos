@@ -6,13 +6,13 @@ export_ota_url() {
 	case "$board" in
 	fastrhino,r66s|\
 	fastrhino,r68s)
-		export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/${board##*,}"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
 		;;
 	friendlyelec,nanopi-r5s)
-		export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/${board##*-}"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*-}"
 		;;
 	firefly,rk3568-roc-pc)
-		export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/station-p2"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/station-p2"
 		;;
 	*)
 		return 1

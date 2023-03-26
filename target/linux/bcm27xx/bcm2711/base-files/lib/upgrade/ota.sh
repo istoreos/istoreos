@@ -7,7 +7,7 @@ export_ota_url() {
 	raspberrypi,400 |\
 	raspberrypi,4-compute-module |\
 	raspberrypi,4-model-b)
-		export -n OTA_URL_BASE="https://fw.koolcenter.com/iStoreOS/rpi4"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/rpi4"
 		;;
 	*)
 		return 1
