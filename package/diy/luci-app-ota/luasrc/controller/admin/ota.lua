@@ -7,6 +7,10 @@ module("luci.controller.admin.ota",package.seeall)
 require "luci.util"
 
 function index()
+  if luci.sys.call("ota >/dev/null 2>&1") ~= 0 then
+    return
+  end
+
   entry({"admin", "system", "ota"}, post_on({ apply = "1" }, "action_ota"), _("OTA"), 69)
   entry({"admin", "system", "ota", "check"}, post("action_check"))
   entry({"admin", "system", "ota", "download"}, post("action_download"))
