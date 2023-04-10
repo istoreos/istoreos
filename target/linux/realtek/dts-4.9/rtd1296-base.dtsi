@@ -221,8 +221,6 @@
 	};
 
 	power-management@0 {
-		/* system-power-controller; //disabled, using g2227 poweroff */
-
 		wakeup-flags = <0x04>; /* only enable gpio wakeup, ref enum _wakeup_flags in rtd129x_suspend.h */
 		/* GPIO Wakeup */
 		wakeup-gpio-enable = /* (0) disable (1) enable */

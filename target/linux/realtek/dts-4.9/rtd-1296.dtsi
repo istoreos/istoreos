@@ -954,7 +954,7 @@
 
 	power-management@0 {
 		compatible = "Realtek,power-management";
-		/*system-power-controller;*/ /* Disable rtk suspend */
+		system-power-controller;
 		reg = <0x98000000 0x1800>,   /* CRT */
 			<0x98006000 0x1000>, /* AIO */
 			<0x98007000 0x1000>, /* ISO */

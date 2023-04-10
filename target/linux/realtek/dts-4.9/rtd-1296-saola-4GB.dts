@@ -195,7 +195,6 @@
 	};
 
 	power-management@0 {
-		/* system-power-controller; */
 
 		wakeup-flags = <0x04>; /* only enable gpio wakeup, ref enum _wakeup_flags in rtd129x_suspend.h */
 		/* GPIO Wakeup */

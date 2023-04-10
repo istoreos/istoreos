@@ -150,10 +150,12 @@
 	};
 
 	dptx@9803D000 {
+		// DisplayPort Transmitter
 		compatible = "Realtek,rtk-dptx";
 		status = "disabled";
 
 		dp_hpd {
+			// Hot-Plug Detection
 			gpios = <&rtk_iso_gpio 7 0 0>; /*HPD, input, default N/A */
 			interrupt-parent = <&rtk_iso_gpio>;
 			interrupts = <7>; /*HPD*/
@@ -231,7 +233,7 @@
 				status = "okay";
 				
 				/* enable pmic poweroff */
-				system-power-controller;
+				// system-power-controller;
 			};
 		};
         };

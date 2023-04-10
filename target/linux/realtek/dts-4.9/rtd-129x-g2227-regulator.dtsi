@@ -11,7 +11,7 @@
 		};
 		poweroff {
 			compatible = "gmt,g22xx-poweroff";
-			system-power-controller;
+			// system-power-controller;
 			status = "disabled";
 		};
 		regulators {
