@@ -1,0 +1,16 @@
+/*
+ * include this file to complete shudown pmic.
+ * user MUST re-plug power supplier for boot again after shutdown, power buttons will not work.
+ */
+/{
+	i2c@0x98007D00 {
+		g2227@12 {
+			poweroff {
+				system-power-controller;
+			};
+		};
+	};
+	power-management@0 {
+		/delete-property/ system-power-controller;
+	};
+};

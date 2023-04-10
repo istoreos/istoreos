@@ -1,3 +1,6 @@
+/*
+ * include this file on boards that only have a single gmac port (without rtd1295-hwnat).
+ */
 /{
     clk-en@9800708c {
 		ignore-unused-clocks = "clk_en_etn_250m", "clk_en_etn_sys";

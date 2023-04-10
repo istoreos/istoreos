@@ -2,6 +2,8 @@
 
 #include "rtd1296-4GB.dtsi"
 
+/include/ "rtd1296-pmic-off.dtsi"
+
 / {
 	model= "ARS2";
 	chosen {
