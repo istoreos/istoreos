@@ -90,6 +90,18 @@ board_set_iface_smp_affinity() {
     friendlyelec,nanopi-r5s)
         set_iface_cpumask 2 eth0
         ;;
+    hinlink,opc-h68k)
+	    set_interface_core 0 "eth0"
+	    set_interface_core 2 "eth1"
+	    set_interface_core 4 "eth2-0"
+	    set_interface_core 4 "eth2-16"
+	    set_interface_core 2 "eth2-18"
+	    set_interface_core 6 "eth3-0"
+	    set_interface_core 6 "eth3-18"
+	    set_interface_core 0 "eth3-16"
+	    /usr/sbin/ethtool -K eth0 tso on sg on tx on
+	    /usr/sbin/ethtool -K eth1 tso on sg on tx on
+        ;;
     esac
 }
 

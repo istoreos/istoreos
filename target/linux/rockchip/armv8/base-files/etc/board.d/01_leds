@@ -18,6 +18,9 @@ friendlyarm,nanopi-r4s)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth1"
 	;;
+hinlink,opc-h69k)
+	ucidef_set_led_netdev "wan" "WAN" "blue:net" "eth0"
+	;;
 esac
 
 board_config_flush
