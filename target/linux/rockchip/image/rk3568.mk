@@ -24,6 +24,15 @@ $(call Device/fastrhino_common)
 endef
 TARGET_DEVICES += fastrhino_r68s
 
+define Device/hinlink_opc-h68k
+$(call Device/rk3568)
+  DEVICE_VENDOR := HINLINK
+  DEVICE_MODEL := OPC-H68K
+  SUPPORTED_DEVICES += hinlink,opc-h68k
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += hinlink_opc-h68k
+
 define Device/friendlyarm_nanopi-r5s
 $(call Device/rk3568)
   DEVICE_VENDOR := FriendlyARM
