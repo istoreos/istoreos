@@ -24,6 +24,15 @@ $(call Device/fastrhino_common)
 endef
 TARGET_DEVICES += fastrhino_r68s
 
+define Device/fastrhino_r6xs
+$(call Device/fastrhino_common)
+  DEVICE_MODEL := R68s/R66s combined
+  SUPPORTED_DEVICES += fastrhino,r66s fastrhino,r68s
+  DEVICE_DTS := rk3568-r66s rk3568-r68s
+  IMAGE/sysupgrade.img.gz := boot-combined | boot-script rk3568-cb | pine64-img | gzip | append-metadata
+endef
+TARGET_DEVICES += fastrhino_r6xs
+
 define Device/hinlink_opc-h68k
 $(call Device/rk3568)
   DEVICE_VENDOR := HINLINK
