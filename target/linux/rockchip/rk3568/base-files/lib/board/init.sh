@@ -74,6 +74,14 @@ board_fixup_iface_name() {
             rename_iface lan2 eth2
         fi
         ;;
+    hinlink,opc-h68k)
+        device="$(get_iface_device eth0)"
+        if [[ "$device" != "fe010000.ethernet" ]]; then
+            rename_iface eth0 wan
+            rename_iface eth1 eth0
+            rename_iface wan eth1
+        fi
+        ;;
     esac
 }
 
