@@ -2,8 +2,7 @@
 # Copyright (C) 2010 Vertical Communications
 
 failsafe_shell() {
-	local console="$(sed -e 's/ /\n/g' /proc/cmdline | grep '^console=' | head -1 | sed -e 's/^console=//' -e 's/,.*//')"
-	[ -n "$console" ] || console=console
+	local console=console
 	[ -c "/dev/$console" ] || return 0
 	while true; do
 		ash --login <"/dev/$console" >"/dev/$console" 2>"/dev/$console"

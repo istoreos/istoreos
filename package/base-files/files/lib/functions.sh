@@ -259,8 +259,12 @@ default_postinst() {
 	local pkgname="$(basename ${1%.*})"
 	local filelist="/usr/lib/opkg/info/${pkgname}.list"
 	local ret=0
+	local ucitrack_before
 
 	add_group_and_user "${pkgname}"
+
+	[ -z "$root" ] && grep -m1 -q -s "^/etc/uci-defaults/" "$filelist" && \
+		ucitrack_before=`md5sum /etc/config/ucitrack 2>/dev/null || echo "empty" | cut -d ' ' -f 1`
 
 	if [ -f "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" ]; then
 		( . "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" )
@@ -281,7 +285,7 @@ default_postinst() {
 			/etc/init.d/sysctl restart
 		fi
 
-		if grep -m1 -q -s "^/etc/uci-defaults/" "$filelist"; then
+		if [ -n "$ucitrack_before" ]; then
 			[ -d /tmp/.uci ] || mkdir -p /tmp/.uci
 			for i in $(grep -s "^/etc/uci-defaults/" "$filelist"); do
 				( [ -f "$i" ] && cd "$(dirname $i)" && . "$i" ) && rm -f "$i"
@@ -289,7 +293,17 @@ default_postinst() {
 			uci commit
 		fi
 
-		rm -f /tmp/luci-indexcache
+		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
+			if grep -m1 -q -s "^/usr/lib/lua/luci/i18n/" "$filelist"; then
+				/etc/init.d/fix_luci_lang boot
+				touch /tmp/luci-i18n-mtime
+			fi
+			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-indexcache.*
+		fi
+
+		if grep -m1 -q -s "^/usr/share/rpcd/acl\\.d/" "$filelist"; then
+			/etc/init.d/rpcd reload
+		fi
 	fi
 
 	local shell="$(command -v bash)"
@@ -303,6 +317,13 @@ default_postinst() {
 			"$i" start
 		fi
 	done
+
+	if [ -n "$ucitrack_before" ]; then
+		local after=`md5sum /etc/config/ucitrack 2>/dev/null || echo "empty" | cut -d ' ' -f 1`
+		if [ "x$after" != "x$ucitrack_before" ]; then
+			/etc/init.d/ucitrack reload
+		fi
+	fi
 
 	return $ret
 }

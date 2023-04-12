@@ -1,0 +1,61 @@
+From b42c52639c744f7fe254323175f8bf2f04d805ec Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Fri, 10 Feb 2023 11:20:13 +0800
+Subject: [PATCH] drivers/base: avoiding devcoredump api striped out
+
+---
+ drivers/base/Kconfig           |  1 +
+ drivers/base/Makefile          |  1 +
+ drivers/base/devcoredump_mod.c | 16 ++++++++++++++++
+ 3 files changed, 18 insertions(+)
+ create mode 100644 drivers/base/devcoredump_mod.c
+
+diff --git a/drivers/base/Kconfig b/drivers/base/Kconfig
+index 972b64fc9..2e0305c1d 100644
+--- a/drivers/base/Kconfig
++++ b/drivers/base/Kconfig
+@@ -91,6 +91,7 @@ source "drivers/base/firmware_loader/Kconfig"
+ 
+ config WANT_DEV_COREDUMP
+ 	bool
++	default y
+ 	help
+ 	  Drivers should "select" this option if they desire to use the
+ 	  device coredump mechanism.
+diff --git a/drivers/base/Makefile b/drivers/base/Makefile
+index 157452080..8e593cdb5 100644
+--- a/drivers/base/Makefile
++++ b/drivers/base/Makefile
+@@ -21,6 +21,7 @@ obj-$(CONFIG_REGMAP)	+= regmap/
+ obj-$(CONFIG_SOC_BUS) += soc.o
+ obj-$(CONFIG_PINCTRL) += pinctrl.o
+ obj-$(CONFIG_DEV_COREDUMP) += devcoredump.o
++obj-$(CONFIG_DEV_COREDUMP) += devcoredump_mod.o
+ obj-$(CONFIG_GENERIC_MSI_IRQ_DOMAIN) += platform-msi.o
+ obj-$(CONFIG_GENERIC_ARCH_TOPOLOGY) += arch_topology.o
+ 
+diff --git a/drivers/base/devcoredump_mod.c b/drivers/base/devcoredump_mod.c
+new file mode 100644
+index 000000000..2276834f9
+--- /dev/null
++++ b/drivers/base/devcoredump_mod.c
+@@ -0,0 +1,16 @@
++// SPDX-License-Identifier: GPL-2.0
++#include <linux/module.h>
++#include <linux/devcoredump.h>
++
++static int
++__init devcoredump_mod_init(void)
++{
++	printk("devcoredump api: %p %p %p\n", dev_coredumpv, dev_coredumpm, dev_coredumpsg);
++	return 0;
++}
++
++module_init(devcoredump_mod_init);
++
++MODULE_LICENSE("GPL");
++MODULE_DESCRIPTION("Simple module for avoiding devcoredump api striped out");
++MODULE_AUTHOR("JJm2473");
+-- 
+2.31.0
+

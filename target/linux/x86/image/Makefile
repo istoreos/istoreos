@@ -21,11 +21,10 @@ GRUB_SERIAL:=$(call qstrip,$(CONFIG_GRUB_SERIAL))
 ifneq ($(GRUB_SERIAL),)
   GRUB_CONSOLE_CMDLINE += console=$(GRUB_SERIAL),$(CONFIG_GRUB_BAUDRATE)n8$(if $(CONFIG_GRUB_FLOWCONTROL),r,)
   GRUB_SERIAL_CONFIG := serial --unit=0 --speed=$(CONFIG_GRUB_BAUDRATE) --word=8 --parity=no --stop=1 --rtscts=$(if $(CONFIG_GRUB_FLOWCONTROL),on,off)
-  GRUB_TERMINALS += serial
 endif
 
 ifneq ($(GRUB_TERMINALS),)
-  GRUB_TERMINAL_CONFIG := terminal_input $(GRUB_TERMINALS); terminal_output $(GRUB_TERMINALS)
+  GRUB_TERMINAL_CONFIG := terminal_input $(GRUB_TERMINALS); terminal_output $(GRUB_TERMINALS) $(if $(GRUB_SERIAL),serial,)
 endif
 
 ROOTPART:=$(call qstrip,$(CONFIG_TARGET_ROOTFS_PARTNAME))
@@ -48,7 +47,8 @@ define Build/combined
 		$(INSTALL_DIR) $@.boot/efi/boot
 		$(CP) $(STAGING_DIR_IMAGE)/grub2/boot$(if $(CONFIG_x86_64),x64,ia32).efi $@.boot/efi/boot/
 	)
-	PADDING="1" SIGNATURE="$(IMG_PART_SIGNATURE)" \
+	SIGNATURE="$(IMG_PART_SIGNATURE)" \
+		$(if $(filter $(1),pad),PADDING="1") \
 		$(if $(filter $(1),efi),GUID="$(IMG_PART_DISKGUID)") $(SCRIPT_DIR)/gen_image_generic.sh \
 		$@ \
 		$(CONFIG_TARGET_KERNEL_PARTSIZE) $@.boot \
@@ -64,6 +64,7 @@ define Build/grub-config
 		-e 's#@TERMINAL_CONFIG@#$(strip $(GRUB_TERMINAL_CONFIG))#g' \
 		-e 's#@ROOTPART@#root=$(ROOTPART) rootwait#g' \
 		-e 's#@GPT_ROOTPART@#root=$(GPT_ROOTPART) rootwait#g' \
+		-e 's#@BOOTOPTS@#$(BOOTOPTS)#g' \
 		-e 's#@CMDLINE@#$(BOOTOPTS) $(GRUB_CONSOLE_CMDLINE)#g' \
 		-e 's#@TIMEOUT@#$(GRUB_TIMEOUT)#g' \
 		-e 's#@TITLE@#$(GRUB_TITLE)#g' \
@@ -105,19 +106,19 @@ endef
 DEVICE_VARS += GRUB2_VARIANT
 define Device/Default
   ARTIFACT/image.iso := grub-config iso | iso
-  IMAGE/combined.img := grub-config pc | combined | grub-install | append-metadata
-  IMAGE/combined.img.gz := grub-config pc | combined | grub-install | gzip | append-metadata
-  IMAGE/combined.vdi := grub-config pc | combined | grub-install | qemu-image vdi
-  IMAGE/combined.vmdk := grub-config pc | combined | grub-install | qemu-image vmdk
-  IMAGE/combined.vhdx := grub-config pc | combined | grub-install | qemu-image vhdx -o subformat=dynamic
+  IMAGE/combined.img := grub-config pc | combined pad | grub-install | append-metadata
+  IMAGE/combined.img.gz := grub-config pc | combined pad | grub-install | gzip | append-metadata
+  IMAGE/combined.vdi := grub-config pc | combined pad | grub-install | qemu-image vdi
+  IMAGE/combined.vmdk := grub-config pc | combined pad | grub-install | qemu-image vmdk
+  IMAGE/combined.vhdx := grub-config pc | combined pad | grub-install | qemu-image vhdx -o subformat=dynamic
   IMAGE/rootfs.img := append-rootfs | pad-to $(ROOTFS_PARTSIZE)
   IMAGE/rootfs.img.gz := append-rootfs | pad-to $(ROOTFS_PARTSIZE) | gzip
   ARTIFACT/image-efi.iso := grub-config iso | iso efi
-  IMAGE/combined-efi.img := grub-config efi | combined efi | grub-install efi | append-metadata
-  IMAGE/combined-efi.img.gz := grub-config efi | combined efi | grub-install efi | gzip | append-metadata
-  IMAGE/combined-efi.vdi := grub-config efi | combined efi | grub-install efi | qemu-image vdi
-  IMAGE/combined-efi.vmdk := grub-config efi | combined efi | grub-install efi | qemu-image vmdk
-  IMAGE/combined-efi.vhdx := grub-config efi | combined efi | grub-install efi | qemu-image vhdx -o subformat=dynamic
+  IMAGE/combined-efi.img := grub-config efi | combined efi pad | grub-install efi | append-metadata
+  IMAGE/combined-efi.img.gz := grub-config efi | combined efi pad | grub-install efi | gzip | append-metadata
+  IMAGE/combined-efi.vdi := grub-config efi | combined efi pad | grub-install efi | qemu-image vdi
+  IMAGE/combined-efi.vmdk := grub-config efi | combined efi pad | grub-install efi | qemu-image vmdk
+  IMAGE/combined-efi.vhdx := grub-config efi | combined efi pad | grub-install efi | qemu-image vhdx -o subformat=dynamic
   ifeq ($(CONFIG_TARGET_IMAGES_GZIP),y)
     IMAGES-y := rootfs.img.gz
     IMAGES-$$(CONFIG_GRUB_IMAGES) += combined.img.gz

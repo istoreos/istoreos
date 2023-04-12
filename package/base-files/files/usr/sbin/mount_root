@@ -1,0 +1,354 @@
+#!/bin/sh
+# Copyright (C) 2010 OpenWrt.org
+# Copyright (C) 2020-2023 jjm2473@gmail.com
+
+DEFAULT_OVERLAY_FS="ext4"
+OVERLAY_LABEL="etc"
+
+OVERLAY_FS=${DEFAULT_OVERLAY_FS}
+OVERLAY_DEV=
+
+log() {
+	echo "<1>mount_root: $1" >/dev/kmsg
+}
+
+inlog() {
+	$@ >/dev/kmsg 2>&1
+}
+
+. /lib/functions/istoreos-boot.sh
+
+validate_overlay_partition()
+{
+	log "- mount overlayfs -"
+
+	# Check device existence
+	[ ! -e "$OVERLAY_DEV" ] && \
+		log "overlay: $OVERLAY_DEV not found" && return 1
+
+	[ -n "$FSTYPE" ] && return 0
+
+	# get filesystem
+	if dd if="$OVERLAY_DEV" bs=5 count=1 2>/dev/null | grep -qF RESET; then
+		FSTYPE=RESET
+		log "overlay: $OVERLAY_DEV marked as RESET, format later"
+		return 0
+	elif blkid -o device -t LABEL=$OVERLAY_LABEL "$OVERLAY_DEV" >/dev/null; then
+		FSTYPE=`blkid -o value -s TYPE $OVERLAY_DEV`
+	else
+		FSTYPE=RESET
+		log "overlay: $OVERLAY_DEV not labeled, format later"
+		return 0
+	fi
+
+	if [ -z "$FSTYPE" ]; then
+		log "overlay: no valid filesystem"
+	else
+		log "overlay: filesystem $FSTYPE found"
+	fi
+}
+
+format_overlay_partition()
+{
+	local RET
+	[ "$FSTYPE" = "$OVERLAY_FS" ] && return 0
+
+	log "overlay: try to format $OVERLAY_DEV as $OVERLAY_FS partition"
+
+	case "$OVERLAY_FS" in
+		ext4)
+			mkfs.ext4 -q -j -FF -L $OVERLAY_LABEL "$OVERLAY_DEV"
+			RET=$?
+			[ $RET -ne 0 ] || tune2fs -o '^user_xattr,^acl' -r 1024 "$OVERLAY_DEV"
+			;;
+		*)
+			log "overlay: unhandled fs type : $OVERLAY_FS"
+			RET=1
+			;;
+	esac
+
+	if [ $RET -ne 0 ]; then
+		log "overlay: format command failed ret: $RET"
+	else
+		echo 3 > /proc/sys/vm/drop_caches
+		FSTYPE=$OVERLAY_FS
+	fi
+
+	return $RET
+}
+
+check_overlay_partition()
+{
+	case "$FSTYPE" in
+		ext4)
+			fsck.ext4 -y "$OVERLAY_DEV" >/dev/null
+			sync
+			resize2fs "$OVERLAY_DEV"
+			sync
+			;;
+	esac
+}
+
+mount_overlay_partition()
+{
+	local RET
+	mount -t $OVERLAY_FS "$OVERLAY_DEV" /overlay
+	RET=$?
+
+	[ $RET -ne 0 ] && \
+		log "overlay: failed to mount $OVERLAY_DEV as $OVERLAY_FS partition ret: $RET" && return $RET
+
+	log 'overlay: successfully mounted'
+}
+
+OVERLAYFS_XATTR=""
+is_overlayfs_use_xattr() {
+	# only linux 4.13 or above
+	[ -z "$OVERLAYFS_XATTR" ] && OVERLAYFS_XATTR=$([ "0$((`uname -r | cut -d. -f1-2 | sed 's/\./ * 100 + /'`))" -ge 413 ] && echo 1 || echo 0)
+	[ "$OVERLAYFS_XATTR" = "1" ]
+}
+
+ROOTFS_UUID=""
+rootfs_uuid() {
+	if [ -z "$ROOTFS_UUID" ]; then
+		ROOTFS_UUID=`block info | grep -Fw 'MOUNT="/"' | sed -E 's/.* UUID="([^"]+)" .*/\1/'`
+		[ -z "$ROOTFS_UUID" ] && ROOTFS_UUID="UNKNOWN"
+	fi
+	echo "$ROOTFS_UUID"
+}
+
+update_overlay_lower_uuid() {
+	local realuuid=`rootfs_uuid`
+	local lastuuid="NULL"
+	if [ -f "$1/.rootfs-uuid" ]; then
+		lastuuid=`cat "$1/.rootfs-uuid"`
+	fi
+	if [ "$realuuid" != "$lastuuid" ]; then
+		echo "$realuuid" >"$1/.rootfs-uuid"
+		return 0
+	fi
+	return 1
+}
+
+clean_overlayfs_origin() {
+	local line
+	cd "$1"
+	getfattr -R -P -h --match='trusted.overlay.origin' . 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+		line="$REPLY"
+		setfattr -x "trusted.overlay.origin" -h "$line" 2>/dev/null
+	done
+	cd - >/dev/null 2>&1
+}
+
+clean_overlayfs_redundant_whiteout_marker()
+{
+	local line
+	cd "$1"
+	find upper ! -path 'upper/opt/*' -type c -perm 0 -user 0 -group 0 | sed 's#^upper/#/#g' | while read; do
+		line="$REPLY"
+		[ ! -e "$line" -a \( -z "$2" -o ! -e "$2/upper$line" \) ] && \
+			busybox ls -l "upper$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
+			rm -f "upper$line"
+	done
+	cd - >/dev/null 2>&1
+}
+
+clean_kmods()
+{
+	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
+		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`
+		if [ -n "$compat" ]; then
+			cd "$1/upper/usr/lib/opkg/info"
+			grep -LFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' > /tmp/del_kmods.txt
+			cat /tmp/del_kmods.txt | sed 's/$/.list/' | xargs cat | sed "s#^/#$1/upper/#" | xargs rm -f
+			cat /tmp/del_kmods.txt | xargs -rn1 sh -c 'rm -f $0.*'
+			rm -f /tmp/del_kmods.txt
+			cd - >/dev/null 2>&1
+			return 0
+		fi
+	else
+		return 0
+	fi
+
+	# rm -rf $1/upper/lib/modules $1/upper/etc/modules-boot.d \
+	# 	$1/upper/etc/modules.d $1/upper/usr/lib/opkg/info/kmod-* \
+	# 	$1/upper/usr/lib/opkg/info/kernel.* 2>/dev/null
+}
+
+prepare_primary_overlay()
+{
+	if [ -f /overlay/.reset ]; then
+		rm -rf /overlay/upper /overlay/work
+		rm -f /overlay/.reset
+		sync /overlay
+	else
+		if [ -d /overlay/upper ] && update_overlay_lower_uuid /overlay; then
+			is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
+			clean_overlayfs_redundant_whiteout_marker /overlay
+		fi
+		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
+			clean_kmods /overlay
+		fi
+	fi
+
+	mkdir -p /overlay/upper /overlay/work
+}
+
+pivot_root_to_overlayfs()
+{
+	# pivot
+	mount --move /proc /mnt/proc
+
+	pivot_root /mnt /mnt/rom || return 1
+
+	mount --move /rom/dev /dev
+	mount --move /rom/tmp /tmp
+	mount --move /rom/sys /sys
+	mount --move /rom/overlay /overlay
+}
+
+mount_extroot()
+{
+	[ -f /overlay/upper/etc/config/fstab ] || return 1
+	# let `block extroot` read /overlay/upper/etc/config/fstab
+	mount --bind /overlay/upper/etc/config /etc/config || return 1
+	block extroot
+	local ret=$?
+	umount /etc/config
+	return $ret
+}
+
+apply_overlayfs_opaque() {
+	local line
+	local dest="$2"
+	cd "$1"
+	if is_overlayfs_use_xattr; then
+		getfattr -R -P -h --match='trusted.overlay.opaque' upper 2>/dev/null | grep '^# file: ' | cut -c9- | while read; do
+			line="$REPLY"
+			rm -rf "$dest/$line"
+		done
+	fi
+	find upper -xdev -type c | while read; do
+		line="$REPLY"
+		rm -rf "$dest/$line"
+	done
+	cd - >/dev/null 2>&1
+}
+
+prepare_ext_overlay()
+{
+	local newoverlaydir=$1
+	local overlaydir=$2
+
+	if [ -f "$newoverlaydir/.reset" ]; then
+		rm -rf "$newoverlaydir/upper"
+		rm -f "$newoverlaydir/.commit" "$newoverlaydir/.reset"
+	else
+		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
+			clean_kmods "$newoverlaydir"
+		fi
+		if [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
+			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
+			[ -f "$newoverlaydir/.commit" ] || clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
+		fi
+		if [ -f "$newoverlaydir/.commit" ]; then
+			if [ -d "$newoverlaydir/upper" ]; then
+				apply_overlayfs_opaque "$newoverlaydir" "$overlaydir"
+			fi
+			cp -a "$newoverlaydir/upper/." "$overlaydir/upper" && {
+				rmdir "$overlaydir/upper/ext_overlay"
+				clean_overlayfs_redundant_whiteout_marker "$overlaydir"
+				rm -rf "$newoverlaydir/upper"
+				mkdir -m 0755 -p "$newoverlaydir/upper/ext_overlay"
+			}
+			rm -f "$newoverlaydir/.commit"
+		fi
+	fi
+
+	( mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay && \
+		  mkdir -m 0755 -p $newoverlaydir/work ) || return 1
+
+	return 0
+}
+
+prepare_mnt()
+{
+	local dir
+	if mount_extroot && mountpoint -q /tmp/extroot/mnt; then
+		for dir in proc dev tmp sys overlay rom root; do
+			mkdir -m 0755 /tmp/extroot/mnt/$dir
+		done
+		if mount --move /tmp/extroot/mnt /mnt; then
+			# writeable extroot existed, we don't need overlay
+			umount /tmp/extroot/overlay
+			return 0
+		fi
+		umount /tmp/extroot/mnt
+	fi
+
+	local lowerdir=/
+	local overlaydir=/overlay
+
+	if mountpoint -q /tmp/extroot/overlay; then
+		# use ext overlay as upper layer
+		local newoverlaydir=/tmp/extroot/overlay
+		if [ `mountpoint -x "$OVERLAY_DEV"` != `mountpoint -d $newoverlaydir` ] && \
+		  prepare_ext_overlay $newoverlaydir $overlaydir && \
+		  mount --move /tmp/extroot/overlay /ext_overlay; then
+			lowerdir=$overlaydir/upper:$lowerdir
+			overlaydir=/ext_overlay
+		else
+			umount /tmp/extroot/overlay
+		fi
+	fi
+
+	mount -o noatime,lowerdir=$lowerdir,upperdir=$overlaydir/upper,workdir=$overlaydir/work \
+		-t overlay "overlayfs:/overlay" /mnt \
+		|| return 1
+}
+
+post_extroot()
+{
+	mountpoint -q /rom/ext_overlay && mount --move /rom/ext_overlay /ext_overlay
+	mountpoint -q /tmp/extroot/overlay && umount /tmp/extroot/overlay
+	rmdir /tmp/extroot/overlay
+	mountpoint -q /tmp/extroot/mnt && umount /tmp/extroot/mnt
+	rmdir /tmp/extroot/mnt
+	rmdir /tmp/extroot
+	mountpoint -q /rom/dev && umount /rom/dev
+}
+
+do_mount_overlayfs()
+{
+	[ ! -e /rom/note ] && return 0
+
+	inlog get_overlay_partition || return 1
+
+	inlog validate_overlay_partition || return 1
+
+	inlog format_overlay_partition || return 1
+
+	inlog check_overlay_partition
+
+	inlog mount_overlay_partition || return 1
+
+	# if we are in recovery mode, just skip pivot_root
+	if [ -f /.recovery_mode ]; then
+		rm -f /rom/note >/dev/null 2>&1
+		return 0
+	fi
+
+	inlog prepare_primary_overlay
+
+	inlog prepare_mnt || return 1
+
+	inlog pivot_root_to_overlayfs || return 1
+
+	post_extroot >/dev/null 2>&1
+
+	inlog mount --make-shared -t tmpfs -o size=4M tmpfs /mnt
+
+	return 0
+}
+
+[ -n "$1" ] || ( do_mount_overlayfs && exit 0 )

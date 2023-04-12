@@ -1,0 +1,9 @@
+{
+	"admin/system/fstab": {
+		"action": {
+			"type": "call",
+			"module": "luci.controller.admin.compat",
+			"function": "action_fatab"
+		}
+	}
+}

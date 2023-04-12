@@ -1,3 +1,0 @@
-FROM registry.gitlab.com/openwrt/buildbot/buildworker-3.4.1
-
-COPY --chown=buildbot:buildbot tools.tar /tools.tar

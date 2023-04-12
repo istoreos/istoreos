@@ -46,6 +46,8 @@ boot() {
 		sleep 1
 	}
 
+	[ -x /lib/board/init.sh ] && /lib/board/init.sh
+
 	/bin/config_generate
 	uci_apply_defaults
 	sync

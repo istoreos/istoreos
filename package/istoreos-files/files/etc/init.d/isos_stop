@@ -1,0 +1,13 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+STOP=89
+
+shutdown() {
+
+	/etc/init.d/dockerman stop 2>/dev/null
+	/etc/init.d/dockerd stop 2>/dev/null
+	/etc/init.d/netdata stop 2>/dev/null
+
+	while /usr/bin/umount -R -d /overlay/upper/opt/docker; do true; done
+}
