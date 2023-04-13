@@ -9,7 +9,7 @@
 #include "rk3568-hinlink.dtsi"
 
 / {
-	model = "HINLINK OPC-H68K Board";
+	model = "HINLINK OPC-H68K/H69K Board";
 	compatible = "hinlink,opc-h68k", "rockchip,rk3568";
 
 	aliases {
