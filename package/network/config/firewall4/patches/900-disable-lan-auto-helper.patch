@@ -1,0 +1,10 @@
+--- a/root/etc/config/firewall
++++ b/root/etc/config/firewall
+@@ -12,6 +12,7 @@
+ 	option input		ACCEPT
+ 	option output		ACCEPT
+ 	option forward		ACCEPT
++	option auto_helper	'0'
+ 
+ config zone
+ 	option name		wan
