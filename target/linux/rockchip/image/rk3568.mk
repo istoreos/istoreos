@@ -44,16 +44,10 @@ $(call Device/rk3568)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 
-define Device/hinlink_opc-h68k
-$(call Device/hinlink_common)
-  DEVICE_MODEL := OPC-H68K
-endef
-TARGET_DEVICES += hinlink_opc-h68k
-
 define Device/hinlink_opc-h6xk
 $(call Device/hinlink_common)
 $(call Device/rk3568_combined)
-  DEVICE_MODEL := OPC-H68K/H66K combined
+  DEVICE_MODEL := OPC-H69K/H68K/H66K combined
   SUPPORTED_DEVICES += hinlink,opc-h66k hinlink,opc-h68k
   DEVICE_DTS := rk3568-opc-h66k rk3568-opc-h68k
 endef

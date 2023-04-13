@@ -61,16 +61,6 @@
 			<0x0 0xfd90f000 0x0 0x1000>;
 	};
 
-	leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 = <&led_work_en>;
-		led_work: work {
-			gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-		};
-	};
-
 	hdmi_sound: hdmi-sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
@@ -191,20 +181,62 @@
 		pinctrl-0 = <&vcc5v0_otg_en>;
 	};
 
-	vcc3v3_pcie: vcc3v3-pcie {
+	pcie30_avdd0v9: pcie30-avdd0v9 {
 		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
+		regulator-name = "pcie30_avdd0v9";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <900000>;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
+	pcie30_avdd1v8: pcie30-avdd1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "pcie30_avdd1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc3v3_sys>;
+	};
+
+	vcc3v3_pcie: gpio-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_pcie";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		regulator-name = "vcc3v3_pcie";
+		enable-active-high;
+		gpio = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <5000>;
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	test-power {
-		status = "okay";
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&reset_button>;
+
+		button@1 {
+			label = "reset_button";
+			linux,code = <KEY_RESTART>;
+			gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
+			linux,input-type = <1>;
+			debounce-interval = <60>;
+		};
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_work_en>;
+
+		led_work: work {
+			gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
 };
 
 &combphy0_us {
@@ -625,6 +657,13 @@
 		};
 	};
 
+	keys {
+		reset_button: reset-button {
+			rockchip,pins =
+				<0 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
 	pmic {
 		pmic_int: pmic_int {
 			rockchip,pins = <0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>;
@@ -857,8 +896,12 @@
 	status = "okay";
 };
 
+&pcie30phy {
+	status = "okay";
+};
+
 &pcie3x1 {
-	num-lanes = <1>;
+	rockchip,bifurcation;
 	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc3v3_pcie>;
 	status = "okay";
@@ -868,15 +911,15 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		rtl8125_1: pcie-eth@10,0 {
-			compatible = "pci10ec,8125";
+		rtl8125_1: pcie@10,0 {
 			reg = <0x000000 0 0 0 0>;
 		};
 	};
 };
 
 &pcie3x2 {
-	num-lanes = <1>;
+	rockchip,bifurcation;
+	rockchip,init-delay-ms = <100>;
 	reset-gpios = <&gpio2 RK_PD0 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc3v3_pcie>;
 	status = "okay";
@@ -886,8 +929,7 @@
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		rtl8125_2: pcie-eth@20,0 {
-			compatible = "pci10ec,8125";
+		rtl8125_2: pcie@20,0 {
 			reg = <0x000000 0 0 0 0>;
 		};
 	};
