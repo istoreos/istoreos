@@ -198,3 +198,13 @@ define Package/e100-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/e100/d102e_ucode.bin $(1)/lib/firmware/e100/
 endef
 $(eval $(call BuildPackage,e100-firmware))
+
+Package/i915-firmware = $(call Package/firmware-default,Intel GPU firmware)
+define Package/i915-firmware/install
+	$(INSTALL_DIR) $(1)/lib/firmware/i915
+	# N5105 GPU
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_33.0.4.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+endef
+$(eval $(call BuildPackage,i915-firmware))
