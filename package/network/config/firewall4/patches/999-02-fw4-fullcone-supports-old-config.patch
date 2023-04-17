@@ -1,0 +1,66 @@
+From c7837caa6bf56908a6fe94e652f29e5832d96426 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 17 Apr 2023 15:55:27 +0800
+Subject: [PATCH] fw4: fullcone nat supports old config
+
+Signed-off-by: jjm2473 <1129525450@qq.com>
+---
+ root/etc/config/firewall    |  2 --
+ root/usr/share/ucode/fw4.uc | 20 ++++++++++++++------
+ 2 files changed, 14 insertions(+), 8 deletions(-)
+
+diff --git a/root/etc/config/firewall b/root/etc/config/firewall
+index 4fde65b..200737a 100644
+--- a/root/etc/config/firewall
++++ b/root/etc/config/firewall
+@@ -21,8 +21,6 @@ config zone
+ 	option input		REJECT
+ 	option output		ACCEPT
+ 	option forward		REJECT
+-	option fullcone4	1
+-	option fullcone6	1
+ 	option masq		1
+ 	option mtu_fix		1
+ 
+diff --git a/root/usr/share/ucode/fw4.uc b/root/usr/share/ucode/fw4.uc
+index aad70ce..0b77f17 100644
+--- a/root/usr/share/ucode/fw4.uc
++++ b/root/usr/share/ucode/fw4.uc
+@@ -1978,8 +1978,8 @@ return {
+ 			masq_dest: [ "network", null, PARSE_LIST ],
+ 
+ 			masq6: [ "bool" ],
+-			fullcone4: [ "bool", "0" ],
+-			fullcone6: [ "bool", "0" ],
++			fullcone4: [ "bool", "0" , DEPRECATED ],
++			fullcone6: [ "bool", "0" , DEPRECATED ],
+ 
+ 			extra: [ "string", null, UNSUPPORTED ],
+ 			extra_src: [ "string", null, UNSUPPORTED ],
+@@ -2012,11 +2012,19 @@ return {
+ 			}
+ 		}
+ 
+-		if (this.state.defaults && !this.state.defaults.fullcone) {
+-			this.warn_section(data, "fullcone in defaults not enabled, ignore zone fullcone settings");
+-			zone.fullcone4 = false;
+-			zone.fullcone6 = false;
++		zone.fullcone4 = false;
++		zone.fullcone6 = false;
++		if (this.state.defaults && this.state.defaults.fullcone) {
++			if (zone.masq) {
++				zone.fullcone4 = true;
++				zone.masq = false;
++			}
++			if (zone.masq6) {
++				zone.fullcone6 = true;
++				zone.masq6 = false;
++			}
+ 		}
++
+ 		if (zone.fullcone4) {
+ 			this.myinfo_section(data, "IPv4 fullcone enabled for zone '" + zone.name + "'");
+ 		}
+-- 
+2.31.0
+
