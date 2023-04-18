@@ -19,6 +19,11 @@
 	aliases {
 		mmc0 = &sdmmc0;
 		mmc1 = &sdhci;
+
+		led-boot = &led_green;
+		led-failsafe = &led_green;
+		led-running = &led_green;
+		led-upgrade = &led_green;
 	};
 
 	chosen: chosen {
@@ -229,11 +234,23 @@
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&led_work_en>;
+		pinctrl-0 =
+			<&led_green_en>,
+			<&led_yellow_en>,
+			<&led_blue_en>;
 
-		led_work: work {
+		led_green: green {
 			gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
+			label = "green:sys";
 			linux,default-trigger = "heartbeat";
+		};
+		led_yellow: yellow {
+			gpios = <&gpio3 RK_PA7 GPIO_ACTIVE_HIGH>;
+			label = "yellow:disk";
+		};
+		led_blue: blue {
+			gpios = <&gpio3 RK_PA5 GPIO_ACTIVE_HIGH>;
+			label = "blue:net";
 		};
 	};
 
@@ -651,9 +668,17 @@
 
 &pinctrl {
 	leds {
-		led_work_en: led-work-en {
+		led_green_en: led-green-en {
 			rockchip,pins =
 				<3 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_yellow_en: led-yellow-en {
+			rockchip,pins =
+				<3 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_blue_en: led-blue-en {
+			rockchip,pins =
+				<3 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
