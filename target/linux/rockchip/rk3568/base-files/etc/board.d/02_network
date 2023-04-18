@@ -11,20 +11,15 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
+	fastrhino,r66s|\
 	hinlink,opc-h66k|\
-	mrkaio,m68s)
+	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
-		;;
-	firefly,rk3568-roc-pc|\
-	fastrhino,r66s)
-		ucidef_set_interfaces_lan_wan 'eth0' 'eth1'
-		;;
-	fastrhino,r68s)
-		ucidef_set_interfaces_lan_wan 'eth0 eth2 eth3' 'eth1'
 		;;
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		;;
+	fastrhino,r68s|\
 	hinlink,opc-h68k)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
@@ -53,7 +48,6 @@ rockchip_setup_macs()
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	fastrhino,r66s|\
-	rockchip,rk3568-lunzn-r68s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)
 		lan_mac=$(macaddr_add "$wan_mac" 1)
