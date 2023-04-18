@@ -13,12 +13,14 @@ PKG_RELEASE:=$(AUTORELEASE)
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/awesometic/realtek-r8125-dkms/tar.gz/$(PKG_VERSION)?
 PKG_HASH:=e3f0a0a02a4ba847cb962ea7e12c89e3f4ab732944f04ebeb76d4d9711fa8ca6
-PKG_BUILD_DIR:=$(KERNEL_BUILD_DIR)/realtek-$(PKG_NAME)-dkms-$(PKG_VERSION)
 
 PKG_LICENSE:=GPL-2.0-only
 PKG_LICENSE_FILE:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
+
+TAR_OPTIONS+= --strip-components 1
+TAR_CMD=$(HOST_TAR) -C $(1) $(TAR_OPTIONS)
 
 define KernelPackage/r8125
   TITLE:=Driver for Realtek r8125 chipsets
