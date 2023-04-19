@@ -844,6 +844,10 @@
 	status = "okay";
 };
 
+&sata0 {
+	status = "okay";
+};
+
 &tsadc {
 	status = "okay";
 };
@@ -895,11 +899,11 @@
 &usbdrd_dwc3 {
 	dr_mode = "otg";
 	extcon = <&usb2phy0>;
-	status = "okay";
+	status = "disabled";
 };
 
 &usbdrd30 {
-	status = "okay";
+	status = "disabled";
 };
 
 &usbhost_dwc3 {
