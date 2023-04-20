@@ -14,6 +14,11 @@ export_ota_url() {
 	firefly,rk3568-roc-pc)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/station-p2"
 		;;
+	hinlink,opc-h66k|\
+	hinlink,opc-h68k|\
+	hinlink,opc-h69k)
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/h6xk"
+		;;
 	*)
 		return 1
 		;;
