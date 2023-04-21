@@ -35,7 +35,14 @@ set_iface_cpumask() {
 board_fixup_iface_name() {
     local device
     case $(board_name) in
-    fastrhino,r66s|\
+    fastrhino,r66s)
+        device="$(get_iface_device eth0)"
+        if [[ "$device" = "0001:11:00.0" ]]; then
+            rename_iface eth0 lan1
+            rename_iface eth1 eth0
+            rename_iface lan1 eth1
+        fi
+        ;;
     hinlink,opc-h66k)
         device="$(get_iface_device eth1)"
         if [[ "$device" = "0001:11:00.0" ]]; then
@@ -59,7 +66,7 @@ board_fixup_iface_name() {
         fi
         ;;
     firefly,rk3568-roc-pc)
-        device="$(get_iface_device eth1)"
+        device="$(get_iface_device eth0)"
         if [[ "$device" = "fe010000.ethernet" ]]; then
             rename_iface eth0 wan
             rename_iface eth1 eth0
