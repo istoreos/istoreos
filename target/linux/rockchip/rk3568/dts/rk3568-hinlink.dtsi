@@ -74,10 +74,10 @@
 		status = "disabled";
 
 		simple-audio-card,cpu {
-				sound-dai = <&i2s0_8ch>;
+			sound-dai = <&i2s0_8ch>;
 		};
 		simple-audio-card,codec {
-				sound-dai = <&hdmi>;
+			sound-dai = <&hdmi>;
 		};
 	};
 
@@ -128,17 +128,17 @@
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "ROCKCHIP,SPDIF";
 		simple-audio-card,cpu {
-				sound-dai = <&spdif_8ch>;
+			sound-dai = <&spdif_8ch>;
 		};
 		simple-audio-card,codec {
-				sound-dai = <&spdif_out>;
+			sound-dai = <&spdif_out>;
 		};
 	};
 
 	spdif_out: spdif-out {
-			status = "okay";
-			compatible = "linux,spdif-dit";
-			#sound-dai-cells = <0>;
+		status = "okay";
+		compatible = "linux,spdif-dit";
+		#sound-dai-cells = <0>;
 	};
 
 	dc_12v: dc-12v {
@@ -172,7 +172,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&vcc3v3_sys_en>;
 		vin-supply = <&vcc5v0_sys>;
-        };
+	};
 
 	vcc5v0_otg: vcc5v0-otg-regulator {
 		compatible = "regulator-fixed";
@@ -627,9 +627,9 @@
 	rockchip,clk-trcm = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2s1m0_sclktx
-		     &i2s1m0_lrcktx
-		     &i2s1m0_sdi0
-		     &i2s1m0_sdo0>;
+		&i2s1m0_lrcktx
+		&i2s1m0_sdi0
+		&i2s1m0_sdo0>;
 };
 
 &iep {
@@ -916,7 +916,6 @@
 
 &pcie2x1 {
 	reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_pcie>;
 	status = "okay";
 };
 
