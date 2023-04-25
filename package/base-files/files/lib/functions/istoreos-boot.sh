@@ -12,6 +12,26 @@ _getbootdisk()
 	echo "$rootdisk"
 }
 
+# > getbootdisk_lvm
+# dm-0
+_getbootdisk_lvm()
+{
+	local rootpart
+	if [ -e /rom/note ]; then
+		rootpart="`grep -Fm1 ' / / ' /proc/self/mountinfo | grep -F ' - squashfs ' | cut -d' ' -f3`"
+	else
+		rootpart="`grep -Fm1 ' / /rom ' /proc/self/mountinfo | grep -F ' - squashfs ' | cut -d' ' -f3`"
+	fi
+	[ -z "$rootpart" ] && return 1
+	local major=${rootpart%%:*}
+	local minor=${rootpart##*:}
+	minor="$(( $minor & 0xfffc ))"
+	local devpath="`readlink /sys/dev/block/$major:$minor`"
+	[ -z "$devpath" ] && return 1
+	local rootdisk="${devpath##*/}"
+	echo "$rootdisk"
+}
+
 # > getpartofdisk sda 3
 # sda3
 # > getpartofdisk mmcblk0 3
@@ -25,6 +45,18 @@ _getpartofdisk()
 		part="$disk"
 		echo "$part" | grep -q '^.*\d$' && part="${part}p"
 		part="${part}"$(( ${offset} ))
+		if [ ! -b "/dev/$part" ]; then
+			# lvm
+			local line
+			local MAJOR MINOR DEVNAME DEVTYPE
+			while read line; do
+				export -n "$line"
+			done < "/sys/block/$disk/uevent"
+			local devpath="`readlink /sys/dev/block/$MAJOR:$(($MINOR + $offset))`"
+			if [ -n "$devpath" ]; then
+				part="${devpath##*/}"
+			fi
+		fi
 		echo "$part"
 	fi
 	return 0
@@ -34,10 +66,18 @@ _get_overlay_partition_default()
 {
 	local bootdisk="`_getbootdisk`"
 	[ -z "$bootdisk" ] && {
-		log "getbootdisk failed"
+		log "getbootdisk failed, try lvm"
+		bootdisk="`_getbootdisk_lvm`"
+	}
+	[ -z "$bootdisk" ] && {
+		log "getbootdisk_lvm failed"
 		return 1
 	}
-	if [ -e /rom/note -a -e "/sys/block/$bootdisk/uevent" ]; then
+	if [ ! -e "/sys/block/$bootdisk/uevent" ]; then
+		log "/sys/block/$bootdisk/uevent does not exist"
+		return 1
+	fi
+	if [ -e /rom/note ]; then
 		# we are in mount_root if /rom/note exists
 		cat "/sys/block/$bootdisk/uevent" > /tmp/.bootdisk
 	fi
