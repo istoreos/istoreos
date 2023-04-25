@@ -241,6 +241,13 @@ export_partdevice() {
 		if [ -b "/dev/$part" ]; then
 			export "$var=$part"
 			return 0
+		else
+			# ventoy
+			local devpath="`readlink /sys/dev/block/$BOOTDEV_MAJOR:$(($BOOTDEV_MINOR + $offset))`"
+			[ -n "$devpath" ] && {
+				export "$var=${devpath##*/}"
+				return 0
+			}
 		fi
 	fi
 
