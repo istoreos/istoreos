@@ -2,7 +2,7 @@
 # 1. keep overlay partition when upgrade
 # 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade (stage2:istoreos_pre_upgrade)
 
-RAMFS_COPY_BIN='grub-bios-setup'
+RAMFS_COPY_BIN='grub-bios-setup readlink'
 
 platform_check_image() {
 	local diskdev partdev diff
