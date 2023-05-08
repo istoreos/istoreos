@@ -38,7 +38,7 @@ define Package/base-files
   SECTION:=base
   CATEGORY:=Base system
   DEPENDS:=+netifd +libc +jsonfilter +SIGNED_PACKAGES:usign +SIGNED_PACKAGES:openwrt-keyring +NAND_SUPPORT:ubi-utils +fstools +fwtool \
-	+blkid +mount-utils +e2fsprogs +tune2fs +resize2fs +attr
+	+blkid +mount-utils +e2fsprogs +tune2fs +resize2fs +attr +block-mount
   TITLE:=Base filesystem for OpenWrt
   URL:=http://openwrt.org/
   VERSION:=$(PKG_RELEASE)-$(REVISION)
