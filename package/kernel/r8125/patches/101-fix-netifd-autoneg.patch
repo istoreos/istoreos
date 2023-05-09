@@ -1,0 +1,29 @@
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 9 May 2023 18:00:00 +0800
+Subject: [PATCH] fix for openwrt netifd auto negotiation
+
+netifd using old ethtool api, does not support 2500baseT,
+netifd will drop 2.5G advertising on configure interface.
+
+so we report 2500baseX instead
+
+---
+
+diff --git a/src/r8125_n.c b/src/r8125_n.c
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -5011,14 +5011,10 @@ static void rtl8125_gset_xmii(struct net
+                                                 lpa_adv);
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
+         if (supported & SUPPORTED_2500baseX_Full) {
+-                linkmode_mod_bit(ETHTOOL_LINK_MODE_2500baseX_Full_BIT,
+-                                 cmd->link_modes.supported, 0);
+                 linkmode_mod_bit(ETHTOOL_LINK_MODE_2500baseT_Full_BIT,
+                                  cmd->link_modes.supported, 1);
+         }
+         if (advertising & ADVERTISED_2500baseX_Full) {
+-                linkmode_mod_bit(ETHTOOL_LINK_MODE_2500baseX_Full_BIT,
+-                                 cmd->link_modes.advertising, 0);
+                 linkmode_mod_bit(ETHTOOL_LINK_MODE_2500baseT_Full_BIT,
+                                  cmd->link_modes.advertising, 1);
+         }
