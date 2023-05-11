@@ -19,6 +19,7 @@ rockchip_setup_interfaces()
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		;;
+	lyt,t68m|\
 	fastrhino,r68s|\
 	hinlink,opc-h68k)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
@@ -47,6 +48,7 @@ rockchip_setup_macs()
 	friendlyelec,nanopi-r5s|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
+	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)

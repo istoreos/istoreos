@@ -82,6 +82,7 @@ board_fixup_iface_name() {
             rename_iface lan2 eth2
         fi
         ;;
+    lyt,t68m|\
     hinlink,opc-h68k)
         device="$(get_iface_device eth1)"
         if [[ "$device" = "fe010000.ethernet" ]]; then
@@ -108,6 +109,7 @@ board_set_iface_smp_affinity() {
     friendlyelec,nanopi-r5s)
         set_iface_cpumask 2 eth0
         ;;
+    lyt,t68m|\
     fastrhino,r68s|\
     hinlink,opc-h68k)
         set_iface_cpumask 1 "eth0"

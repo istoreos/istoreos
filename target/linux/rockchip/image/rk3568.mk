@@ -71,3 +71,12 @@ $(call Device/rk3568)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 TARGET_DEVICES += firefly_station-p2
+
+define Device/lyt_t68m
+$(call Device/rk3568)
+  DEVICE_VENDOR := LYT
+  DEVICE_MODEL := T68M
+  SUPPORTED_DEVICES += lyt,t68m
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += lyt_t68m
