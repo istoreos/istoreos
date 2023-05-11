@@ -64,6 +64,7 @@ board_fixup_iface_name() {
             rename_iface lan1 eth1
         fi
         ;;
+    lyt,t68m|\
     fastrhino,r68s)
         device="$(get_iface_device eth0)"
         if [[ "$device" = "fe010000.ethernet" ]]; then
@@ -71,8 +72,8 @@ board_fixup_iface_name() {
             rename_iface eth1 eth0
             rename_iface wan eth1
         fi
-        device="$(get_iface_device eth3)"
-        if [[ "$device" = "0002:21:00.0" ]]; then
+        device="$(get_iface_device eth2)"
+        if [[ "$device" = "0001:11:00.0" ]]; then
             rename_iface eth2 lan3
             rename_iface eth3 eth2
             rename_iface lan3 eth3
@@ -95,7 +96,6 @@ board_fixup_iface_name() {
             rename_iface lan2 eth2
         fi
         ;;
-    lyt,t68m|\
     hinlink,opc-h68k)
         device="$(get_iface_device eth1)"
         if [[ "$device" = "fe010000.ethernet" ]]; then
