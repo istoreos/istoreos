@@ -80,3 +80,13 @@ $(call Device/rk3568)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 TARGET_DEVICES += lyt_t68m
+
+define Device/hsa_bh2
+	$(call Device/rk3568)
+  DEVICE_VENDOR := HSA
+	DEVICE_MODEL := BH2
+  DEVICE_DTS := rk3568-hsa-bh2
+  SUPPORTED_DEVICES += hsa,bh2
+  DEVICE_PACKAGES := kmod-scsi-core
+endef
+TARGET_DEVICES += hsa_bh2

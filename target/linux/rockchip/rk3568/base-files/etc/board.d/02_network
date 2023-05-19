@@ -25,7 +25,7 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
 	*)
-		ucidef_set_interface_lan 'eth0'
+		ucidef_set_interface_lan 'eth0' 'dhcp'
 		;;
 	esac
 }
@@ -49,6 +49,7 @@ rockchip_setup_macs()
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	lyt,t68m|\
+	hsa,bh2|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)

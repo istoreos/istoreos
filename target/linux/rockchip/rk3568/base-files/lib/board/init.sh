@@ -164,6 +164,9 @@ board_set_iface_smp_affinity() {
             set_iface_cpumask 1 "eth1" "eth1-16"
         fi
         ;;
+    hsa,bh2)
+        set_iface_cpumask 2 "eth0"
+        ;;
     esac
 }
 
