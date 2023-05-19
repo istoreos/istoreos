@@ -1,8 +1,8 @@
 --- a/system-linux.c
 +++ b/system-linux.c
-@@ -30,6 +30,12 @@
- #include <netinet/ether.h>
+@@ -31,6 +31,12 @@
  #include <netinet/in.h>
+ #include <netinet/ether.h>
  
 +#if !defined(__GLIBC__)
 +/* avoid IPPROTO_TCP redefine */

@@ -1,0 +1,52 @@
+--- a/system-linux.c
++++ b/system-linux.c
+@@ -71,6 +71,10 @@
+ #include <netlink/socket.h>
+ #include <libubox/uloop.h>
+ 
++#ifndef DEBUG
++#define DEBUG
++#endif
++
+ #include "netifd.h"
+ #include "device.h"
+ #include "system.h"
+@@ -1734,13 +1738,21 @@ system_set_ethtool_settings(struct devic
+ 		{ 1000, ETHTOOL_LINK_MODE_1000baseT_Half_BIT, ETHTOOL_LINK_MODE_1000baseT_Full_BIT },
+ 	};
+ 	uint32_t adv;
++	uint8_t autoneg;
+ 	int i;
++	uint32_t mask = SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full| SUPPORTED_100baseT_Half |
++			SUPPORTED_100baseT_Full | SUPPORTED_1000baseT_Half | SUPPORTED_1000baseT_Full |
++			SUPPORTED_Autoneg;
++
++	if (!(s->flags & (DEV_OPT_DUPLEX | DEV_OPT_SPEED)))
++		return;
+ 
+ 	strncpy(ifr.ifr_name, dev->ifname, sizeof(ifr.ifr_name) - 1);
+ 
+ 	if (ioctl(sock_ioctl, SIOCETHTOOL, &ifr) != 0)
+ 		return;
+-
++	D(DEVICE, "ethtool get %s (DUPLEX %d SPEED %d): autoneg %d supported %x, advertising %x\n", dev->ifname, !!(s->flags & DEV_OPT_DUPLEX), !!(s->flags & DEV_OPT_SPEED), ecmd.autoneg, ecmd.supported, ecmd.advertising);
++	autoneg = !!(ecmd.supported & (1 << ETHTOOL_LINK_MODE_Autoneg_BIT));
+ 	adv = ecmd.supported;
+ 	for (i = 0; i < ARRAY_SIZE(speed_mask); i++) {
+ 		if (s->flags & DEV_OPT_DUPLEX) {
+@@ -1757,12 +1769,13 @@ system_set_ethtool_settings(struct devic
+ 	}
+ 
+ 
+-	if (ecmd.autoneg && ecmd.advertising == adv)
++	if (ecmd.autoneg == autoneg && (ecmd.advertising & mask) == (adv & mask))
+ 		return;
+ 
+-	ecmd.autoneg = 1;
++	ecmd.autoneg = autoneg;
+ 	ecmd.advertising = adv;
+ 	ecmd.cmd = ETHTOOL_SSET;
++	D(DEVICE, "ethtool set %s: autoneg %d supported %x, advertising %x\n", dev->ifname, ecmd.autoneg, ecmd.supported, ecmd.advertising);
+ 	ioctl(sock_ioctl, SIOCETHTOOL, &ifr);
+ }
+ 
