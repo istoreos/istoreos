@@ -721,10 +721,6 @@
             rockchip,pins =
                 <0 RK_PA2 RK_FUNC_2 &pcfg_pull_none>;
         };
-
-        spk_ctl_gpio: spk_ctl_gpio {
-            rockchip,pins = <3 RK_PC5 RK_FUNC_GPIO &pcfg_pull_up>;
-        };
     };
 
     usb_hdd_power {
