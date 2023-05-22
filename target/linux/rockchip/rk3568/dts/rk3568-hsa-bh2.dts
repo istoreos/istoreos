@@ -102,6 +102,8 @@
 
     vcc5v0_otg: vcc5v0-otg-regulator {
         compatible = "regulator-fixed";
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
         enable-active-high;
         gpio = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
         pinctrl-names = "default";
@@ -602,7 +604,7 @@
 };
 
 &usbdrd30 {
-    status = "disabled";
+    status = "okay";
 };
 
 // MULTI_PHY1
