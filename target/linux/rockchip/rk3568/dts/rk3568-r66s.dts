@@ -18,6 +18,15 @@
 	/delete-node/ adc-keys;
 };
 
+&vccio_sd {
+	regulator-always-on;
+	regulator-boot-on;
+};
+
+&pmu_io_domains {
+	vccio3-supply = <&vccio_sd>;
+};
+
 &sdmmc0 {
 	no-sdio;
 	no-mmc;
