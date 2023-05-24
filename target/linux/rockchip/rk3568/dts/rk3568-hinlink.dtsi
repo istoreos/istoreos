@@ -81,15 +81,6 @@
 		};
 	};
 
-	mach: board {
-		compatible = "friendlyelec,board";
-		machine = "NANOPI5";
-		hwrev = <255>;
-		model = "NanoPi 5 Series";
-		nvmem-cells = <&otp_id>, <&otp_cpu_version>;
-		nvmem-cell-names = "id", "cpu-version";
-	};
-
 	pdmics: dummy-codec {
 		status = "disabled";
 		compatible = "rockchip,dummy-codec";
@@ -109,7 +100,7 @@
 	};
 
 	rk809_sound: rk809-sound {
-		status = "okay";
+		status = "disabled";
 		compatible = "simple-audio-card";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,name = "rockchip,rk809-codec";
@@ -124,7 +115,7 @@
 	};
 
 	spdif-sound {
-		status = "okay";
+		status = "disabled";
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "ROCKCHIP,SPDIF";
 		simple-audio-card,cpu {
@@ -136,7 +127,7 @@
 	};
 
 	spdif_out: spdif-out {
-		status = "okay";
+		status = "disabled";
 		compatible = "linux,spdif-dit";
 		#sound-dai-cells = <0>;
 	};
@@ -462,8 +453,6 @@
 			};
 
 			vdda0v9_image: LDO_REG1 {
-				regulator-boot-on;
-				regulator-always-on;
 				regulator-min-microvolt = <900000>;
 				regulator-max-microvolt = <900000>;
 				regulator-name = "vdda0v9_image";
@@ -553,8 +542,6 @@
 			};
 
 			vcca1v8_image: LDO_REG9 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
 				regulator-name = "vcca1v8_image";
@@ -606,7 +593,7 @@
 			hp-volume = <20>;
 			spk-volume = <3>;
 			mic-in-differential;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 };
@@ -619,7 +606,7 @@
 };
 
 &i2s0_8ch {
-	status = "okay";
+	status = "disabled";
 };
 
 &i2s1_8ch {
@@ -998,7 +985,7 @@
 	status = "okay";
 	assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
 	assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
-	support-multi-area;
+	disable-win-move;
 };
 
 &vop_mmu {
