@@ -11,6 +11,11 @@ define Device/rk3568_combined
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3568_combined_friendlyelec
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3568-friendlyelec | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
@@ -55,9 +60,11 @@ TARGET_DEVICES += hinlink_opc-h6xk
 
 define Device/friendlyarm_nanopi-r5s
 $(call Device/rk3568)
+$(call Device/rk3568_combined_friendlyelec)
   DEVICE_VENDOR := FriendlyARM
-  DEVICE_MODEL := NanoPi R5S
-  SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyarm,nanopi-r5s
+  DEVICE_MODEL := NanoPi R5S/R5C combined
+  SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyarm,nanopi-r5s friendlyelec,nanopi-r5c
+  DEVICE_DTS := rk3568-nanopi-r5s rk3568-nanopi-r5c
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r5s

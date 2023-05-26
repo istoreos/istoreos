@@ -11,6 +11,7 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
+	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,opc-h66k|\
 	firefly,rk3568-roc-pc)
@@ -46,6 +47,7 @@ rockchip_setup_macs()
 	case "$board" in
 	firefly,rk3568-roc-pc|\
 	friendlyelec,nanopi-r5s|\
+	friendlyelec,nanopi-r5c|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	lyt,t68m|\

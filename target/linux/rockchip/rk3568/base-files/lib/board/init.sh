@@ -48,6 +48,7 @@ set_iface_cpumask() {
 board_fixup_iface_name() {
     local device
     case $(board_name) in
+    friendlyelec,nanopi-r5c|\
     fastrhino,r66s)
         device="$(get_iface_device eth0)"
         if [[ "$device" = "0001:11:00.0" ]]; then
@@ -150,6 +151,7 @@ board_set_iface_smp_affinity() {
             set_iface_cpumask 1 "eth3" "eth3-16"
         fi
         ;;
+    friendlyelec,nanopi-r5c|\
     fastrhino,r66s|\
     hinlink,opc-h66k)
         if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
