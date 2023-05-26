@@ -1,0 +1,24 @@
+# friendlyelec rk3568 combined image, board detected by ADC
+
+env delete hwrev
+env delete adc_value
+
+# using SARADC CH1 to detect hwrev
+
+adc single saradc@fe720000 1 adc_value
+
+if test -n "$adc_value"; then
+    if test "$adc_value" -ge 151; then
+        echo board rev02
+        setenv hwrev 1
+    fi
+fi
+
+part uuid mmc ${devnum}:2 uuid
+
+setenv bootargs "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=${uuid} rw rootwait"
+
+load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
+load mmc ${devnum}:1 ${kernel_addr_r} kernel.img
+
+booti ${kernel_addr_r} - ${fdt_addr_r}
