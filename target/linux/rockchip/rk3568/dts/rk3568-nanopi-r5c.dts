@@ -16,6 +16,10 @@
 	aliases {
 		ethernet0 = &r8125_1;
 		ethernet1 = &r8125_2;
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
 	};
 
 	gpio_keys: gpio-keys {
