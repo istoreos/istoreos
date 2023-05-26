@@ -204,6 +204,8 @@ static int rockchip_saradc_ofdata_to_platdata(struct udevice *dev)
 	uc_pdata->data_format = ADC_DATA_FORMAT_BIN;
 	uc_pdata->data_timeout_us = SARADC_TIMEOUT / 5;
 	uc_pdata->channel_mask = (1 << priv->data->num_channels) - 1;
+	uc_pdata->vdd_microvolts = -ENODATA;
+	uc_pdata->vss_microvolts = -ENODATA;
 
 	return 0;
 }
