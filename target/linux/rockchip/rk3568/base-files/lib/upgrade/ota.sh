@@ -9,8 +9,9 @@ export_ota_url() {
 	fastrhino,r68s)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
 		;;
+	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r5s)
-		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*-}"
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/r5s"
 		;;
 	firefly,rk3568-roc-pc)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/station-p2"
