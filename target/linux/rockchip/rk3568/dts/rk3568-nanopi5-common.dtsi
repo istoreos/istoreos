@@ -409,8 +409,6 @@
 			};
 
 			vdda0v9_image: LDO_REG1 {
-				regulator-boot-on;
-				regulator-always-on;
 				regulator-min-microvolt = <900000>;
 				regulator-max-microvolt = <900000>;
 				regulator-name = "vdda0v9_image";
@@ -443,8 +441,6 @@
 			};
 
 			vccio_acodec: LDO_REG4 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
 				regulator-name = "vccio_acodec";
@@ -500,8 +496,6 @@
 			};
 
 			vcca1v8_image: LDO_REG9 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
 				regulator-name = "vcca1v8_image";
