@@ -218,6 +218,10 @@
     };
 };
 
+&rng {
+    status = "okay";
+};
+
 // ynnnas-lp4x.dts
 &reserved_memory {
     ramoops: ramoops@110000 {
