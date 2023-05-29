@@ -1,0 +1,534 @@
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/pwm/pwm.h>
+#include <dt-bindings/input/rk-input.h>
+#include <dt-bindings/sensor-dev.h>
+#include "rk3566.dtsi"
+
+/ {
+    model = "Yingniuniu NAS";
+    compatible = "ynn,nas", "rockchip,rk3566";
+
+    aliases {
+        led-boot = &sys_led;
+        led-failsafe = &sys_led;
+        led-running = &sys_led;
+        led-upgrade = &sys_led;
+    };
+
+    chosen: chosen {
+        bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rw rootwait";
+    };
+
+    fiq-debugger {
+        compatible = "rockchip,fiq-debugger";
+        rockchip,serial-id = <2>;
+        rockchip,wake-irq = <0>;
+        /* If enable uart uses irq instead of fiq */
+        rockchip,irq-mode-enable = <1>;
+        rockchip,baudrate = <1500000>;  /* Only 115200 and 1500000 */
+        interrupts = <GIC_SPI 252 IRQ_TYPE_LEVEL_LOW>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&uart2m0_xfer>;
+        status = "okay";
+    };
+
+    debug: debug@fd904000 {
+        compatible = "rockchip,debug";
+        reg = <0x0 0xfd904000 0x0 0x1000>,
+            <0x0 0xfd905000 0x0 0x1000>,
+            <0x0 0xfd906000 0x0 0x1000>,
+            <0x0 0xfd907000 0x0 0x1000>;
+    };
+
+    cspmu: cspmu@fd90c000 {
+        compatible = "rockchip,cspmu";
+        reg = <0x0 0xfd90c000 0x0 0x1000>,
+            <0x0 0xfd90d000 0x0 0x1000>,
+            <0x0 0xfd90e000 0x0 0x1000>,
+            <0x0 0xfd90f000 0x0 0x1000>;
+    };
+
+    dc_12v: dc-12v {
+        compatible = "regulator-fixed";
+        regulator-name = "dc_12v";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <12000000>;
+        regulator-max-microvolt = <12000000>;
+    };
+
+    vcc3v3_sys: vcc3v3-sys {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc3v3_sys";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <3300000>;
+        regulator-max-microvolt = <3300000>;
+        vin-supply = <&dc_12v>;
+    };
+
+    vcc5v0_sys: vcc5v0-sys {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc5v0_sys";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        vin-supply = <&dc_12v>;
+    };
+
+    vdd_cpu: vdd-cpu {
+        compatible = "pwm-regulator";
+        pwms = <&pwm0 0 5000 1>;
+        regulator-name = "vdd_cpu";
+        regulator-min-microvolt = <800000>;
+        regulator-max-microvolt = <1200000>;
+        regulator-init-microvolt =  <950000>;
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-ramp-delay = <6001>;
+        regulator-settling-time-up-us = <250>;
+        pwm-supply = <&vcc5v0_sys>;
+        status = "okay";
+    };
+
+    vdd_logic: vdd-logic {
+        compatible = "pwm-regulator";
+        pwms = <&pwm1 0 5000 1>;
+        regulator-name = "vdd_logic";
+        regulator-min-microvolt = <800000>;
+        regulator-max-microvolt = <1100000>;
+        regulator-init-microvolt = <950000>;
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-ramp-delay = <6001>;
+        regulator-settling-time-up-us = <250>;
+        pwm-supply = <&vcc5v0_sys>;
+        status = "okay";
+    };
+
+    vcc_1v8: vcc-1v8 {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc_1v8";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        vin-supply = <&vcc3v3_sys>;
+    };
+
+    vcca_1v8: vcca-1v8 {
+        compatible = "regulator-fixed";
+        regulator-name = "vcca_1v8";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <1800000>;
+        regulator-max-microvolt = <1800000>;
+        vin-supply = <&vcc3v3_sys>;
+    };
+
+    vcc_3v3: vcc-3v3 {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc_3v3";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <3300000>;
+        regulator-max-microvolt = <3300000>;
+        vin-supply = <&vcc3v3_sys>;
+    };
+
+    vcc5v0_usb: vcc5v0-usb {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc5v0_usb";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        vin-supply = <&dc_12v>;
+    };
+
+    vcc5v0_host: vcc5v0-host-regulator {
+        compatible = "regulator-fixed";
+        enable-active-high;
+        gpio = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&vcc5v0_host_en>;
+        regulator-name = "vcc5v0_host";
+        regulator-always-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        vin-supply = <&vcc5v0_usb>;
+    };
+
+    gpio-leds {
+        compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&led_user_pin>,
+			<&led_sys_pin>,
+			<&led_hdd_pin>,
+            <&led_net_pin>;
+        user_led: led-0 {
+            label = "green:user";
+            gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
+            default-state = "off";
+        };
+        sys_led: led-1 {
+            label = "green:sys";
+            gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_LOW>;
+            linux,default-trigger = "heartbeat";
+        };
+        hdd_led: led-2 {
+            label = "green:hdd";
+            gpios = <&gpio3 RK_PB3 GPIO_ACTIVE_LOW>;
+            default-state = "off";
+        };
+        net_led: led-3 {
+            label = "green:net";
+            gpios = <&gpio3 RK_PB4 GPIO_ACTIVE_LOW>;
+            default-state = "off";
+        };		
+    };
+/*
+    pwm-leds {
+        compatible = "pwm-leds";
+        work_led: led-0 {
+            label = "sys:green";
+            pwms = <&pwm4 0 50000>;
+            max-brightness = <255>;
+            default-state = "on";
+        };
+    };
+*/
+    adc_keys: adc-keys {
+        compatible = "adc-keys";
+        io-channels = <&saradc 0>;
+        io-channel-names = "buttons";
+        keyup-threshold-microvolt = <1800000>;
+        poll-interval = <100>;
+
+        back-key {
+            label = "back";
+            linux,code = <KEY_BACK>;
+            press-threshold-microvolt = <1305500>;
+        };
+    };
+};
+
+// ynnnas-lp4x.dts
+&reserved_memory {
+    ramoops: ramoops@110000 {
+        compatible = "ramoops";
+        reg = <0x0 0x110000 0x0 0xf0000>;
+        record-size = <0x20000>;
+        console-size = <0x80000>;
+        ftrace-size = <0x00000>;
+        pmsg-size = <0x50000>;
+    };
+};
+
+&rockchip_suspend {
+    status = "okay";
+};
+
+// ynnnas.dtsi
+&bus_npu {
+    bus-supply = <&vdd_logic>;
+    pvtm-supply = <&vdd_cpu>;
+    status = "okay";
+};
+
+&cpu0 {
+    cpu-supply = <&vdd_cpu>;
+};
+
+&dfi {
+    status = "okay";
+};
+
+&dmc {
+    center-supply = <&vdd_logic>;
+    status = "okay";
+};
+
+&iep {
+    status = "okay";
+};
+
+&iep_mmu {
+    status = "okay";
+};
+
+&jpegd {
+    status = "okay";
+};
+
+&jpegd_mmu {
+    status = "okay";
+};
+
+&mpp_srv {
+    status = "okay";
+};
+
+&nandc0 {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+
+    nand@0 {
+        reg = <0>;
+        nand-bus-width = <8>;
+        nand-ecc-mode = "hw";
+        nand-ecc-strength = <16>;
+        nand-ecc-step-size = <1024>;
+    };
+};
+
+/*
+* There are 10 independent IO domains in RK3566/RK3568, including PMUIO[0:2] and VCCIO[1:7].
+* 1/ PMUIO0 and PMUIO1 are fixed-level power domains which cannot be configured;
+* 2/ PMUIO2 and VCCIO1,VCCIO[3:7] domains require that their hardware power supply voltages
+*    must be consistent with the software configuration correspondingly
+*	a/ When the hardware IO level is connected to 1.8V, the software voltage configuration
+*	   should also be configured to 1.8V accordingly;
+*	b/ When the hardware IO level is connected to 3.3V, the software voltage configuration
+*	   should also be configured to 3.3V accordingly;
+* 3/ VCCIO2 voltage control selection (0xFDC20140)
+*	BIT[0]: 0x0: from GPIO_0A7 (default)
+*	BIT[0]: 0x1: from GRF
+*    Default is determined by Pin FLASH_VOL_SEL/GPIO0_A7:
+*	L:VCCIO2 must supply 3.3V
+*	H:VCCIO2 must supply 1.8V
+*/
+&pmu_io_domains {
+    status = "okay";
+    pmuio1-supply = <&vcc_3v3>;
+    pmuio2-supply = <&vcc_3v3>;
+    vccio1-supply = <&vcc_1v8>;
+    vccio3-supply = <&vcc_3v3>;
+    vccio4-supply = <&vcc_1v8>;
+    vccio5-supply = <&vcc_3v3>;
+    vccio6-supply = <&vcc_1v8>;
+    vccio7-supply = <&vcc_3v3>;
+};
+
+&pwm0 {
+    status = "okay";
+};
+
+&pwm1 {
+    status = "okay";
+};
+
+/*
+&pwm4 {
+    status = "okay";
+};
+*/
+
+&rk_rga {
+    status = "okay";
+};
+
+&rkvdec {
+    status = "okay";
+};
+
+&rkvdec_mmu {
+    status = "okay";
+};
+
+&rkvenc {
+    venc-supply = <&vdd_logic>;
+    status = "okay";
+};
+
+&rkvenc_mmu {
+    status = "okay";
+};
+
+&rknpu {
+    rknpu-supply = <&vdd_logic>;
+    status = "okay";
+};
+
+&rknpu_mmu {
+    status = "okay";
+};
+
+&saradc {
+    status = "okay";
+    vref-supply = <&vcca_1v8>;
+};
+
+&sdhci {
+    bus-width = <8>;
+    supports-emmc;
+    non-removable;
+    max-frequency = <200000000>;
+    status = "okay";
+};
+
+&tsadc {
+    status = "okay";
+};
+
+&sata2 {
+    status = "okay";
+};
+
+&u2phy0_host {
+    phy-supply = <&vcc5v0_host>;
+    status = "okay";
+};
+
+&u2phy0_otg {
+    vbus-supply = <&vcc5v0_sys>;
+    status = "okay";
+};
+
+&usb2phy0 {
+    status = "okay";
+};
+
+&usbdrd_dwc3 {
+    dr_mode = "otg";
+    extcon = <&usb2phy0>;
+    status = "okay";
+};
+
+&usbdrd30 {
+    status = "okay";
+};
+
+&usbhost_dwc3 {
+    status = "okay";
+};
+
+&usbhost30 {
+    status = "okay";
+};
+
+&vdpu {
+    status = "okay";
+};
+
+&vdpu_mmu {
+    status = "okay";
+};
+
+&vepu {
+    status = "okay";
+};
+
+&vepu_mmu {
+    status = "okay";
+};
+
+// ynnnas-lp4x.dtsi
+&combphy1_usq {
+    assigned-clocks = <&pmucru CLK_PCIEPHY1_REF>;
+    assigned-clock-rates = <100000000>;
+    status = "okay";
+};
+
+&combphy2_psq {
+    pinctrl-names = "default";
+    pinctrl-0 = <&sata_pm_reset>;
+    status = "okay";
+};
+
+&gmac1 {
+    phy-mode = "rgmii";
+    clock_in_out = "input";
+
+    snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+    snps,reset-active-low;
+    /* Reset time is 20ms, 100ms for rtl8211f */
+    snps,reset-delays-us = <0 20000 100000>;
+
+    assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+    assigned-clock-parents =  <&cru SCLK_GMAC1_RGMII_SPEED>, <&gmac1_clkin>;
+    //assigned-clock-rates = <0>, <125000000>;
+
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac1m1_miim
+            &gmac1m1_tx_bus2
+            &gmac1m1_rx_bus2
+            &gmac1m1_rgmii_clk
+            &gmac1m1_rgmii_bus
+            &gmac1m1_clkinout>;
+
+    tx_delay = <0x4f>;
+    rx_delay = <0x2d>;
+
+    phy-handle = <&rgmii_phy1>;
+    status = "okay";
+};
+
+&mdio1 {
+    rgmii_phy1: phy@0 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x0>;
+    };
+};
+
+&pinctrl {
+    pmic {
+        pmic_int: pmic_int {
+            rockchip,pins =
+                <0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>;
+        };
+
+        soc_slppin_gpio: soc_slppin_gpio {
+            rockchip,pins =
+                <0 RK_PA2 RK_FUNC_GPIO &pcfg_output_low_pull_down>;
+        };
+
+        soc_slppin_slp: soc_slppin_slp {
+            rockchip,pins =
+                <0 RK_PA2 1 &pcfg_pull_up>;
+        };
+
+        soc_slppin_rst: soc_slppin_rst {
+            rockchip,pins =
+                <0 RK_PA2 2 &pcfg_pull_none>;
+        };
+    };
+
+    usb {
+        vcc5v0_host_en: vcc5v0-host-en {
+            rockchip,pins = <0 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
+
+    stata {
+        sata_pm_reset: sata-pm-reset {
+            rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_output_high>;
+        };
+    };
+
+    gpio-leds {
+        led_user_pin: led-user-pin {
+            rockchip,pins =
+                <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        led_sys_pin: led-sys-pin {
+            rockchip,pins =
+                <0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        led_hdd_pin: led-hdd-pin {
+            rockchip,pins =
+                <3 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        led_net_pin: led-net-pin {
+            rockchip,pins =
+                <3 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
+
+};

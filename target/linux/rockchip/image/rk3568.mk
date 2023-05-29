@@ -6,6 +6,11 @@ define Device/rk3568
   IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3568 | pine64-img | gzip | append-metadata
 endef
 
+define Device/rk3566
+$(call Device/rk3568)
+  SOC := rk3566
+endef
+
 define Device/rk3568_combined
   IMAGE/combined.img.gz := boot-combined | boot-script rk3568-cb | pine64-img | gzip | append-metadata
   IMAGES := combined.img.gz
@@ -89,11 +94,20 @@ endef
 TARGET_DEVICES += lyt_t68m
 
 define Device/hsa_bh2
-	$(call Device/rk3568)
+  $(call Device/rk3568)
   DEVICE_VENDOR := HSA
-	DEVICE_MODEL := BH2
+  DEVICE_MODEL := BH2
   DEVICE_DTS := rk3568-hsa-bh2
   SUPPORTED_DEVICES += hsa,bh2
   DEVICE_PACKAGES := kmod-scsi-core
 endef
 TARGET_DEVICES += hsa_bh2
+
+define Device/ynn_ynnnas
+  $(call Device/rk3566)
+  DEVICE_VENDOR := YingNiuNiu
+  DEVICE_MODEL := NAS
+  SUPPORTED_DEVICES += ynn,nas
+  DEVICE_PACKAGES := kmod-scsi-core
+endef
+TARGET_DEVICES += ynn_ynnnas
