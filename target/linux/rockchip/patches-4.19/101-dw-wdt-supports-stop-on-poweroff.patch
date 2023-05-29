@@ -1,0 +1,44 @@
+--- a/drivers/watchdog/dw_wdt.c
++++ b/drivers/watchdog/dw_wdt.c
+@@ -61,6 +61,7 @@
+ 	/* Save/restore */
+ 	u32			control;
+ 	u32			timeout;
++	bool			stop_on_shutdown;
+ };
+ 
+ #define to_dw_wdt(wdd)	container_of(wdd, struct dw_wdt, wdd)
+@@ -309,6 +310,8 @@
+ 
+ 	reset_control_deassert(dw_wdt->rst);
+ 
++	dw_wdt->stop_on_shutdown = of_property_read_bool(pdev->dev.of_node, "snps,stop-on-shutdown");
++
+ 	wdd = &dw_wdt->wdd;
+ 	wdd->info = &dw_wdt_ident;
+ 	wdd->ops = &dw_wdt_ops;
+@@ -364,6 +367,16 @@
+ 	return 0;
+ }
+ 
++static void dw_wdt_shutdown(struct platform_device *pdev)
++{
++	struct dw_wdt *dw_wdt = platform_get_drvdata(pdev);
++	if (dw_wdt && dw_wdt->stop_on_shutdown) {
++        	dev_info(&pdev->dev, "stop watchdog on shutdown\n");
++        	clk_disable_unprepare(dw_wdt->pclk);
++	        clk_disable_unprepare(dw_wdt->clk);
++	}
++}
++
+ #ifdef CONFIG_OF
+ static const struct of_device_id dw_wdt_of_match[] = {
+ 	{ .compatible = "snps,dw-wdt", },
+@@ -375,6 +388,7 @@
+ static struct platform_driver dw_wdt_driver = {
+ 	.probe		= dw_wdt_drv_probe,
+ 	.remove		= dw_wdt_drv_remove,
++	.shutdown 	= dw_wdt_shutdown,
+ 	.driver		= {
+ 		.name	= "dw_wdt",
+ 		.of_match_table = of_match_ptr(dw_wdt_of_match),

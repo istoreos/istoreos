@@ -222,6 +222,10 @@
     status = "okay";
 };
 
+&wdt {
+    snps,stop-on-shutdown;
+};
+
 // ynnnas-lp4x.dts
 &reserved_memory {
     ramoops: ramoops@110000 {
