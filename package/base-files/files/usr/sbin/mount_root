@@ -146,9 +146,23 @@ clean_overlayfs_redundant_whiteout_marker()
 	cd "$1"
 	find upper ! -path 'upper/opt/*' -type c -perm 0 -user 0 -group 0 | sed 's#^upper/#/#g' | while read; do
 		line="$REPLY"
-		[ ! -e "$line" -a \( -z "$2" -o ! -e "$2/upper$line" \) ] && \
+		[ ! -e "$line" -a \( -z "$2" -o ! -f "$2/upper$line" \) ] && \
 			busybox ls -l "upper$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
 			rm -f "upper$line"
+	done
+	cd - >/dev/null 2>&1
+}
+
+clean_overlayfs_redundant_whiteout_marker_luci()
+{
+	local line
+	[ -d "$1/upper/usr/lib/lua/luci" ] || return 0
+	cd "$1/upper/usr/lib/lua"
+	find luci -type c -perm 0 -user 0 -group 0 | while read; do
+		line="$REPLY"
+		[ ! -e "/usr/lib/lua/$line" -a \( -z "$2" -o ! -f "$2/upper/usr/lib/lua/$line" \) ] && \
+			busybox ls -l "$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
+			rm -f "$line"
 	done
 	cd - >/dev/null 2>&1
 }
@@ -182,14 +196,23 @@ prepare_primary_overlay()
 		rm -f /overlay/.reset
 		sync /overlay
 	else
-		if [ -d /overlay/upper ] && update_overlay_lower_uuid /overlay; then
-			is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
-			clean_overlayfs_redundant_whiteout_marker /overlay
+		if [ -d /overlay/upper ] ; then
+			if update_overlay_lower_uuid /overlay || [ -f /overlay/.upgrading ] ; then
+				rm -f /overlay/upper/etc/opkg/distfeeds.conf
+				is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
+				clean_overlayfs_redundant_whiteout_marker /overlay
+			else
+				clean_overlayfs_redundant_whiteout_marker_luci /overlay
+			fi
+		else
+			update_overlay_lower_uuid /overlay
 		fi
 		if [ -f /overlay/upper/usr/lib/opkg/.upgrading ]; then
 			clean_kmods /overlay
 		fi
 	fi
+
+	rm -f /overlay/.upgrading
 
 	mkdir -p /overlay/upper /overlay/work
 }
@@ -247,9 +270,10 @@ prepare_ext_overlay()
 		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
 			clean_kmods "$newoverlaydir"
 		fi
-		if [ -d "$newoverlaydir/upper" -a -f "$overlaydir/.upgrading" ]; then
+		# should change to $newoverlaydir/.upgrading
+		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
+			rm -f "$newoverlaydir/upper/etc/opkg/distfeeds.conf"
 			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
-			[ -f "$newoverlaydir/.commit" ] || clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
 		fi
 		if [ -f "$newoverlaydir/.commit" ]; then
 			if [ -d "$newoverlaydir/upper" ]; then
@@ -262,8 +286,14 @@ prepare_ext_overlay()
 				mkdir -m 0755 -p "$newoverlaydir/upper/ext_overlay"
 			}
 			rm -f "$newoverlaydir/.commit"
+		elif [ -d "$newoverlaydir/upper" -a \( -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" -o ! -f "$overlaydir/.sandbox" \) ]; then
+			clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
+		else
+			clean_overlayfs_redundant_whiteout_marker_luci "$newoverlaydir" "$overlaydir"
 		fi
 	fi
+
+	rm -f "$newoverlaydir/.upgrading"
 
 	( mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay && \
 		  mkdir -m 0755 -p $newoverlaydir/work ) || return 1
@@ -305,6 +335,14 @@ prepare_mnt()
 	mount -o noatime,lowerdir=$lowerdir,upperdir=$overlaydir/upper,workdir=$overlaydir/work \
 		-t overlay "overlayfs:/overlay" /mnt \
 		|| return 1
+
+	if [ "$overlaydir" = "/ext_overlay" ]; then
+		[ -f "/overlay/.sandbox" ] || touch "/overlay/.sandbox"
+	else
+		rm -f "/overlay/.sandbox"
+	fi
+
+	return 0
 }
 
 post_extroot()
