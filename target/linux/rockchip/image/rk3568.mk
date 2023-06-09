@@ -103,6 +103,15 @@ define Device/hsa_bh2
 endef
 TARGET_DEVICES += hsa_bh2
 
+define Device/hinlink_unibox
+  $(call Device/rk3568)
+  DEVICE_VENDOR := HINLINK
+  DEVICE_MODEL := UniBox
+  SUPPORTED_DEVICES += hinlink,unibox
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += hinlink_unibox
+
 define Device/ynn_ynnnas
   $(call Device/rk3566)
   DEVICE_VENDOR := YingNiuNiu

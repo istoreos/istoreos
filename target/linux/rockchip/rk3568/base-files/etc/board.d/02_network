@@ -11,6 +11,7 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
+	hinlink,unibox|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,opc-h66k|\
@@ -50,6 +51,7 @@ rockchip_setup_macs()
 	friendlyelec,nanopi-r5c|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
+	hinlink,unibox|\
 	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)

@@ -177,27 +177,7 @@
 		pinctrl-0 = <&vcc5v0_otg_en>;
 	};
 
-	pcie30_avdd0v9: pcie30-avdd0v9 {
-		compatible = "regulator-fixed";
-		regulator-name = "pcie30_avdd0v9";
-		regulator-always-on;
-		regulator-boot-on;
-		regulator-min-microvolt = <900000>;
-		regulator-max-microvolt = <900000>;
-		vin-supply = <&vcc3v3_sys>;
-	};
-
-	pcie30_avdd1v8: pcie30-avdd1v8 {
-		compatible = "regulator-fixed";
-		regulator-name = "pcie30_avdd1v8";
-		regulator-always-on;
-		regulator-boot-on;
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		vin-supply = <&vcc3v3_sys>;
-	};
-
-	vcc3v3_pcie: gpio-regulator {
+	vcc3v3_pcie: vcc3v3-pcie-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_pcie";
 		regulator-min-microvolt = <3300000>;
@@ -248,6 +228,7 @@
 };
 
 &combphy0_us {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
 	status = "okay";
 };
 
@@ -718,10 +699,6 @@
 	vccio7-supply = <&vcc_3v3>;
 };
 
-&pwm0 {
-	status = "okay";
-};
-
 &pwm4 {
 	status = "disabled";
 };
@@ -839,22 +816,22 @@
 	status = "okay";
 };
 
-&u2phy0_host {
-	phy-supply = <&vcc5v0_otg>;
-	status = "okay";
-};
-
 &u2phy0_otg {
 	vbus-supply = <&vcc5v0_otg>;
 	status = "okay";
 };
 
-&u2phy1_host {
+&u2phy0_host {
 	phy-supply = <&vcc5v0_otg>;
 	status = "okay";
 };
 
 &u2phy1_otg {
+	phy-supply = <&vcc5v0_otg>;
+	status = "okay";
+};
+
+&u2phy1_host {
 	phy-supply = <&vcc5v0_otg>;
 	status = "okay";
 };
@@ -884,13 +861,16 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "otg";
-	extcon = <&usb2phy0>;
-	status = "disabled";
+    phys = <&u2phy0_otg>;
+    phy-names = "usb2-phy";
+    extcon = <&usb2phy0>;
+    maximum-speed = "high-speed"; /* only USB2.0 */
+    snps,dis_u2_susphy_quirk; /* only USB2.0 */
+    status = "okay";
 };
 
 &usbdrd30 {
-	status = "disabled";
+    status = "okay";
 };
 
 &usbhost_dwc3 {
@@ -908,10 +888,6 @@
 
 &pcie30phy {
 	data-lanes = <1 2>;
-	status = "okay";
-};
-
-&pcie30phy {
 	status = "okay";
 };
 

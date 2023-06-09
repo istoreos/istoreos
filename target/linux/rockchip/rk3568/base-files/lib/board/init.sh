@@ -80,6 +80,7 @@ board_fixup_iface_name() {
             rename_iface lan3 eth3
         fi
         ;;
+    hinlink,unibox|\
     firefly,rk3568-roc-pc)
         device="$(get_iface_device eth0)"
         if [[ "$device" = "fe010000.ethernet" ]]; then
@@ -116,6 +117,7 @@ board_fixup_iface_name() {
 
 board_set_iface_smp_affinity() {
     case $(board_name) in
+    hinlink,unibox|\
     firefly,rk3568-roc-pc)
         set_iface_cpumask 2 eth0
         set_iface_cpumask 4 eth1
