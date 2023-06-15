@@ -12,7 +12,7 @@ so we report 2500baseX instead
 diff --git a/src/r8125_n.c b/src/r8125_n.c
 --- a/src/r8125_n.c
 +++ b/src/r8125_n.c
-@@ -5011,14 +5011,10 @@ static void rtl8125_gset_xmii(struct net
+@@ -5014,14 +5014,10 @@ static void rtl8125_gset_xmii(struct net
                                                  lpa_adv);
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
          if (supported & SUPPORTED_2500baseX_Full) {
