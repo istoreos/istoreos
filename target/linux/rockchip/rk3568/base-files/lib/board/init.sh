@@ -112,6 +112,14 @@ board_fixup_iface_name() {
             rename_iface lan3 eth3
         fi
         ;;
+    hinlink,opc-h69k)
+        device="$(get_iface_device eth2)"
+        if [[ "$device" = "0001:11:00.0" ]]; then
+            rename_iface eth1 lan2
+            rename_iface eth2 eth1
+            rename_iface lan2 eth2
+        fi
+        ;;
     esac
 }
 
@@ -122,6 +130,7 @@ board_set_iface_smp_affinity() {
         set_iface_cpumask 2 eth0
         set_iface_cpumask 4 eth1
         ;;
+    hinlink,opc-h69k|\
     friendlyelec,nanopi-r5s)
         set_iface_cpumask 2 eth0
         if ethtool -i eth1 | grep -Fq 'driver: r8169'; then

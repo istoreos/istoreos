@@ -21,6 +21,11 @@ define Device/rk3568_combined_friendlyelec
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3568_combined_hinlink
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3568-hinlink | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
@@ -56,10 +61,10 @@ endef
 
 define Device/hinlink_opc-h6xk
 $(call Device/hinlink_common)
-$(call Device/rk3568_combined)
+$(call Device/rk3568_combined_hinlink)
   DEVICE_MODEL := OPC-H69K/H68K/H66K combined
-  SUPPORTED_DEVICES += hinlink,opc-h66k hinlink,opc-h68k
-  DEVICE_DTS := rk3568-opc-h66k rk3568-opc-h68k
+  SUPPORTED_DEVICES += hinlink,opc-h66k hinlink,opc-h68k hinlink,opc-h69k
+  DEVICE_DTS := rk3568-opc-h66k rk3568-opc-h68k rk3568-opc-h69k
 endef
 TARGET_DEVICES += hinlink_opc-h6xk
 
