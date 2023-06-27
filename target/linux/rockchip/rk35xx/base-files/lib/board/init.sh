@@ -110,6 +110,14 @@ board_fixup_iface_name() {
             rename_iface lan3 eth3
         fi
         ;;
+    hinlink,opc-h69k)
+        device="$(get_iface_device eth2)"
+        if [[ "$device" = "0001:11:00.0" ]]; then
+            rename_iface eth1 lan2
+            rename_iface eth2 eth1
+            rename_iface lan2 eth2
+        fi
+        ;;
     friendlyelec,nanopi-r6s)
         device="$(get_iface_device eth1)"
         if [[ "$device" = "0004:41:00.0" ]]; then
@@ -127,6 +135,7 @@ board_set_iface_smp_affinity() {
         set_iface_cpumask 2 eth0
         set_iface_cpumask 4 eth1
         ;;
+    hinlink,opc-h69k|\
     friendlyelec,nanopi-r6s|\
     friendlyelec,nanopi-r6c|\
     friendlyelec,nanopi-r5s)

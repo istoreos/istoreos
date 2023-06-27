@@ -18,6 +18,7 @@ rockchip_setup_interfaces()
 	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
 		;;
+	hinlink,opc-h69k|\
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		;;
@@ -53,6 +54,7 @@ rockchip_setup_macs()
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6s|\
 	friendlyelec,nanopi-r6c|\
+	hinlink,opc-h69k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	fastrhino,r66s|\

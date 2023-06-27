@@ -1,0 +1,36 @@
+# hinlink rk3568 combined image
+
+env delete hwflag
+env delete adc_value
+
+# using gpio 143 (GPIO4_B7, GMAC1_MDIO_M1) to detect gmac1
+if gpio input 143; then
+    echo nogmac
+else
+    echo hasgmac1
+    setenv hwflag 1
+
+    # using SARADC CH7 to detect hwrev
+    adc single saradc@fe720000 7 adc_value
+
+    if test -n "$adc_value"; then
+        # h68k 511-524
+        # h69k 691-695
+        if test "$adc_value" -ge 610; then
+            echo h69k
+            setenv hwflag 10
+        fi
+    fi
+fi
+env delete adc_value
+
+part uuid mmc ${devnum}:2 uuid
+
+setenv bootargs "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=${uuid} rw rootwait"
+
+load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwflag}.dtb
+load mmc ${devnum}:1 ${kernel_addr_r} kernel.img
+
+env delete hwflag
+
+booti ${kernel_addr_r} - ${fdt_addr_r}
