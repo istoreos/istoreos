@@ -20,3 +20,11 @@
 &gmac1 {
 	status = "disabled";
 };
+
+&pwm0 {
+	status = "disabled";
+};
+
+&i2c5 {
+	status = "disabled";
+};

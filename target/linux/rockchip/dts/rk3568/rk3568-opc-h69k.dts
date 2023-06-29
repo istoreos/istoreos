@@ -81,6 +81,10 @@
 	status = "okay";
 };
 
+&i2c5 {
+	status = "okay";
+};
+
 &soc_thermal {
 	trips {
 		cpu_warm: cpu_warm {
