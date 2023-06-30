@@ -16,7 +16,22 @@ define Build/boot-common
 	rm -fR $@.boot
 	mkdir -p $@.boot
 
-	$(CP) $(DTS_DIR)/$(DEVICE_DTS).dtb $@.boot/rockchip.dtb
+	$(CP) $(KDIR)/image-$(firstword $(DEVICE_DTS)).dtb $@.boot/rockchip.dtb
+	$(CP) $(IMAGE_KERNEL) $@.boot/kernel.img
+endef
+
+define Build/boot-combined
+	# This creates a new folder copies the dtbs (as rockchip*.dtb) 
+	# and the kernel image (as kernel.img)
+	rm -fR $@.boot
+	mkdir -p $@.boot
+
+	i=0; \
+	for dts in $(DEVICE_DTS); do \
+		$(CP) $(KDIR)/image-$${dts}.dtb $@.boot/rockchip$$(perl -e 'printf "%b\n",'$$i).dtb; \
+		let i+=1; \
+	done
+	$(LN) rockchip0.dtb $@.boot/rockchip.dtb
 	$(CP) $(IMAGE_KERNEL) $@.boot/kernel.img
 endef
 
@@ -50,7 +65,8 @@ define Device/Default
   PROFILES := Default
   KERNEL := kernel-bin
   IMAGES := sysupgrade.img.gz
-  DEVICE_DTS = rockchip/$$(SOC)-$(lastword $(subst _, ,$(1)))
+  DEVICE_DTS_DIR := $(DTS_DIR)/rockchip
+  DEVICE_DTS = $$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
 include $(SUBTARGET).mk

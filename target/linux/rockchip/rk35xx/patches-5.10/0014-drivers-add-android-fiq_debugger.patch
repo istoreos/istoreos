@@ -1,0 +1,37 @@
+From 2fe57061dabd0814557490af5e4a85c5340428c2 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 11 May 2023 18:48:24 +0800
+Subject: [PATCH 14/42] drivers: add android fiq_debugger
+
+---
+ drivers/staging/android/Kconfig  | 2 ++
+ drivers/staging/android/Makefile | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/staging/android/Kconfig b/drivers/staging/android/Kconfig
+index 8d8fd5c29..24c79b442 100644
+--- a/drivers/staging/android/Kconfig
++++ b/drivers/staging/android/Kconfig
+@@ -16,6 +16,8 @@ config ASHMEM
+ 
+ source "drivers/staging/android/ion/Kconfig"
+ 
++source "drivers/staging/android/fiq_debugger/Kconfig"
++
+ endif # if ANDROID
+ 
+ endmenu
+diff --git a/drivers/staging/android/Makefile b/drivers/staging/android/Makefile
+index 3b66cd0b0..5788c4def 100644
+--- a/drivers/staging/android/Makefile
++++ b/drivers/staging/android/Makefile
+@@ -2,5 +2,6 @@
+ ccflags-y += -I$(src)			# needed for trace events
+ 
+ obj-y					+= ion/
++obj-$(CONFIG_FIQ_DEBUGGER)		+= fiq_debugger/
+ 
+ obj-$(CONFIG_ASHMEM)			+= ashmem.o
+-- 
+2.37.1 (Apple Git-137.1)
+

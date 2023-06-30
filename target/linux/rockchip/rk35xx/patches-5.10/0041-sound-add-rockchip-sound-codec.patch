@@ -1,0 +1,62 @@
+From 004c536981874761b916ba67010082f99c6e9d9b Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Thu, 11 May 2023 18:56:39 +0800
+Subject: [PATCH 41/42] sound: add rockchip sound codec
+
+---
+ sound/soc/codecs/Kconfig  | 9 +++++++++
+ sound/soc/codecs/Makefile | 4 ++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
+index f1c9e5639..511c1806c 100644
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -151,6 +151,7 @@ config SND_SOC_ALL_CODECS
+ 	imply SND_SOC_PCM512x_I2C
+ 	imply SND_SOC_PCM512x_SPI
+ 	imply SND_SOC_RK3328
++	imply SND_SOC_RK817
+ 	imply SND_SOC_RT274
+ 	imply SND_SOC_RT286
+ 	imply SND_SOC_RT298
+@@ -1028,6 +1029,14 @@ config SND_SOC_RK3328
+ 	tristate "Rockchip RK3328 audio CODEC"
+ 	select REGMAP_MMIO
+ 
++config SND_SOC_RK817
++	tristate "Rockchip RK817 CODEC"
++	depends on MFD_RK808
++	select REGMAP_I2C
++
++config SND_SOC_RK_CODEC_DIGITAL
++	tristate "Rockchip Codec Digital Interface"
++
+ config SND_SOC_RL6231
+ 	tristate
+ 	default y if SND_SOC_RT5514=y
+diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
+index 11ce98c25..fa8e928c8 100644
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -156,6 +156,8 @@ snd-soc-pcm512x-objs := pcm512x.o
+ snd-soc-pcm512x-i2c-objs := pcm512x-i2c.o
+ snd-soc-pcm512x-spi-objs := pcm512x-spi.o
+ snd-soc-rk3328-objs := rk3328_codec.o
++snd-soc-rk817-objs := rk817_codec.o
++snd-soc-rk-codec-digital-objs := rk_codec_digital.o
+ snd-soc-rl6231-objs := rl6231.o
+ snd-soc-rl6347a-objs := rl6347a.o
+ snd-soc-rt1011-objs := rt1011.o
+@@ -465,6 +467,8 @@ obj-$(CONFIG_SND_SOC_PCM512x)	+= snd-soc-pcm512x.o
+ obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd-soc-pcm512x-i2c.o
+ obj-$(CONFIG_SND_SOC_PCM512x_SPI)	+= snd-soc-pcm512x-spi.o
+ obj-$(CONFIG_SND_SOC_RK3328)	+= snd-soc-rk3328.o
++obj-$(CONFIG_SND_SOC_RK817)	+= snd-soc-rk817.o
++obj-$(CONFIG_SND_SOC_RK_CODEC_DIGITAL)	+= snd-soc-rk-codec-digital.o
+ obj-$(CONFIG_SND_SOC_RL6231)	+= snd-soc-rl6231.o
+ obj-$(CONFIG_SND_SOC_RL6347A)	+= snd-soc-rl6347a.o
+ obj-$(CONFIG_SND_SOC_RT1011)	+= snd-soc-rt1011.o
+-- 
+2.37.1 (Apple Git-137.1)
+

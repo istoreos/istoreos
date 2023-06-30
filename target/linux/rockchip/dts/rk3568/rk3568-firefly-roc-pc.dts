@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+
+#include "rk3568-firefly-roc-pc.dtsi"
+
+/ {
+    model = "Firefly Station P2 / RK3568-ROC-PC HDMI (Linux)";
+    compatible = "firefly,rk3568-roc-pc", "rockchip,rk3568";
+
+};
+
+&route_hdmi {
+    status = "okay";
+    connect = <&vp0_out_hdmi>;
+};
