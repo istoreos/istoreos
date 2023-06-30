@@ -1,0 +1,34 @@
+From 4fc5fb85fea59b67d15aeca72022b26a2f04e5db Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 8 Nov 2022 11:34:00 +0800
+Subject: [PATCH] default enable tso
+
+---
+ src/r8125_n.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/r8125_n.c b/src/r8125_n.c
+index 3c2866e..2edeaba 100755
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -12711,7 +12711,7 @@ rtl8125_init_one(struct pci_dev *pdev,
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
+                 tp->cp_cmd |= RxChkSum;
+ #else
+-                dev->features |= NETIF_F_RXCSUM;
++                dev->features |= NETIF_F_RXCSUM | NETIF_F_SG | NETIF_F_TSO;
+                 dev->hw_features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_TSO |
+                                    NETIF_F_RXCSUM | NETIF_F_HW_VLAN_TX | NETIF_F_HW_VLAN_RX;
+                 dev->vlan_features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_TSO |
+@@ -12723,7 +12723,7 @@ rtl8125_init_one(struct pci_dev *pdev,
+                 dev->hw_features |= NETIF_F_RXFCS;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,22)
+                 dev->hw_features |= NETIF_F_IPV6_CSUM | NETIF_F_TSO6;
+-                dev->features |=  NETIF_F_IPV6_CSUM;
++                dev->features |=  NETIF_F_IPV6_CSUM | NETIF_F_TSO6;
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+                 netif_set_tso_max_size(dev, LSO_64K);
+                 netif_set_tso_max_segs(dev, NIC_MAX_PHYS_BUF_COUNT_LSO2);
+-- 
+2.31.0
+
