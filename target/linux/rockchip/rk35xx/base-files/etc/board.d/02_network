@@ -12,6 +12,7 @@ rockchip_setup_interfaces()
 
 	case "$board" in
 	friendlyelec,nanopi-r5c|\
+	friendlyelec,nanopi-r6c|\
 	fastrhino,r66s|\
 	hinlink,opc-h66k|\
 	firefly,rk3568-roc-pc)
@@ -23,6 +24,9 @@ rockchip_setup_interfaces()
 	fastrhino,r68s|\
 	hinlink,opc-h68k)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
+		;;
+	friendlyelec,nanopi-r6s)
+		ucidef_set_interfaces_lan_wan 'eth2 eth0' 'eth1'
 		;;
 	*)
 		ucidef_set_interface_lan 'eth0'
@@ -47,6 +51,8 @@ rockchip_setup_macs()
 	firefly,rk3568-roc-pc|\
 	friendlyelec,nanopi-r5s|\
 	friendlyelec,nanopi-r5c|\
+	friendlyelec,nanopi-r6s|\
+	friendlyelec,nanopi-r6c|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	fastrhino,r66s|\

@@ -1,0 +1,25 @@
+# friendlyelec rk3588 combined image, board detected by ADC
+# https://github.com/friendlyarm/uboot-rockchip/blob/nanopi6-v2017.09/board/rockchip/nanopi6/hwrev.c
+# adc_value >> 2 : R6S < 211 < R6C
+env delete hwrev
+env delete adc_value
+
+# using SARADC CH5 to detect hwrev
+
+adc single saradc@fec10000 5 adc_value
+
+if test -n "$adc_value"; then
+    if test "$adc_value" -ge 844; then
+        echo adc $adc_value : board R6C
+        setenv hwrev 1
+    fi
+fi
+
+part uuid mmc ${devnum}:2 uuid
+
+setenv bootargs "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 root=PARTUUID=${uuid} rw rootwait"
+
+load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
+load mmc ${devnum}:1 ${kernel_addr_r} kernel.img
+
+booti ${kernel_addr_r} - ${fdt_addr_r}

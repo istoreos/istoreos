@@ -29,6 +29,11 @@ define Device/rk3588_combined
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3588_combined_friendlyelec
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3588-friendlyelec | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
@@ -91,3 +96,14 @@ $(call Device/rk3568)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 TARGET_DEVICES += firefly_station-p2
+
+define Device/friendlyarm_nanopi-r6s
+$(call Device/rk3588)
+$(call Device/rk3588_combined_friendlyelec)
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R6S/R6C
+  SUPPORTED_DEVICES += friendlyelec,nanopi-r6s friendlyelec,nanopi-r6c
+  DEVICE_DTS := rk3588-nanopi-r6s rk3588-nanopi-r6c
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal
+endef
+TARGET_DEVICES += friendlyarm_nanopi-r6s
