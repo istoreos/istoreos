@@ -1,0 +1,11 @@
+--- a/inode.c
++++ b/inode.c
+@@ -53,7 +53,7 @@ static struct inode *ntfs_read_mft(struc
+ 	struct MFT_REC *rec;
+ 	struct runs_tree *run;
+ 
+-	inode->i_op = NULL;
++	// inode->i_op = NULL; // avoid null dereference
+ 
+ 	err = mi_init(&ni->mi, sbi, ino);
+ 	if (err)
