@@ -1,0 +1,5 @@
+RK3568_ATF:=rk3568_bl31_v1.40.elf
+RK3568_DDR:=rk3568_ddr_1560MHz_v1.16.bin
+
+RK3588_ATF:=rk3588_bl31_v1.37.elf
+RK3588_DDR:=rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.10.bin

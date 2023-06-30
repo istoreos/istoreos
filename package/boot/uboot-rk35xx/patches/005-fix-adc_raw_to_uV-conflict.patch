@@ -1,0 +1,34 @@
+From 03b6b30ffc20daece015c3605724c7dc6d3d9e4d Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 5 Jun 2023 12:59:10 +0800
+Subject: [PATCH] fix adc_raw_to_uV conflict
+
+---
+ drivers/input/key-uclass.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/input/key-uclass.c b/drivers/input/key-uclass.c
+index 35e7eae..1937f5d 100644
+--- a/drivers/input/key-uclass.c
++++ b/drivers/input/key-uclass.c
+@@ -39,7 +39,7 @@ uint64_t key_timer(uint64_t base)
+ }
+ 
+ #ifdef CONFIG_ADC
+-static int adc_raw_to_uV(struct udevice *dev, unsigned int raw, int *uV)
++static int adc_raw_to_uV_rk(struct udevice *dev, unsigned int raw, int *uV)
+ {
+ 	unsigned int data_mask;
+ 	int ret, vref = 1800000;
+@@ -62,7 +62,7 @@ static int key_adc_event(struct udevice *dev,
+ 	int val = adcval;
+ 
+ 	if (uc_key->in_volt) {
+-		if (adc_raw_to_uV(dev, adcval, &val))
++		if (adc_raw_to_uV_rk(dev, adcval, &val))
+ 			return KEY_PRESS_NONE;
+ 	}
+ 
+-- 
+2.31.0
+
