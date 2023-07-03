@@ -208,6 +208,12 @@ generate_network() {
 				EOF
 			}
 		;;
+
+		*)
+			uci -q batch <<-EOF
+				set network.$1.proto='$protocol'
+				set network.$1.auto='0'
+			EOF
 	esac
 }
 

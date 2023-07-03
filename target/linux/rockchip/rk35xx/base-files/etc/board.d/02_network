@@ -21,6 +21,10 @@ rockchip_setup_interfaces()
 	hinlink,opc-h69k|\
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
+		if [[ "$board" = "hinlink,opc-h69k" ]]; then
+			ucidef_set_interface "wwan" device "/sys/devices/platform/usbhost/fd000000.dwc3/xhci-hcd.0.auto/usb4/4-1" protocol "modemmanager" metric "100"
+			uci add_list firewall.@zone[1].network='wwan'
+		fi
 		;;
 	fastrhino,r68s|\
 	hinlink,opc-h68k)
