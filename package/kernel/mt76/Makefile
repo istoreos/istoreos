@@ -58,6 +58,11 @@ define KernelPackage/mt76-core
 	$(PKG_BUILD_DIR)/mt76.ko
 endef
 
+define KernelPackage/mt76-core/install
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/mt79.defaults $(1)/etc/uci-defaults/00-mt79
+endef
+
 define KernelPackage/mt76-usb
   $(KernelPackage/mt76-default)
   TITLE:=MediaTek MT76xx wireless driver USB support
