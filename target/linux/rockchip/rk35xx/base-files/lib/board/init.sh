@@ -186,6 +186,22 @@ board_set_iface_smp_affinity() {
     esac
 }
 
+board_wait_wifi() {
+    local seconds
+    case $(board_name) in
+    hinlink,opc-h68k|\
+    hinlink,opc-h69k)
+        for seconds in $(seq 0 15); do
+            [[ -s /etc/config/wireless ]] && break
+            sleep 1
+        done
+        sleep 1
+    ;;
+    esac
+}
+
 board_fixup_iface_name
 
 board_set_iface_smp_affinity
+
+board_wait_wifi
