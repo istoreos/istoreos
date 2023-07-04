@@ -1,0 +1,40 @@
+#!/bin/sh
+
+enable_wifi_device() {
+    uci_remove "wireless" "$1" disabled
+}
+
+config_wifi_interface() {
+    uci_set "wireless" "$1" ssid "$2"
+    uci_set "wireless" "$1" encryption "$3"
+    uci_set "wireless" "$1" key "$4"
+}
+
+config_wifi_all() {
+    config_load "wireless"
+    config_foreach enable_wifi_device wifi-device
+    config_foreach config_wifi_interface wifi-iface "$1" "$2" "$3"
+    uci_commit "wireless"
+}
+
+board_config_wifi() {
+    [[ -s /etc/config/wireless ]] || return 0
+
+    . /lib/functions.sh
+
+    local ssid
+    case $(board_name) in
+    hinlink,opc-h68k)
+        ssid=H68K
+    ;;
+    hinlink,opc-h69k)
+        ssid=H69K
+    ;;
+    esac
+
+    if [[ -n "$ssid" ]]; then
+        config_wifi_all "$ssid" "sae-mixed" "1234567890"
+    fi
+}
+
+board_config_wifi
