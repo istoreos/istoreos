@@ -149,8 +149,6 @@ board_set_iface_smp_affinity() {
         set_iface_cpumask 4 eth1
         ;;
     hinlink,opc-h69k|\
-    friendlyelec,nanopi-r6s|\
-    friendlyelec,nanopi-r6c|\
     friendlyelec,nanopi-r5s)
         set_iface_cpumask 2 eth0
         if ethtool -i eth1 | grep -Fq 'driver: r8169'; then
@@ -194,6 +192,21 @@ board_set_iface_smp_affinity() {
             set_iface_cpumask 4 "eth1" "eth1-0" && \
             set_iface_cpumask 4 "eth1" "eth1-18" && \
             set_iface_cpumask 1 "eth1" "eth1-16"
+        fi
+        ;;
+    friendlyelec,nanopi-r6s|\
+    friendlyelec,nanopi-r6c)
+        set_iface_cpumask 2 eth0
+        if ethtool -i eth1 | grep -Fq 'driver: r8169'; then
+            set_iface_cpumask 4 "eth1"
+            set_iface_cpumask 8 "eth2"
+        else
+            set_iface_cpumask 4 "eth1" "eth1-0" f0 && \
+            set_iface_cpumask 4 "eth1" "eth1-16" && \
+            set_iface_cpumask 2 "eth1" "eth1-18" && \
+            set_iface_cpumask 8 "eth2" "eth2-0" f0 && \
+            set_iface_cpumask 8 "eth2" "eth2-18" && \
+            set_iface_cpumask 1 "eth2" "eth2-16"
         fi
         ;;
     esac
