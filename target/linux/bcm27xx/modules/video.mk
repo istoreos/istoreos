@@ -28,6 +28,7 @@ define KernelPackage/drm-vc4
   TITLE:=Broadcom VC4 Graphics
   DEPENDS:= \
     @TARGET_bcm27xx +kmod-drm \
+    +kmod-backlight \
     +kmod-sound-core \
     +kmod-sound-soc-core
   KCONFIG:= \
