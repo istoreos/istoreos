@@ -43,6 +43,7 @@ define KernelPackage/drm-vc4
   TITLE:=Broadcom VC4 Graphics
   DEPENDS:= \
     @TARGET_bcm27xx +kmod-drm \
+    +kmod-backlight \
     +kmod-sound-core \
     +kmod-sound-soc-core
   KCONFIG:= \
@@ -132,7 +133,7 @@ define KernelPackage/drm-rp1-dsi
     CONFIG_DRM_WERROR=n
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/rp1/rp1-dsi/drm-rp1-dsi.ko
   AUTOLOAD:=$(call AutoLoad,67,drm-rp1-dsi)
-  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-drm-vc4
+  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-backlight +kmod-drm-vc4
 endef
 
 define KernelPackage/drm-rp1-dsi/description
@@ -156,7 +157,7 @@ define KernelPackage/drm-rp1-dpi
     CONFIG_DRM_TTM_HELPER=n
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/rp1/rp1-dpi/drm-rp1-dpi.ko
   AUTOLOAD:=$(call AutoLoad,67,drm-rp1-dpi)
-  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-drm-vc4 +kmod-rp1-pio
+  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-backlight +kmod-drm-vc4 +kmod-rp1-pio
 endef
 
 define KernelPackage/drm-rp1-dpi/description
@@ -182,7 +183,7 @@ define KernelPackage/drm-rp1-vec
     CONFIG_DRM_TTM_HELPER=n
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/rp1/rp1-vec/drm-rp1-vec.ko
   AUTOLOAD:=$(call AutoLoad,67,drm-rp1-vec)
-  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-drm-vc4
+  DEPENDS:=@TARGET_bcm27xx_bcm2712 +kmod-backlight +kmod-drm-vc4
 endef
 
 define KernelPackage/drm-rp1-vec/description
