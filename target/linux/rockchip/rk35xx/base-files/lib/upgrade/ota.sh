@@ -12,6 +12,10 @@ export_ota_url() {
 	friendlyelec,nanopi-r5s)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/r5s"
 		;;
+	friendlyelec,nanopi-r6s|\
+	friendlyelec,nanopi-r6c)
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/r6s"
+		;;
 	firefly,rk3568-roc-pc)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/station-p2"
 		;;
