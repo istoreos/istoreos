@@ -1,6 +1,10 @@
 #!/bin/sh
+# don't change file name, if you do, modify init.sh, too.
 
 enable_wifi_device() {
+    local band
+    config_get band "$1" band
+    [[ "$band" = "5g" ]] && uci_set "wireless" "$1" channel "157"
     uci_remove "wireless" "$1" disabled
 }
 

@@ -216,10 +216,11 @@ board_set_iface_smp_affinity() {
 
 board_wait_wifi() {
     local seconds
+    [[ -f "/etc/uci-defaults/01-rk35xx-wifi" ]] || return 0
     case $(board_name) in
     hinlink,opc-h68k|\
     hinlink,opc-h69k)
-        for seconds in $(seq 0 15); do
+        for seconds in $(seq 0 30); do
             [[ -s /etc/config/wireless ]] && break
             sleep 1
         done
