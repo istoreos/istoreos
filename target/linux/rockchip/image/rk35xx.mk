@@ -112,3 +112,12 @@ $(call Device/rk3588_combined_friendlyelec)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r6s
+
+define Device/lyt_t68m
+$(call Device/rk3568)
+  DEVICE_VENDOR := LYT
+  DEVICE_MODEL := T68M
+  SUPPORTED_DEVICES += lyt,t68m
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += lyt_t68m

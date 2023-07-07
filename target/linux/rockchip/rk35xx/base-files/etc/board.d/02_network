@@ -26,6 +26,7 @@ rockchip_setup_interfaces()
 			uci get firewall.@zone[1].network | grep -qFw wwan || uci add_list firewall.@zone[1].network='wwan'
 		fi
 		;;
+	lyt,t68m|\
 	fastrhino,r68s|\
 	hinlink,opc-h68k)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
@@ -61,6 +62,7 @@ rockchip_setup_macs()
 	hinlink,opc-h69k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
+	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)

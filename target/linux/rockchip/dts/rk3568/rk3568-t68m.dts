@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+* Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+*
+*/
+
+/dts-v1/;
+
+#include "rk3568-t68m.dtsi"
+
+/ {
+	model = "T68M";
+	compatible = "lyt,t68m", "rockchip,rk3568";
+
+	leds {
+		status = "okay";
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_user_en>;
+		user_led: user {
+			label = "t68m:red:user";
+			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};
+
+&gmac0 {
+	snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+};
+
+&gmac1 {
+	snps,reset-gpio = <&gpio3 RK_PB0 GPIO_ACTIVE_LOW>;
+};
+
+&pcie30phy {
+	status = "okay";
+};
+
+&pcie3x1 {
+	num-viewport = <4>;
+	rockchip,bifurcation;
+	rockchip,init-delay-ms = <100>;
+	reset-gpios = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	pcie@10 {
+		reg = <0x00100000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		r8125_2: pcie@10,0 {
+			reg = <0x000000 0 0 0 0>;
+			local-mac-address = [ 00 00 00 00 00 00 ];
+		};
+	};
+};
+
+&pcie3x2 {
+	max-link-speed = <2>;
+	num-lanes = <1>;
+	num-ib-windows = <8>;
+	num-ob-windows = <8>;
+	num-viewport = <4>;
+	rockchip,bifurcation;
+	reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+		pcie@00 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		r8125_1: pcie@01,0 {
+			reg = <0x000000 0 0 0 0>;
+			local-mac-address = [ 00 00 00 00 00 00 ];
+		};
+	};
+};
+
+&led_user_en {
+	rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+};

@@ -4,6 +4,7 @@ type 'board_name' >/dev/null 2>/dev/null || . /lib/functions.sh
 export_ota_url() {
 	local board="$(board_name)"
 	case "$board" in
+	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
