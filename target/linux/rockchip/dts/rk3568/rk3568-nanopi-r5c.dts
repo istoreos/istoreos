@@ -38,34 +38,31 @@
 
 	gpio_leds: gpio-leds {
 		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sys_led_pin>,
+			<&wan_led_pin>,
+			<&lan1_led_pin>,
+			<&lan2_led_pin>;
 
 		sys_led: led-0 {
 			gpios = <&gpio3 RK_PA2 GPIO_ACTIVE_HIGH>;
 			label = "red:sys";
 			linux,default-trigger = "heartbeat";
-			pinctrl-names = "default";
-			pinctrl-0 = <&sys_led_pin>;
 		};
 
 		wan_led: led-1 {
 			gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 			label = "green:wan";
-			pinctrl-names = "default";
-			pinctrl-0 = <&wan_led_pin>;
 		};
 
 		lan1_led: led-2 {
 			gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
 			label = "green:lan1";
-			pinctrl-names = "default";
-			pinctrl-0 = <&lan1_led_pin>;
 		};
 
 		lan2_led: led-3 {
 			gpios = <&gpio3 RK_PA5 GPIO_ACTIVE_HIGH>;
 			label = "green:wlan";
-			pinctrl-names = "default";
-			pinctrl-0 = <&lan2_led_pin>;
 		};
 	};
 
