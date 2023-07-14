@@ -1,0 +1,34 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+OVERLAY="$( grep ' /overlay ' /proc/mounts )"
+MODEL=`cat /proc/device-tree/model`
+TIMEOUT=5
+[[ "$MODEL" = "SGR" ]] && TIMEOUT=10
+
+case "$ACTION" in
+pressed)
+	[ -z "$OVERLAY" ] && return 0
+
+	return $TIMEOUT
+;;
+timeout)
+	. /etc/diag.sh
+	set_state failsafe
+;;
+released)
+	if [ "$SEEN" -lt 1 ]
+	then
+		echo "REBOOT" > /dev/console
+		sync
+		reboot
+	elif [ "$SEEN" -ge $TIMEOUT -a -n "$OVERLAY" ]
+	then
+		echo "FACTORY RESET" > /dev/console
+		firstboot -y && reboot &
+	fi
+;;
+esac
+
+return 0

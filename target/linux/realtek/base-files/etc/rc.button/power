@@ -1,0 +1,21 @@
+#!/bin/sh
+
+MODEL=`cat /proc/device-tree/model`
+
+if [[ "$MODEL" = "SGR" ]]; then
+    case "$ACTION" in
+    pressed)
+        return 5
+    ;;
+    timeout)
+        exec /sbin/poweroff
+    ;;
+    esac
+
+else
+    [ "${ACTION}" = "released" ] || exit 0
+
+    exec /sbin/poweroff
+fi
+
+return 0

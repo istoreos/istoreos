@@ -1,0 +1,18 @@
+#!/bin/sh
+
+case "$ACTION" in
+pressed)
+	return 1
+;;
+timeout)
+	logger -t "UPS" "Power down"
+;;
+released)
+	if [ "$SEEN" -ge 1 ]
+	then
+		logger -t "UPS" "Power up"
+	fi
+;;
+esac
+
+return 0

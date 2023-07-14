@@ -78,6 +78,14 @@ define Device/hsa-bh1
 endef
 TARGET_DEVICES += hsa-bh1
 
+define Device/pl-sgr1
+	$(call Device/ars2)
+	DEVICE_TITLE := PList SGR
+	DEVICE_DTS := pl-sgr1
+	UBOOT_DTS := pl-sgr1
+endef
+TARGET_DEVICES += pl-sgr1
+
 include rescue.mk
 
 endif

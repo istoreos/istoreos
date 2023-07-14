@@ -1,0 +1,106 @@
+/dts-v1/;
+
+#include "rtd1296-4GB.dtsi"
+
+/ {
+	model= "SGR";
+	chosen {
+		default-hostname = "SGR";
+	};
+
+	aliases {
+		led-boot = &led_green;
+		led-failsafe = &led_red;
+		led-running = &led_green;
+		led-upgrade = &led_red;
+	};
+
+	sata@9803F000 {
+		sata0: sata-port@0 {
+			led-io = <&rtk_misc_gpio 11 RTK_GPIO_DIROUT 0>;
+			/delete-property/ gpios; // SATA power is not assignd to gpio, (original gpio56)
+		};
+		sata1: sata-port@1 {
+			led-io = <&rtk_misc_gpio 12 RTK_GPIO_DIROUT 0>;
+			/delete-property/ gpios; // SATA power is not assignd to gpio, (original igpio15)
+		};
+	};
+	ehci@98013000 {
+		status = "disabled";
+	};
+	ohci@98013400 {
+		status = "disabled";
+	};
+	rtk_dwc3_drd@98013200 {
+		dwc3_drd@98020000 {
+			dr_mode = "host";
+		};
+		rtk_dwc3_drd_type_c@0 {
+			/delete-property/ drd_mode;
+		};
+	};
+	rtk_dwc3_u2host@98013E00 {
+		status = "disabled";
+		dwc3_u2host@98029000 {
+			status = "disabled";
+		};
+	};
+	dwc3_u2host_usb2phy@0 {
+		status = "disabled";
+	};
+	usb_phy_rle0599@0 {
+		status = "disabled";
+	};
+	rtk_usb_power_manager@0 {
+		/* For port1 and port2 */
+		gpio1: gpio1 {
+			realtek,power-gpio;
+		};
+		/* For port2 */
+		gpio2: gpio2 {
+			realtek,power-gpio;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_green: green {
+			label = "green:router";
+			gpios = <&rtk_misc_gpio 97 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+		led_red: red {
+			label = "red:router";
+			gpios = <&rtk_misc_gpio 98 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		led_blue: blue {
+			label = "blue:router";
+			gpios = <&rtk_misc_gpio 99 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		ssd1_red {
+			label = "red:ssd1";
+			gpios = <&rtk_misc_gpio 59 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		ssd1_green {
+			label = "green:ssd1";
+			gpios = <&rtk_misc_gpio 60 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		ssd2_red {
+			label = "red:ssd2";
+			gpios = <&rtk_misc_gpio 61 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+		ssd2_green {
+			label = "green:ssd2";
+			gpios = <&rtk_misc_gpio 62 RTK_GPIO_DIROUT GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+	keys {
+		ups {
+			label = "ups";
+			gpios = <&rtk_iso_gpio 4 RTK_GPIO_DIRIN GPIO_ACTIVE_LOW>;
+			linux,code = <BTN_1>;
+		};
+	};
+};
