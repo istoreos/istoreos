@@ -8,12 +8,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rtk-rescue-firmware
-PKG_VERSION:=2
+PKG_VERSION:=3
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)_$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/jjm2473/rtd1296_prebuilt_target/releases/download/v1.0/
-PKG_HASH:=3da5865a7d11679a65bee1948a6cf4d3adeb1ad5afcf7642501f6db0eb8848fd
+PKG_HASH:=d53713fd1fef05435b44c8dffdb31cc98dfea7ce52d7b13e52734f463d26c4da
 
 PKG_LICENSE:=CC0-1.0
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
