@@ -80,3 +80,16 @@
 &led_user_en {
 	rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
 };
+
+#ifndef PCIE2_USE_MSATA
+&pcie2x1 {
+	num-viewport = <4>;
+	reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&sata2 {
+	status = "disabled";
+};
+#endif
+
