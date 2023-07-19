@@ -42,6 +42,14 @@ define U-Boot/easepi-rk3568
   SOC:=rk3568
 endef
 
+define U-Boot/xgp-rk3568
+  NAME:=RK3568 xgp board
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3568
+  ATF:=$(RK3568_ATF)
+  DDR:=$(RK3568_DDR)
+  SOC:=rk3568
+endef
+
 # RK3588 boards
 define U-Boot/easepi-rk3588
   NAME:=RK3588 Generic
@@ -51,7 +59,7 @@ define U-Boot/easepi-rk3588
   SOC:=rk3588
 endef
 
-UBOOT_TARGETS := easepi-rk3568 easepi-rk3588
+UBOOT_TARGETS := easepi-rk3568 xgp-rk3568 easepi-rk3588
 
 UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 
