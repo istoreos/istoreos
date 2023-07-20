@@ -21,10 +21,6 @@ rockchip_setup_interfaces()
 	hinlink,opc-h69k|\
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
-		if [[ "$board" = "hinlink,opc-h69k" ]]; then
-			ucidef_set_interface "wwan" device "/sys/devices/platform/usbhost/fd000000.dwc3/xhci-hcd.0.auto/usb4/4-1" protocol "modemmanager" metric "100"
-			uci get firewall.@zone[1].network | grep -qFw wwan || uci add_list firewall.@zone[1].network='wwan'
-		fi
 		;;
 	lyt,t68m|\
 	fastrhino,r68s|\
@@ -77,10 +73,29 @@ rockchip_setup_macs()
 	[ -n "$lan_mac" ] && ucidef_set_interface_macaddr "lan" $lan_mac
 }
 
+generate_wwan_uci()
+{
+	local device="$1"
+	ucidef_set_interface "wwan" device "$device" protocol "modemmanager" metric "100"
+	uci get firewall.@zone[1].network | grep -qFw wwan || uci add_list firewall.@zone[1].network='wwan'
+}
+
+rockchip_setup_wwan()
+{
+	local board="$1"
+
+	case "$board" in
+	hinlink,opc-h69k)
+		generate_wwan_uci "/sys/devices/platform/usbhost/fd000000.dwc3/xhci-hcd.0.auto/usb4/4-1"
+		;;
+	esac
+}
+
 board_config_update
 board=$(board_name)
 rockchip_setup_interfaces $board
 rockchip_setup_macs $board
+rockchip_setup_wwan $board
 board_config_flush
 
 exit 0
