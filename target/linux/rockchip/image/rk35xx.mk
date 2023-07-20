@@ -121,3 +121,16 @@ $(call Device/rk3568)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 TARGET_DEVICES += lyt_t68m
+
+define Device/hinlink_rk3588
+$(call Device/rk3588)
+  DEVICE_VENDOR := HINLINK
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme
+endef
+
+define Device/hinlink_h88k-v3
+$(call Device/hinlink_rk3588)
+  DEVICE_MODEL := H88K V3
+  SUPPORTED_DEVICES += hinlink,h88k-v3 hinlink,h88k
+endef
+TARGET_DEVICES += hinlink_h88k-v3

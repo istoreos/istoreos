@@ -132,12 +132,13 @@ board_fixup_iface_name() {
 			rename_iface lan2 eth2
 		fi
 		;;
+	hinlink,h88k-v3|\
 	friendlyelec,nanopi-r6s)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0004:41:00.0" ]]; then
-			rename_iface eth1 lan1
+			rename_iface eth1 lan2
 			rename_iface eth2 eth1
-			rename_iface lan1 eth2
+			rename_iface lan2 eth2
 		fi
 		;;
 	esac
@@ -211,6 +212,29 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth2" "eth2-16"
 		fi
 		;;
+	hinlink,h88k-*|\
+	hinlink,h88k)
+		set_iface_cpumask 2 eth0
+		if ethtool -i eth1 | grep -Fq 'driver: r8169'; then
+			set_iface_cpumask 4 "eth1"
+			set_iface_cpumask 8 "eth2" && \
+			set_iface_cpumask 10 "eth3" && \
+			set_iface_cpumask 20 "eth4"
+		else
+			set_iface_cpumask 4 "eth1" "eth1-0" f0 && \
+			set_iface_cpumask 4 "eth1" "eth1-16" && \
+			set_iface_cpumask 2 "eth1" "eth1-18" && \
+			set_iface_cpumask 8 "eth2" "eth2-0" f0 && \
+			set_iface_cpumask 8 "eth2" "eth2-18" && \
+			set_iface_cpumask 1 "eth2" "eth2-16" && \
+			set_iface_cpumask 10 "eth3" "eth3-0" f0 && \
+			set_iface_cpumask 10 "eth3" "eth3-16" && \
+			set_iface_cpumask 8 "eth3" "eth3-18" && \
+			set_iface_cpumask 20 "eth4" "eth4-0" f0 && \
+			set_iface_cpumask 20 "eth4" "eth4-18" && \
+			set_iface_cpumask 4 "eth4" "eth4-16"
+		fi
+		;;
 	esac
 }
 
@@ -218,6 +242,8 @@ board_wait_wifi() {
 	local seconds
 	[[ -f "/etc/uci-defaults/01-rk35xx-wifi" ]] || return 0
 	case $(board_name) in
+	hinlink,h88k-*|\
+	hinlink,h88k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h69k)
 		for seconds in $(seq 0 30); do

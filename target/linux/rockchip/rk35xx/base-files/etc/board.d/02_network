@@ -14,6 +14,8 @@ rockchip_setup_interfaces()
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6c|\
 	fastrhino,r66s|\
+	hinlink,h88k-v2|\
+	hinlink,h88k|\
 	hinlink,opc-h66k|\
 	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
@@ -29,6 +31,9 @@ rockchip_setup_interfaces()
 		;;
 	friendlyelec,nanopi-r6s)
 		ucidef_set_interfaces_lan_wan 'eth2 eth0' 'eth1'
+		;;
+	hinlink,h88k-v3)
+		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3 eth4' 'eth0'
 		;;
 	*)
 		ucidef_set_interface_lan 'eth0'
@@ -55,6 +60,8 @@ rockchip_setup_macs()
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6s|\
 	friendlyelec,nanopi-r6c|\
+	hinlink,h88k-*|\
+	hinlink,h88k|\
 	hinlink,opc-h69k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
@@ -87,6 +94,10 @@ rockchip_setup_wwan()
 	case "$board" in
 	hinlink,opc-h69k)
 		generate_wwan_uci "/sys/devices/platform/usbhost/fd000000.dwc3/xhci-hcd.0.auto/usb4/4-1"
+		;;
+	hinlink,h88k-*|\
+	hinlink,h88k)
+		generate_wwan_uci "/sys/devices/platform/usbdrd3_1/fc400000.usb/xhci-hcd.4.auto/usb6/6-1/6-1.1"
 		;;
 	esac
 }

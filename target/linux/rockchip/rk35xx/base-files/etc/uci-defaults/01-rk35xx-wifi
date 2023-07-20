@@ -34,6 +34,10 @@ board_config_wifi() {
 	hinlink,opc-h69k)
 		ssid=H69K
 	;;
+	hinlink,h88k-*|\
+	hinlink,h88k)
+		ssid=H88K
+	;;
 	esac
 
 	if [[ -n "$ssid" ]]; then
