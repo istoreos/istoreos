@@ -39,6 +39,11 @@ define Device/rk3588_combined_friendlyelec
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3588_combined_hinlink
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3588-hinlink | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
@@ -128,9 +133,11 @@ $(call Device/rk3588)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme
 endef
 
-define Device/hinlink_h88k-v3
+define Device/hinlink_h88k
 $(call Device/hinlink_rk3588)
-  DEVICE_MODEL := H88K V3
-  SUPPORTED_DEVICES += hinlink,h88k-v3 hinlink,h88k
+$(call Device/rk3588_combined_hinlink)
+  DEVICE_MODEL := H88K
+  SUPPORTED_DEVICES += hinlink,h88k-v2 hinlink,h88k-v3 hinlink,h88k
+  DEVICE_DTS := rk3588-h88k-v2 rk3588-h88k-v3
 endef
-TARGET_DEVICES += hinlink_h88k-v3
+TARGET_DEVICES += hinlink_h88k

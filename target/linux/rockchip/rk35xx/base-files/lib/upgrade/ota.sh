@@ -25,7 +25,8 @@ export_ota_url() {
 	hinlink,opc-h69k)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/h6xk"
 		;;
-	hinlink,h88k-v3)
+	hinlink,h88k-*|\
+	hinlink,h88k)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/h88k"
 		;;
 	*)

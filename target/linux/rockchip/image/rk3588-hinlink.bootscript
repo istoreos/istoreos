@@ -1,0 +1,24 @@
+# hinlink rk3588 combined image, board detected by ADC
+# v1,v2 < 600 < v3 < 1300 < v4
+env delete hwrev
+env delete adc_value
+
+# using SARADC CH5 to detect hwrev
+
+adc single saradc@fec10000 5 adc_value
+
+if test -n "$adc_value"; then
+    if test "$adc_value" -ge 600; then
+        echo adc $adc_value : board v3
+        setenv hwrev 1
+    fi
+fi
+
+part uuid mmc ${devnum}:2 uuid
+
+setenv bootargs "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 root=PARTUUID=${uuid} rw rootwait"
+
+load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
+load mmc ${devnum}:1 ${kernel_addr_r} kernel.img
+
+booti ${kernel_addr_r} - ${fdt_addr_r}
