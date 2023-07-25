@@ -1,0 +1,239 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+* Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+*/
+
+/dts-v1/;
+
+#include "rk3568-opc-h68k.dts"
+
+/ {
+    model = "HINLINK Unibox Board";
+    compatible = "hinlink,unibox", "rockchip,rk3568";
+
+    /delete-node/ gpio-keys;
+    /delete-node/ leds;
+
+    vcc5v0_usb: vcc5v0-usb {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc5v0_usb";
+        regulator-always-on;
+        regulator-boot-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        vin-supply = <&dc_12v>;
+    };
+
+    vbus5v0_typec: vbus5v0-typec-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "vbus5v0_typec";
+        regulator-boot-on;
+        regulator-always-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        vin-supply = <&vcc5v0_usb>;
+    };
+
+    vcc5v0_usb20: vcc5v0-usb20-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc5v0_usb20";
+        regulator-boot-on;
+        regulator-always-on;
+        regulator-min-microvolt = <5000000>;
+        regulator-max-microvolt = <5000000>;
+        enable-active-high;
+        gpio = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+        vin-supply = <&vcc5v0_usb>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&vcc5v0_host_en2>;
+    };
+
+    vcc_sata: vcc-sata-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "vcc_sata";
+        regulator-always-on;
+        regulator-boot-on;
+        enable-active-high;
+        gpio = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&sata_pwr>;
+    };
+
+    pwm-leds {
+        compatible = "pwm-leds";
+        red {
+            label = "red";
+            pwms = <&pwm8 0 1250 0>;
+            max-brightness = < 1250 >;
+        };
+        led_green: green {
+            label = "green";
+            pwms = <&pwm9 0 1250 0>;
+            max-brightness = < 1250 >;
+            linux,default-trigger = "heartbeat";
+        };
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        pinctrl-names = "default";
+        pinctrl-0 = <&led_blue_en>;
+        blue {
+            gpios = <&gpio3 RK_PB3 GPIO_ACTIVE_HIGH>;
+            label = "blue";
+        };
+    };
+
+    fan: pwm-fan {
+        compatible = "pwm-fan";
+        cooling-levels = <0 18 102 170 255>;
+        #cooling-cells = <2>;
+        fan-supply = <&vcc5v0_sys>;
+        pwms = <&pwm0 0 50000 0>;
+    };
+
+};
+
+&vcc3v3_sys {
+    /delete-property/ enable-active-high;
+    /delete-property/ gpio;
+    /delete-property/ pinctrl-names;
+    /delete-property/ pinctrl-0;
+    vin-supply = <&dc_12v>;
+};
+
+&vcc5v0_otg {
+    vin-supply = <&vcc5v0_usb>;
+};
+
+&vcc3v3_pcie {
+    enable-active-high;
+    gpio = <&gpio2 RK_PD2 GPIO_ACTIVE_HIGH>;
+    vin-supply = <&dc_12v>;
+};
+
+&sdmmc0 {
+    status = "disabled";
+};
+
+// PCIE3.0 x2 => NVME
+&pcie30phy {
+    /delete-property/ data-lanes;
+    status = "okay";
+};
+
+&pcie3x1 {
+    status = "disabled";
+};
+
+&pcie3x2 {
+    reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
+
+    /delete-property/ rockchip,bifurcation;
+    /delete-property/ rockchip,init-delay-ms;
+    /delete-node/ pcie@0,0;
+};
+
+// MULTI_PHY0 => OTG 3.0
+&combphy0_us {
+    /delete-property/ rockchip,dis-u3otg0-port;
+};
+
+&sata0 {
+    status = "disabled";
+};
+
+&usbdrd_dwc3 {
+    phys = <&u2phy0_otg>, <&combphy0_us PHY_TYPE_USB3>;
+    phy-names = "usb2-phy", "usb3-phy";
+    /delete-property/ maximum-speed;
+    /delete-property/ snps,dis_u2_susphy_quirk;
+    status = "okay";
+};
+
+&usbdrd30 {
+    status = "okay";
+};
+
+// MULTI_PHY1 => USB 3.0
+// same as h68k
+
+// MULTI_PHY2 => SATA
+&pcie2x1 {
+    status = "disabled";
+};
+
+&sata2 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&sata2_pins>;
+    status = "okay";
+};
+
+// USB 2.0
+&u2phy0_otg {
+    vbus-supply = <&vbus5v0_typec>;
+    status = "okay";
+};
+
+&u2phy0_host {
+    phy-supply = <&vcc5v0_otg>;
+    status = "okay";
+};
+
+&u2phy1_otg {
+    phy-supply = <&vcc5v0_usb20>;
+    status = "okay";
+};
+
+&u2phy1_host {
+    phy-supply = <&vcc5v0_usb20>;
+    status = "okay";
+};
+
+// OTHERS
+&rk809_codec {
+    status = "disabled";
+};
+
+&rk809 {
+    rtc {
+        status = "okay";
+    };
+};
+
+&pwm0 {
+    status = "disabled";
+};
+
+&fan {
+    status = "disabled";
+};
+
+&pwm8 {
+    status = "okay";
+};
+
+&pwm9 {
+    status = "okay";
+};
+
+&pinctrl {
+    usb {
+        vcc5v0_host_en2: vcc5v0-host-en2 {
+            rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
+    sata {
+        sata_pwr: sata-pwr {
+            rockchip,pins =
+                /* sata power en */
+                <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
+    leds {
+        led_blue_en: led-blue-en {
+            rockchip,pins =
+                <3 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
+};
