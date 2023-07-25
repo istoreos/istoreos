@@ -1,0 +1,64 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ */
+
+#include "rk3568.dtsi"
+
+/ {
+	aliases {
+		/delete-property/ ethernet0;
+	};
+};
+
+&cpu0_opp_table {
+	/delete-node/ opp-1992000000;
+};
+
+&lpddr4_params {
+	/* freq info, freq_0 is final frequency, unit: MHz */
+	freq_0 = <1056>;
+};
+
+&lpddr4x_params {
+	/* freq info, freq_0 is final frequency, unit: MHz */
+	freq_0 = <1056>;
+};
+
+&power {
+	pd_pipe@RK3568_PD_PIPE {
+		reg = <RK3568_PD_PIPE>;
+		clocks = <&cru PCLK_PIPE>;
+		pm_qos = <&qos_pcie2x1>,
+			 <&qos_sata1>,
+			 <&qos_sata2>,
+			 <&qos_usb3_0>,
+			 <&qos_usb3_1>;
+	};
+};
+
+&rkisp {
+	rockchip,iq-feature = /bits/ 64 <0x3FBF7FE67FF>;
+};
+
+&usbdrd_dwc3 {
+	phys = <&u2phy0_otg>;
+	phy-names = "usb2-phy";
+	extcon = <&usb2phy0>;
+	maximum-speed = "high-speed";
+	snps,dis_u2_susphy_quirk;
+	snps,usb2-lpm-disable;
+};
+
+/delete-node/ &combphy0_us;
+/delete-node/ &gmac0_clkin;
+/delete-node/ &gmac0_xpcsclk;
+/delete-node/ &gmac0;
+/delete-node/ &pcie30_phy_grf;
+/delete-node/ &pcie30phy;
+/delete-node/ &pcie3x1;
+/delete-node/ &pcie3x2;
+/delete-node/ &qos_pcie3x1;
+/delete-node/ &qos_pcie3x2;
+/delete-node/ &qos_sata0;
+/delete-node/ &sata0;
