@@ -24,6 +24,7 @@ rockchip_setup_interfaces()
 	friendlyelec,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		;;
+	bithighway,linkfaster-n4a|\
 	lyt,t68m|\
 	fastrhino,r68s|\
 	hinlink,opc-h68k)
@@ -65,6 +66,7 @@ rockchip_setup_macs()
 	hinlink,opc-h69k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
+	bithighway,linkfaster-n4a|\
 	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)

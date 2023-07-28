@@ -78,6 +78,14 @@ board_fixup_iface_name() {
 			rename_iface lan1 eth1
 		fi
 		;;
+	bithighway,linkfaster-n4a)
+		device="$(get_iface_device eth3)"
+		if [[ "$device" = "0002:21:00.0" ]]; then
+			rename_iface eth2 lan3
+			rename_iface eth3 eth2
+			rename_iface lan3 eth3
+		fi
+		;;
 	lyt,t68m|\
 	fastrhino,r68s)
 		device="$(get_iface_device eth0)"
@@ -165,6 +173,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth2" "eth2-16"
 		fi
 		;;
+	bithighway,linkfaster-n4a|\
 	lyt,t68m|\
 	fastrhino,r68s|\
 	hinlink,opc-h68k)

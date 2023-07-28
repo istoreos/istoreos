@@ -118,6 +118,15 @@ $(call Device/rk3588_combined_friendlyelec)
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r6s
 
+define Device/bithighway_linkfaster-n4a
+$(call Device/rk3568)
+  DEVICE_VENDOR := Bithighway
+  DEVICE_MODEL := LinkFaster N4A
+  SUPPORTED_DEVICES += bithighway,linkfaster-n4a
+  DEVICE_PACKAGES := kmod-r8125 kmod-scsi-core
+endef
+TARGET_DEVICES += bithighway_linkfaster-n4a
+
 define Device/lyt_t68m
 $(call Device/rk3568)
   DEVICE_VENDOR := LYT

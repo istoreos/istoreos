@@ -4,6 +4,7 @@ type 'board_name' >/dev/null 2>/dev/null || . /lib/functions.sh
 export_ota_url() {
 	local board="$(board_name)"
 	case "$board" in
+	bithighway,linkfaster-n4a|\
 	lyt,t68m|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
