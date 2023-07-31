@@ -141,3 +141,13 @@ $(call Device/rk3588_combined_hinlink)
   DEVICE_DTS := rk3588-h88k-v2 rk3588-h88k-v3
 endef
 TARGET_DEVICES += hinlink_h88k
+
+define Device/nlnet_xgp
+$(call Device/rk3568)
+  DEVICE_VENDOR := NLnet
+  DEVICE_MODEL := XiGuaPi
+  UBOOT_DEVICE_NAME := xgp-rk3568
+  SUPPORTED_DEVICES += nlnet,xgp
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += nlnet_xgp
