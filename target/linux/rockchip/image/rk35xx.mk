@@ -11,6 +11,11 @@ define Device/rk3568_combined
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3568_combined_fastrhino
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3568-fastrhino | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/rk3568_combined_friendlyelec
   IMAGE/combined.img.gz := boot-combined | boot-script rk3568-friendlyelec | pine64-img | gzip | append-metadata
   IMAGES := combined.img.gz
@@ -64,7 +69,7 @@ TARGET_DEVICES += fastrhino_r68s
 
 define Device/fastrhino_r6xs
 $(call Device/fastrhino_common)
-$(call Device/rk3568_combined)
+$(call Device/rk3568_combined_fastrhino)
   DEVICE_MODEL := R68s/R66s combined
   SUPPORTED_DEVICES += fastrhino,r66s fastrhino,r68s
   DEVICE_DTS := rk3568-r66s rk3568-r68s
