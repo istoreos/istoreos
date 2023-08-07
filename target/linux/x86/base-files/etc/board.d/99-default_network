@@ -12,6 +12,7 @@ json_is_a network object && exit 0
 ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
 if [ $ETHNUM == 1 ]; then
     ucidef_set_interface_lan 'eth0'
+    [ -f /etc/config/network ] || uci -q get firewall.@zone[0].masq >/dev/null || uci -q set firewall.@zone[0].masq=1
 else
     [ -d /sys/class/net/eth0 ] && ucidef_set_interface_wan 'eth0'
     interface=""
