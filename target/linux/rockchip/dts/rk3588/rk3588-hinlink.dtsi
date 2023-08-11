@@ -137,7 +137,7 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "modem-enable";
 		vin-supply = <&vcc_3v3_s3>;
-		startup-delay-us = <500000>;
+		startup-delay-us = <2000000>;
 		pinctrl-names = "default";
 		pintctrl-0 = <&modem_reset_en>;
 	};

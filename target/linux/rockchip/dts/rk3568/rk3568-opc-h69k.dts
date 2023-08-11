@@ -30,6 +30,20 @@
 		pinctrl-0 = <&vcc3v3_ssd_en>;
 	};
 
+	modem-enable-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "modem_enable";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
+		startup-delay-us = <2000000>;
+		vin-supply = <&vcc5v0_sys>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&modem_enable_en>;
+	};
+
 	fan: pwm-fan {
 		compatible = "pwm-fan";
 		cooling-levels = <0 0x66 0x88 0xaa 0xcc 0xff>;
@@ -117,6 +131,11 @@
 	ssd {
 		vcc3v3_ssd_en: vcc3v3-ssd-en {
 			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	modem {
+		modem_enable_en: modem-enable-en {
+			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };

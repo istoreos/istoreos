@@ -14,6 +14,12 @@ if test -n "$adc_value"; then
     fi
 fi
 
+# reset USB modem
+# 1. set RESET(GPIO4_C6) to low
+gpio clear 150
+# 2. pull down USB power GPIO4_A3
+# gpio clear 131
+
 part uuid mmc ${devnum}:2 uuid
 
 setenv bootargs "earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 irqchip.gicv3_pseudo_nmi=0 root=PARTUUID=${uuid} rw rootwait"

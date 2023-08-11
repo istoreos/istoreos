@@ -19,6 +19,11 @@ else
         if test "$adc_value" -ge 610; then
             echo h69k
             setenv hwflag 10
+            # reset USB modem
+            # 1. set RESET(GPIO0_C0) to high, will invert to low on module RESET#
+            gpio set 16
+            # 2. pull down USB power GPIO0_A5
+            # gpio clear 5
         fi
     fi
 fi
