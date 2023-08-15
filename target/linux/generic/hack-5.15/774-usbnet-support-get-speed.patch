@@ -11,7 +11,7 @@ diff --git a/drivers/net/usb/usbnet.c b/drivers/net/usb/usbnet.c
 index b8b9df82f..414a9ebf5 100644
 --- a/drivers/net/usb/usbnet.c
 +++ b/drivers/net/usb/usbnet.c
-@@ -947,8 +947,11 @@ int usbnet_get_link_ksettings(struct net_device *net,
+@@ -967,8 +967,11 @@ int usbnet_get_link_ksettings_mii(struct
  {
  	struct usbnet *dev = netdev_priv(net);
  

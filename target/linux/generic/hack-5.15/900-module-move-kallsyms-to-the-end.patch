@@ -16,7 +16,7 @@ diff --git a/include/linux/module.h b/include/linux/module.h
 index 3a21e15fd..ff18fa2b3 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
-@@ -442,18 +442,6 @@ struct module {
+@@ -437,18 +437,6 @@ struct module {
  	struct bug_entry *bug_table;
  #endif
  
@@ -35,7 +35,7 @@ index 3a21e15fd..ff18fa2b3 100644
  	/* The command line arguments (may be mangled).  People like
  	   keeping pointers to this stuff */
  	char *args;
-@@ -537,6 +525,18 @@ struct module {
+@@ -541,6 +529,18 @@ struct module {
  	struct error_injection_entry *ei_funcs;
  	unsigned int num_ei_funcs;
  #endif
@@ -70,7 +70,7 @@ diff --git a/kernel/module.c b/kernel/module.c
 index 47ad55318..b1b1af389 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
-@@ -2523,6 +2523,12 @@ static void layout_sections(struct module *mod, struct load_info *info)
+@@ -2475,6 +2475,12 @@ static void layout_sections(struct modul
  			break;
  		}
  	}
@@ -83,7 +83,7 @@ index 47ad55318..b1b1af389 100644
  
  	pr_debug("Init section allocation order:\n");
  	for (m = 0; m < ARRAY_SIZE(masks); ++m) {
-@@ -3166,6 +3172,10 @@ static int copy_module_from_user(const void __user *umod, unsigned long len,
+@@ -3179,6 +3185,10 @@ out:
  static void free_copy(struct load_info *info)
  {
  	vfree(info->hdr);
@@ -94,7 +94,7 @@ index 47ad55318..b1b1af389 100644
  }
  
  static int rewrite_section_headers(struct load_info *info, int flags)
-@@ -3202,6 +3212,7 @@ static int rewrite_section_headers(struct load_info *info, int flags)
+@@ -3217,6 +3227,7 @@ static int rewrite_section_headers(struc
  static int setup_load_info(struct load_info *info, int flags)
  {
  	unsigned int i;
@@ -102,7 +102,7 @@ index 47ad55318..b1b1af389 100644
  
  	/* Try to find a name early so we can log errors with a module name */
  	info->index.info = find_sec(info, ".modinfo");
-@@ -3241,6 +3252,24 @@ static int setup_load_info(struct load_info *info, int flags)
+@@ -3256,6 +3267,24 @@ static int setup_load_info(struct load_i
  	if (!info->name)
  		info->name = info->mod->name;
  
@@ -127,7 +127,7 @@ index 47ad55318..b1b1af389 100644
  	if (flags & MODULE_INIT_IGNORE_MODVERSIONS)
  		info->index.vers = 0; /* Pretend no __versions section! */
  	else
-@@ -3467,6 +3496,14 @@ static int move_module(struct module *mod, struct load_info *info)
+@@ -3475,6 +3504,14 @@ static int move_module(struct module *mo
  
  		if (shdr->sh_type != SHT_NOBITS)
  			memcpy(dest, (void *)shdr->sh_addr, shdr->sh_size);

@@ -11,7 +11,7 @@ diff --git a/drivers/usb/serial/option.c b/drivers/usb/serial/option.c
 index 1d1392511..9bb73475a 100644
 --- a/drivers/usb/serial/option.c
 +++ b/drivers/usb/serial/option.c
-@@ -2215,6 +2215,14 @@ static const struct usb_device_id option_ids[] = {
+@@ -2256,6 +2256,14 @@ static const struct usb_device_id option
  	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x01a2, 0xff) },			/* Fibocom FM101-GL (laptop MBIM) */
  	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x01a4, 0xff),			/* Fibocom FM101-GL (laptop MBIM) */
  	  .driver_info = RSVD(4) },
