@@ -1,3 +1,7 @@
+# modified by jjm2473
+# 1. keep overlay partition when upgrade
+# 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade (stage2:istoreos_pre_upgrade)
+
 platform_check_image() {
 	local diskdev partdev diff
 
@@ -5,6 +9,7 @@ platform_check_image() {
 		echo "Unable to determine upgrade device"
 		return 1
 	}
+	[ "$SAVE_CONFIG" -eq 1 ] && return 0
 
 	get_partitions "/dev/$diskdev" bootdisk
 
@@ -25,16 +30,6 @@ platform_check_image() {
 	fi
 }
 
-platform_copy_config() {
-	local partdev
-
-	if export_partdevice partdev 1; then
-		mount -o rw,noatime "/dev/$partdev" /mnt
-		cp -af "$UPGRADE_BACKUP" "/mnt/$BACKUP_FILE"
-		umount /mnt
-	fi
-}
-
 platform_do_upgrade() {
 	local diskdev partdev diff
 
@@ -45,16 +40,21 @@ platform_do_upgrade() {
 
 	sync
 
-	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" ]; then
-		get_partitions "/dev/$diskdev" bootdisk
+	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" -o -n "$UPGRADE_BACKUP" ]; then
+		[ -n "$UPGRADE_BACKUP" ] || get_partitions "/dev/$diskdev" bootdisk
 
 		#extract the boot sector from the image
 		get_image "$@" | dd of=/tmp/image.bs count=1 bs=512b
 
 		get_partitions /tmp/image.bs image
 
-		#compare tables
-		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
+		if [ -n "$UPGRADE_BACKUP" ]; then
+			#keep overlay partition when upgrade
+			diff=
+		else
+			#compare tables
+			diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
+		fi
 	else
 		diff=1
 	fi
@@ -72,9 +72,17 @@ platform_do_upgrade() {
 
 	#iterate over each partition from the image and write it to the boot disk
 	while read part start size; do
+		if [ -n "$UPGRADE_BACKUP" -a "$part" -ge 3 ]; then
+			v "Skip partition $part >= 3 when upgrading"
+			continue
+		fi
 		if export_partdevice partdev $part; then
 			echo "Writing image to /dev/$partdev..."
-			get_image "$@" | dd of="/dev/$partdev" ibs="512" obs=1M skip="$start" count="$size" conv=fsync
+			if [ "$part" -eq 3 ]; then
+				echo "RESET000" | dd of="/dev/$partdev" bs=512 count=1 conv=sync,fsync 2>/dev/null
+			else
+				get_image "$@" | dd of="/dev/$partdev" ibs="512" obs=1M skip="$start" count="$size" conv=fsync
+			fi
 		else
 			echo "Unable to find partition $part device, skipped."
 		fi

@@ -1,0 +1,20 @@
+--- a/arch/arm/dts/rk3399-nanopi-r4s.dts	2023-04-26 21:31:21.089126862 +0800
++++ b/arch/arm/dts/rk3399-nanopi-r4s.dts	2023-04-26 21:34:16.929275627 +0800
+@@ -66,7 +66,7 @@
+ };
+ 
+ &emmc_phy {
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &fusb0 {
+@@ -110,7 +110,7 @@
+ };
+ 
+ &sdhci {
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &sdio0 {
