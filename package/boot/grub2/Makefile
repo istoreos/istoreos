@@ -160,7 +160,7 @@ define Package/grub2-efi/install
 		-O $(CONFIG_ARCH)-efi \
 		-c $(PKG_BUILD_DIR)/grub-early.cfg \
 		-o $(STAGING_DIR_IMAGE)/grub2/boot$(if $(CONFIG_x86_64),x64,ia32).efi \
-		at_keyboard boot chain configfile fat linux ls part_gpt reboot serial test efi_gop efi_uga
+		at_keyboard boot chain configfile fat linux ls part_gpt reboot search serial test efi_gop efi_uga
 	$(STAGING_DIR_HOST)/bin/grub-mkimage \
 		-d $(PKG_BUILD_DIR)/grub-core \
 		-p /boot/grub \
