@@ -180,4 +180,6 @@ define BuildKernel
 
   prereq: image-prereq
 
+  image: $(LINUX_DIR)/.image
+
 endef
