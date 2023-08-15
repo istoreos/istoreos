@@ -14,7 +14,7 @@ diff --git a/drivers/base/Kconfig b/drivers/base/Kconfig
 index 972b64fc9..2e0305c1d 100644
 --- a/drivers/base/Kconfig
 +++ b/drivers/base/Kconfig
-@@ -91,6 +91,7 @@ source "drivers/base/firmware_loader/Kconfig"
+@@ -94,6 +94,7 @@ source "drivers/base/firmware_loader/Kco
  
  config WANT_DEV_COREDUMP
  	bool
@@ -26,14 +26,14 @@ diff --git a/drivers/base/Makefile b/drivers/base/Makefile
 index 157452080..8e593cdb5 100644
 --- a/drivers/base/Makefile
 +++ b/drivers/base/Makefile
-@@ -21,6 +21,7 @@ obj-$(CONFIG_REGMAP)	+= regmap/
+@@ -22,6 +22,7 @@ obj-$(CONFIG_REGMAP)	+= regmap/
  obj-$(CONFIG_SOC_BUS) += soc.o
  obj-$(CONFIG_PINCTRL) += pinctrl.o
  obj-$(CONFIG_DEV_COREDUMP) += devcoredump.o
 +obj-$(CONFIG_DEV_COREDUMP) += devcoredump_mod.o
  obj-$(CONFIG_GENERIC_MSI_IRQ_DOMAIN) += platform-msi.o
  obj-$(CONFIG_GENERIC_ARCH_TOPOLOGY) += arch_topology.o
- 
+ obj-$(CONFIG_GENERIC_ARCH_NUMA) += arch_numa.o
 diff --git a/drivers/base/devcoredump_mod.c b/drivers/base/devcoredump_mod.c
 new file mode 100644
 index 000000000..2276834f9
