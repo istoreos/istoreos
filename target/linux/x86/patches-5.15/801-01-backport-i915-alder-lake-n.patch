@@ -1,0 +1,119 @@
+From 63f329abdd68547d9a0a9d7f47f5e91256d1d66f Mon Sep 17 00:00:00 2001
+From: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+Date: Wed, 16 Aug 2023 20:37:30 +0800
+Subject: [PATCH] [V3] drm/i915/adl-n: Enable ADL-N platform
+
+Adding PCI device ids and enabling ADL-N platform.
+ADL-N from i915 point of view is subplatform of ADL-P.
+
+BSpec: 68397
+
+Changes since V2:
+	- Added version log history
+Changes since V1:
+	- replace IS_ALDERLAKE_N with IS_ADLP_N - Jani Nikula
+
+Signed-off-by: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+---
+ arch/x86/kernel/early-quirks.c           | 1 +
+ drivers/gpu/drm/i915/i915_drv.h          | 2 ++
+ drivers/gpu/drm/i915/i915_pci.c          | 1 +
+ drivers/gpu/drm/i915/intel_device_info.c | 7 +++++++
+ drivers/gpu/drm/i915/intel_device_info.h | 3 +++
+ include/drm/i915_pciids.h                | 6 ++++++
+ 6 files changed, 20 insertions(+)
+
+diff --git a/arch/x86/kernel/early-quirks.c b/arch/x86/kernel/early-quirks.c
+index 8690fab..80c2498 100644
+--- a/arch/x86/kernel/early-quirks.c
++++ b/arch/x86/kernel/early-quirks.c
+@@ -555,6 +555,7 @@ static const struct pci_device_id intel_early_ids[] __initconst = {
+ 	INTEL_RKL_IDS(&gen11_early_ops),
+ 	INTEL_ADLS_IDS(&gen11_early_ops),
+ 	INTEL_ADLP_IDS(&gen11_early_ops),
++	INTEL_ADLN_IDS(&gen11_early_ops),
+ };
+ 
+ struct resource intel_graphics_stolen_res __ro_after_init = DEFINE_RES_MEM(0, 0);
+diff --git a/drivers/gpu/drm/i915/i915_drv.h b/drivers/gpu/drm/i915/i915_drv.h
+index 236cfee..e5686d0 100644
+--- a/drivers/gpu/drm/i915/i915_drv.h
++++ b/drivers/gpu/drm/i915/i915_drv.h
+@@ -1448,6 +1448,8 @@ IS_SUBPLATFORM(const struct drm_i915_private *i915,
+ 	IS_SUBPLATFORM(dev_priv, INTEL_DG2, INTEL_SUBPLATFORM_G10)
+ #define IS_DG2_G11(dev_priv) \
+ 	IS_SUBPLATFORM(dev_priv, INTEL_DG2, INTEL_SUBPLATFORM_G11)
++#define IS_ADLP_N(dev_priv) \
++	IS_SUBPLATFORM(dev_priv, INTEL_ALDERLAKE_P, INTEL_SUBPLATFORM_N)
+ #define IS_HSW_EARLY_SDV(dev_priv) (IS_HASWELL(dev_priv) && \
+ 				    (INTEL_DEVID(dev_priv) & 0xFF00) == 0x0C00)
+ #define IS_BDW_ULT(dev_priv) \
+diff --git a/drivers/gpu/drm/i915/i915_pci.c b/drivers/gpu/drm/i915/i915_pci.c
+index 0bba1c5..dafc40f 100644
+--- a/drivers/gpu/drm/i915/i915_pci.c
++++ b/drivers/gpu/drm/i915/i915_pci.c
+@@ -1116,6 +1116,7 @@ static const struct pci_device_id pciidlist[] = {
+ 	INTEL_RKL_IDS(&rkl_info),
+ 	INTEL_ADLS_IDS(&adl_s_info),
+ 	INTEL_ADLP_IDS(&adl_p_info),
++	INTEL_ADLN_IDS(&adl_p_info),
+ 	{0, 0, 0}
+ };
+ MODULE_DEVICE_TABLE(pci, pciidlist);
+diff --git a/drivers/gpu/drm/i915/intel_device_info.c b/drivers/gpu/drm/i915/intel_device_info.c
+index 305face..255bc56 100644
+--- a/drivers/gpu/drm/i915/intel_device_info.c
++++ b/drivers/gpu/drm/i915/intel_device_info.c
+@@ -177,6 +177,10 @@ static const u16 subplatform_portf_ids[] = {
+ 	INTEL_ICL_PORT_F_IDS(0),
+ };
+ 
++static const u16 subplatform_n_ids[] = {
++	INTEL_ADLN_IDS(0),
++};
++
+ static bool find_devid(u16 id, const u16 *p, unsigned int num)
+ {
+ 	for (; num; num--, p++) {
+@@ -213,6 +217,9 @@ void intel_device_info_subplatform_init(struct drm_i915_private *i915)
+ 	} else if (find_devid(devid, subplatform_portf_ids,
+ 			      ARRAY_SIZE(subplatform_portf_ids))) {
+ 		mask = BIT(INTEL_SUBPLATFORM_PORTF);
++	} else if (find_devid(devid, subplatform_n_ids,
++				ARRAY_SIZE(subplatform_n_ids))) {
++		mask = BIT(INTEL_SUBPLATFORM_N);
+ 	}
+ 
+ 	if (IS_TIGERLAKE(i915)) {
+diff --git a/drivers/gpu/drm/i915/intel_device_info.h b/drivers/gpu/drm/i915/intel_device_info.h
+index d328bb9..c9e5a7a 100644
+--- a/drivers/gpu/drm/i915/intel_device_info.h
++++ b/drivers/gpu/drm/i915/intel_device_info.h
+@@ -110,6 +110,9 @@ enum intel_platform {
+ #define INTEL_SUBPLATFORM_G10	0
+ #define INTEL_SUBPLATFORM_G11	1
+ 
++/* ADL-P */
++#define INTEL_SUBPLATFORM_N    0
++
+ enum intel_ppgtt_type {
+ 	INTEL_PPGTT_NONE = I915_GEM_PPGTT_NONE,
+ 	INTEL_PPGTT_ALIASING = I915_GEM_PPGTT_ALIASING,
+diff --git a/include/drm/i915_pciids.h b/include/drm/i915_pciids.h
+index eee18fa..16af71d 100644
+--- a/include/drm/i915_pciids.h
++++ b/include/drm/i915_pciids.h
+@@ -668,4 +668,10 @@
+ 	INTEL_VGA_DEVICE(0x46C2, info), \
+ 	INTEL_VGA_DEVICE(0x46C3, info)
+ 
++/* ADL-N */
++#define INTEL_ADLN_IDS(info) \
++	INTEL_VGA_DEVICE(0x46D0, info), \
++	INTEL_VGA_DEVICE(0x46D1, info), \
++	INTEL_VGA_DEVICE(0x46D2, info)
++
+ #endif /* _I915_PCIIDS_H */
+-- 
+2.31.0
+

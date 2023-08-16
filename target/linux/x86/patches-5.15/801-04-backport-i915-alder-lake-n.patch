@@ -1,0 +1,44 @@
+From 041b33e2803310c43d42d1faded4667239ed76fd Mon Sep 17 00:00:00 2001
+From: Daniele Ceraolo Spurio <daniele.ceraolospurio@intel.com>
+Date: Wed, 16 Aug 2023 20:58:53 +0800
+Subject: [PATCH] drm/i915/guc: ADL-N should use the same GuC FW as ADL-S
+
+The only difference between the ADL S and P GuC FWs is the HWConfig
+support. ADL-N does not support HWConfig, so we should use the same
+binary as ADL-S, otherwise the GuC might attempt to fetch a config
+table that does not exist. ADL-N is internally identified as an ADL-P,
+so we need to special-case it in the FW selection code.
+
+Fixes: 7e28d0b26759 ("drm/i915/adl-n: Enable ADL-N platform")
+Cc: John Harrison <John.C.Harrison@Intel.com>
+Cc: Tejas Upadhyay <tejas.upadhyay@intel.com>
+Cc: Anusha Srivatsa <anusha.srivatsa@intel.com>
+Cc: Jani Nikula <jani.nikula@intel.com>
+Signed-off-by: Daniele Ceraolo Spurio <daniele.ceraolospurio@intel.com>
+---
+ drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c b/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
+index 6be7fbf..ddc6e5d 100644
+--- a/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
++++ b/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
+@@ -125,6 +125,15 @@ __uc_fw_auto_select(struct drm_i915_private *i915, struct intel_uc_fw *uc_fw)
+ 	u8 rev = INTEL_REVID(i915);
+ 	int i;
+ 
++	/*
++	 * The only difference between the ADL GuC FWs is the HWConfig support.
++	 * ADL-N does not support HWConfig, so we should use the same binary as
++	 * ADL-S, otherwise the GuC might attempt to fetch a config table that
++	 * does not exist.
++	 */
++	if (IS_ADLP_N(i915))
++		p = INTEL_ALDERLAKE_S;
++
+ 	for (i = 0; i < ARRAY_SIZE(fw_blobs) && p <= fw_blobs[i].p; i++) {
+ 		if (p == fw_blobs[i].p && rev >= fw_blobs[i].rev) {
+ 			const struct uc_fw_blob *blob =
+-- 
+2.31.0
+

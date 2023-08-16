@@ -1,0 +1,44 @@
+From 2e31c7d6f096f4b5bd419ee4fac5ceefbadc416c Mon Sep 17 00:00:00 2001
+From: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+Date: Wed, 16 Aug 2023 20:43:59 +0800
+Subject: [PATCH] drm/i915/adl-n: Add stepping info
+
+Add ADL-N stepping-substepping info in
+accordance to BSpec.
+
+Bspec: 68397
+
+Cc: Matt Roper <matthew.d.roper@intel.com>
+Signed-off-by: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+---
+ drivers/gpu/drm/i915/intel_step.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/intel_step.c b/drivers/gpu/drm/i915/intel_step.c
+index 6cf9676..e1c9fb8 100644
+--- a/drivers/gpu/drm/i915/intel_step.c
++++ b/drivers/gpu/drm/i915/intel_step.c
+@@ -121,6 +121,10 @@ static const struct intel_step_info dg2_g11_revid_step_tbl[] = {
+ 	[0x5] = { .gt_step = STEP_B1, .display_step = STEP_C0 },
+ };
+ 
++static const struct intel_step_info adlp_n_revids[] = {
++	[0x0] = { .gt_step = STEP_A0, .display_step = STEP_D0 },
++};
++
+ void intel_step_init(struct drm_i915_private *i915)
+ {
+ 	const struct intel_step_info *revids = NULL;
+@@ -137,6 +141,9 @@ void intel_step_init(struct drm_i915_private *i915)
+ 	} else if (IS_XEHPSDV(i915)) {
+ 		revids = xehpsdv_revids;
+ 		size = ARRAY_SIZE(xehpsdv_revids);
++	} else if (IS_ADLP_N(i915)) {
++		revids = adlp_n_revids;
++		size = ARRAY_SIZE(adlp_n_revids);
+ 	} else if (IS_ALDERLAKE_P(i915)) {
+ 		revids = adlp_revids;
+ 		size = ARRAY_SIZE(adlp_revids);
+-- 
+2.31.0
+

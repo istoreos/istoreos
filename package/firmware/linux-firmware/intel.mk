@@ -216,5 +216,10 @@ define Package/i915-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_62.0.0.bin $(1)/lib/firmware/i915/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+
+	# N100 GPU
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_dmc_ver2_10.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
 endef
 $(eval $(call BuildPackage,i915-firmware))

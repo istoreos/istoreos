@@ -1,0 +1,40 @@
+From 22ae46dcf75fd2b42a994b7b0a2dadaf5c8bb31e Mon Sep 17 00:00:00 2001
+From: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+Date: Wed, 16 Aug 2023 20:40:30 +0800
+Subject: [PATCH] drm/i915/adl-n: Add PCH Support for Alder Lake N
+
+Add the PCH ID for ADL-N.
+
+Signed-off-by: Tejas Upadhyay <tejaskumarx.surendrakumar.upadhyay@intel.com>
+---
+ drivers/gpu/drm/i915/intel_pch.c | 1 +
+ drivers/gpu/drm/i915/intel_pch.h | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/intel_pch.c b/drivers/gpu/drm/i915/intel_pch.c
+index 287f5a3..2dd0ba2 100644
+--- a/drivers/gpu/drm/i915/intel_pch.c
++++ b/drivers/gpu/drm/i915/intel_pch.c
+@@ -129,6 +129,7 @@ intel_pch_type(const struct drm_i915_private *dev_priv, unsigned short id)
+ 		return PCH_JSP;
+ 	case INTEL_PCH_ADP_DEVICE_ID_TYPE:
+ 	case INTEL_PCH_ADP2_DEVICE_ID_TYPE:
++	case INTEL_PCH_ADP4_DEVICE_ID_TYPE:
+ 		drm_dbg_kms(&dev_priv->drm, "Found Alder Lake PCH\n");
+ 		drm_WARN_ON(&dev_priv->drm, !IS_ALDERLAKE_S(dev_priv) &&
+ 			    !IS_ALDERLAKE_P(dev_priv));
+diff --git a/drivers/gpu/drm/i915/intel_pch.h b/drivers/gpu/drm/i915/intel_pch.h
+index 994c56f..3dbecfd 100644
+--- a/drivers/gpu/drm/i915/intel_pch.h
++++ b/drivers/gpu/drm/i915/intel_pch.h
+@@ -57,6 +57,7 @@ enum intel_pch {
+ #define INTEL_PCH_JSP_DEVICE_ID_TYPE		0x4D80
+ #define INTEL_PCH_ADP_DEVICE_ID_TYPE		0x7A80
+ #define INTEL_PCH_ADP2_DEVICE_ID_TYPE		0x5180
++#define INTEL_PCH_ADP4_DEVICE_ID_TYPE		0x5480
+ #define INTEL_PCH_P2X_DEVICE_ID_TYPE		0x7100
+ #define INTEL_PCH_P3X_DEVICE_ID_TYPE		0x7000
+ #define INTEL_PCH_QEMU_DEVICE_ID_TYPE		0x2900 /* qemu q35 has 2918 */
+-- 
+2.31.0
+
