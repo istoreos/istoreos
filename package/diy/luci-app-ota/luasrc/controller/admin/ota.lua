@@ -11,7 +11,9 @@ function index()
     return
   end
 
-  entry({"admin", "system", "ota"}, post_on({ apply = "1" }, "action_ota"), _("OTA"), 69)
+  local ota_action = call("action_ota")
+  ota_action["post"] = { apply = "1" }
+  entry({"admin", "system", "ota"}, ota_action, _("OTA"), 69)
   entry({"admin", "system", "ota", "check"}, post("action_check"))
   entry({"admin", "system", "ota", "download"}, post("action_download"))
   entry({"admin", "system", "ota", "progress"}, call("action_progress"))
@@ -62,9 +64,6 @@ function action_ota()
   local image_tmp = "/tmp/firmware.img"
   local http = require "luci.http"
   if http.formvalue("apply") == "1" then
-    if not luci.dispatcher.test_post_security() then
-      return
-    end
     if not image_supported(image_tmp) then
       luci.template.render("admin_system/ota", {image_invalid = true})
       return
