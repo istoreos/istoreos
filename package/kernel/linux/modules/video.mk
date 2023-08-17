@@ -1087,7 +1087,7 @@ define KernelPackage/drm-i915
 	CONFIG_DRM_I915_WERROR=n
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/i915/i915.ko
   AUTOLOAD:=$(call AutoProbe,i915)
-  MODPARAMS.i915:=enable_guc=3 force_probe=46d0,46d1,46d2
+  MODPARAMS.i915:=enable_guc=3 force_probe=4680,4690,4692,4693,46a3,46a6,46b3,46c3,46d0,46d1,46d2
 endef
 
 define KernelPackage/drm-i915/description

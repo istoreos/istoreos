@@ -211,15 +211,71 @@ $(eval $(call BuildPackage,e100-firmware))
 
 Package/i915-firmware = $(call Package/firmware-default,Intel GPU firmware)
 define Package/i915-firmware/install
-	$(INSTALL_DIR) $(1)/lib/firmware/i915
-	# N5105 GPU
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_62.0.0.bin $(1)/lib/firmware/i915/
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	# GEN9 J4125 (Gemini Lake)
+	# GEN11 N5105 (Jasper Lake) J6413 (Elkhart Lake)
+	# GEN12 N100 (Alder Lake-N)
 
-	# N100 GPU
+	$(INSTALL_DIR) $(1)/lib/firmware/i915
+	# drivers/gpu/drm/i915/display/intel_dmc.c:intel_dmc_ucode_init
+	# ALDERLAKE_P ALDERLAKE_P_N
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_dmc_ver2_10.bin $(1)/lib/firmware/i915/
+	# ALDERLAKE_S
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adls_dmc_ver2_01.bin $(1)/lib/firmware/i915/
+	# DG1
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg1_dmc_ver2_02.bin $(1)/lib/firmware/i915/
+	# ROCKETLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/rkl_dmc_ver2_03.bin $(1)/lib/firmware/i915/
+	# DISPLAY_VER >= 12
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_dmc_ver2_12.bin $(1)/lib/firmware/i915/
+	# DISPLAY_VER == 11
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	# KABYLAKE || COFFEELAKE || COMETLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_dmc_ver1_27.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_dmc_ver1_07.bin $(1)/lib/firmware/i915/
+
+	# drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c:INTEL_UC_FIRMWARE_DEFS
+	## guc
+	# ALDERLAKE_P
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_guc_62.0.3.bin $(1)/lib/firmware/i915/
+	# ALDERLAKE_S ALDERLAKE_P_N ROCKETLAKE TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# JASPERLAKE ELKHARTLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# ICELAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE (REV >= 5)
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE COFFEELAKE KABYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_guc_62.0.0.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_guc_62.0.0.bin $(1)/lib/firmware/i915/
+
+	## huc
+	# ALDERLAKE_P ALDERLAKE_P_N ALDERLAKE_S ROCKETLAKE TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
+	# JASPERLAKE ELKHARTLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	# ICELAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE (REV >= 5)
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE COFFEELAKE KABYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_huc_2.0.0.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_huc_2.0.0.bin $(1)/lib/firmware/i915/
+
 endef
 $(eval $(call BuildPackage,i915-firmware))
