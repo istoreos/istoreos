@@ -38,7 +38,7 @@ rockchip_setup_interfaces()
 		;;
 	*)
 		ucidef_set_interface_lan 'eth0'
-		[ -f /etc/config/network ] || uci -q get firewall.@zone[0].masq >/dev/null || uci -q set firewall.@zone[0].masq=1
+		[ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.@zone[0].masq >/dev/null || uci -q set firewall.@zone[0].masq=1
 		;;
 	esac
 }
@@ -87,7 +87,7 @@ generate_wwan_uci()
 {
 	local device="$1"
 	ucidef_set_interface "wwan" device "$device" protocol "modemmanager" metric "100"
-	uci get firewall.@zone[1].network | grep -qFw wwan || uci add_list firewall.@zone[1].network='wwan'
+	[ -f /rom/note -o -f /etc/config/network ] || uci get firewall.@zone[1].network | grep -qFw wwan || uci add_list firewall.@zone[1].network='wwan'
 }
 
 rockchip_setup_wwan()
