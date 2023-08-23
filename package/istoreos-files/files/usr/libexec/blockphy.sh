@@ -3,22 +3,14 @@
 DEVNAME=${1#/dev/}
 [ -z "$DEVNAME" ] && exit 1
 
-getusb() {
-    if [ "$2" = "1" ]; then
-        echo "/$1/"
-        return 0
-    fi
-    echo "/$1_$2/"
-}
-
 getdisk() {
     local DISK=$1
     local path=`readlink /sys/block/$DISK`
-    local usb=`echo "$path" | grep -oE '/usb[0-9]+/'`
+    local usb=`echo "$path" | grep -oE '/usb\d+/[^:]+'`
     if [ -n "$usb" ]; then
-        usb=${usb#/}
-        usb=${usb%/}
-        getusb `echo "$path" | grep -oE "/$usb/${usb#usb}-[0-9]+/" | sed -r "s#^/($usb)/${usb#usb}-([0-9]+)/\\\$#\\1 \\2#g"`
+        usb=${usb##*/}
+        usb=${usb%%-1}
+        echo usb`echo "$usb" | sed 's/[-.]/_/g'`
         return 0
     fi
     case "$DISK" in
