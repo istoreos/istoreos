@@ -76,7 +76,13 @@ EOF
 
 scan_all() {
     local line
-    block info | while read; do
+    local dev
+
+    if [ "$DETECT" = "0" -a -n "$DEVNAME" ]; then
+        dev="/dev/$DEVNAME"
+    fi
+
+    block info $dev | while read; do
         line="$REPLY"
         eval "${line##*: } handle_part ${line%%: *}"
     done
@@ -88,7 +94,7 @@ if [ "$1" = "detect" ]; then
 config global
 	option anon_swap '0'
 	option anon_mount '0'
-    option port_mount '0'
+	option port_mount '0'
 	option auto_swap '1'
 	option auto_mount '1'
 	option delay_root '5'
