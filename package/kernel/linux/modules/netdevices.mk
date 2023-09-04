@@ -650,7 +650,7 @@ define KernelPackage/r8169
     CONFIG_R8169_NAPI=y \
     CONFIG_R8169_VLAN=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/realtek/r8169.ko
-  AUTOLOAD:=$(call AutoProbe,r8169)
+  AUTOLOAD:=$(call AutoLoad,35-1,r8169)
 endef
 
 define KernelPackage/r8169/description
@@ -684,7 +684,7 @@ define KernelPackage/e100
   DEPENDS:=@PCI_SUPPORT +kmod-mii +e100-firmware
   KCONFIG:=CONFIG_E100
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/e100.ko
-  AUTOLOAD:=$(call AutoProbe,e100)
+  AUTOLOAD:=$(call AutoLoad,35,e100)
 endef
 
 define KernelPackage/e100/description
@@ -718,7 +718,7 @@ define KernelPackage/e1000e
   DEPENDS:=@PCIE_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_E1000E
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/e1000e/e1000e.ko
-  AUTOLOAD:=$(call AutoProbe,e1000e)
+  AUTOLOAD:=$(call AutoLoad,35,e1000e)
   MODPARAMS.e1000e:= \
     IntMode=1 \
     InterruptThrottleRate=4,4,4,4,4,4,4,4
@@ -814,7 +814,7 @@ define KernelPackage/i40e
     CONFIG_I40E_HWMON=y \
     CONFIG_I40E_DCA=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/i40e/i40e.ko
-  AUTOLOAD:=$(call AutoProbe,i40e)
+  AUTOLOAD:=$(call AutoLoad,35,i40e)
 endef
 
 define KernelPackage/i40e/description
@@ -1336,7 +1336,7 @@ define KernelPackage/igc
   DEPENDS:=@PCI_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_IGC
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/igc/igc.ko
-  AUTOLOAD:=$(call AutoProbe,igc)
+  AUTOLOAD:=$(call AutoLoad,35,igc)
 endef
 
 define KernelPackage/igc/description
