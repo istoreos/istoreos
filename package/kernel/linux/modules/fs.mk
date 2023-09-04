@@ -238,6 +238,26 @@ endef
 
 $(eval $(call KernelPackage,fs-f2fs))
 
+define KernelPackage/fs-erofs
+  SUBMENU:=$(FS_MENU)
+  TITLE:=EROFS filesystem support
+  DEPENDS:= +kmod-lib-crc32c +kmod-lib-lz4
+  KCONFIG:=\
+	CONFIG_EROFS_FS \
+	CONFIG_EROFS_FS_ZIP=y \
+	CONFIG_EROFS_FS_CLUSTER_PAGE_LIMIT=256 \
+	CONFIG_EROFS_FS_DEBUG=n \
+	CONFIG_EROFS_FS_XATTR=n
+  FILES:=$(LINUX_DIR)/fs/erofs/erofs.ko
+  AUTOLOAD:=$(call AutoLoad,30,erofs,1)
+endef
+
+define KernelPackage/fs-erofs/description
+ Kernel module for EROFS filesystem support
+endef
+
+$(eval $(call KernelPackage,fs-erofs))
+
 
 define KernelPackage/fs-fscache
   SUBMENU:=$(FS_MENU)
