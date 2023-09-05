@@ -38,7 +38,14 @@ rockchip_setup_interfaces()
 		;;
 	*)
 		ucidef_set_interface_lan 'eth0'
-		[ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.@zone[0].masq >/dev/null || uci -q set firewall.@zone[0].masq=1
+		[ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.docker_nat >/dev/null || uci -q batch <<-EOF
+			set firewall.docker_nat=nat
+			set firewall.docker_nat.name='DockerNAT'
+			set firewall.docker_nat.proto='all'
+			set firewall.docker_nat.src='lan'
+			set firewall.docker_nat.target='MASQUERADE'
+			set firewall.docker_nat.extra='-i docker0'
+EOF
 		;;
 	esac
 }
