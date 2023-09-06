@@ -133,6 +133,20 @@ endef
 
 $(eval $(call KernelPackage,fs-cifs))
 
+define KernelPackage/fs-binfmt-misc
+  SUBMENU:=$(FS_MENU)
+  TITLE:=MISC binaries support
+  KCONFIG:= \
+	CONFIG_BINFMT_MISC
+  FILES:=$(LINUX_DIR)/fs/binfmt_misc.ko
+  AUTOLOAD:=$(call AutoLoad,30,binfmt_misc)
+endef
+
+define KernelPackage/fs-binfmt-misc/description
+ Kernel module for MISC binaries support
+endef
+
+$(eval $(call KernelPackage,fs-binfmt-misc))
 
 define KernelPackage/fs-configfs
   SUBMENU:=$(FS_MENU)
