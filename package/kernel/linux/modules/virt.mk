@@ -80,8 +80,7 @@ define KernelPackage/vfio
   DEPENDS:=@TARGET_x86_64
   KCONFIG:= \
 	CONFIG_VFIO \
-	CONFIG_VFIO_NOIOMMU=n \
-	CONFIG_VFIO_MDEV=n
+	CONFIG_VFIO_NOIOMMU=n
   MODPARAMS.vfio:=\
 	enable_unsafe_noiommu_mode=n
   FILES:= \
@@ -97,6 +96,22 @@ endef
 
 $(eval $(call KernelPackage,vfio))
 
+define KernelPackage/vfio-mdev
+  SUBMENU:=Virtualization
+  TITLE:=Mediated device driver framework
+  DEPENDS:=@TARGET_x86_64 +kmod-vfio
+  KCONFIG:= \
+	CONFIG_VFIO_MDEV
+  FILES:= \
+	$(LINUX_DIR)/drivers/vfio/mdev/mdev.ko
+  AUTOLOAD:=$(call AutoProbe,mdev)
+endef
+
+define KernelPackage/vfio-mdev/description
+  VFIO Mediated device provides a framework to virtualize devices.
+endef
+
+$(eval $(call KernelPackage,vfio-mdev))
 
 define KernelPackage/vfio-pci
   SUBMENU:=Virtualization
