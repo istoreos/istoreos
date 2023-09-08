@@ -520,50 +520,6 @@
     };
 };
 
-// USB2 PHY
-&u2phy0_otg {
-    vbus-supply = <&vcc5v0_otg>;
-    status = "okay";
-};
-
-&u2phy0_host {
-    status = "disabled";
-};
-
-&u2phy1_otg {
-    status = "disabled";
-};
-
-&u2phy1_host {
-    phy-supply = <&vcc5v0_usb2>;
-    status = "okay";
-};
-
-&usb2phy0 {
-    status = "okay";
-};
-
-&usb2phy1 {
-    status = "okay";
-};
-
-// USB2 HOST
-&usb_host0_ehci {
-    status = "disabled";
-};
-
-&usb_host0_ohci {
-    status = "disabled";
-};
-
-&usb_host1_ehci {
-    status = "okay";
-};
-
-&usb_host1_ohci {
-    status = "okay";
-};
-
 // PCIE3
 &pcie30phy {
     status = "disabled";
@@ -573,6 +529,58 @@
 };
 &pcie3x2 {
     status = "disabled";
+};
+
+// USB2 PHY
+// USB2 PHY0 (for USB3.0 HOST)
+&usb2phy0 {
+    status = "okay";
+};
+
+// USB2 PHY0 port0 USB3_OTG0_D
+&u2phy0_otg {
+    vbus-supply = <&vcc5v0_otg>;
+    status = "okay";
+};
+
+// USB2 PHY0 port1 USB3_HOST1_D
+&u2phy0_host {
+    status = "disabled";
+};
+
+// USB2 PHY1 (for USB2.0 HOST)
+&usb2phy1 {
+    status = "okay";
+};
+
+// USB2 PHY1 port0 USB2_HOST2_D
+&u2phy1_otg {
+    status = "disabled";
+};
+
+// USB2 PHY1 port1 USB2_HOST3_D
+&u2phy1_host {
+    phy-supply = <&vcc5v0_usb2>;
+    status = "okay";
+};
+
+// USB2 HOST
+// USB2_HOST2
+&usb_host0_ehci {
+    status = "disabled";
+};
+
+&usb_host0_ohci {
+    status = "disabled";
+};
+
+// USB2_HOST3
+&usb_host1_ehci {
+    status = "okay";
+};
+
+&usb_host1_ohci {
+    status = "okay";
 };
 
 // START MULTI_PHY
@@ -588,16 +596,17 @@
     status = "okay";
 };
 
-&usbdrd_dwc3 {
-    phys = <&u2phy0_otg>;
-    phy-names = "usb2-phy";
-    extcon = <&usb2phy0>;
-    maximum-speed = "high-speed"; /* only USB2.0 */
-    snps,dis_u2_susphy_quirk; /* only USB2.0 */
+// USB3_OTG0 phy &u2phy0_otg
+&usbdrd30 {
     status = "okay";
 };
 
-&usbdrd30 {
+&usbdrd_dwc3 {
+    extcon = <&usb2phy0>;
+    phys = <&u2phy0_otg>; /* only USB2.0 */
+    phy-names = "usb2-phy"; /* only USB2.0 */
+    maximum-speed = "high-speed"; /* only USB2.0 */
+    snps,dis_u2_susphy_quirk; /* only USB2.0 */
     status = "okay";
 };
 
@@ -612,11 +621,12 @@
     status = "okay";
 };
 
-&usbhost_dwc3 {
+// USB3_HOST1 phy &u2phy0_host
+&usbhost30 {
     status = "disabled";
 };
 
-&usbhost30 {
+&usbhost_dwc3 {
     status = "disabled";
 };
 
@@ -762,12 +772,12 @@
 
         soc_slppin_slp: soc_slppin_slp {
             rockchip,pins =
-                <0 RK_PA2 RK_FUNC_1 &pcfg_pull_up>;
+                <0 RK_PA2 1 &pcfg_pull_up>;
         };
 
         soc_slppin_rst: soc_slppin_rst {
             rockchip,pins =
-                <0 RK_PA2 RK_FUNC_2 &pcfg_pull_none>;
+                <0 RK_PA2 2 &pcfg_pull_none>;
         };
     };
 

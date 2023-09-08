@@ -63,13 +63,13 @@
         compatible = "pwm-leds";
         red {
             label = "red";
-            pwms = <&pwm8 0 1250 0>;
-            max-brightness = < 1250 >;
+            pwms = <&pwm8 0 50000 0>;
+            max-brightness = <255>;
         };
         led_green: green {
             label = "green";
-            pwms = <&pwm9 0 1250 0>;
-            max-brightness = < 1250 >;
+            pwms = <&pwm9 0 50000 0>;
+            max-brightness = <255>;
             linux,default-trigger = "heartbeat";
         };
     };
