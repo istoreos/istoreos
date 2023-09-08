@@ -147,6 +147,16 @@ $(call Device/rk3588_combined_hinlink)
 endef
 TARGET_DEVICES += hinlink_h88k
 
+define Device/jsy_h1
+$(call Device/rk3568)
+  DEVICE_VENDOR := JSY
+  DEVICE_MODEL := H1
+  DEVICE_DTS := rk3568-jsy-h1
+  SUPPORTED_DEVICES += jsy,h1
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-thermal
+endef
+TARGET_DEVICES += jsy_h1
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
   DEVICE_VENDOR := NLnet

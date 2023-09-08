@@ -17,6 +17,7 @@ rockchip_setup_interfaces()
 	hinlink,h88k-v2|\
 	hinlink,h88k|\
 	hinlink,opc-h66k|\
+	jsy,h1|\
 	nlnet,xgp|\
 	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
@@ -74,6 +75,7 @@ rockchip_setup_macs()
 	hinlink,opc-h69k|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
+	jsy,h1|\
 	lyt,t68m|\
 	nlnet,xgp|\
 	fastrhino,r66s|\

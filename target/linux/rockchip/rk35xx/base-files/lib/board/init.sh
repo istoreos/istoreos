@@ -70,6 +70,7 @@ board_fixup_iface_name() {
 			rename_iface lan1 eth1
 		fi
 		;;
+	jsy,h1|\
 	hinlink,opc-h66k)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0001:11:00.0" ]]; then
@@ -182,6 +183,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth3" "eth3-16"
 		fi
 		;;
+	jsy,h1|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,opc-h66k)
