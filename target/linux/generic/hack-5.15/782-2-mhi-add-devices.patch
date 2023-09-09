@@ -1,0 +1,26 @@
+From 9cbe7f6be39afd4adb7d9afa0de9888c99953ba0 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Sun, 10 Sep 2023 01:48:17 +0800
+Subject: [PATCH] bus: mhi: pci_generic: add devices [2/2]
+
+---
+ drivers/bus/mhi/host/pci_generic.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/bus/mhi/host/pci_generic.c b/drivers/bus/mhi/host/pci_generic.c
+index b874ad9..1d32a92 100644
+--- a/drivers/bus/mhi/host/pci_generic.c
++++ b/drivers/bus/mhi/host/pci_generic.c
+@@ -528,6 +528,9 @@ static const struct pci_device_id mhi_pci_id_table[] = {
+ 	/* Telit FN980 hardware revision v1 */
+ 	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x1C5D, 0x2000),
+ 		.driver_data = (kernel_ulong_t) &mhi_telit_fn980_hw_v1_info },
++	/* Fibocom FM150-AE */
++	{ PCI_DEVICE_SUB(PCI_VENDOR_ID_QCOM, 0x0306, 0x1cf8, 0x5502),
++		.driver_data = (kernel_ulong_t) &mhi_sierra_em919x_info },
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_QCOM, 0x0306),
+ 		.driver_data = (kernel_ulong_t) &mhi_qcom_sdx55_info },
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_QCOM, 0x0304),
+-- 
+2.31.0
+
