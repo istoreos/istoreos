@@ -1,0 +1,15 @@
+--- a/compat/Makefile
++++ b/compat/Makefile
+@@ -1,6 +1,6 @@
+ ccflags-y += -I$(src) -Wframe-larger-than=1280
+ ifeq ($(CONFIG_BACKPORT_INTEGRATE),)
+-obj-m += compat.o
++obj-m += i915-compat.o
+ else
+ obj-y += compat.o
+ endif
+@@ -42,3 +42,4 @@ compat-$(CPTCFG_KERNEL_5_5) += backport-
+ compat-$(CPTCFG_KERNEL_5_15) += backport-5.15.o
+ compat-y += backport-5.10.o backport-5.19.o
+ compat-y += slub.o slab.o ptrace.o
++i915-compat-y += $(compat-y)
