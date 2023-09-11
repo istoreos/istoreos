@@ -44,7 +44,7 @@ define KernelPackage/drm-i915-oot
   URL:=https://github.com/intel-gpu/intel-gpu-i915-backports
   MAINTAINER:=jjm2473 <jjm2473@gmail.com>
   TITLE:=Intel i915 backports
-  DEPENDS+=+i915-firmware +kmod-drm-kms-helper +kmod-kvm-x86 +kmod-lib-crc32c +kmod-vfio-mdev
+  DEPENDS+=+i915-oot-firmware +kmod-drm-kms-helper +kmod-kvm-x86 +kmod-lib-crc32c +kmod-vfio-mdev
   CONFLICTS:=kmod-drm-i915
   ABI_VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
   FILES:= \
