@@ -97,7 +97,7 @@
  .PHONY: defconfig-help
 --- a/Makefile.backport
 +++ b/Makefile.backport
-@@ -179,7 +179,7 @@ endif
+@@ -196,7 +196,7 @@ endif
  
  endif
  
@@ -106,7 +106,7 @@
  # disable built-in rules for this file
  .SUFFIXES:
  
-@@ -202,7 +202,12 @@ backport-include/backport/backport_path.
+@@ -219,7 +219,12 @@ backport-include/backport/backport_path.
  		echo "#define BACKPORT_PATH $(shell pwd)"		;\
  		echo ""							;\
  		echo "#endif /* BACKPORTED_PATH_INCLUDED */"		;\
