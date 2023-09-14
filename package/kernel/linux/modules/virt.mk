@@ -119,7 +119,7 @@ define KernelPackage/vfio-pci
   DEPENDS:=@TARGET_x86_64 @PCI_SUPPORT +kmod-vfio +kmod-irqbypass
   KCONFIG:= \
 	CONFIG_VFIO_PCI \
-	CONFIG_VFIO_PCI_IGD=n
+	CONFIG_VFIO_PCI_IGD=y
   FILES:= \
 	$(LINUX_DIR)/drivers/vfio/pci/vfio-pci-core.ko \
 	$(LINUX_DIR)/drivers/vfio/pci/vfio-pci.ko
