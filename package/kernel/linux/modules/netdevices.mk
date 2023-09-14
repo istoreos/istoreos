@@ -650,7 +650,7 @@ define KernelPackage/r8169
     CONFIG_R8169_NAPI=y \
     CONFIG_R8169_VLAN=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/realtek/r8169.ko
-  AUTOLOAD:=$(call AutoLoad,35-1,r8169)
+  AUTOLOAD:=$(call AutoLoad,35,r8169)
 endef
 
 define KernelPackage/r8169/description
@@ -776,7 +776,7 @@ define KernelPackage/ixgbe
     CONFIG_IXGBE_HWMON=y \
     CONFIG_IXGBE_DCA=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/ixgbe/ixgbe.ko
-  AUTOLOAD:=$(call AutoLoad,35,ixgbe)
+  AUTOLOAD:=$(call AutoLoad,36,ixgbe)
 endef
 
 define KernelPackage/ixgbe/description
@@ -795,7 +795,7 @@ define KernelPackage/ixgbevf
     CONFIG_IXGBE_HWMON=y \
     CONFIG_IXGBE_DCA=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/ixgbevf/ixgbevf.ko
-  AUTOLOAD:=$(call AutoLoad,35,ixgbevf)
+  AUTOLOAD:=$(call AutoLoad,36,ixgbevf)
 endef
 
 define KernelPackage/ixgbevf/description
