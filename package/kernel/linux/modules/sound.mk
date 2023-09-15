@@ -212,6 +212,35 @@ endef
 
 $(eval $(call KernelPackage,sound-soc-ac97))
 
+define KernelPackage/sound-soc-acpi
+  TITLE:=snd-soc-acpi
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/snd-soc-acpi.ko
+  DEPENDS:=+kmod-sound-soc-core
+endef
+
+$(eval $(call KernelPackage,sound-soc-acpi))
+
+define KernelPackage/sound-soc-acpi-intel-match
+  TITLE:=snd-soc-acpi-intel-match
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/intel/common/snd-soc-acpi-intel-match.ko
+  DEPENDS:=+kmod-sound-soc-acpi
+endef
+
+$(eval $(call KernelPackage,sound-soc-acpi-intel-match))
+
+define KernelPackage/sound-soc-hdac-hda
+  TITLE:=snd-soc-hdac-hda
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/codecs/snd-soc-hdac-hda.ko
+  DEPENDS:=+kmod-sound-soc-core +kmod-sound-hda-ext-core
+endef
+
+$(eval $(call KernelPackage,sound-soc-hdac-hda))
 
 define KernelPackage/sound-soc-imx
   TITLE:=IMX SoC support
@@ -325,6 +354,16 @@ define KernelPackage/sound-hda-core/description
 endef
 
 $(eval $(call KernelPackage,sound-hda-core))
+
+define KernelPackage/sound-hda-ext-core
+  TITLE:=HD Audio Sound Ext Core Support
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/hda/ext/snd-hda-ext-core.ko
+  $(call AddDepends/sound,kmod-sound-hda-core)
+endef
+
+$(eval $(call KernelPackage,sound-hda-ext-core))
 
 define KernelPackage/sound-hda-codec-realtek
   SUBMENU:=$(SOUND_MENU)
@@ -533,3 +572,112 @@ define KernelPackage/sound-hda-intel/description
 endef
 
 $(eval $(call KernelPackage,sound-hda-intel))
+
+define KernelPackage/sound-soc-sof
+  TITLE:=Sound Open Firmware Support
+  DEPENDS:=+kmod-sound-soc-core +kmod-ledtrig-audio
+  HIDDEN:=1
+  KCONFIG:= \
+	CONFIG_SND_SOC_SOF_TOPLEVEL=y
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/sof/snd-sof.ko
+  AUTOLOAD:=$(call AutoLoad,57,snd-sof)
+  $(call AddDepends/sound)
+endef
+
+$(eval $(call KernelPackage,sound-soc-sof))
+
+define KernelPackage/sound-soc-sof-acpi
+  TITLE:=Sound Open Firmware ACPI Support
+  DEPENDS:=@TARGET_x86 +kmod-sound-soc-sof
+  KCONFIG:= \
+	CONFIG_SND_SOC_SOF_ACPI
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/sof/snd-sof-acpi.ko
+  AUTOLOAD:=$(call AutoLoad,58,snd-sof-acpi)
+  $(call AddDepends/sound)
+endef
+
+$(eval $(call KernelPackage,sound-soc-sof-acpi))
+
+define KernelPackage/sound-soc-sof-pci
+  TITLE:=Sound Open Firmware PCI Support
+  DEPENDS:=@PCI_SUPPORT +kmod-sound-soc-sof
+  KCONFIG:= \
+	CONFIG_SND_SOC_SOF_PCI
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/sof/snd-sof-pci.ko
+  AUTOLOAD:=$(call AutoLoad,58,snd-sof-pci)
+  $(call AddDepends/sound)
+endef
+
+$(eval $(call KernelPackage,sound-soc-sof-pci))
+
+define KernelPackage/sound-sof-xtensa-dsp
+  TITLE:=snd-sof-xtensa-dsp
+  DEPENDS:=+kmod-sound-soc-sof
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/sof/xtensa/snd-sof-xtensa-dsp.ko
+  $(call AddDepends/sound)
+endef
+
+$(eval $(call KernelPackage,sound-sof-xtensa-dsp))
+
+define KernelPackage/sound-soc-sof-intel
+  SUBMENU:=$(SOUND_MENU)
+  TITLE:=SOF support for Intel audio DSPs
+  DEPENDS:=@TARGET_x86 +kmod-sound-soc-sof +kmod-sound-soc-sof-acpi +kmod-sound-soc-sof-pci \
+	+kmod-sound-sof-xtensa-dsp \
+	+kmod-sound-soc-hdac-hda +kmod-sound-soc-acpi-intel-match
+  KCONFIG:= \
+	CONFIG_SND_SOC_SOF_INTEL_TOPLEVEL=y \
+	CONFIG_SND_SOC_SOF_BAYTRAIL \
+	CONFIG_SND_SOC_SOF_BROADWELL \
+	CONFIG_SND_SOC_SOF_MERRIFIELD \
+	CONFIG_SND_SOC_SOF_APOLLOLAKE \
+	CONFIG_SND_SOC_SOF_GEMINILAKE \
+	CONFIG_SND_SOC_SOF_CANNONLAKE \
+	CONFIG_SND_SOC_SOF_COFFEELAKE \
+	CONFIG_SND_SOC_SOF_COMETLAKE \
+	CONFIG_SND_SOC_SOF_ICELAKE \
+	CONFIG_SND_SOC_SOF_JASPERLAKE \
+	CONFIG_SND_SOC_SOF_TIGERLAKE \
+	CONFIG_SND_SOC_SOF_ELKHARTLAKE \
+	CONFIG_SND_SOC_SOF_ALDERLAKE \
+	CONFIG_SND_SOC_SOF_HDA_LINK=y \
+	CONFIG_SND_SOC_SOF_HDA_AUDIO_CODEC=y \
+	CONFIG_SND_SOC_SOF_HDA_PROBES=y \
+	CONFIG_SND_SOC_INTEL_BYT_CHT_CX2072X_MACH=n \
+	CONFIG_SND_SOC_INTEL_SOF_RT5682_MACH=n \
+	CONFIG_SND_SOC_INTEL_SOF_PCM512x_MACH=n \
+	CONFIG_SND_SOC_INTEL_SKL_HDA_DSP_GENERIC_MACH=n
+
+  FILES:= \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-intel-atom.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-acpi-intel-byt.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-acpi-intel-bdw.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-intel-ipc.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-intel-hda-common.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-intel-hda.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-pci-intel-tng.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-pci-intel-apl.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-pci-intel-cnl.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-pci-intel-icl.ko \
+	$(LINUX_DIR)/sound/soc/sof/intel/snd-sof-pci-intel-tgl.ko
+  AUTOLOAD:=$(call AutoProbe,snd-sof-intel-ipc snd-sof-intel-atom \
+	snd-sof-acpi-intel-bdw snd-sof-acpi-intel-byt \
+	snd-sof-intel-hda-common snd-sof-intel-hda \
+	snd-sof-pci-intel-tng snd-sof-pci-intel-apl \
+	snd-sof-pci-intel-cnl snd-sof-pci-intel-icl \
+	snd-sof-pci-intel-tgl)
+  $(call AddDepends/sound,kmod-sound-hda-intel)
+endef
+
+define KernelPackage/sound-soc-sof-intel/description
+ Kernel modules for Sound Open Firmware for Intel platforms support
+endef
+
+$(eval $(call KernelPackage,sound-soc-sof-intel))
