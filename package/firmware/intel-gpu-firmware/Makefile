@@ -29,6 +29,13 @@ endef
 
 define Package/i915-oot-firmware/install
 	$(INSTALL_DIR) $(1)/lib/firmware/i915
+
+	# don't include firmwares in package/firmware/linux-firmware/intel.mk:i915-firmware
+
+	# drivers/gpu/drm/i915/display/intel_dmc.c:intel_dmc_ucode_init
+	# ALDERLAKE_P ALDERLAKE_P_N
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_dmc_ver2_16.bin $(1)/lib/firmware/i915/
+
 	# drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c:INTEL_UC_FIRMWARE_DEFS
 	## guc
 	# ALDERLAKE_P
