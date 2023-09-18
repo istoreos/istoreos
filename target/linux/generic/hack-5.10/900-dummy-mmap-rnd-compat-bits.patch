@@ -1,0 +1,62 @@
+From 25f2d9e65074d714d8e69d2e30f404465a8eb1bd Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Wed, 13 Sep 2023 11:33:31 +0800
+Subject: [PATCH] mm/mmap: add mmap_rnd_compat_bits api for not compat kernel
+
+---
+ include/linux/mm.h | 3 +--
+ kernel/sysctl.c    | 2 --
+ mm/mmap.c          | 7 +++++--
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index a27a6b5..596c791 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -90,8 +90,7 @@ extern int sysctl_legacy_va_layout;
+ extern const int mmap_rnd_bits_min;
+ extern const int mmap_rnd_bits_max;
+ extern int mmap_rnd_bits __read_mostly;
+-#endif
+-#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
++
+ extern const int mmap_rnd_compat_bits_min;
+ extern const int mmap_rnd_compat_bits_max;
+ extern int mmap_rnd_compat_bits __read_mostly;
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 928798f..ccbc0c0 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -3126,8 +3126,6 @@ static struct ctl_table vm_table[] = {
+ 		.extra1		= (void *)&mmap_rnd_bits_min,
+ 		.extra2		= (void *)&mmap_rnd_bits_max,
+ 	},
+-#endif
+-#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
+ 	{
+ 		.procname	= "mmap_rnd_compat_bits",
+ 		.data		= &mmap_rnd_compat_bits,
+diff --git a/mm/mmap.c b/mm/mmap.c
+index a0a4ead..d36d9e7 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -66,11 +66,14 @@
+ const int mmap_rnd_bits_min = CONFIG_ARCH_MMAP_RND_BITS_MIN;
+ const int mmap_rnd_bits_max = CONFIG_ARCH_MMAP_RND_BITS_MAX;
+ int mmap_rnd_bits __read_mostly = CONFIG_ARCH_MMAP_RND_BITS;
+-#endif
+-#ifdef CONFIG_HAVE_ARCH_MMAP_RND_COMPAT_BITS
++
+ const int mmap_rnd_compat_bits_min = CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MIN;
+ const int mmap_rnd_compat_bits_max = CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MAX;
++#ifdef CONFIG_ARCH_MMAP_RND_COMPAT_BITS
+ int mmap_rnd_compat_bits __read_mostly = CONFIG_ARCH_MMAP_RND_COMPAT_BITS;
++#else
++int mmap_rnd_compat_bits __read_mostly = CONFIG_ARCH_MMAP_RND_COMPAT_BITS_MIN;
++#endif
+ #endif
+ 
+ static bool ignore_rlimit_data;
+-- 
+2.31.0
+
