@@ -1206,8 +1206,12 @@ config KERNEL_SQUASHFS_FRAGMENT_CACHE_SIZE
 config KERNEL_SQUASHFS_XATTR
 	bool "Squashfs XATTR support"
 
+config KERNEL_PSI
+	bool
+
 config KERNEL_ANDROID
 	bool "Enable support for Android"
+	select KERNEL_PSI
 	help
 	  Say Y here if you want to support the Android.
 	  Contains ashmem and binder drivers.
