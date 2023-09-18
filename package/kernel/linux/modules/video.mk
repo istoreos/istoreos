@@ -1099,3 +1099,19 @@ define KernelPackage/drm-i915/description
 endef
 
 $(eval $(call KernelPackage,drm-i915))
+
+define KernelPackage/drm-i915-kvmgt
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=Intel GPU GVT-g support
+  DEPENDS:=@TARGET_x86 +kmod-drm-i915 +kmod-kvm-x86 +kmod-vfio-mdev
+  KCONFIG:= \
+	CONFIG_DRM_I915_GVT_KVMGT
+  FILES:=$(LINUX_DIR)/drivers/gpu/drm/i915/gvt/kvmgt.ko
+  AUTOLOAD:=$(call AutoProbe,kvmgt)
+endef
+
+define KernelPackage/drm-i915-kvmgt/description
+  Enable KVM/VFIO support for Intel GVT-g
+endef
+
+$(eval $(call KernelPackage,drm-i915-kvmgt))
