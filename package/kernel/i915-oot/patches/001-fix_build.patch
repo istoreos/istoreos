@@ -1,0 +1,292 @@
+--- a/compat/slub.c
++++ b/compat/slub.c
+@@ -77,7 +77,7 @@ static inline unsigned int oo_objects(st
+ 
+ #define count_partial  LINUX_I915_BACKPORT(count_partial)
+ 
+-#if defined(CONFIG_SLUB_DEBUG) || defined(CONFIG_SYSFS)
++#if defined(CONFIG_SLUB_DEBUG)
+ 
+ #ifdef COUNT_STRUCT_PAGE_PRESENT
+ static unsigned long count_partial(struct kmem_cache_node *n,
+--- a/Makefile
++++ b/Makefile
+@@ -2,10 +2,10 @@
+ # Makefile for the output source package
+ #
+ 
+-ifeq ($(KERNELRELEASE),)
++ifeq ($(KERNELVERSION),)
+ 
+ MAKEFLAGS += --no-print-directory
+-SHELL := /bin/bash
++SHELL := /usr/bin/env bash
+ BACKPORT_DIR := $(shell pwd)
+ 
+ KMODDIR ?= updates
+@@ -19,6 +19,7 @@ KLIB_BUILD ?= $(KLIB)/build/
+ KERNEL_CONFIG := $(KLIB_BUILD)/.config
+ KERNEL_MAKEFILE := $(KLIB_BUILD)/Makefile
+ CONFIG_MD5 := $(shell md5sum $(KERNEL_CONFIG) 2>/dev/null | sed 's/\s.*//')
++STAMP_KERNEL_CONFIG := .kernel_config_md5_$(CONFIG_MD5)
+ KBUILD_MODPOST_WARN := 1
+ DEB_PKG_DISTRO_TARGETS := i915dkmsdeb-pkg bindeb-pkg
+ RPM_PKG_DISTRO_TARGETS := i915dkmsrpm-pkg
+@@ -43,7 +44,8 @@ mrproper:
+ 	@rm -f backport-include/backport/autoconf.h
+ 	@$(MAKE) -f Makefile.real mrproper
+ 
+-.DEFAULT:
++.SILENT: $(STAMP_KERNEL_CONFIG)
++$(STAMP_KERNEL_CONFIG):
+ 	@set -e ; test -f local-symbols || (						\
+ 	echo "/--------------"								;\
+ 	echo "| You shouldn't run make in the backports tree, but only in"		;\
+@@ -56,7 +58,6 @@ mrproper:
+ 	echo "| for more options."							;\
+ 	echo "\\--"									;\
+ 	false)
+-ifeq (,$(filter $(PKG_DISTRO_TARGETS), $(MAKECMDGOALS)))
+ 	@set -e ; test -f $(KERNEL_CONFIG) || (						\
+ 	echo "/--------------"								;\
+ 	echo "| Your kernel headers are incomplete/not installed."			;\
+@@ -68,7 +69,11 @@ ifeq (,$(filter $(PKG_DISTRO_TARGETS), $
+ 	echo "| (that isn't currently running.)"					;\
+ 	echo "\\--"									;\
+ 	false)
+-	@set -e ; if [ "$$(cat .kernel_config_md5 2>/dev/null)" != "$(CONFIG_MD5)" ]	;\
++	@rm -f .kernel_config_md5_*
++	@touch $@
++
++Kconfig.kernel: $(STAMP_KERNEL_CONFIG) local-symbols
++	@set -e ; if true ;\
+ 	then 										\
+ 		echo -n "Generating local configuration database from kernel ..."	;\
+ 		grep -v -f local-symbols $(KERNEL_CONFIG) | grep = | (			\
+@@ -91,7 +96,13 @@ ifeq (,$(filter $(PKG_DISTRO_TARGETS), $
+ 				echo "    default $$v"					;\
+ 				echo ""							;\
+ 			done								\
+-		) > Kconfig.kernel							;\
++		) > $@									;\
++		echo " done."								;\
++	fi
++
++Kconfig.versions: Kconfig.kernel
++	@set -e ; if true ;\
++	then 										\
+ 		kver=$$($(MAKE) --no-print-directory -C $(KLIB_BUILD) kernelversion |	\
+ 			sed 's/^\(\([3-5]\|2\.6\)\.[0-9]\+\).*/\1/;t;d')		;\
+ 		test "$$kver" != "" || echo "Kernel version parse failed!"		;\
+@@ -116,11 +127,11 @@ ifeq (,$(filter $(PKG_DISTRO_TARGETS), $
+ 		for v in $$(seq 0 $$RHEL_MINOR) ; do 					\
+ 			echo config BACKPORT_RHEL_KERNEL_$${RHEL_MAJOR}_$$v		;\
+ 			echo "    def_bool y"						;\
+-		done >> Kconfig.versions						;\
+-		echo " done."								;\
+-	fi										;\
+-	echo "$(CONFIG_MD5)" > .kernel_config_md5
+-endif
++		done >> $@								;\
++	fi
++
++.DEFAULT:
++	@$(MAKE) Kconfig.versions
+ 	@$(MAKE) -f Makefile.real "$@"
+ 
+ .PHONY: defconfig-help
+--- a/Makefile.backport
++++ b/Makefile.backport
+@@ -196,7 +196,7 @@ endif
+ 
+ endif
+ 
+-ifeq ($(KERNELRELEASE),)
++ifeq ($(KERNELVERSION),)
+ # disable built-in rules for this file
+ .SUFFIXES:
+ 
+@@ -219,7 +219,12 @@ backport-include/backport/backport_path.
+ 		echo "#define BACKPORT_PATH $(shell pwd)"		;\
+ 		echo ""							;\
+ 		echo "#endif /* BACKPORTED_PATH_INCLUDED */"		;\
+-		) > backport-include/backport/backport_path.h
++		) > $@.new
++	@if cmp -s $@ $@.new; then \
++                rm -f $@.new; \
++        else \
++                mv $@.new $@; \
++        fi
+ 	@echo " done."
+ 
+ ###
+--- a/drivers/gpu/drm/i915/Kconfig
++++ b/drivers/gpu/drm/i915/Kconfig
+@@ -28,7 +28,6 @@ config DRM_I915
+ 	select CEC_CORE if CEC_NOTIFIER
+ 	depends on VMAP_PFN
+ 	depends on AUXILIARY_BUS || MFD_CORE
+-	depends on MTD
+ 	help
+ 	  Choose this option if you have a system that has "Intel Graphics
+ 	  Media Accelerator" or "HD Graphics" integrated graphics,
+--- a/drivers/gpu/drm/i915/Makefile
++++ b/drivers/gpu/drm/i915/Makefile
+@@ -236,9 +236,6 @@ i915-y += gt/uc/intel_uc.o \
+ # graphics system controller (GSC) support
+ i915-y += gt/intel_gsc.o
+ 
+-# graphics spi device (DGFX) support
+-i915-y += spi/intel_spi.o
+-
+ # Virtualization support
+ iov-y += \
+ 	i915_sriov.o \
+@@ -409,9 +406,6 @@ obj-$(CPTCFG_DRM_I915) += i915.o
+ obj-$(CPTCFG_DRM_I915_GVT_KVMGT) += gvt/kvmgt.o
+ obj-$(CPTCFG_DRM_I915_INTEL_FABRIC) += fabric/
+ 
+-obj-m += i915_spi.o
+-i915_spi-y := spi/intel_spi_drv.o
+-
+ # header test
+ 
+ # exclude some broken headers from the test coverage
+--- a/drivers/gpu/drm/i915/i915_driver.c
++++ b/drivers/gpu/drm/i915/i915_driver.c
+@@ -84,8 +84,6 @@
+ 
+ #include "pxp/intel_pxp_pm.h"
+ 
+-#include "spi/intel_spi.h"
+-
+ #include "i915_debugfs.h"
+ #include "i915_driver.h"
+ #include "i915_drm_client.h"
+@@ -1258,9 +1256,6 @@ void i915_driver_register(struct drm_i91
+ 	i915_setup_sysfs(dev_priv);
+ 	i915_register_sysrq(dev_priv);
+ 
+-
+-	intel_spi_init(&dev_priv->spi, dev_priv);
+-
+ 	for_each_gt(gt, dev_priv, i)
+ 		intel_gt_driver_register(gt);
+ 
+@@ -1313,8 +1308,6 @@ static void i915_driver_unregister(struc
+ 
+ 	intel_iaf_remove(dev_priv);
+ 
+-	intel_spi_fini(&dev_priv->spi);
+-
+ 	i915_perf_unregister(dev_priv);
+ 	/* GT should be available until PMU is gone */
+ 	i915_pmu_unregister(dev_priv);
+--- a/drivers/gpu/drm/i915/i915_drv.h
++++ b/drivers/gpu/drm/i915/i915_drv.h
+@@ -66,8 +66,6 @@
+ #include "gt/intel_workarounds.h"
+ #include "gt/uc/intel_uc.h"
+ 
+-#include "spi/intel_spi.h"
+-
+ #include "i915_drm_client.h"
+ #include "i915_gem.h"
+ #include "i915_gem_gtt.h"
+@@ -822,8 +820,6 @@ struct drm_i915_private {
+ 
+ 	struct i915_perf perf;
+ 
+-	struct intel_spi spi;
+-
+ 	struct i915_hwmon *hwmon;
+ 
+ 	/* Abstract the submission mechanism (legacy ringbuffer or execlists) away */
+--- a/drivers/gpu/drm/i915/i915_irq.c
++++ b/drivers/gpu/drm/i915/i915_irq.c
+@@ -31,6 +31,7 @@
+ #include <linux/circ_buf.h>
+ #include <linux/irq.h>
+ #include <linux/slab.h>
++#include <linux/string.h>
+ #include <linux/sysrq.h>
+ 
+ #include <drm/drm_drv.h>
+@@ -3662,11 +3663,11 @@ gen12_gt_hw_error_handler(struct intel_g
+ 				}
+ 				raw_reg_write(regs, ERR_STAT_GT_COR_VCTR_REG(i), vctr);
+ 
+-				if (!strcmp(name, "Undefined"))
++				if (!strncmp(name, "Undefined", 9))
+ 					intel_gt_log_driver_error(gt, INTEL_GT_DRIVER_ERROR_INTERRUPT,
+ 								  "%s CORRECTABLE error, ERR_VECT_GT_CORRECTABLE_%d:0x%08lx\n",
+ 								  name, i, vctr);
+-				else if (strcmp(name, "SUBSLICE"))
++				else if (strncmp(name, "SUBSLICE", 8))
+ 					log_gt_hw_err(gt, "%s CORRECTABLE error, ERR_VECT_GT_CORRECTABLE_%d:0x%08lx\n",
+ 						      name, i, vctr);
+ 				error = true;
+@@ -3745,11 +3746,11 @@ gen12_gt_hw_error_handler(struct intel_g
+ 				}
+ 				raw_reg_write(regs, ERR_STAT_GT_FATAL_VCTR_REG(i), vctr);
+ 
+-				if (!strcmp(name, "Undefined"))
++				if (!strncmp(name, "Undefined", 9))
+ 					intel_gt_log_driver_error(gt, INTEL_GT_DRIVER_ERROR_INTERRUPT,
+ 								  "%s FATAL error, ERR_VECT_GT_FATAL_%d:0x%08lx\n",
+ 								  name, i, vctr);
+-				else if (strcmp(name, "SUBSLICE"))
++				else if (strncmp(name, "SUBSLICE", 8))
+ 					log_gt_hw_err(gt, "%s FATAL error, ERR_VECT_GT_FATAL_%d:0x%08lx\n",
+ 						      name, i, vctr);
+ 				error = true;
+--- a/drivers/gpu/drm/i915/display/intel_display_trace.h
++++ b/drivers/gpu/drm/i915/display/intel_display_trace.h
+@@ -586,6 +586,6 @@ TRACE_EVENT(intel_frontbuffer_flush,
+ /* This part must be outside protection */
+ #undef TRACE_INCLUDE_PATH
+ #undef TRACE_INCLUDE_FILE
+-#define TRACE_INCLUDE_PATH BACKPORT_PATH/drivers/gpu/drm/i915/display
++#define TRACE_INCLUDE_PATH ./display
+ #define TRACE_INCLUDE_FILE intel_display_trace
+ #include <trace/define_trace.h>
+--- a/drivers/gpu/drm/i915/i915_trace.h
++++ b/drivers/gpu/drm/i915/i915_trace.h
+@@ -1068,6 +1068,6 @@ TRACE_EVENT(i915_vm_prefetch,
+ /* This part must be outside protection */
+ #undef TRACE_INCLUDE_PATH
+ #undef TRACE_INCLUDE_FILE
+-#define TRACE_INCLUDE_PATH BACKPORT_PATH/drivers/gpu/drm/i915
++#define TRACE_INCLUDE_PATH .
+ #define TRACE_INCLUDE_FILE i915_trace
+ #include <trace/define_trace.h>
+--- a/Makefile.real
++++ b/Makefile.real
+@@ -80,7 +80,12 @@ backport-include/backport/autoconf.h: .c
+ 			esac						;\
+ 		done							;\
+ 		echo "#endif /* COMPAT_AUTOCONF_INCLUDED */"		;\
+-	) > backport-include/backport/autoconf.h
++	) > $@.new
++	@if cmp -s $@ $@.new; then \
++                rm -f $@.new; \
++        else \
++                mv $@.new $@; \
++        fi
+ 	@echo " done."
+ 
+ backport-include/backport/backport_path.h: .config Kconfig.versions Kconfig.kernel
+@@ -96,7 +101,12 @@ backport-include/backport/backport_path.
+ 		echo "#define BACKPORT_PATH $(shell pwd)"		;\
+ 		echo ""							;\
+ 		echo "#endif /* BACKPORTED_PATH_INCLUDED */"		;\
+-	) > backport-include/backport/backport_path.h
++	) > $@.new
++	@if cmp -s $@ $@.new; then \
++                rm -f $@.new; \
++        else \
++                mv $@.new $@; \
++        fi
+ 	@echo " done."
+ 
+ .PHONY: modules

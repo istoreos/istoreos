@@ -1,0 +1,2884 @@
+From f28fef3a3faa358f68d88a0ba603aee8190698be Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Wed, 20 Sep 2023 12:40:31 +0800
+Subject: [PATCH] openwrt: fix build on 5.10
+
+---
+ backport-include/backport/backport_macro.h    |  23 +-
+ backport-include/drm/drm_aperture.h           |   7 +
+ backport-include/drm/drm_connector.h          |  15 +
+ backport-include/drm/drm_crtc.h               |   4 +
+ backport-include/drm/drm_dp_helper.h          | 201 ++++++
+ backport-include/drm/drm_dsc.h                |   3 +
+ backport-include/drm/drm_plane.h              |  15 +
+ backport-include/drm/drm_rect.h               |  19 +
+ backport-include/linux/dma-buf.h              |  52 ++
+ backport-include/linux/dma-resv.h             |  33 +
+ backport-include/linux/interrupt.h            |   9 +
+ backport-include/linux/iosys-map.h            |  81 ++-
+ backport-include/linux/lockdep.h              |  11 +
+ backport-include/linux/mm.h                   |  13 +
+ backport-include/linux/pci.h                  |  15 +
+ backport-include/linux/rbtree.h               | 105 +++
+ backport-include/linux/sched/mm.h             |  51 ++
+ backport-include/linux/seqlock.h              | 114 ++++
+ backport-include/linux/sizes.h                |  14 +
+ compat/Makefile                               |   1 +
+ compat/backport-5.10.c                        | 623 +++++++++++++++++-
+ compat/backport-5.13.c                        |  36 +
+ .../gpu/drm/i915/display/intel_atomic_plane.c |   2 +-
+ drivers/gpu/drm/i915/display/intel_display.c  |   4 +-
+ .../drm/i915/display/intel_display_types.h    |   2 +-
+ drivers/gpu/drm/i915/display/intel_dp.c       |  22 +-
+ drivers/gpu/drm/i915/display/intel_dp_aux.c   |   2 +-
+ .../drm/i915/display/intel_dp_link_training.c |   4 +-
+ drivers/gpu/drm/i915/display/intel_dp_mst.c   |  16 +-
+ drivers/gpu/drm/i915/display/intel_hdmi.c     |   6 +-
+ drivers/gpu/drm/i915/display/intel_lspcon.c   |  38 +-
+ .../drm/i915/display/intel_modeset_setup.c    |   2 +
+ drivers/gpu/drm/i915/fabric/fw.c              |   1 -
+ drivers/gpu/drm/i915/gem/i915_gem_dmabuf.c    |  12 +
+ drivers/gpu/drm/i915/gem/i915_gem_internal.c  |   4 +
+ drivers/gpu/drm/i915/gt/intel_gsc.c           | 166 ++++-
+ drivers/gpu/drm/i915/gvt/kvmgt.c              |  60 +-
+ drivers/gpu/drm/i915/i915_debugger.c          |   1 +
+ drivers/gpu/drm/i915/i915_drv.h               |   4 -
+ 39 files changed, 1701 insertions(+), 90 deletions(-)
+ create mode 100644 backport-include/drm/drm_aperture.h
+ create mode 100644 backport-include/drm/drm_connector.h
+ create mode 100644 backport-include/drm/drm_plane.h
+ create mode 100644 backport-include/drm/drm_rect.h
+ create mode 100644 backport-include/linux/dma-buf.h
+ create mode 100644 backport-include/linux/rbtree.h
+ create mode 100644 backport-include/linux/sched/mm.h
+ create mode 100644 backport-include/linux/seqlock.h
+ create mode 100644 backport-include/linux/sizes.h
+ create mode 100644 compat/backport-5.13.c
+
+diff --git a/backport-include/backport/backport_macro.h b/backport-include/backport/backport_macro.h
+index fe3e082..e2ab166 100644
+--- a/backport-include/backport/backport_macro.h
++++ b/backport-include/backport/backport_macro.h
+@@ -237,15 +237,11 @@
+ 
+ #endif
+ 
+-#if LINUX_VERSION_IS_GEQ(5,17,0)
+-
+ /*
+  * 502fee2499277c drm/i915/dp: Use the drm helpers for getting max FRL rate.
+  */
+ #define MAX_FLR_NOT_PRESENT
+ 
+-#endif
+-
+ #if LINUX_VERSION_IS_LESS(5,17,0)
+ /*
+  * 2d8b5b3b9e40f7 drm/i915/dp: use new link training delay helpers
+@@ -514,4 +510,23 @@
+ #define BPM_MEI_AUX_BUS_AVAILABLE
+ #endif
+ 
++
++#if LINUX_VERSION_IS_LESS(5,13,0)
++/*
++ * eb2dafbba8b82 tasklets: Prevent tasklet_unlock_spin_wait() deadlock on RT
++ *
++ */
++#define BPM_TASKLET_UNLOCK_SPIN_WAIT_NOT_PRESENT
++#define RB_FIND_NOT_PRESENT
++#define BPM_DP_READ_LTTPR_CAPS_DPCD_ARG_NOT_PRESENT
++#define BPM_PCI_REBAR_SIZE_NOT_PRESENT
++#define BPM_LOCKDEP_ASSERT_NOT_HELD_NOT_PRESENT
++#define BPM_PTRACE_MAY_ACCESS_NOT_PRESENT
++#define BPM_SEQPROP_SEQUENCE_NOT_PRESENT
++#define BPM_MIGHT_ALLOC_NOT_PRESENT
++#define BPM_VMA_SET_FILE_NOT_PRESENT
++#define BPM_IS_COW_MAPPING_NOT_PRESENT
++#define BPM_SWIOTLB_NR_TBL_NO_ARG_PRESENT
++#endif
++
+ #endif /* _BP_LINUX_BACKPORT_MACRO_H */
+diff --git a/backport-include/drm/drm_aperture.h b/backport-include/drm/drm_aperture.h
+new file mode 100644
+index 0000000..5cf5fe1
+--- /dev/null
++++ b/backport-include/drm/drm_aperture.h
+@@ -0,0 +1,7 @@
++#ifndef _DRM_APERTURE_H_
++#define _DRM_APERTURE_H_
++
++#include_next <drm/drm_fb_helper.h>
++#define drm_aperture_remove_conflicting_pci_framebuffers drm_fb_helper_remove_conflicting_pci_framebuffers
++
++#endif
+diff --git a/backport-include/drm/drm_connector.h b/backport-include/drm/drm_connector.h
+new file mode 100644
+index 0000000..c7bf16e
+--- /dev/null
++++ b/backport-include/drm/drm_connector.h
+@@ -0,0 +1,15 @@
++#ifndef _BACKPORT_DRM_CONNECTOR_H_
++#define _BACKPORT_DRM_CONNECTOR_H_
++
++#include_next  <drm/drm_connector.h>
++
++#define drm_connector_atomic_hdr_metadata_equal LINUX_I915_BACKPORT(drm_connector_atomic_hdr_metadata_equal)
++bool drm_connector_atomic_hdr_metadata_equal(struct drm_connector_state *old_state,
++					     struct drm_connector_state *new_state);
++
++#define drm_connector_attach_colorspace_property LINUX_I915_BACKPORT(drm_connector_attach_colorspace_property)
++int drm_connector_attach_colorspace_property(struct drm_connector *connector);
++#define drm_connector_attach_hdr_output_metadata_property LINUX_I915_BACKPORT(drm_connector_attach_hdr_output_metadata_property)
++int drm_connector_attach_hdr_output_metadata_property(struct drm_connector *connector);
++
++#endif /* _BACKPORT_DRM_CONNECTOR_H_ */
+diff --git a/backport-include/drm/drm_crtc.h b/backport-include/drm/drm_crtc.h
+index 9509dee..147d663 100644
+--- a/backport-include/drm/drm_crtc.h
++++ b/backport-include/drm/drm_crtc.h
+@@ -42,4 +42,8 @@
+ #include <linux/backlight.h>
+ #endif
+ 
++#define drm_crtc_create_scaling_filter_property LINUX_I915_BACKPORT(drm_crtc_create_scaling_filter_property)
++int drm_crtc_create_scaling_filter_property(struct drm_crtc *crtc,
++					    unsigned int supported_filters);
++
+ #endif /* _BACKPORT_DRM_CRTC_H_ */
+diff --git a/backport-include/drm/drm_dp_helper.h b/backport-include/drm/drm_dp_helper.h
+index 27f0558..c1245fe 100644
+--- a/backport-include/drm/drm_dp_helper.h
++++ b/backport-include/drm/drm_dp_helper.h
+@@ -9,8 +9,130 @@
+ #include_next  <drm/drm_dp_helper.h>
+ #endif /* DRM_DP_HELPER_DIR_DISPLAY_PRESENT */
+ 
++// DP_MAIN_LINK_CHANNEL_CODING_SET	    0x108
++# define DP_SET_ANSI_128B132B               (1 << 1)
++
++#define HDCP_2_2_DP_CERT_READ_TIMEOUT_MS	110
++#define HDCP_2_2_DP_HPRIME_READ_TIMEOUT_MS	7
++#define HDCP_2_2_DP_PAIRING_READ_TIMEOUT_MS	5
++
++/* PCON HDMI LINK STATUS */
++#define DP_PCON_HDMI_TX_LINK_STATUS           0x303B
++# define DP_PCON_HDMI_TX_LINK_ACTIVE          (1 << 0)
++# define DP_PCON_FRL_READY		      (1 << 1)
++
++/* DP-HDMI2.1 PCON DSC ENCODER SUPPORT */
++#define DP_PCON_DSC_ENCODER_CAP_SIZE        0xD	/* 0x92 through 0x9E */
++#define DP_PCON_DSC_ENCODER                 0x092
++# define DP_PCON_DSC_ENCODER_SUPPORTED      (1 << 0)
++# define DP_PCON_DSC_PPS_ENC_OVERRIDE       (1 << 1)
++
++// DP_PSR_EN_CFG				0x170   /* XXX 1.2? */
++# define DP_PSR_SU_REGION_SCANLINE_CAPTURE	BIT(4) /* eDP 1.4a */
++
++// DP_MAIN_LINK_CHANNEL_CODING         0x006
++# define DP_CAP_ANSI_128B132B               (1 << 1) /* 2.0 */
++
++#define DP_128B132B_SUPPORTED_LINK_RATES       0x2215 /* 2.0 */
++# define DP_UHBR10                             (1 << 0)
++# define DP_UHBR20                             (1 << 1)
++# define DP_UHBR13_5                           (1 << 2)
++
++/* PCON CONFIGURE-1 FRL FOR HDMI SINK */
++#define DP_PCON_HDMI_LINK_CONFIG_1             0x305A
++# define DP_PCON_ENABLE_MAX_FRL_BW             (7 << 0)
++# define DP_PCON_ENABLE_MAX_BW_0GBPS	       0
++# define DP_PCON_ENABLE_MAX_BW_9GBPS	       1
++# define DP_PCON_ENABLE_MAX_BW_18GBPS	       2
++# define DP_PCON_ENABLE_MAX_BW_24GBPS	       3
++# define DP_PCON_ENABLE_MAX_BW_32GBPS	       4
++# define DP_PCON_ENABLE_MAX_BW_40GBPS	       5
++# define DP_PCON_ENABLE_MAX_BW_48GBPS	       6
++# define DP_PCON_ENABLE_SOURCE_CTL_MODE       (1 << 3)
++# define DP_PCON_ENABLE_CONCURRENT_LINK       (1 << 4)
++# define DP_PCON_ENABLE_SEQUENTIAL_LINK       (0 << 4)
++# define DP_PCON_ENABLE_LINK_FRL_MODE         (1 << 5)
++# define DP_PCON_ENABLE_HPD_READY	      (1 << 6)
++# define DP_PCON_ENABLE_HDMI_LINK             (1 << 7)
++
++/* PCON CONFIGURE-2 FRL FOR HDMI SINK */
++#define DP_PCON_HDMI_LINK_CONFIG_2            0x305B
++# define DP_PCON_MAX_LINK_BW_MASK             (0x3F << 0)
++# define DP_PCON_FRL_BW_MASK_9GBPS            (1 << 0)
++# define DP_PCON_FRL_BW_MASK_18GBPS           (1 << 1)
++# define DP_PCON_FRL_BW_MASK_24GBPS           (1 << 2)
++# define DP_PCON_FRL_BW_MASK_32GBPS           (1 << 3)
++# define DP_PCON_FRL_BW_MASK_40GBPS           (1 << 4)
++# define DP_PCON_FRL_BW_MASK_48GBPS           (1 << 5)
++# define DP_PCON_FRL_LINK_TRAIN_EXTENDED      (1 << 6)
++# define DP_PCON_FRL_LINK_TRAIN_NORMAL        (0 << 6)
++
++// DP_LINK_SERVICE_IRQ_VECTOR_ESI0     0x2005   /* 1.2 */
++# define RX_CAP_CHANGED                      (1 << 0)
++# define LINK_STATUS_CHANGED                 (1 << 1)
++# define STREAM_STATUS_CHANGED               (1 << 2)
++# define HDMI_LINK_STATUS_CHANGED            (1 << 3)
++# define CONNECTED_OFF_ENTRY_REQUESTED       (1 << 4)
++
++// DP_PROTOCOL_CONVERTER_CONTROL_2		0x3052 /* DP 1.3 */
++# define DP_CONVERSION_RGB_YCBCR_MASK	       (7 << 4)
++# define DP_CONVERSION_BT601_RGB_YCBCR_ENABLE  (1 << 4)
++# define DP_CONVERSION_BT709_RGB_YCBCR_ENABLE  (1 << 5)
++# define DP_CONVERSION_BT2020_RGB_YCBCR_ENABLE (1 << 6)
++
++// DP_DOWNSTREAM_PORT_0		    0x80
++/* HDMI2.1 PCON FRL CONFIGURATION */
++# define DP_PCON_MAX_FRL_BW                 (7 << 2)
++# define DP_PCON_MAX_0GBPS                  (0 << 2)
++# define DP_PCON_MAX_9GBPS                  (1 << 2)
++# define DP_PCON_MAX_18GBPS                 (2 << 2)
++# define DP_PCON_MAX_24GBPS                 (3 << 2)
++# define DP_PCON_MAX_32GBPS                 (4 << 2)
++# define DP_PCON_MAX_40GBPS                 (5 << 2)
++# define DP_PCON_MAX_48GBPS                 (6 << 2)
++# define DP_PCON_SOURCE_CTL_MODE            (1 << 5)
++/*
++ * VESA DP-to-HDMI PCON Specification adds caps for colorspace
++ * conversion in DFP cap DPCD 83h. Sec6.1 Table-3.
++ * Based on the available support the source can enable
++ * color conversion by writing into PROTOCOL_COVERTER_CONTROL_2
++ * DPCD 3052h.
++ */
++# define DP_DS_HDMI_BT601_RGB_YCBCR_CONV    (1 << 5)
++# define DP_DS_HDMI_BT709_RGB_YCBCR_CONV    (1 << 6)
++# define DP_DS_HDMI_BT2020_RGB_YCBCR_CONV   (1 << 7)
++
++#define DP_EDP_MSO_LINK_CAPABILITIES        0x7a4    /* eDP 1.4 */
++# define DP_EDP_MSO_NUMBER_OF_LINKS_MASK    (7 << 0)
++# define DP_EDP_MSO_NUMBER_OF_LINKS_SHIFT   0
++# define DP_EDP_MSO_INDEPENDENT_LINK_BIT    (1 << 3)
++
++// DP_TRANSMITTER_CAPABILITY_PHY_REPEATER1		    0xf0021 /* 1.4a */
++# define DP_VOLTAGE_SWING_LEVEL_3_SUPPORTED		    BIT(0)
++# define DP_PRE_EMPHASIS_LEVEL_3_SUPPORTED		    BIT(1)
++
+ #ifdef BPM_DP_READ_LTTPR_CAPS_DPCD_ARG_NOT_PRESENT
+ 
++enum drm_dp_phy {
++	DP_PHY_DPRX,
++
++	DP_PHY_LTTPR1,
++	DP_PHY_LTTPR2,
++	DP_PHY_LTTPR3,
++	DP_PHY_LTTPR4,
++	DP_PHY_LTTPR5,
++	DP_PHY_LTTPR6,
++	DP_PHY_LTTPR7,
++	DP_PHY_LTTPR8,
++
++	DP_MAX_LTTPR_COUNT = DP_PHY_LTTPR8,
++};
++
++#define DP_PHY_LTTPR(i)					    (DP_PHY_LTTPR1 + (i))
++
++#define DP_LTTPR_COMMON_CAP_SIZE	8
++#define DP_LTTPR_PHY_CAP_SIZE		3
++
+ #define drm_dp_read_lttpr_common_caps LINUX_I915_BACKPORT(drm_dp_read_lttpr_common_caps)
+ int drm_dp_read_lttpr_common_caps(struct drm_dp_aux *aux,
+                                   u8 caps[DP_LTTPR_COMMON_CAP_SIZE]);
+@@ -19,9 +141,56 @@ int drm_dp_read_lttpr_common_caps(struct drm_dp_aux *aux,
+ int drm_dp_read_lttpr_phy_caps(struct drm_dp_aux *aux,
+                                enum drm_dp_phy dp_phy,
+                                u8 caps[DP_LTTPR_PHY_CAP_SIZE]);
++#define drm_dp_lttpr_count LINUX_I915_BACKPORT(drm_dp_lttpr_count)
++int drm_dp_lttpr_count(const u8 cap[DP_LTTPR_COMMON_CAP_SIZE]);
++#define drm_dp_lttpr_max_link_rate LINUX_I915_BACKPORT(drm_dp_lttpr_max_link_rate)
++int drm_dp_lttpr_max_link_rate(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE]);
++#define drm_dp_lttpr_max_lane_count LINUX_I915_BACKPORT(drm_dp_lttpr_max_lane_count)
++int drm_dp_lttpr_max_lane_count(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE]);
++#define drm_dp_lttpr_voltage_swing_level_3_supported LINUX_I915_BACKPORT(drm_dp_lttpr_voltage_swing_level_3_supported)
++bool drm_dp_lttpr_voltage_swing_level_3_supported(const u8 caps[DP_LTTPR_PHY_CAP_SIZE]);
++#define drm_dp_lttpr_pre_emphasis_level_3_supported LINUX_I915_BACKPORT(drm_dp_lttpr_pre_emphasis_level_3_supported)
++bool drm_dp_lttpr_pre_emphasis_level_3_supported(const u8 caps[DP_LTTPR_PHY_CAP_SIZE]);
++#define drm_dp_lttpr_link_train_clock_recovery_delay LINUX_I915_BACKPORT(drm_dp_lttpr_link_train_clock_recovery_delay)
++void drm_dp_lttpr_link_train_clock_recovery_delay(void);
++#define drm_dp_lttpr_link_train_channel_eq_delay LINUX_I915_BACKPORT(drm_dp_lttpr_link_train_channel_eq_delay)
++void drm_dp_lttpr_link_train_channel_eq_delay(const struct drm_dp_aux *aux,
++					      const u8 caps[DP_LTTPR_PHY_CAP_SIZE]);
++
++#define __DP_LTTPR1_BASE				    0xf0010 /* 1.3 */
++#define __DP_LTTPR2_BASE				    0xf0060 /* 1.3 */
++#define DP_LTTPR_BASE(dp_phy) \
++	(__DP_LTTPR1_BASE + (__DP_LTTPR2_BASE - __DP_LTTPR1_BASE) * \
++		((dp_phy) - DP_PHY_LTTPR1))
++
++#define DP_LTTPR_REG(dp_phy, lttpr1_reg) \
++	(DP_LTTPR_BASE(dp_phy) - DP_LTTPR_BASE(DP_PHY_LTTPR1) + (lttpr1_reg))
++
++#define DP_TRAINING_AUX_RD_INTERVAL_PHY_REPEATER(dp_phy)	\
++	DP_LTTPR_REG(dp_phy, DP_TRAINING_AUX_RD_INTERVAL_PHY_REPEATER1)
++
++// DP_LANE0_1_STATUS_PHY_REPEATER1			    0xf0030 /* 1.3 */
++#define DP_LANE0_1_STATUS_PHY_REPEATER(dp_phy) \
++	DP_LTTPR_REG(dp_phy, DP_LANE0_1_STATUS_PHY_REPEATER1)
++
++// DP_TRAINING_PATTERN_SET_PHY_REPEATER1		    0xf0010 /* 1.3 */
++#define DP_TRAINING_PATTERN_SET_PHY_REPEATER(dp_phy) \
++	DP_LTTPR_REG(dp_phy, DP_TRAINING_PATTERN_SET_PHY_REPEATER1)
++
++// DP_TRAINING_LANE0_SET_PHY_REPEATER1		    0xf0011 /* 1.3 */
++#define DP_TRAINING_LANE0_SET_PHY_REPEATER(dp_phy) \
++	DP_LTTPR_REG(dp_phy, DP_TRAINING_LANE0_SET_PHY_REPEATER1)
++
+ #endif
+ 
+ #ifdef DRM_DP_GET_ADJUST_NOT_PRESENT
++/* DP 2.0 128b/132b Link Layer */
++#define DP_ADJUST_TX_FFE_PRESET_LANE0_MASK  (0xf << 0)
++#define DP_ADJUST_TX_FFE_PRESET_LANE0_SHIFT 0
++#define DP_ADJUST_TX_FFE_PRESET_LANE1_MASK  (0xf << 4)
++#define DP_ADJUST_TX_FFE_PRESET_LANE1_SHIFT 4
++
++# define DP_TX_FFE_PRESET_VALUE_MASK        (0xf << 0) /* 2.0 128b/132b Link Layer */
+ 
+ #define drm_dp_get_adjust_tx_ffe_preset LINUX_I915_BACKPORT(drm_dp_get_adjust_tx_ffe_preset)
+ u8 drm_dp_get_adjust_tx_ffe_preset(const u8 link_status[DP_LINK_STATUS_SIZE],
+@@ -100,11 +269,13 @@ drm_edp_backlight_supported(const u8 edp_dpcd[EDP_DISPLAY_CTL_CAP_SIZE])
+ #endif /* DRM_EDP_BACKLIGHT_SUPPORT_PRESENT */
+ #endif /* DRM_EDP_BACKLIGHT_NOT_PRESENT */
+ 
++#ifndef MAX_FLR_NOT_PRESENT
+ #define drm_hdmi_sink_max_frl_rate LINUX_I915_BACKPORT(drm_hdmi_sink_max_frl_rate)
+ int drm_hdmi_sink_max_frl_rate(struct drm_connector *connector);
+ 
+ #define drm_hdmi_sink_dsc_max_frl_rate LINUX_I915_BACKPORT(drm_hdmi_sink_dsc_max_frl_rate)
+ int drm_hdmi_sink_dsc_max_frl_rate(struct drm_connector *connector);
++#endif
+ 
+ #ifdef BPM_DRM_DP_DSC_SINK_SUPPORTS_FORMAT_NOT_PRESENT
+ /**
+@@ -121,4 +292,34 @@ drm_dp_dsc_sink_supports_format(const u8 dsc_dpcd[DP_DSC_RECEIVER_CAP_SIZE], u8
+ }
+ #endif /* BPM_DRM_DP_DSC_SINK_SUPPORTS_FORMAT_NOT_PRESENT */
+ 
++/**
++ * drm_dp_has_quirk() - does the DP device have a specific quirk
++ * @desc: Device descriptor filled by drm_dp_read_desc()
++ * @quirk: Quirk to query for
++ *
++ * Return true if DP device identified by @desc has @quirk.
++ */
++static inline bool
++LINUX_I915_BACKPORT(drm_dp_has_quirk)(const struct drm_dp_desc *desc, enum drm_dp_quirk quirk)
++{
++	return drm_dp_has_quirk(desc, 0, quirk);
++}
++
++#define drm_dp_has_quirk LINUX_I915_BACKPORT(drm_dp_has_quirk)
++
++#define drm_dp_get_pcon_max_frl_bw LINUX_I915_BACKPORT(drm_dp_get_pcon_max_frl_bw)
++int drm_dp_get_pcon_max_frl_bw(const u8 dpcd[DP_RECEIVER_CAP_SIZE],
++			       const u8 port_cap[4]);
++#define drm_dp_downstream_rgb_to_ycbcr_conversion LINUX_I915_BACKPORT(drm_dp_downstream_rgb_to_ycbcr_conversion)
++bool drm_dp_downstream_rgb_to_ycbcr_conversion(const u8 dpcd[DP_RECEIVER_CAP_SIZE],
++					       const u8 port_cap[4], u8 color_spc);
++#define drm_dp_pcon_convert_rgb_to_ycbcr LINUX_I915_BACKPORT(drm_dp_pcon_convert_rgb_to_ycbcr)
++int drm_dp_pcon_convert_rgb_to_ycbcr(struct drm_dp_aux *aux, u8 color_spc);
++#define drm_dp_pcon_hdmi_link_active LINUX_I915_BACKPORT(drm_dp_pcon_hdmi_link_active)
++bool drm_dp_pcon_hdmi_link_active(struct drm_dp_aux *aux);
++#define drm_dp_dpcd_read_phy_link_status LINUX_I915_BACKPORT(drm_dp_dpcd_read_phy_link_status)
++int drm_dp_dpcd_read_phy_link_status(struct drm_dp_aux *aux,
++				     enum drm_dp_phy dp_phy,
++				     u8 link_status[DP_LINK_STATUS_SIZE]);
++
+ #endif /* _BACKPORT_DRM_DP_HELPER_H_ */
+diff --git a/backport-include/drm/drm_dsc.h b/backport-include/drm/drm_dsc.h
+index dd827ad..6502e66 100644
+--- a/backport-include/drm/drm_dsc.h
++++ b/backport-include/drm/drm_dsc.h
+@@ -15,4 +15,7 @@
+ #include_next <drm/drm_dsc.h>
+ #endif
+ 
++#define drm_dsc_dp_rc_buffer_size LINUX_I915_BACKPORT(drm_dsc_dp_rc_buffer_size)
++int drm_dsc_dp_rc_buffer_size(u8 rc_buffer_block_size, u8 rc_buffer_size);
++
+ #endif /* _BACKPORT_DRM_DSC_H_ */
+diff --git a/backport-include/drm/drm_plane.h b/backport-include/drm/drm_plane.h
+new file mode 100644
+index 0000000..5585985
+--- /dev/null
++++ b/backport-include/drm/drm_plane.h
+@@ -0,0 +1,15 @@
++#ifndef _BACKPORT_DRM_PLANE_H_
++#define _BACKPORT_DRM_PLANE_H_
++
++#include_next <drm/drm_plane.h>
++
++enum drm_scaling_filter {
++	DRM_SCALING_FILTER_DEFAULT,
++	DRM_SCALING_FILTER_NEAREST_NEIGHBOR,
++};
++
++#define drm_plane_create_scaling_filter_property LINUX_I915_BACKPORT(drm_plane_create_scaling_filter_property)
++int drm_plane_create_scaling_filter_property(struct drm_plane *plane,
++					     unsigned int supported_filters);
++
++#endif /* _BACKPORT_DRM_PLANE_H_ */
+diff --git a/backport-include/drm/drm_rect.h b/backport-include/drm/drm_rect.h
+new file mode 100644
+index 0000000..076cd5e
+--- /dev/null
++++ b/backport-include/drm/drm_rect.h
+@@ -0,0 +1,19 @@
++#ifndef _BACKPORT_DRM_RECT_H_
++#define _BACKPORT_DRM_RECT_H_
++
++#include_next <drm/drm_rect.h>
++
++/**
++ * drm_rect_fp_to_int - Convert a rect in 16.16 fixed point form to int form.
++ * @dst: rect to be stored the converted value
++ * @src: rect in 16.16 fixed point form
++ */
++static inline void drm_rect_fp_to_int(struct drm_rect *dst,
++				      const struct drm_rect *src)
++{
++	drm_rect_init(dst, src->x1 >> 16, src->y1 >> 16,
++		      drm_rect_width(src) >> 16,
++		      drm_rect_height(src) >> 16);
++}
++
++#endif /* _BACKPORT_DRM_RECT_H_ */
+diff --git a/backport-include/linux/dma-buf.h b/backport-include/linux/dma-buf.h
+new file mode 100644
+index 0000000..7bdc86a
+--- /dev/null
++++ b/backport-include/linux/dma-buf.h
+@@ -0,0 +1,52 @@
++#ifndef __BACKPORT_DMA_BUF_H
++#define __BACKPORT_DMA_BUF_H
++
++#include_next <linux/dma-buf.h>
++
++/**
++ * struct dma_buf_map - Pointer to IO/system memory
++ * @vaddr_iomem:	The buffer's address if in I/O memory
++ * @vaddr:		The buffer's address if in system memory
++ * @is_iomem:		True if the buffer is located in I/O memory, or false
++ *			otherwise.
++ */
++struct dma_buf_map {
++	union {
++		void __iomem *vaddr_iomem;
++		void *vaddr;
++	};
++	bool is_iomem;
++};
++
++/**
++ * dma_buf_map_clear - Clears a iosys mapping structure
++ * @map:	The dma_buf_map structure
++ *
++ * Clears all fields to zero, including struct dma_buf_map.is_iomem, so
++ * mapping structures that were set to point to I/O memory are reset for
++ * system memory. Pointers are cleared to NULL. This is the default.
++ */
++static inline void dma_buf_map_clear(struct dma_buf_map *map)
++{
++	memset(map, 0, sizeof(*map));
++}
++
++static inline int LINUX_I915_BACKPORT(dma_buf_vmap)(struct dma_buf *dmabuf, struct dma_buf_map *map) {
++        void *dma_map;
++        dma_buf_map_clear(map);
++        dma_map = dma_buf_vmap(dmabuf);
++        if (!dma_map) {
++                return -ENOMEM;
++        }
++        map->vaddr = dma_map;
++        return 0;
++}
++
++static inline void LINUX_I915_BACKPORT(dma_buf_vunmap)(struct dma_buf *dmabuf, struct dma_buf_map *map) {
++        dma_buf_vunmap(dmabuf, map->vaddr);
++}
++
++#define dma_buf_vmap LINUX_I915_BACKPORT(dma_buf_vmap)
++#define dma_buf_vunmap LINUX_I915_BACKPORT(dma_buf_vunmap)
++
++#endif /* __BACKPORT_DMA_BUF_H */
+diff --git a/backport-include/linux/dma-resv.h b/backport-include/linux/dma-resv.h
+index 50861b5..1d5c9e7 100644
+--- a/backport-include/linux/dma-resv.h
++++ b/backport-include/linux/dma-resv.h
+@@ -2,6 +2,9 @@
+ #define __BACKPORT_DMA_RESV_H
+ 
+ #include_next <linux/dma-resv.h>
++#define dma_resv_test_signaled dma_resv_test_signaled_rcu
++#define dma_resv_get_fences dma_resv_get_fences_rcu
++#define dma_resv_get_excl_unlocked dma_resv_get_excl_rcu
+ 
+ #ifdef BPM_DMA_RESV_RESERVE_SHARED_NOT_PRESENT
+ #define dma_resv_reserve_shared dma_resv_reserve_fences
+@@ -37,4 +40,34 @@ dma_resv_get_excl_unlocked(struct dma_resv *obj)
+ }
+ #endif /* DMA_RESV_EXCL_UNLOCKED_NOT_PRESENT */
+ 
++/**
++ * dma_resv_excl_fence - return the object's exclusive fence
++ * @obj: the reservation object
++ *
++ * Returns the exclusive fence (if any). Caller must either hold the objects
++ * through dma_resv_lock() or the RCU read side lock through rcu_read_lock(),
++ * or one of the variants of each
++ *
++ * RETURNS
++ * The exclusive fence or NULL
++ */
++static inline struct dma_fence *
++dma_resv_excl_fence(struct dma_resv *obj)
++{
++	return rcu_dereference_check(obj->fence_excl, dma_resv_held(obj));
++}
++
++/**
++ * dma_resv_shared_list - get the reservation object's shared fence list
++ * @obj: the reservation object
++ *
++ * Returns the shared fence list. Caller must either hold the objects
++ * through dma_resv_lock() or the RCU read side lock through rcu_read_lock(),
++ * or one of the variants of each
++ */
++static inline struct dma_resv_list *dma_resv_shared_list(struct dma_resv *obj)
++{
++	return rcu_dereference_check(obj->fence, dma_resv_held(obj));
++}
++
+ #endif /* __BACKPORT_DMA_RESV_H */
+diff --git a/backport-include/linux/interrupt.h b/backport-include/linux/interrupt.h
+index 1c6031c..95cf021 100644
+--- a/backport-include/linux/interrupt.h
++++ b/backport-include/linux/interrupt.h
+@@ -33,4 +33,13 @@ static inline void backport_hrtimer_start(struct hrtimer *timer, s64 time,
+ #define hrtimer_start LINUX_I915_BACKPORT(hrtimer_start)
+ #endif
+ 
++#ifdef BPM_TASKLET_UNLOCK_SPIN_WAIT_NOT_PRESENT
++#if defined(CONFIG_SMP) || defined(CONFIG_PREEMPT_RT)
++#define tasklet_unlock_spin_wait LINUX_I915_BACKPORT(tasklet_unlock_spin_wait)
++void tasklet_unlock_spin_wait(struct tasklet_struct *t);
++#else
++static inline void tasklet_unlock_spin_wait(struct tasklet_struct *t) { }
++#endif
++#endif
++
+ #endif /* _BP_LINUX_INTERRUPT_H */
+diff --git a/backport-include/linux/iosys-map.h b/backport-include/linux/iosys-map.h
+index 9b75a12..945eaae 100644
+--- a/backport-include/linux/iosys-map.h
++++ b/backport-include/linux/iosys-map.h
+@@ -4,12 +4,13 @@
+ #ifdef BPM_IOSYS_MAP_PRESENT
+ #include_next <linux/iosys-map.h>
+ #else
+-#include <linux/dma-buf-map.h>
++#include <linux/dma-buf.h>
++
++#define iosys_map dma_buf_map
+ #endif
+ 
+ #ifdef BPM_IOSYS_MAP_MEMCPY_TO_ARG_OFFSET_ADDED
+ #define iosys_map_memcpy_to LINUX_I915_BACKPORT(iosys_map_memcpy_to)
+-#define iosys_map dma_buf_map
+ 
+ /**
+  * iosys_map_memcpy_to - Memcpy into offset of iosys_map
+@@ -292,4 +293,80 @@ static inline void iosys_map_memset(struct iosys_map *dst, size_t offset,
+ #define iosys_map_incr dma_buf_map_incr
+ #endif
+ 
++
++/**
++ * iosys_map_set_vaddr - Sets a iosys mapping structure to an address in system memory
++ * @map:	The iosys_map structure
++ * @vaddr:	A system-memory address
++ *
++ * Sets the address and clears the I/O-memory flag.
++ */
++static inline void iosys_map_set_vaddr(struct iosys_map *map, void *vaddr)
++{
++	map->vaddr = vaddr;
++	map->is_iomem = false;
++}
++
++/**
++ * iosys_map_set_vaddr_iomem - Sets a iosys mapping structure to an address in I/O memory
++ * @map:		The iosys_map structure
++ * @vaddr_iomem:	An I/O-memory address
++ *
++ * Sets the address and the I/O-memory flag.
++ */
++static inline void iosys_map_set_vaddr_iomem(struct iosys_map *map,
++					     void __iomem *vaddr_iomem)
++{
++	map->vaddr_iomem = vaddr_iomem;
++	map->is_iomem = true;
++}
++
++/**
++ * iosys_map_is_null - Tests for a iosys mapping to be NULL
++ * @map:	The iosys_map structure
++ *
++ * Depending on the state of struct iosys_map.is_iomem, tests if the
++ * mapping is NULL.
++ *
++ * Returns:
++ * True if the mapping is NULL, or false otherwise.
++ */
++static inline bool iosys_map_is_null(const struct iosys_map *map)
++{
++	if (map->is_iomem)
++		return !map->vaddr_iomem;
++	return !map->vaddr;
++}
++
++/**
++ * iosys_map_is_set - Tests if the iosys mapping has been set
++ * @map:	The iosys_map structure
++ *
++ * Depending on the state of struct iosys_map.is_iomem, tests if the
++ * mapping has been set.
++ *
++ * Returns:
++ * True if the mapping is been set, or false otherwise.
++ */
++static inline bool iosys_map_is_set(const struct iosys_map *map)
++{
++	return !iosys_map_is_null(map);
++}
++
++/**
++ * iosys_map_incr - Increments the address stored in a iosys mapping
++ * @map:	The iosys_map structure
++ * @incr:	The number of bytes to increment
++ *
++ * Increments the address stored in a iosys mapping. Depending on the
++ * buffer's location, the correct value will be updated.
++ */
++static inline void iosys_map_incr(struct iosys_map *map, size_t incr)
++{
++	if (map->is_iomem)
++		map->vaddr_iomem += incr;
++	else
++		map->vaddr += incr;
++}
++
+ #endif /* __BACKPORT_LINUX_IOSYS_MAP_H */
+diff --git a/backport-include/linux/lockdep.h b/backport-include/linux/lockdep.h
+index 12b91b4..6185254 100644
+--- a/backport-include/linux/lockdep.h
++++ b/backport-include/linux/lockdep.h
+@@ -20,4 +20,15 @@ struct lockdep_map { };
+ #endif /* CONFIG_LOCKDEP */
+ #endif /* LINUX_VERSION_IS_LESS(4,15,0) */
+ 
++#ifdef BPM_LOCKDEP_ASSERT_NOT_HELD_NOT_PRESENT
++
++#ifdef CONFIG_LOCKDEP
++#define lockdep_assert_not_held(l)      \
++	        lockdep_assert(lockdep_is_held(l) != LOCK_STATE_HELD)
++#else
++#define lockdep_assert_not_held(l)              do { (void)(l); } while (0)
++#endif
++
++#endif
++
+ #endif /* __BACKPORT_LINUX_LOCKDEP_H */
+diff --git a/backport-include/linux/mm.h b/backport-include/linux/mm.h
+index 356c9e9..35d801d 100644
+--- a/backport-include/linux/mm.h
++++ b/backport-include/linux/mm.h
+@@ -79,4 +79,17 @@ static inline void *folio_address(const struct folio *folio)
+ }
+ 
+ #endif /* FOLIO_ADDRESS_PRESENT */
++
++#ifdef BPM_VMA_SET_FILE_NOT_PRESENT
++#define vma_set_file LINUX_I915_BACKPORT(vma_set_file)
++void vma_set_file(struct vm_area_struct *vma, struct file *file);
++#endif
++
++#ifdef BPM_IS_COW_MAPPING_NOT_PRESENT
++static inline bool is_cow_mapping(vm_flags_t flags)
++{
++	return (flags & (VM_SHARED | VM_MAYWRITE)) == VM_MAYWRITE;
++}
++#endif
++
+ #endif /* __BACKPORT_MM_H */
+diff --git a/backport-include/linux/pci.h b/backport-include/linux/pci.h
+index 3f8f379..33f735b 100644
+--- a/backport-include/linux/pci.h
++++ b/backport-include/linux/pci.h
+@@ -261,4 +261,19 @@ backport_pci_disable_link_state(struct pci_dev *pdev, int state)
+ #endif /* < 5.3 */
+ #endif /* defined(CONFIG_PCI) */
+ 
++#ifdef BPM_PCI_REBAR_SIZE_NOT_PRESENT
++#define pci_rebar_get_possible_sizes LINUX_I915_BACKPORT(pci_rebar_get_possible_sizes)
++u32 pci_rebar_get_possible_sizes(struct pci_dev *pdev, int bar);
++
++/*actually introduced in 5.12, for now keeping 5.10*/
++static inline int pci_rebar_bytes_to_size(u64 bytes)
++{
++        bytes = roundup_pow_of_two(bytes);
++
++        /* Return BAR size as defined in the resizable BAR specification */
++        return max(ilog2(bytes), 20) - 20;
++}
++
++#endif /* BPM_PCI_REBAR_SIZE_NOT_PRESENT */
++
+ #endif /* _BACKPORT_LINUX_PCI_H */
+diff --git a/backport-include/linux/rbtree.h b/backport-include/linux/rbtree.h
+new file mode 100644
+index 0000000..7a09ff6
+--- /dev/null
++++ b/backport-include/linux/rbtree.h
+@@ -0,0 +1,105 @@
++/*
++ * Copyright © 2015 Intel Corporation
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the next
++ * paragraph) shall be included in all copies or substantial portions of the
++ * Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
++ * IN THE SOFTWARE.
++ *
++ *
++ */
++
++#ifndef _BACKPORT_LINUX_RBTREE_H
++#define _BACKPORT_LINUX_RBTREE_H
++#include <linux/version.h>
++#include_next <linux/rbtree.h>
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(4,18,0)
++struct rb_root_cached {
++        struct rb_root rb_root;
++        struct rb_node *rb_leftmost;
++};
++#endif
++#define RB_ROOT_CACHED (struct rb_root_cached) { {NULL, }, NULL }
++
++#ifdef RB_FIND_NOT_PRESENT
++#define rb_find_add LINUX_I915_BACKPORT(rb_find_add)
++/**
++ * rb_find_add() - find equivalent @node in @tree, or add @node
++ * @node: node to look-for / insert
++ * @tree: tree to search / modify
++ * @cmp: operator defining the node order
++ *
++ * Returns the rb_node matching @node, or NULL when no match is found and @node
++ * is inserted.
++ */
++static __always_inline struct rb_node *
++rb_find_add(struct rb_node *node, struct rb_root *tree,
++            int (*cmp)(struct rb_node *, const struct rb_node *))
++{
++        struct rb_node **link = &tree->rb_node;
++        struct rb_node *parent = NULL;
++        int c;
++
++        while (*link) {
++                parent = *link;
++                c = cmp(node, parent);
++
++                if (c < 0)
++                        link = &parent->rb_left;
++                else if (c > 0)
++                        link = &parent->rb_right;
++                else
++                        return parent;
++        }
++
++        rb_link_node(node, parent, link);
++        rb_insert_color(node, tree);
++        return NULL;
++}
++
++#define rb_find LINUX_I915_BACKPORT(rb_find)
++/**
++ * rb_find() - find @key in tree @tree
++ * @key: key to match
++ * @tree: tree to search
++ * @cmp: operator defining the node order
++ *
++ * Returns the rb_node matching @key or NULL.
++ */
++static __always_inline struct rb_node *
++rb_find(const void *key, const struct rb_root *tree,
++        int (*cmp)(const void *key, const struct rb_node *))
++{
++        struct rb_node *node = tree->rb_node;
++
++        while (node) {
++                int c = cmp(key, node);
++
++                if (c < 0)
++                        node = node->rb_left;
++                else if (c > 0)
++                        node = node->rb_right;
++                else
++                        return node;
++        }
++
++        return NULL;
++}
++
++#endif /* RB_FIND_NOT_PRESENT */
++#endif
+diff --git a/backport-include/linux/sched/mm.h b/backport-include/linux/sched/mm.h
+new file mode 100644
+index 0000000..b2f4423
+--- /dev/null
++++ b/backport-include/linux/sched/mm.h
+@@ -0,0 +1,51 @@
++/*
++ * Copyright © 2022 Intel Corporation
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the next
++ * paragraph) shall be included in all copies or substantial portions of the
++ * Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
++ * IN THE SOFTWARE.
++ *
++ *
++ */
++
++#ifndef _BACKPORT_LINUX_SCHED_MM_H
++#define _BACKPORT_LINUX_SCHED_MM_H
++#include <linux/version.h>
++
++#include_next <linux/sched/mm.h>
++
++#ifdef BPM_MIGHT_ALLOC_NOT_PRESENT
++#define might_alloc LINUX_I915_BACKPORT(might_alloc)
++/**
++ * might_alloc - Mark possible allocation sites
++ * @gfp_mask: gfp_t flags that would be used to allocate
++ *
++ * Similar to might_sleep() and other annotations, this can be used in functions
++ * that might allocate, but often don't. Compiles to nothing without
++ * CONFIG_LOCKDEP. Includes a conditional might_sleep() if @gfp allows blocking.
++ */
++
++static inline void might_alloc(gfp_t gfp_mask)
++{
++        fs_reclaim_acquire(gfp_mask);
++        fs_reclaim_release(gfp_mask);
++
++        might_sleep_if(gfpflags_allow_blocking(gfp_mask));
++}
++#endif
++#endif /* _BACKPORT_LINUX_SCHED_MM_H */
+diff --git a/backport-include/linux/seqlock.h b/backport-include/linux/seqlock.h
+new file mode 100644
+index 0000000..6256ed6
+--- /dev/null
++++ b/backport-include/linux/seqlock.h
+@@ -0,0 +1,114 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * seqcount_t / seqlock_t - a reader-writer consistency mechanism with
++ * lockless readers (read-only retry loops), and no writer starvation.
++ *
++ * See Documentation/locking/seqlock.rst
++ *
++ * Copyrights:
++ * - Based on x86_64 vsyscall gettimeofday: Keith Owens, Andrea Arcangeli
++ * - Sequence counters with associated locks, (C) 2020 Linutronix GmbH
++ */
++
++#ifndef _BACKPORT_LINUX_SEQLOCK_H
++#define _BACKPORT_LINUX_SEQLOCK_H
++
++#include_next<linux/seqlock.h>
++#ifdef BPM_SEQCOUNT_MUTEX_INIT_NOT_PRESENT
++#if defined(CONFIG_LOCKDEP) || defined(CONFIG_PREEMPT_RT)
++#define __SEQ_LOCK(expr)        expr
++#else
++#define __SEQ_LOCK(expr)
++#endif
++
++typedef struct seqcount_mutex {
++       seqcount_t              seqcount;
++       __SEQ_LOCK(locktype     *lock);
++} seqcount_mutex_t;
++
++#define seqcount_mutex_init(s, lock)                    \
++        do {                                            \
++                seqcount_mutex_t *____s = (s);          \
++                seqcount_init(&____s->seqcount);        \
++                __SEQ_LOCK(____s->lock = (lock));       \
++        } while (0)
++
++static __always_inline seqcount_t *
++__seqcount_ptr(seqcount_mutex_t *s)
++{
++        return &s->seqcount;
++}
++
++#define write_seqcount_invalidate(s)                    \
++        write_seqcount_t_invalidate(__seqcount_ptr(s))
++
++static inline void write_seqcount_t_invalidate(seqcount_t *s)
++{
++        smp_wmb();
++        s->sequence+=2;
++}
++
++static inline unsigned seqprop_sequence(const seqcount_mutex_t *s)
++{
++        unsigned seq = READ_ONCE(s->seqcount.sequence);
++        bool preemptible = true;
++        if (!IS_ENABLED(CONFIG_PREEMPT_RT))
++                return seq;
++
++        if (preemptible && unlikely(seq & 1)) {
++                __SEQ_LOCK(mutex_lock(s->lock));
++                __SEQ_LOCK(mutex_unlock(s->lock));
++
++                /*
++                 * Re-read the sequence counter since the (possibly
++                 * preempted) writer made progress.
++                 */
++                seq = READ_ONCE(s->seqcount.sequence);
++        }
++
++        return seq;
++}
++#endif
++
++#ifdef BPM_SEQCOUNT_SEQUENCE_NOT_PRESENT
++static inline unsigned __seqcount_sequence(const seqcount_t *s)
++{
++        return READ_ONCE(s->sequence);
++}
++
++#define SEQCOUNT_LOCKNAME(lockname, locktype, preemptible, lockmember, lockbase, lock_acquire) \
++static __always_inline unsigned                                         \
++__seqcount_##lockname##_sequence(const seqcount_##lockname##_t *s)      \
++{                                                                       \
++        unsigned seq = READ_ONCE(s->seqcount.sequence);                 \
++                                                                        \
++        if (!IS_ENABLED(CONFIG_PREEMPT_RT))                             \
++                return seq;                                             \
++                                                                        \
++        if (preemptible && unlikely(seq & 1)) {                         \
++                __SEQ_LOCK(lock_acquire);                               \
++                __SEQ_LOCK(lockbase##_unlock(s->lock));                 \
++                                                                        \
++                /*                                                      \
++                 * Re-read the sequence counter since the (possibly     \
++                 * preempted) writer made progress.                     \
++                 */                                                     \
++                seq = READ_ONCE(s->seqcount.sequence);                  \
++        }                                                               \
++                                                                        \
++        return seq;                                                     \
++}
++
++#define __SEQ_RT	IS_ENABLED(CONFIG_PREEMPT_RT)
++
++SEQCOUNT_LOCKNAME(raw_spinlock, raw_spinlock_t,  false,    s->lock,        raw_spin, raw_spin_lock(s->lock))
++SEQCOUNT_LOCKNAME(spinlock,     spinlock_t,      __SEQ_RT, s->lock,        spin,     spin_lock(s->lock))
++SEQCOUNT_LOCKNAME(rwlock,       rwlock_t,        __SEQ_RT, s->lock,        read,     read_lock(s->lock))
++SEQCOUNT_LOCKNAME(mutex,        struct mutex,    true,     s->lock,        mutex,    mutex_lock(s->lock))
++SEQCOUNT_LOCKNAME(ww_mutex,     struct ww_mutex, true,     &s->lock->base, ww_mutex, ww_mutex_lock(s->lock, NULL))
++#endif
++
++#ifdef BPM_SEQPROP_SEQUENCE_NOT_PRESENT
++#define seqprop_sequence(s)	__seqprop(s, sequence)
++#endif
++#endif /* _BACKPORT_LINUX_SEQLOCK_H */
+diff --git a/backport-include/linux/sizes.h b/backport-include/linux/sizes.h
+new file mode 100644
+index 0000000..eeca2b8
+--- /dev/null
++++ b/backport-include/linux/sizes.h
+@@ -0,0 +1,14 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++/*
++ * include/linux/sizes.h
++ */
++#ifndef _BACKPORT_LINUX_SIZES_H__
++#define _BACKPORT_LINUX_SIZES_H__
++
++#include_next<linux/sizes.h>
++
++#define SZ_8G                           _AC(0x200000000, ULL)
++#define SZ_16G                          _AC(0x400000000, ULL)
++#define SZ_32G                          _AC(0x800000000, ULL)
++
++#endif  /* _BACKPORT_LINUX_SIZES_H__ */
+diff --git a/compat/Makefile b/compat/Makefile
+index dd8b755..b1e979c 100644
+--- a/compat/Makefile
++++ b/compat/Makefile
+@@ -39,6 +39,7 @@ compat-$(CPTCFG_KERNEL_4_10) += backport-4.10.o
+ compat-$(CPTCFG_KERNEL_4_18) += backport-4.18.o
+ compat-$(CPTCFG_KERNEL_5_2) += backport-5.2.o backport-genetlink.o
+ compat-$(CPTCFG_KERNEL_5_5) += backport-5.5.o
++compat-$(CPTCFG_KERNEL_5_13) += backport-5.13.o
+ compat-$(CPTCFG_KERNEL_5_15) += backport-5.15.o
+ compat-y += backport-5.10.o backport-5.19.o
+ compat-y += slub.o slab.o ptrace.o
+diff --git a/compat/backport-5.10.c b/compat/backport-5.10.c
+index 0cb1315..811be65 100644
+--- a/compat/backport-5.10.c
++++ b/compat/backport-5.10.c
+@@ -2,9 +2,96 @@
+  * Copyright (C) 2021 Intel Corporation
+  */
+ 
++#include <linux/delay.h>
++#include <linux/file.h>
++#include <linux/mm.h>
++#include <linux/pci.h>
+ #include <drm/drm_dp_helper.h>
+ #include <drm/drm_print.h>
+ #include <drm/drm_atomic_helper.h>
++#include <drm/drm_connector.h>
++#include <drm/drm_crtc.h>
++#include <drm/drm_dsc.h>
++#include <drm/drm_plane.h>
++
++#ifdef BPM_VMA_SET_FILE_NOT_PRESENT
++/*
++ * Change backing file, only valid to use during initial VMA setup.
++ */
++void vma_set_file(struct vm_area_struct *vma, struct file *file)
++{
++	/* Changing an anonymous vma with this is illegal */
++	get_file(file);
++	swap(vma->vm_file, file);
++	fput(file);
++}
++EXPORT_SYMBOL(vma_set_file);
++#endif
++
++#ifdef BPM_PCI_REBAR_SIZE_NOT_PRESENT
++/**
++ * pci_rebar_find_pos - find position of resize ctrl reg for BAR
++ * @pdev: PCI device
++ * @bar: BAR to find
++ *
++ * Helper to find the position of the ctrl register for a BAR.
++ * Returns -ENOTSUPP if resizable BARs are not supported at all.
++ * Returns -ENOENT if no ctrl register for the BAR could be found.
++ */
++static int pci_rebar_find_pos(struct pci_dev *pdev, int bar)
++{
++        unsigned int pos, nbars, i;
++        u32 ctrl;
++
++        pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_REBAR);
++        if (!pos)
++                return -ENOTSUPP;
++
++        pci_read_config_dword(pdev, pos + PCI_REBAR_CTRL, &ctrl);
++        nbars = (ctrl & PCI_REBAR_CTRL_NBAR_MASK) >>
++                    PCI_REBAR_CTRL_NBAR_SHIFT;
++
++        for (i = 0; i < nbars; i++, pos += 8) {
++                int bar_idx;
++
++                pci_read_config_dword(pdev, pos + PCI_REBAR_CTRL, &ctrl);
++                bar_idx = ctrl & PCI_REBAR_CTRL_BAR_IDX;
++                if (bar_idx == bar)
++                        return pos;
++        }
++
++        return -ENOENT;
++}
++
++/**
++ * pci_rebar_get_possible_sizes - get possible sizes for BAR
++ * @pdev: PCI device
++ * @bar: BAR to query
++ *
++ * Get the possible sizes of a resizable BAR as bitmask defined in the spec
++ * (bit 0=1MB, bit 19=512GB). Returns 0 if BAR isn't resizable.
++ */
++u32 pci_rebar_get_possible_sizes(struct pci_dev *pdev, int bar)
++{
++        int pos;
++        u32 cap;
++
++        pos = pci_rebar_find_pos(pdev, bar);
++        if (pos < 0)
++                return 0;
++
++        pci_read_config_dword(pdev, pos + PCI_REBAR_CAP, &cap);
++        cap &= PCI_REBAR_CAP_SIZES;
++
++        /* Sapphire RX 5600 XT Pulse has an invalid cap dword for BAR 0 */
++        if (pdev->vendor == PCI_VENDOR_ID_ATI && pdev->device == 0x731f &&
++            bar == 0 && cap == 0x7000)
++                cap = 0x3f000;
++
++        return cap >> 4;
++}
++EXPORT_SYMBOL(pci_rebar_get_possible_sizes);
++#endif
+ 
+ u8 dp_link_status(const u8 link_status[DP_LINK_STATUS_SIZE], int r)
+ {
+@@ -39,7 +126,7 @@ drm_edp_backlight_probe_level(struct drm_dp_aux *aux, struct drm_edp_backlight_i
+ 
+ 	ret = drm_dp_dpcd_readb(aux, DP_EDP_BACKLIGHT_MODE_SET_REGISTER, &mode_reg);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read backlight mode: %d\n",
++		DRM_DEBUG_DP("%s: Failed to read backlight mode: %d\n",
+ 				aux->name, ret);
+ 		return ret < 0 ? ret : -EIO;
+ 	}
+@@ -50,7 +137,7 @@ drm_edp_backlight_probe_level(struct drm_dp_aux *aux, struct drm_edp_backlight_i
+ 
+ 		ret = drm_dp_dpcd_read(aux, DP_EDP_BACKLIGHT_BRIGHTNESS_MSB, buf, size);
+ 		if (ret != size) {
+-			drm_dbg_kms(aux->drm_dev, "%s: Failed to read backlight level: %d\n",
++			DRM_DEBUG_DP("%s: Failed to read backlight level: %d\n",
+ 					aux->name, ret);
+ 			return ret < 0 ? ret : -EIO;
+ 		}
+@@ -78,7 +165,7 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 
+ 	ret = drm_dp_dpcd_readb(aux, DP_EDP_PWMGEN_BIT_COUNT, &pn);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap: %d\n",
++		DRM_DEBUG_DP("%s: Failed to read pwmgen bit count cap: %d\n",
+ 			    aux->name, ret);
+ 		return -ENODEV;
+ 	}
+@@ -112,13 +199,13 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 	 */
+ 	ret = drm_dp_dpcd_readb(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MIN, &pn_min);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap min: %d\n",
++		DRM_DEBUG_DP("%s: Failed to read pwmgen bit count cap min: %d\n",
+ 			    aux->name, ret);
+ 		return 0;
+ 	}
+ 	ret = drm_dp_dpcd_readb(aux, DP_EDP_PWMGEN_BIT_COUNT_CAP_MAX, &pn_max);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to read pwmgen bit count cap max: %d\n",
++		DRM_DEBUG_DP("%s: Failed to read pwmgen bit count cap max: %d\n",
+ 			    aux->name, ret);
+ 		return 0;
+ 	}
+@@ -129,7 +216,7 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 	fxp_min = DIV_ROUND_CLOSEST(fxp * 3, 4);
+ 	fxp_max = DIV_ROUND_CLOSEST(fxp * 5, 4);
+ 	if (fxp_min < (1 << pn_min) || (255 << pn_max) < fxp_max) {
+-		drm_dbg_kms(aux->drm_dev,
++		DRM_DEBUG_DP(
+ 			    "%s: Driver defined backlight frequency (%d) out of range\n",
+ 			    aux->name, driver_pwm_freq_hz);
+ 		return 0;
+@@ -144,7 +231,7 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 
+ 	ret = drm_dp_dpcd_writeb(aux, DP_EDP_PWMGEN_BIT_COUNT, pn);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to write aux pwmgen bit count: %d\n",
++		DRM_DEBUG_DP("%s: Failed to write aux pwmgen bit count: %d\n",
+ 			    aux->name, ret);
+ 		return 0;
+ 	}
+@@ -153,7 +240,7 @@ drm_edp_backlight_probe_max(struct drm_dp_aux *aux, struct drm_edp_backlight_inf
+ 
+ 	if (edp_dpcd[2] & DP_EDP_BACKLIGHT_FREQ_AUX_SET_CAP) {
+ 		bl->pwm_freq_pre_divider = f;
+-		drm_dbg_kms(aux->drm_dev, "%s: Using backlight frequency from driver (%dHz)\n",
++		DRM_DEBUG_DP("%s: Using backlight frequency from driver (%dHz)\n",
+ 			    aux->name, driver_pwm_freq_hz);
+ 	}
+ 
+@@ -173,7 +260,7 @@ drm_edp_backlight_set_enable(struct drm_dp_aux *aux, const struct drm_edp_backli
+ 
+ 	ret = drm_dp_dpcd_readb(aux, DP_EDP_DISPLAY_CONTROL_REGISTER, &buf);
+ 	if (ret != 1) {
+-		drm_err(aux->drm_dev, "%s: Failed to read eDP display control register: %d\n",
++		DRM_ERROR("%s: Failed to read eDP display control register: %d\n",
+ 			aux->name, ret);
+ 		return ret < 0 ? ret : -EIO;
+ 	}
+@@ -184,7 +271,7 @@ drm_edp_backlight_set_enable(struct drm_dp_aux *aux, const struct drm_edp_backli
+ 
+ 	ret = drm_dp_dpcd_writeb(aux, DP_EDP_DISPLAY_CONTROL_REGISTER, buf);
+ 	if (ret != 1) {
+-		drm_err(aux->drm_dev, "%s: Failed to write eDP display control register: %d\n",
++		DRM_ERROR("%s: Failed to write eDP display control register: %d\n",
+ 			aux->name, ret);
+ 		return ret < 0 ? ret : -EIO;
+ 	}
+@@ -207,7 +294,7 @@ int drm_edp_backlight_set_level(struct drm_dp_aux *aux, const struct drm_edp_bac
+ 
+ 	ret = drm_dp_dpcd_write(aux, DP_EDP_BACKLIGHT_BRIGHTNESS_MSB, buf, sizeof(buf));
+ 	if (ret != sizeof(buf)) {
+-		drm_err(aux->drm_dev,
++		DRM_ERROR(
+ 			"%s: Failed to write aux backlight level: %d\n",
+ 			aux->name, ret);
+ 		return ret < 0 ? ret : -EIO;
+@@ -226,14 +313,14 @@ int drm_edp_backlight_enable(struct drm_dp_aux *aux, const struct drm_edp_backli
+ 	if (bl->pwmgen_bit_count) {
+ 		ret = drm_dp_dpcd_writeb(aux, DP_EDP_PWMGEN_BIT_COUNT, bl->pwmgen_bit_count);
+ 		if (ret != 1)
+-			drm_dbg_kms(aux->drm_dev, "%s: Failed to write aux pwmgen bit count: %d\n",
++			DRM_DEBUG_DP("%s: Failed to write aux pwmgen bit count: %d\n",
+ 				    aux->name, ret);
+ 	}
+ 
+ 	if (bl->pwm_freq_pre_divider) {
+ 		ret = drm_dp_dpcd_writeb(aux, DP_EDP_BACKLIGHT_FREQ_SET, bl->pwm_freq_pre_divider);
+ 		if (ret != 1)
+-			drm_dbg_kms(aux->drm_dev,
++			DRM_DEBUG_DP(
+ 				    "%s: Failed to write aux backlight frequency: %d\n",
+ 				    aux->name, ret);
+ 		else
+@@ -242,7 +329,7 @@ int drm_edp_backlight_enable(struct drm_dp_aux *aux, const struct drm_edp_backli
+ 
+ 	ret = drm_dp_dpcd_writeb(aux, DP_EDP_BACKLIGHT_MODE_SET_REGISTER, dpcd_buf);
+ 	if (ret != 1) {
+-		drm_dbg_kms(aux->drm_dev, "%s: Failed to write aux backlight mode: %d\n",
++		DRM_DEBUG_DP("%s: Failed to write aux backlight mode: %d\n",
+ 			    aux->name, ret);
+ 		return ret < 0 ? ret : -EIO;
+ 	}
+@@ -291,10 +378,10 @@ drm_edp_backlight_init(struct drm_dp_aux *aux, struct drm_edp_backlight_info *bl
+ 		return ret;
+ 	*current_level = ret;
+ 
+-	drm_dbg_kms(aux->drm_dev,
++	DRM_DEBUG_DP(
+ 		    "%s: Found backlight level=%d/%d pwm_freq_pre_divider=%d mode=%x\n",
+ 		    aux->name, *current_level, bl->max, bl->pwm_freq_pre_divider, *current_mode);
+-	drm_dbg_kms(aux->drm_dev,
++	DRM_DEBUG_DP(
+ 		    "%s: Backlight caps: pwmgen_bit_count=%d lsb_reg_used=%d aux_enable=%d\n",
+ 		    aux->name, bl->pwmgen_bit_count, bl->lsb_reg_used, bl->aux_enable);
+ 	return 0;
+@@ -302,6 +389,7 @@ drm_edp_backlight_init(struct drm_dp_aux *aux, struct drm_edp_backlight_info *bl
+ EXPORT_SYMBOL(drm_edp_backlight_init);
+ #endif /* DRM_EDP_BACKLIGHT_NOT_PRESENT */
+ 
++#ifndef MAX_FLR_NOT_PRESENT
+ /**
+  * drm_hdmi_sink_max_frl_rate - get the max frl rate, if supported
+  * @connector - connector with HDMI sink
+@@ -339,3 +427,506 @@ int drm_hdmi_sink_dsc_max_frl_rate(struct drm_connector *connector)
+         return max_dsc_lanes * dsc_rate_per_lane;
+ }
+ EXPORT_SYMBOL(drm_hdmi_sink_dsc_max_frl_rate);
++#endif
++
++/**
++ * drm_connector_atomic_hdr_metadata_equal - checks if the hdr metadata changed
++ * @old_state: old connector state to compare
++ * @new_state: new connector state to compare
++ *
++ * This is used by HDR-enabled drivers to test whether the HDR metadata
++ * have changed between two different connector state (and thus probably
++ * requires a full blown mode change).
++ *
++ * Returns:
++ * True if the metadata are equal, False otherwise
++ */
++bool drm_connector_atomic_hdr_metadata_equal(struct drm_connector_state *old_state,
++					     struct drm_connector_state *new_state)
++{
++	struct drm_property_blob *old_blob = old_state->hdr_output_metadata;
++	struct drm_property_blob *new_blob = new_state->hdr_output_metadata;
++
++	if (!old_blob || !new_blob)
++		return old_blob == new_blob;
++
++	if (old_blob->length != new_blob->length)
++		return false;
++
++	return !memcmp(old_blob->data, new_blob->data, old_blob->length);
++}
++EXPORT_SYMBOL(drm_connector_atomic_hdr_metadata_equal);
++
++/**
++ * drm_dsc_dp_rc_buffer_size - get rc buffer size in bytes
++ * @rc_buffer_block_size: block size code, according to DPCD offset 62h
++ * @rc_buffer_size: number of blocks - 1, according to DPCD offset 63h
++ *
++ * return:
++ * buffer size in bytes, or 0 on invalid input
++ */
++int drm_dsc_dp_rc_buffer_size(u8 rc_buffer_block_size, u8 rc_buffer_size)
++{
++	int size = 1024 * (rc_buffer_size + 1);
++
++	switch (rc_buffer_block_size) {
++	case DP_DSC_RC_BUF_BLK_SIZE_1:
++		return 1 * size;
++	case DP_DSC_RC_BUF_BLK_SIZE_4:
++		return 4 * size;
++	case DP_DSC_RC_BUF_BLK_SIZE_16:
++		return 16 * size;
++	case DP_DSC_RC_BUF_BLK_SIZE_64:
++		return 64 * size;
++	default:
++		return 0;
++	}
++}
++EXPORT_SYMBOL(drm_dsc_dp_rc_buffer_size);
++
++/**
++ * drm_connector_attach_colorspace_property - attach "Colorspace" property
++ * @connector: connector to attach the property on.
++ *
++ * This is used to allow the userspace to signal the output colorspace
++ * to the driver.
++ *
++ * Returns:
++ * Zero on success, negative errno on failure.
++ */
++int drm_connector_attach_colorspace_property(struct drm_connector *connector)
++{
++	struct drm_property *prop = connector->colorspace_property;
++
++	drm_object_attach_property(&connector->base, prop, DRM_MODE_COLORIMETRY_DEFAULT);
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_connector_attach_colorspace_property);
++
++struct drm_property *
++drm_create_scaling_filter_prop(struct drm_device *dev,
++			       unsigned int supported_filters)
++{
++	struct drm_property *prop;
++	static const struct drm_prop_enum_list props[] = {
++		{ DRM_SCALING_FILTER_DEFAULT, "Default" },
++		{ DRM_SCALING_FILTER_NEAREST_NEIGHBOR, "Nearest Neighbor" },
++	};
++	unsigned int valid_mode_mask = BIT(DRM_SCALING_FILTER_DEFAULT) |
++				       BIT(DRM_SCALING_FILTER_NEAREST_NEIGHBOR);
++	int i;
++
++	if (WARN_ON((supported_filters & ~valid_mode_mask) ||
++		    ((supported_filters & BIT(DRM_SCALING_FILTER_DEFAULT)) == 0)))
++		return ERR_PTR(-EINVAL);
++
++	prop = drm_property_create(dev, DRM_MODE_PROP_ENUM,
++				   "SCALING_FILTER",
++				   hweight32(supported_filters));
++	if (!prop)
++		return ERR_PTR(-ENOMEM);
++
++	for (i = 0; i < ARRAY_SIZE(props); i++) {
++		int ret;
++
++		if (!(BIT(props[i].type) & supported_filters))
++			continue;
++
++		ret = drm_property_add_enum(prop, props[i].type,
++					    props[i].name);
++
++		if (ret) {
++			drm_property_destroy(dev, prop);
++
++			return ERR_PTR(ret);
++		}
++	}
++
++	return prop;
++}
++
++/**
++ * drm_crtc_create_scaling_filter_property - create a new scaling filter
++ * property
++ *
++ * @crtc: drm CRTC
++ * @supported_filters: bitmask of supported scaling filters, must include
++ *		       BIT(DRM_SCALING_FILTER_DEFAULT).
++ *
++ * This function lets driver to enable the scaling filter property on a given
++ * CRTC.
++ *
++ * RETURNS:
++ * Zero for success or -errno
++ */
++int drm_crtc_create_scaling_filter_property(struct drm_crtc *crtc,
++					    unsigned int supported_filters)
++{
++	struct drm_property *prop =
++		drm_create_scaling_filter_prop(crtc->dev, supported_filters);
++
++	if (IS_ERR(prop))
++		return PTR_ERR(prop);
++
++	drm_object_attach_property(&crtc->base, prop,
++				   DRM_SCALING_FILTER_DEFAULT);
++//	crtc->scaling_filter_property = prop;
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_crtc_create_scaling_filter_property);
++
++/**
++ * drm_plane_create_scaling_filter_property - create a new scaling filter
++ * property
++ *
++ * @plane: drm plane
++ * @supported_filters: bitmask of supported scaling filters, must include
++ *		       BIT(DRM_SCALING_FILTER_DEFAULT).
++ *
++ * This function lets driver to enable the scaling filter property on a given
++ * plane.
++ *
++ * RETURNS:
++ * Zero for success or -errno
++ */
++int drm_plane_create_scaling_filter_property(struct drm_plane *plane,
++					     unsigned int supported_filters)
++{
++	struct drm_property *prop =
++		drm_create_scaling_filter_prop(plane->dev, supported_filters);
++
++	if (IS_ERR(prop))
++		return PTR_ERR(prop);
++
++	drm_object_attach_property(&plane->base, prop,
++				   DRM_SCALING_FILTER_DEFAULT);
++//	plane->scaling_filter_property = prop;
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_plane_create_scaling_filter_property);
++
++static u8 dp_lttpr_common_cap(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE], int r)
++{
++	return caps[r - DP_LT_TUNABLE_PHY_REPEATER_FIELD_DATA_STRUCTURE_REV];
++}
++
++/**
++ * drm_dp_lttpr_count - get the number of detected LTTPRs
++ * @caps: LTTPR common capabilities
++ *
++ * Get the number of detected LTTPRs from the LTTPR common capabilities info.
++ *
++ * Returns:
++ *   -ERANGE if more than supported number (8) of LTTPRs are detected
++ *   -EINVAL if the DP_PHY_REPEATER_CNT register contains an invalid value
++ *   otherwise the number of detected LTTPRs
++ */
++int drm_dp_lttpr_count(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE])
++{
++	u8 count = dp_lttpr_common_cap(caps, DP_PHY_REPEATER_CNT);
++
++	switch (hweight8(count)) {
++	case 0:
++		return 0;
++	case 1:
++		return 8 - ilog2(count);
++	case 8:
++		return -ERANGE;
++	default:
++		return -EINVAL;
++	}
++}
++EXPORT_SYMBOL(drm_dp_lttpr_count);
++
++/**
++ * drm_dp_lttpr_max_link_rate - get the maximum link rate supported by all LTTPRs
++ * @caps: LTTPR common capabilities
++ *
++ * Returns the maximum link rate supported by all detected LTTPRs.
++ */
++int drm_dp_lttpr_max_link_rate(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE])
++{
++	u8 rate = dp_lttpr_common_cap(caps, DP_MAX_LINK_RATE_PHY_REPEATER);
++
++	return drm_dp_bw_code_to_link_rate(rate);
++}
++EXPORT_SYMBOL(drm_dp_lttpr_max_link_rate);
++
++/**
++ * drm_dp_lttpr_max_lane_count - get the maximum lane count supported by all LTTPRs
++ * @caps: LTTPR common capabilities
++ *
++ * Returns the maximum lane count supported by all detected LTTPRs.
++ */
++int drm_dp_lttpr_max_lane_count(const u8 caps[DP_LTTPR_COMMON_CAP_SIZE])
++{
++	u8 max_lanes = dp_lttpr_common_cap(caps, DP_MAX_LANE_COUNT_PHY_REPEATER);
++
++	return max_lanes & DP_MAX_LANE_COUNT_MASK;
++}
++EXPORT_SYMBOL(drm_dp_lttpr_max_lane_count);
++
++/*
++ * drm_dp_pcon_convert_rgb_to_ycbcr() - Configure the PCon to convert RGB to Ycbcr
++ * @aux: displayPort AUX channel
++ * @color_spc: Color-space/s for which conversion is to be enabled, 0 for disable.
++ *
++ * Returns 0 on success, else returns negative error code.
++ */
++int drm_dp_pcon_convert_rgb_to_ycbcr(struct drm_dp_aux *aux, u8 color_spc)
++{
++	int ret;
++	u8 buf;
++
++	ret = drm_dp_dpcd_readb(aux, DP_PROTOCOL_CONVERTER_CONTROL_2, &buf);
++	if (ret < 0)
++		return ret;
++
++	if (color_spc & DP_CONVERSION_RGB_YCBCR_MASK)
++		buf |= (color_spc & DP_CONVERSION_RGB_YCBCR_MASK);
++	else
++		buf &= ~DP_CONVERSION_RGB_YCBCR_MASK;
++
++	ret = drm_dp_dpcd_writeb(aux, DP_PROTOCOL_CONVERTER_CONTROL_2, buf);
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_dp_pcon_convert_rgb_to_ycbcr);
++
++/**
++ * drm_dp_dpcd_read_phy_link_status - get the link status information for a DP PHY
++ * @aux: DisplayPort AUX channel
++ * @dp_phy: the DP PHY to get the link status for
++ * @link_status: buffer to return the status in
++ *
++ * Fetch the AUX DPCD registers for the DPRX or an LTTPR PHY link status. The
++ * layout of the returned @link_status matches the DPCD register layout of the
++ * DPRX PHY link status.
++ *
++ * Returns 0 if the information was read successfully or a negative error code
++ * on failure.
++ */
++int drm_dp_dpcd_read_phy_link_status(struct drm_dp_aux *aux,
++				     enum drm_dp_phy dp_phy,
++				     u8 link_status[DP_LINK_STATUS_SIZE])
++{
++	int ret;
++
++	if (dp_phy == DP_PHY_DPRX) {
++		ret = drm_dp_dpcd_read(aux,
++				       DP_LANE0_1_STATUS,
++				       link_status,
++				       DP_LINK_STATUS_SIZE);
++
++		if (ret < 0)
++			return ret;
++
++		WARN_ON(ret != DP_LINK_STATUS_SIZE);
++
++		return 0;
++	}
++
++	ret = drm_dp_dpcd_read(aux,
++			       DP_LANE0_1_STATUS_PHY_REPEATER(dp_phy),
++			       link_status,
++			       DP_LINK_STATUS_SIZE - 1);
++
++	if (ret < 0)
++		return ret;
++
++	WARN_ON(ret != DP_LINK_STATUS_SIZE - 1);
++
++	/* Convert the LTTPR to the sink PHY link status layout */
++	memmove(&link_status[DP_SINK_STATUS - DP_LANE0_1_STATUS + 1],
++		&link_status[DP_SINK_STATUS - DP_LANE0_1_STATUS],
++		DP_LINK_STATUS_SIZE - (DP_SINK_STATUS - DP_LANE0_1_STATUS) - 1);
++	link_status[DP_SINK_STATUS - DP_LANE0_1_STATUS] = 0;
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_dp_dpcd_read_phy_link_status);
++
++/**
++ * drm_dp_pcon_hdmi_link_active() - check if the PCON HDMI LINK status is active.
++ * @aux: DisplayPort AUX channel
++ *
++ * Returns true if link is active else returns false.
++ */
++bool drm_dp_pcon_hdmi_link_active(struct drm_dp_aux *aux)
++{
++	u8 buf;
++	int ret;
++
++	ret = drm_dp_dpcd_readb(aux, DP_PCON_HDMI_TX_LINK_STATUS, &buf);
++	if (ret < 0)
++		return false;
++
++	return buf & DP_PCON_HDMI_TX_LINK_ACTIVE;
++}
++EXPORT_SYMBOL(drm_dp_pcon_hdmi_link_active);
++
++/**
++ * drm_dp_get_pcon_max_frl_bw() - maximum frl supported by PCON
++ * @dpcd: DisplayPort configuration data
++ * @port_cap: port capabilities
++ *
++ * Returns maximum frl bandwidth supported by PCON in GBPS,
++ * returns 0 if not supported.
++ */
++int drm_dp_get_pcon_max_frl_bw(const u8 dpcd[DP_RECEIVER_CAP_SIZE],
++			       const u8 port_cap[4])
++{
++	int bw;
++	u8 buf;
++
++	buf = port_cap[2];
++	bw = buf & DP_PCON_MAX_FRL_BW;
++
++	switch (bw) {
++	case DP_PCON_MAX_9GBPS:
++		return 9;
++	case DP_PCON_MAX_18GBPS:
++		return 18;
++	case DP_PCON_MAX_24GBPS:
++		return 24;
++	case DP_PCON_MAX_32GBPS:
++		return 32;
++	case DP_PCON_MAX_40GBPS:
++		return 40;
++	case DP_PCON_MAX_48GBPS:
++		return 48;
++	case DP_PCON_MAX_0GBPS:
++	default:
++		return 0;
++	}
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_dp_get_pcon_max_frl_bw);
++
++/**
++ * drm_dp_downstream_rgb_to_ycbcr_conversion() - determine downstream facing port
++ *                                               RGB->YCbCr conversion capability
++ * @dpcd: DisplayPort configuration data
++ * @port_cap: downstream facing port capabilities
++ * @color_spc: Colorspace for which conversion cap is sought
++ *
++ * Returns: whether the downstream facing port can convert RGB->YCbCr for a given
++ * colorspace.
++ */
++bool drm_dp_downstream_rgb_to_ycbcr_conversion(const u8 dpcd[DP_RECEIVER_CAP_SIZE],
++					       const u8 port_cap[4],
++					       u8 color_spc)
++{
++	if (!drm_dp_is_branch(dpcd))
++		return false;
++
++	if (dpcd[DP_DPCD_REV] < 0x13)
++		return false;
++
++	switch (port_cap[0] & DP_DS_PORT_TYPE_MASK) {
++	case DP_DS_PORT_TYPE_HDMI:
++		if ((dpcd[DP_DOWNSTREAMPORT_PRESENT] & DP_DETAILED_CAP_INFO_AVAILABLE) == 0)
++			return false;
++
++		return port_cap[3] & color_spc;
++	default:
++		return false;
++	}
++}
++EXPORT_SYMBOL(drm_dp_downstream_rgb_to_ycbcr_conversion);
++
++/**
++ * drm_connector_attach_hdr_output_metadata_property - attach "HDR_OUTPUT_METADA" property
++ * @connector: connector to attach the property on.
++ *
++ * This is used to allow the userspace to send HDR Metadata to the
++ * driver.
++ *
++ * Returns:
++ * Zero on success, negative errno on failure.
++ */
++int drm_connector_attach_hdr_output_metadata_property(struct drm_connector *connector)
++{
++	struct drm_device *dev = connector->dev;
++	struct drm_property *prop = dev->mode_config.hdr_output_metadata_property;
++
++	drm_object_attach_property(&connector->base, prop, 0);
++
++	return 0;
++}
++EXPORT_SYMBOL(drm_connector_attach_hdr_output_metadata_property);
++
++static u8 dp_lttpr_phy_cap(const u8 phy_cap[DP_LTTPR_PHY_CAP_SIZE], int r)
++{
++	return phy_cap[r - DP_TRAINING_AUX_RD_INTERVAL_PHY_REPEATER1];
++}
++
++/**
++ * drm_dp_lttpr_voltage_swing_level_3_supported - check for LTTPR vswing3 support
++ * @caps: LTTPR PHY capabilities
++ *
++ * Returns true if the @caps for an LTTPR TX PHY indicate support for
++ * voltage swing level 3.
++ */
++bool
++drm_dp_lttpr_voltage_swing_level_3_supported(const u8 caps[DP_LTTPR_PHY_CAP_SIZE])
++{
++	u8 txcap = dp_lttpr_phy_cap(caps, DP_TRANSMITTER_CAPABILITY_PHY_REPEATER1);
++
++	return txcap & DP_VOLTAGE_SWING_LEVEL_3_SUPPORTED;
++}
++EXPORT_SYMBOL(drm_dp_lttpr_voltage_swing_level_3_supported);
++
++/**
++ * drm_dp_lttpr_pre_emphasis_level_3_supported - check for LTTPR preemph3 support
++ * @caps: LTTPR PHY capabilities
++ *
++ * Returns true if the @caps for an LTTPR TX PHY indicate support for
++ * pre-emphasis level 3.
++ */
++bool
++drm_dp_lttpr_pre_emphasis_level_3_supported(const u8 caps[DP_LTTPR_PHY_CAP_SIZE])
++{
++	u8 txcap = dp_lttpr_phy_cap(caps, DP_TRANSMITTER_CAPABILITY_PHY_REPEATER1);
++
++	return txcap & DP_PRE_EMPHASIS_LEVEL_3_SUPPORTED;
++}
++EXPORT_SYMBOL(drm_dp_lttpr_pre_emphasis_level_3_supported);
++
++void drm_dp_lttpr_link_train_clock_recovery_delay(void)
++{
++	usleep_range(100, 200);
++}
++EXPORT_SYMBOL(drm_dp_lttpr_link_train_clock_recovery_delay);
++
++static void __drm_dp_link_train_channel_eq_delay(const struct drm_dp_aux *aux,
++						 unsigned long rd_interval)
++{
++	if (rd_interval > 4)
++		DRM_DEBUG_DP("%s: AUX interval %lu, out of range (max 4)\n",
++			    aux->name, rd_interval);
++
++	if (rd_interval == 0)
++		rd_interval = 400;
++	else
++		rd_interval *= 4 * USEC_PER_MSEC;
++
++	usleep_range(rd_interval, rd_interval * 2);
++}
++
++void drm_dp_lttpr_link_train_channel_eq_delay(const struct drm_dp_aux *aux,
++					      const u8 phy_cap[DP_LTTPR_PHY_CAP_SIZE])
++{
++	u8 interval = dp_lttpr_phy_cap(phy_cap,
++				       DP_TRAINING_AUX_RD_INTERVAL_PHY_REPEATER1) &
++		      DP_TRAINING_AUX_RD_MASK;
++
++	__drm_dp_link_train_channel_eq_delay(aux, interval);
++}
++EXPORT_SYMBOL(drm_dp_lttpr_link_train_channel_eq_delay);
+diff --git a/compat/backport-5.13.c b/compat/backport-5.13.c
+new file mode 100644
+index 0000000..8507c24
+--- /dev/null
++++ b/compat/backport-5.13.c
+@@ -0,0 +1,36 @@
++// SPDX-License-Identifier: MIT
++/*
++ * Copyright © 2022 Intel Corporation
++ */
++
++#include <linux/interrupt.h>
++
++#ifdef BPM_TASKLET_UNLOCK_SPIN_WAIT_NOT_PRESENT
++#if defined(CONFIG_SMP) || defined(CONFIG_PREEMPT_RT)
++/*
++ * Do not use in new code. Waiting for tasklets from atomic contexts is
++ * error prone and should be avoided.
++ */
++void tasklet_unlock_spin_wait(struct tasklet_struct *t)
++{
++	while (test_bit(TASKLET_STATE_RUN, &(t)->state)) {
++		if (IS_ENABLED(CONFIG_PREEMPT_RT)) {
++			/*
++			 * Prevent a live lock when current preempted soft
++                         * interrupt processing or prevents ksoftirqd from
++                         * running. If the tasklet runs on a different CPU
++                         * then this has no effect other than doing the BH
++                         * disable/enable dance for nothing.
++                         */
++                        local_bh_disable();
++                        local_bh_enable();
++                } else {
++                        cpu_relax();
++                }
++        }
++}
++EXPORT_SYMBOL(tasklet_unlock_spin_wait);
++#endif
++#endif /* BPM_TASKLET_UNLOCK_SPIN_WAIT_NOT_PRESENT */
++
++
+diff --git a/drivers/gpu/drm/i915/display/intel_atomic_plane.c b/drivers/gpu/drm/i915/display/intel_atomic_plane.c
+index 6654193..d425c00 100644
+--- a/drivers/gpu/drm/i915/display/intel_atomic_plane.c
++++ b/drivers/gpu/drm/i915/display/intel_atomic_plane.c
+@@ -336,7 +336,7 @@ void intel_plane_copy_uapi_to_hw_state(struct intel_plane_state *plane_state,
+ 	plane_state->hw.rotation = from_plane_state->uapi.rotation;
+ 	plane_state->hw.color_encoding = from_plane_state->uapi.color_encoding;
+ 	plane_state->hw.color_range = from_plane_state->uapi.color_range;
+-	plane_state->hw.scaling_filter = from_plane_state->uapi.scaling_filter;
++	plane_state->hw.scaling_filter = DRM_SCALING_FILTER_DEFAULT;//from_plane_state->uapi.scaling_filter;
+ 
+ 	plane_state->uapi.src = drm_plane_state_src(&from_plane_state->uapi);
+ 	plane_state->uapi.dst = drm_plane_state_dest(&from_plane_state->uapi);
+diff --git a/drivers/gpu/drm/i915/display/intel_display.c b/drivers/gpu/drm/i915/display/intel_display.c
+index 69cf335..a92fc4b 100644
+--- a/drivers/gpu/drm/i915/display/intel_display.c
++++ b/drivers/gpu/drm/i915/display/intel_display.c
+@@ -5103,7 +5103,7 @@ intel_crtc_copy_uapi_to_hw_state_modeset(struct intel_atomic_state *state,
+ 		      &crtc_state->uapi.mode);
+ 	drm_mode_copy(&crtc_state->hw.adjusted_mode,
+ 		      &crtc_state->uapi.adjusted_mode);
+-	crtc_state->hw.scaling_filter = crtc_state->uapi.scaling_filter;
++	crtc_state->hw.scaling_filter = DRM_SCALING_FILTER_DEFAULT;//crtc_state->uapi.scaling_filter;
+ 
+ 	intel_crtc_copy_uapi_to_hw_state_nomodeset(state, crtc);
+ }
+@@ -6846,9 +6846,11 @@ static int intel_atomic_check(struct drm_device *dev,
+ 		if (new_crtc_state->inherited != old_crtc_state->inherited)
+ 			new_crtc_state->uapi.mode_changed = true;
+ 
++#if 0
+ 		if (new_crtc_state->uapi.scaling_filter !=
+ 		    old_crtc_state->uapi.scaling_filter)
+ 			new_crtc_state->uapi.mode_changed = true;
++#endif
+ 	}
+ 
+ 	intel_vrr_check_modeset(state);
+diff --git a/drivers/gpu/drm/i915/display/intel_display_types.h b/drivers/gpu/drm/i915/display/intel_display_types.h
+index 3cd3018..cf3bfcc 100644
+--- a/drivers/gpu/drm/i915/display/intel_display_types.h
++++ b/drivers/gpu/drm/i915/display/intel_display_types.h
+@@ -1748,7 +1748,7 @@ struct intel_dp {
+ 	bool hobl_failed;
+ 	bool hobl_active;
+ 
+-	struct intel_dp_pcon_frl frl;
++//	struct intel_dp_pcon_frl frl;
+ 
+ 	struct intel_psr psr;
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_dp.c b/drivers/gpu/drm/i915/display/intel_dp.c
+index 6c33f04..6374182 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp.c
++++ b/drivers/gpu/drm/i915/display/intel_dp.c
+@@ -2500,6 +2500,7 @@ static void intel_dp_get_pcon_dsc_cap(struct intel_dp *intel_dp)
+ 		    (int)sizeof(intel_dp->pcon_dsc_dpcd), intel_dp->pcon_dsc_dpcd);
+ }
+ 
++#if 0
+ static int intel_dp_pcon_get_frl_mask(u8 frl_bw_mask)
+ {
+ 	int bw_gbps[] = {9, 18, 24, 32, 40, 48};
+@@ -2534,6 +2535,9 @@ static int intel_dp_pcon_set_frl_mask(int max_frl)
+ 
+ static int intel_dp_hdmi_sink_max_frl(struct intel_dp *intel_dp)
+ {
++#if 1
++	return 0;
++#else
+ 	struct intel_connector *intel_connector = intel_dp->attached_connector;
+ 	struct drm_connector *connector = &intel_connector->base;
+ #ifdef MAX_FLR_NOT_PRESENT
+@@ -2562,6 +2566,7 @@ static int intel_dp_hdmi_sink_max_frl(struct intel_dp *intel_dp)
+ #endif
+ 
+ 	return max_frl_rate;
++#endif
+ }
+ 
+ static bool
+@@ -2674,9 +2679,11 @@ int intel_dp_pcon_set_tmds_mode(struct intel_dp *intel_dp)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ void intel_dp_check_frl_training(struct intel_dp *intel_dp)
+ {
++#if 0
+ 	struct drm_i915_private *dev_priv = dp_to_i915(intel_dp);
+ 
+ 	/*
+@@ -2701,8 +2708,10 @@ void intel_dp_check_frl_training(struct intel_dp *intel_dp)
+ 	} else {
+ 		drm_dbg(&dev_priv->drm, "FRL training Completed\n");
+ 	}
++#endif
+ }
+ 
++#if 0
+ static int
+ intel_dp_pcon_dsc_enc_slice_height(const struct intel_crtc_state *crtc_state)
+ {
+@@ -2751,11 +2760,13 @@ intel_dp_pcon_dsc_enc_bpp(struct intel_dp *intel_dp,
+ 				      num_slices, output_format, bpc, hdmi_all_bpp,
+ 				      hdmi_max_chunk_bytes);
+ }
++#endif
+ 
+ void
+ intel_dp_pcon_dsc_configure(struct intel_dp *intel_dp,
+ 			    const struct intel_crtc_state *crtc_state)
+ {
++#if 0
+ 	u8 pps_param[6];
+ 	int slice_height;
+ 	int slice_width;
+@@ -2805,6 +2816,7 @@ intel_dp_pcon_dsc_configure(struct intel_dp *intel_dp,
+ 	ret = drm_dp_pcon_pps_override_param(&intel_dp->aux, pps_param);
+ 	if (ret < 0)
+ 		drm_dbg_kms(&i915->drm, "Failed to set pcon DSC\n");
++#endif
+ }
+ 
+ void intel_dp_configure_protocol_converter(struct intel_dp *intel_dp,
+@@ -4091,6 +4103,7 @@ intel_dp_check_mst_status(struct intel_dp *intel_dp)
+ 	return link_ok;
+ }
+ 
++#if 0
+ static void
+ intel_dp_handle_hdmi_link_status_change(struct intel_dp *intel_dp)
+ {
+@@ -4112,6 +4125,7 @@ intel_dp_handle_hdmi_link_status_change(struct intel_dp *intel_dp)
+ 		intel_dp_check_frl_training(intel_dp);
+ 	}
+ }
++#endif
+ 
+ static bool
+ intel_dp_needs_link_retrain(struct intel_dp *intel_dp)
+@@ -4445,6 +4459,7 @@ static void intel_dp_check_device_service_irq(struct intel_dp *intel_dp)
+ 		drm_dbg_kms(&i915->drm, "Sink specific irq unhandled\n");
+ }
+ 
++#if 0
+ static void intel_dp_check_link_service_irq(struct intel_dp *intel_dp)
+ {
+ 	u8 val;
+@@ -4463,6 +4478,7 @@ static void intel_dp_check_link_service_irq(struct intel_dp *intel_dp)
+ 	if (val & HDMI_LINK_STATUS_CHANGED)
+ 		intel_dp_handle_hdmi_link_status_change(intel_dp);
+ }
++#endif
+ 
+ /*
+  * According to DP spec
+@@ -4504,7 +4520,7 @@ intel_dp_short_pulse(struct intel_dp *intel_dp)
+ 	}
+ 
+ 	intel_dp_check_device_service_irq(intel_dp);
+-	intel_dp_check_link_service_irq(intel_dp);
++//	intel_dp_check_link_service_irq(intel_dp);
+ 
+ 	/* Handle CEC interrupts, if any */
+ 	drm_dp_cec_irq(&intel_dp->aux);
+@@ -5586,8 +5602,8 @@ intel_dp_init_connector(struct intel_digital_port *dig_port,
+ 			       (temp & ~0xf) | 0xd);
+ 	}
+ 
+-	intel_dp->frl.is_trained = false;
+-	intel_dp->frl.trained_rate_gbps = 0;
++//	intel_dp->frl.is_trained = false;
++//	intel_dp->frl.trained_rate_gbps = 0;
+ 
+ 	intel_psr_init(intel_dp);
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_dp_aux.c b/drivers/gpu/drm/i915/display/intel_dp_aux.c
+index 10616e1..816aa67 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp_aux.c
++++ b/drivers/gpu/drm/i915/display/intel_dp_aux.c
+@@ -723,7 +723,7 @@ void intel_dp_aux_init(struct intel_dp *intel_dp)
+ 	else
+ 		intel_dp->get_aux_send_ctl = g4x_get_aux_send_ctl;
+ 
+-	intel_dp->aux.drm_dev = &dev_priv->drm;
++//	intel_dp->aux.drm_dev = &dev_priv->drm;
+ 	drm_dp_aux_init(&intel_dp->aux);
+ 
+ 	/* Failure to allocate our preferred name is not critical */
+diff --git a/drivers/gpu/drm/i915/display/intel_dp_link_training.c b/drivers/gpu/drm/i915/display/intel_dp_link_training.c
+index ace1730..d9aa54a 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp_link_training.c
++++ b/drivers/gpu/drm/i915/display/intel_dp_link_training.c
+@@ -713,7 +713,7 @@ static void intel_dp_link_training_clock_recovery_delay(struct intel_dp *intel_d
+                                                         enum drm_dp_phy dp_phy)
+ {
+         if (dp_phy == DP_PHY_DPRX)
+-                drm_dp_link_train_clock_recovery_delay(&intel_dp->aux, intel_dp->dpcd);
++                drm_dp_link_train_clock_recovery_delay(intel_dp->dpcd);
+         else
+                 drm_dp_lttpr_link_train_clock_recovery_delay();
+ }
+@@ -938,7 +938,7 @@ intel_dp_link_training_channel_equalization_delay(struct intel_dp *intel_dp,
+                                                  enum drm_dp_phy dp_phy)
+ {
+        if (dp_phy == DP_PHY_DPRX) {
+-               drm_dp_link_train_channel_eq_delay(&intel_dp->aux, intel_dp->dpcd);
++               drm_dp_link_train_channel_eq_delay(intel_dp->dpcd);
+        } else {
+                const u8 *phy_caps = intel_dp_lttpr_phy_caps(intel_dp, dp_phy);
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_dp_mst.c b/drivers/gpu/drm/i915/display/intel_dp_mst.c
+index 4e8e2eb..b31e8f7 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp_mst.c
++++ b/drivers/gpu/drm/i915/display/intel_dp_mst.c
+@@ -73,7 +73,7 @@ static int intel_dp_mst_compute_link_config(struct intel_encoder *encoder,
+ 		slots = drm_dp_atomic_find_vcpi_slots(state, &intel_dp->mst_mgr,
+ 						      connector->port,
+ 						      crtc_state->pbn,
+-						      drm_dp_get_vc_payload_bw(&intel_dp->mst_mgr,
++						      drm_dp_get_vc_payload_bw(
+ 									       crtc_state->port_clock,
+ 									       crtc_state->lane_count));
+ 		if (slots == -EDEADLK)
+@@ -882,13 +882,11 @@ intel_dp_mst_mode_valid_ctx(struct drm_connector *connector,
+ }
+ 
+ static struct drm_encoder *intel_mst_atomic_best_encoder(struct drm_connector *connector,
+-							 struct drm_atomic_state *state)
++							 struct drm_connector_state *state)
+ {
+-	struct drm_connector_state *connector_state = drm_atomic_get_new_connector_state(state,
+-											 connector);
+ 	struct intel_connector *intel_connector = to_intel_connector(connector);
+ 	struct intel_dp *intel_dp = intel_connector->mst_port;
+-	struct intel_crtc *crtc = to_intel_crtc(connector_state->crtc);
++	struct intel_crtc *crtc = to_intel_crtc(state->crtc);
+ 
+ 	return &intel_dp->mst_encoders[crtc->pipe]->base.base;
+ }
+@@ -1113,8 +1111,8 @@ intel_dp_mst_encoder_init(struct intel_digital_port *dig_port, int conn_base_id)
+ 	struct intel_dp *intel_dp = &dig_port->dp;
+ 	enum port port = dig_port->base.port;
+ 	int ret;
+-	int max_source_rate =
+-		intel_dp->source_rates[intel_dp->num_source_rates - 1];
++//	int max_source_rate =
++//		intel_dp->source_rates[intel_dp->num_source_rates - 1];
+ 
+ 	if (!HAS_DP_MST(i915) || intel_dp_is_edp(intel_dp))
+ 		return 0;
+@@ -1131,8 +1129,8 @@ intel_dp_mst_encoder_init(struct intel_digital_port *dig_port, int conn_base_id)
+ 	intel_dp_create_fake_mst_encoders(dig_port);
+ 	ret = drm_dp_mst_topology_mgr_init(&intel_dp->mst_mgr, &i915->drm,
+ 					   &intel_dp->aux, 16, 3,
+-					   dig_port->max_lanes,
+-					   max_source_rate,
++//					   dig_port->max_lanes,
++//					   max_source_rate,
+ 					   conn_base_id);
+ 	if (ret) {
+ 		intel_dp->mst_mgr.cbs = NULL;
+diff --git a/drivers/gpu/drm/i915/display/intel_hdmi.c b/drivers/gpu/drm/i915/display/intel_hdmi.c
+index 0b03015..55d1ecd 100644
+--- a/drivers/gpu/drm/i915/display/intel_hdmi.c
++++ b/drivers/gpu/drm/i915/display/intel_hdmi.c
+@@ -1260,7 +1260,7 @@ void intel_dp_dual_mode_set_tmds_output(struct intel_hdmi *hdmi, bool enable)
+ 	drm_dbg_kms(&dev_priv->drm, "%s DP dual mode adaptor TMDS output\n",
+ 		    enable ? "Enabling" : "Disabling");
+ 
+-	drm_dp_dual_mode_set_tmds_output(&dev_priv->drm, hdmi->dp_dual_mode.type, adapter, enable);
++	drm_dp_dual_mode_set_tmds_output(hdmi->dp_dual_mode.type, adapter, enable);
+ }
+ 
+ static int intel_hdmi_hdcp_read(struct intel_digital_port *dig_port,
+@@ -2373,7 +2373,7 @@ intel_hdmi_dp_dual_mode_detect(struct drm_connector *connector, bool has_edid)
+ 	enum port port = hdmi_to_dig_port(hdmi)->base.port;
+ 	struct i2c_adapter *adapter =
+ 		intel_gmbus_get_adapter(dev_priv, hdmi->ddc_bus);
+-	enum drm_dp_dual_mode_type type = drm_dp_dual_mode_detect(&dev_priv->drm, adapter);
++	enum drm_dp_dual_mode_type type = drm_dp_dual_mode_detect(adapter);
+ 
+ 	/*
+ 	 * Type 1 DVI adaptors are not required to implement any
+@@ -2406,7 +2406,7 @@ intel_hdmi_dp_dual_mode_detect(struct drm_connector *connector, bool has_edid)
+ 
+ 	hdmi->dp_dual_mode.type = type;
+ 	hdmi->dp_dual_mode.max_tmds_clock =
+-		drm_dp_dual_mode_max_tmds_clock(&dev_priv->drm, type, adapter);
++		drm_dp_dual_mode_max_tmds_clock(type, adapter);
+ 
+ 	drm_dbg_kms(&dev_priv->drm,
+ 		    "DP dual mode adaptor (%s) detected (max TMDS clock: %d kHz)\n",
+diff --git a/drivers/gpu/drm/i915/display/intel_lspcon.c b/drivers/gpu/drm/i915/display/intel_lspcon.c
+index 6cc91d7..6f8b45a 100644
+--- a/drivers/gpu/drm/i915/display/intel_lspcon.c
++++ b/drivers/gpu/drm/i915/display/intel_lspcon.c
+@@ -144,7 +144,7 @@ static enum drm_lspcon_mode lspcon_get_current_mode(struct intel_lspcon *lspcon)
+ 	enum drm_lspcon_mode current_mode;
+ 	struct i2c_adapter *adapter = &intel_dp->aux.ddc;
+ 
+-	if (drm_lspcon_get_mode(intel_dp->aux.drm_dev, adapter, &current_mode)) {
++	if (drm_lspcon_get_mode(adapter, &current_mode)) {
+ 		drm_dbg_kms(&i915->drm, "Error reading LSPCON mode\n");
+ 		return DRM_LSPCON_MODE_INVALID;
+ 	}
+@@ -185,7 +185,7 @@ static int lspcon_change_mode(struct intel_lspcon *lspcon,
+ 	enum drm_lspcon_mode current_mode;
+ 	struct i2c_adapter *adapter = &intel_dp->aux.ddc;
+ 
+-	err = drm_lspcon_get_mode(intel_dp->aux.drm_dev, adapter, &current_mode);
++	err = drm_lspcon_get_mode(adapter, &current_mode);
+ 	if (err) {
+ 		drm_err(&i915->drm, "Error reading LSPCON mode\n");
+ 		return err;
+@@ -196,7 +196,7 @@ static int lspcon_change_mode(struct intel_lspcon *lspcon,
+ 		return 0;
+ 	}
+ 
+-	err = drm_lspcon_set_mode(intel_dp->aux.drm_dev, adapter, mode);
++	err = drm_lspcon_set_mode(adapter, mode);
+ 	if (err < 0) {
+ 		drm_err(&i915->drm, "LSPCON mode change failed\n");
+ 		return err;
+@@ -242,7 +242,7 @@ static bool lspcon_probe(struct intel_lspcon *lspcon)
+ 		if (retry)
+ 			usleep_range(500, 1000);
+ 
+-		adaptor_type = drm_dp_dual_mode_detect(intel_dp->aux.drm_dev, adapter);
++		adaptor_type = drm_dp_dual_mode_detect(adapter);
+ 		if (adaptor_type == DRM_DP_DUAL_MODE_LSPCON)
+ 			break;
+ 	}
+@@ -308,7 +308,7 @@ static bool lspcon_parade_fw_ready(struct drm_dp_aux *aux)
+ 		ret = drm_dp_dpcd_read(aux, LSPCON_PARADE_AVI_IF_CTRL,
+ 				       &avi_if_ctrl, 1);
+ 		if (ret < 0) {
+-			drm_err(aux->drm_dev, "Failed to read AVI IF control\n");
++			DRM_ERROR("Failed to read AVI IF control\n");
+ 			return false;
+ 		}
+ 
+@@ -316,7 +316,7 @@ static bool lspcon_parade_fw_ready(struct drm_dp_aux *aux)
+ 			return true;
+ 	}
+ 
+-	drm_err(aux->drm_dev, "Parade FW not ready to accept AVI IF\n");
++	DRM_ERROR("Parade FW not ready to accept AVI IF\n");
+ 	return false;
+ }
+ 
+@@ -331,7 +331,7 @@ static bool _lspcon_parade_write_infoframe_blocks(struct drm_dp_aux *aux,
+ 
+ 	while (block_count < 4) {
+ 		if (!lspcon_parade_fw_ready(aux)) {
+-			drm_dbg_kms(aux->drm_dev, "LSPCON FW not ready, block %d\n",
++			DRM_DEBUG_DP("LSPCON FW not ready, block %d\n",
+ 				    block_count);
+ 			return false;
+ 		}
+@@ -340,7 +340,7 @@ static bool _lspcon_parade_write_infoframe_blocks(struct drm_dp_aux *aux,
+ 		data = avi_buf + block_count * 8;
+ 		ret = drm_dp_dpcd_write(aux, reg, data, 8);
+ 		if (ret < 0) {
+-			drm_err(aux->drm_dev, "Failed to write AVI IF block %d\n",
++			DRM_ERROR("Failed to write AVI IF block %d\n",
+ 				block_count);
+ 			return false;
+ 		}
+@@ -355,7 +355,7 @@ static bool _lspcon_parade_write_infoframe_blocks(struct drm_dp_aux *aux,
+ 		avi_if_ctrl = LSPCON_PARADE_AVI_IF_KICKOFF | block_count;
+ 		ret = drm_dp_dpcd_write(aux, reg, &avi_if_ctrl, 1);
+ 		if (ret < 0) {
+-			drm_err(aux->drm_dev, "Failed to update (0x%x), block %d\n",
++			DRM_ERROR("Failed to update (0x%x), block %d\n",
+ 				reg, block_count);
+ 			return false;
+ 		}
+@@ -363,7 +363,7 @@ static bool _lspcon_parade_write_infoframe_blocks(struct drm_dp_aux *aux,
+ 		block_count++;
+ 	}
+ 
+-	drm_dbg_kms(aux->drm_dev, "Wrote AVI IF blocks successfully\n");
++	DRM_DEBUG_DP("Wrote AVI IF blocks successfully\n");
+ 	return true;
+ }
+ 
+@@ -385,14 +385,14 @@ static bool _lspcon_write_avi_infoframe_parade(struct drm_dp_aux *aux,
+ 	 */
+ 
+ 	if (len > LSPCON_PARADE_AVI_IF_DATA_SIZE - 1) {
+-		drm_err(aux->drm_dev, "Invalid length of infoframes\n");
++		DRM_ERROR("Invalid length of infoframes\n");
+ 		return false;
+ 	}
+ 
+ 	memcpy(&avi_if[1], frame, len);
+ 
+ 	if (!_lspcon_parade_write_infoframe_blocks(aux, avi_if)) {
+-		drm_dbg_kms(aux->drm_dev, "Failed to write infoframe blocks\n");
++		DRM_DEBUG_DP("Failed to write infoframe blocks\n");
+ 		return false;
+ 	}
+ 
+@@ -419,7 +419,7 @@ static bool _lspcon_write_avi_infoframe_mca(struct drm_dp_aux *aux,
+ 				mdelay(50);
+ 				continue;
+ 			} else {
+-				drm_err(aux->drm_dev, "DPCD write failed at:0x%x\n", reg);
++				DRM_ERROR("DPCD write failed at:0x%x\n", reg);
+ 				return false;
+ 			}
+ 		}
+@@ -430,7 +430,7 @@ static bool _lspcon_write_avi_infoframe_mca(struct drm_dp_aux *aux,
+ 	reg = LSPCON_MCA_AVI_IF_CTRL;
+ 	ret = drm_dp_dpcd_read(aux, reg, &val, 1);
+ 	if (ret < 0) {
+-		drm_err(aux->drm_dev, "DPCD read failed, address 0x%x\n", reg);
++		DRM_ERROR("DPCD read failed, address 0x%x\n", reg);
+ 		return false;
+ 	}
+ 
+@@ -440,19 +440,19 @@ static bool _lspcon_write_avi_infoframe_mca(struct drm_dp_aux *aux,
+ 
+ 	ret = drm_dp_dpcd_write(aux, reg, &val, 1);
+ 	if (ret < 0) {
+-		drm_err(aux->drm_dev, "DPCD read failed, address 0x%x\n", reg);
++		DRM_ERROR("DPCD read failed, address 0x%x\n", reg);
+ 		return false;
+ 	}
+ 
+ 	val = 0;
+ 	ret = drm_dp_dpcd_read(aux, reg, &val, 1);
+ 	if (ret < 0) {
+-		drm_err(aux->drm_dev, "DPCD read failed, address 0x%x\n", reg);
++		DRM_ERROR("DPCD read failed, address 0x%x\n", reg);
+ 		return false;
+ 	}
+ 
+ 	if (val == LSPCON_MCA_AVI_IF_HANDLED)
+-		drm_dbg_kms(aux->drm_dev, "AVI IF handled by FW\n");
++		DRM_DEBUG_DP("AVI IF handled by FW\n");
+ 
+ 	return true;
+ }
+@@ -584,7 +584,7 @@ static bool _lspcon_read_avi_infoframe_enabled_mca(struct drm_dp_aux *aux)
+ 
+ 	ret = drm_dp_dpcd_read(aux, reg, &val, 1);
+ 	if (ret < 0) {
+-		drm_err(aux->drm_dev, "DPCD read failed, address 0x%x\n", reg);
++		DRM_ERROR("DPCD read failed, address 0x%x\n", reg);
+ 		return false;
+ 	}
+ 
+@@ -599,7 +599,7 @@ static bool _lspcon_read_avi_infoframe_enabled_parade(struct drm_dp_aux *aux)
+ 
+ 	ret = drm_dp_dpcd_read(aux, reg, &val, 1);
+ 	if (ret < 0) {
+-		drm_err(aux->drm_dev, "DPCD read failed, address 0x%x\n", reg);
++		DRM_ERROR("DPCD read failed, address 0x%x\n", reg);
+ 		return false;
+ 	}
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_modeset_setup.c b/drivers/gpu/drm/i915/display/intel_modeset_setup.c
+index cd21b0d..d4d86c2 100644
+--- a/drivers/gpu/drm/i915/display/intel_modeset_setup.c
++++ b/drivers/gpu/drm/i915/display/intel_modeset_setup.c
+@@ -152,7 +152,9 @@ static void intel_crtc_copy_hw_to_uapi_state(struct intel_crtc_state *crtc_state
+ 		    drm_atomic_set_mode_for_crtc(&crtc_state->uapi, &crtc_state->hw.mode) < 0);
+ 
+ 	crtc_state->uapi.adjusted_mode = crtc_state->hw.adjusted_mode;
++#if 0
+ 	crtc_state->uapi.scaling_filter = crtc_state->hw.scaling_filter;
++#endif
+ 
+ 	drm_property_replace_blob(&crtc_state->uapi.degamma_lut,
+ 				  crtc_state->hw.degamma_lut);
+diff --git a/drivers/gpu/drm/i915/fabric/fw.c b/drivers/gpu/drm/i915/fabric/fw.c
+index 765acc9..24f9607 100644
+--- a/drivers/gpu/drm/i915/fabric/fw.c
++++ b/drivers/gpu/drm/i915/fabric/fw.c
+@@ -9,7 +9,6 @@
+ #include <linux/crc32c.h>
+ #include <linux/delay.h>
+ #include <linux/firmware.h>
+-#include <linux/math.h>
+ #include <linux/module.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/overflow.h>
+diff --git a/drivers/gpu/drm/i915/gem/i915_gem_dmabuf.c b/drivers/gpu/drm/i915/gem/i915_gem_dmabuf.c
+index 06c7227..a9a6267 100644
+--- a/drivers/gpu/drm/i915/gem/i915_gem_dmabuf.c
++++ b/drivers/gpu/drm/i915/gem/i915_gem_dmabuf.c
+@@ -182,8 +182,12 @@ static void i915_gem_unmap_dma_buf(struct dma_buf_attachment *attach,
+ 	kfree(sgt);
+ }
+ 
++#ifdef BPM_IOSYS_MAP_PRESENT
+ static int i915_gem_dmabuf_vmap(struct dma_buf *dma_buf,
+ 				struct iosys_map *map)
++#else
++static void *i915_gem_dmabuf_vmap(struct dma_buf *dma_buf)
++#endif
+ {
+ 	struct drm_i915_gem_object *obj = dma_buf_to_obj(dma_buf);
+ 	enum i915_map_type type;
+@@ -191,16 +195,24 @@ static int i915_gem_dmabuf_vmap(struct dma_buf *dma_buf,
+ 
+ 	type = i915_coherent_map_type(to_i915(obj->base.dev), obj, true);
+ 	vaddr = i915_gem_object_pin_map_unlocked(obj, type);
++#ifdef BPM_IOSYS_MAP_PRESENT
+ 	if (IS_ERR(vaddr))
+ 		return PTR_ERR(vaddr);
+ 
+ 	iosys_map_set_vaddr(map, vaddr);
+ 
+ 	return 0;
++#else
++	return vaddr;
++#endif
+ }
+ 
++#ifdef BPM_IOSYS_MAP_PRESENT
+ static void i915_gem_dmabuf_vunmap(struct dma_buf *dma_buf,
+ 				   struct iosys_map *map)
++#else
++static void i915_gem_dmabuf_vunmap(struct dma_buf *dma_buf, void *vaddr)
++#endif
+ {
+ 	struct drm_i915_gem_object *obj = dma_buf_to_obj(dma_buf);
+ 
+diff --git a/drivers/gpu/drm/i915/gem/i915_gem_internal.c b/drivers/gpu/drm/i915/gem/i915_gem_internal.c
+index d6a6c0e..515d55f 100644
+--- a/drivers/gpu/drm/i915/gem/i915_gem_internal.c
++++ b/drivers/gpu/drm/i915/gem/i915_gem_internal.c
+@@ -46,7 +46,11 @@ static int i915_gem_object_get_pages_internal(struct drm_i915_gem_object *obj)
+ 	max_order = MAX_ORDER;
+ #ifdef CONFIG_SWIOTLB
+ #ifdef IS_SWIOTLB_ACTIVE_ARG_DEV_NOT_PRESENT
++#ifdef BPM_SWIOTLB_NR_TBL_NO_ARG_PRESENT
++	if (swiotlb_nr_tbl()) {
++#else
+ 	if (is_swiotlb_active()) {
++#endif
+ #else
+ 	if (is_swiotlb_active(obj->base.dev->dev)) {
+ #endif
+diff --git a/drivers/gpu/drm/i915/gt/intel_gsc.c b/drivers/gpu/drm/i915/gt/intel_gsc.c
+index e58ec67..07cd293 100644
+--- a/drivers/gpu/drm/i915/gt/intel_gsc.c
++++ b/drivers/gpu/drm/i915/gt/intel_gsc.c
+@@ -4,7 +4,12 @@
+  */
+ 
+ #include <linux/irq.h>
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ #include <linux/mei_aux.h>
++#else
++#include <linux/platform_device.h>
++#include <linux/mfd/core.h>
++#endif
+ #include "i915_drv.h"
+ #include "i915_reg.h"
+ #include "gem/i915_gem_region.h"
+@@ -36,6 +41,44 @@ static int gsc_irq_init(int irq)
+ 
+ 	return irq_set_chip_data(irq, NULL);
+ }
++#if !IS_ENABLED(CONFIG_AUXILIARY_BUS)
++/* gsc (graphics system controller) resources */
++static const struct resource gsc_dg2_resources[] = {
++	DEFINE_RES_IRQ_NAMED(0, "gsc-irq"),
++	DEFINE_RES_MEM_NAMED(DG2_GSC_HECI1_BASE,
++			     GSC_BAR_LENGTH,
++			     "gsc-mmio"),
++};
++
++static const struct resource gsc_pvc_resources[] = {
++	DEFINE_RES_IRQ_NAMED(0, "gsc-irq"),
++	DEFINE_RES_MEM_NAMED(PVC_GSC_HECI1_BASE,
++			     GSC_BAR_LENGTH,
++			     "gsc-mmio"),
++};
++
++/* gscfi (graphics system controller firmware interface) resources */
++static const struct resource gscfi_dg1_resources[] = {
++	DEFINE_RES_IRQ_NAMED(0, "gscfi-irq"),
++	DEFINE_RES_MEM_NAMED(DG1_GSC_HECI2_BASE,
++			     GSC_BAR_LENGTH,
++			     "gscfi-mmio"),
++};
++
++static const struct resource gscfi_dg2_resources[] = {
++	DEFINE_RES_IRQ_NAMED(0, "gscfi-irq"),
++	DEFINE_RES_MEM_NAMED(DG2_GSC_HECI2_BASE,
++			     GSC_BAR_LENGTH,
++			     "gscfi-mmio"),
++};
++
++static const struct resource gscfi_pvc_resources[] = {
++	DEFINE_RES_IRQ_NAMED(0, "gscfi-irq"),
++	DEFINE_RES_MEM_NAMED(PVC_GSC_HECI2_BASE,
++			     GSC_BAR_LENGTH,
++			     "gscfi-mmio"),
++};
++#endif /* CONFIG_AUXILIARY_BUS */
+ 
+ static int
+ gsc_ext_om_alloc(struct intel_gsc *gsc, struct intel_gsc_intf *intf, size_t size)
+@@ -80,6 +123,7 @@ static void gsc_ext_om_destroy(struct intel_gsc_intf *intf)
+ 	i915_gem_object_put(obj);
+ }
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static void intel_gsc_forcewake_get(void *gsc)
+ {
+ 	struct intel_uncore *uncore = gsc_to_gt(gsc)->uncore;
+@@ -116,8 +160,10 @@ struct gsc_def {
+ 	bool slow_firmware;
+ 	size_t lmem_size;
+ };
++#endif
+ 
+ /* gsc resources and definitions (HECI1 and HECI2) */
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static const struct gsc_def gsc_def_dg1[] = {
+ 	{
+ 		/* HECI1 not yet implemented. */
+@@ -128,7 +174,22 @@ static const struct gsc_def gsc_def_dg1[] = {
+ 		.bar_size = GSC_BAR_LENGTH,
+ 	}
+ };
++#else
++static const struct mfd_cell intel_gsc_dg1_cell[] = {
++        {
++                .id = 0,
++        },
++        {
++                .id = 1,
++                .name = "mei-gscfi",
++                .num_resources = ARRAY_SIZE(gscfi_dg1_resources),
++                .resources  = gscfi_dg1_resources,
++        }
++};
++#endif
++
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static const struct gsc_def gsc_def_xehpsdv[] = {
+ 	{
+ 		/* HECI1 not enabled on the device. */
+@@ -141,7 +202,9 @@ static const struct gsc_def gsc_def_xehpsdv[] = {
+ 		.slow_firmware = true,
+ 	}
+ };
++#endif
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static const struct gsc_def gsc_def_dg2[] = {
+ 	{
+ 		.name = "mei-gsc",
+@@ -155,7 +218,24 @@ static const struct gsc_def gsc_def_dg2[] = {
+ 		.bar_size = GSC_BAR_LENGTH,
+ 	}
+ };
++#else
++static const struct mfd_cell intel_gsc_dg2_cell[] = {
++        {
++                .id = 0,
++                .name = "mei-gsc",
++                .num_resources = ARRAY_SIZE(gsc_dg2_resources),
++                .resources  = gsc_dg2_resources,
++        },
++        {
++                .id = 1,
++                .name = "mei-gscfi",
++                .num_resources = ARRAY_SIZE(gscfi_dg2_resources),
++                .resources  = gscfi_dg2_resources,
++        }
++};
++#endif
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static const struct gsc_def gsc_def_pvc[] = {
+ 	{
+ 		/* HECI1 not enabled on the device. */
+@@ -167,7 +247,24 @@ static const struct gsc_def gsc_def_pvc[] = {
+ 		.slow_firmware = true,
+ 	}
+ };
++#else
++static const struct mfd_cell intel_gsc_pvc_cell[] = {
++        {
++                .id =  0,
++                .name = "mei-gsc",
++                .num_resources = ARRAY_SIZE(gsc_pvc_resources),
++                .resources  = gsc_pvc_resources,
++        },
++        {
++                .id = 1,
++                .name = "mei-gscfi",
++                .num_resources = ARRAY_SIZE(gscfi_pvc_resources),
++                .resources  = gscfi_pvc_resources,
++        }
++};
++#endif
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ static void gsc_release_dev(struct device *dev)
+ {
+ 	struct auxiliary_device *aux_dev = to_auxiliary_dev(dev);
+@@ -175,18 +272,20 @@ static void gsc_release_dev(struct device *dev)
+ 
+ 	kfree(adev);
+ }
++#endif
+ 
+ static void gsc_destroy_one(struct drm_i915_private *i915,
+ 			    struct intel_gsc *gsc, unsigned int intf_id)
+ {
+ 	struct intel_gsc_intf *intf = &gsc->intf[intf_id];
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ 	if (intf->adev) {
+ 		auxiliary_device_delete(&intf->adev->aux_dev);
+ 		auxiliary_device_uninit(&intf->adev->aux_dev);
+ 		intf->adev = NULL;
+ 	}
+-
++#endif
+ 	if (intf->irq >= 0)
+ 		irq_free_desc(intf->irq);
+ 	intf->irq = -1;
+@@ -198,12 +297,19 @@ static void gsc_init_one(struct drm_i915_private *i915, struct intel_gsc *gsc,
+ 			 unsigned int intf_id)
+ {
+ 	struct pci_dev *pdev = to_pci_dev(i915->drm.dev);
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ 	struct mei_aux_device *adev;
+ 	struct auxiliary_device *aux_dev;
+ 	const struct gsc_def *def;
++	bool forcewake_needed = false;
++#else
++	const struct mfd_cell *cells;
++	struct mfd_cell cell;
++	size_t lmem_size = 0;
++	struct resource res;
++#endif
+ 	struct intel_gsc_intf *intf = &gsc->intf[intf_id];
+ 	bool use_polling = false;
+-	bool forcewake_needed = false;
+ 	int ret;
+ 
+ 	intf->irq = -1;
+@@ -220,6 +326,7 @@ static void gsc_init_one(struct drm_i915_private *i915, struct intel_gsc *gsc,
+ 	if (intf_id == 0 && !HAS_HECI_PXP(i915))
+ 		return;
+ 
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ 	if (IS_DG1(i915)) {
+ 		def = &gsc_def_dg1[intf_id];
+ 	} else if (IS_XEHPSDV(i915)) {
+@@ -247,6 +354,49 @@ static void gsc_init_one(struct drm_i915_private *i915, struct intel_gsc *gsc,
+ 	if (def->use_polling || use_polling)
+ 		goto add_device;
+ 
++#else
++	if (IS_DG1(i915)) {
++		cells = intel_gsc_dg1_cell;
++	} else if (IS_XEHPSDV(i915)) {
++		cells = intel_gsc_dg1_cell;
++		/* Use polling on XEHPSDV HW bug Wa */
++		use_polling = true;
++	} else if (IS_DG2(i915)) {
++		cells = intel_gsc_dg2_cell;
++		if (intf->id == 0)
++			lmem_size = SZ_4M;
++	} else if (IS_PONTEVECCHIO(i915)) {
++		cells = intel_gsc_pvc_cell;
++		/* Use polling on PVC A-step HW bug Wa */
++		if (IS_PVC_BD_STEP(i915, STEP_A0, STEP_B0))
++			use_polling = true;
++	} else {
++		drm_warn_once(&i915->drm, "Unknown platform\n");
++		return;
++	}
++
++	memcpy(&cell, &cells[intf->id], sizeof(cell));
++
++	if (lmem_size) {
++		dev_dbg(&pdev->dev, "setting up GSC lmem\n");
++
++		if (gsc_ext_om_alloc(gsc, intf, lmem_size)) {
++			dev_err(&pdev->dev, "setting up gsc extended operational memory failed\n");
++			goto fail;
++		}
++
++		memset(&res, 0, sizeof(res));
++		res.start = i915_gem_object_get_dma_address(intf->gem_obj, 0);
++		res.end = res.start + lmem_size;
++
++		cell.pdata_size = sizeof(res);
++		cell.platform_data = &res;
++	}
++	/* skip irq initialization */
++	if (use_polling)
++		goto add_device;
++#endif
++
+ 	intf->irq = irq_alloc_desc(0);
+ 	if (intf->irq < 0) {
+ 		drm_err(&i915->drm, "gsc irq error %d\n", intf->irq);
+@@ -260,6 +410,8 @@ static void gsc_init_one(struct drm_i915_private *i915, struct intel_gsc *gsc,
+ 	}
+ 
+ add_device:
++
++#if IS_ENABLED(CONFIG_AUXILIARY_BUS)
+ 	adev = kzalloc(sizeof(*adev), GFP_KERNEL);
+ 	if (!adev)
+ 		goto fail;
+@@ -311,7 +463,15 @@ add_device:
+ 		goto fail;
+ 	}
+ 	intf->adev = adev;
+-
++#else
++	/* this takes a copy of the data, so it is ok to use local vars */
++	ret = mfd_add_devices(&pdev->dev, PLATFORM_DEVID_AUTO,
++			&cell, 1, &pdev->resource[0], intf->irq, NULL);
++	if (ret < 0) {
++		dev_err(&pdev->dev, "cell creation failed\n");
++		goto fail;
++	}
++#endif
+ 	return;
+ fail:
+ 	gsc_destroy_one(i915, gsc, intf->id);
+diff --git a/drivers/gpu/drm/i915/gvt/kvmgt.c b/drivers/gpu/drm/i915/gvt/kvmgt.c
+index 887eb69..3abc81e 100644
+--- a/drivers/gpu/drm/i915/gvt/kvmgt.c
++++ b/drivers/gpu/drm/i915/gvt/kvmgt.c
+@@ -148,15 +148,33 @@ static inline bool handle_valid(unsigned long handle)
+ 	return !!(handle & ~0xff);
+ }
+ 
+-static ssize_t available_instances_show(struct mdev_type *mtype,
+-					struct mdev_type_attribute *attr,
++static struct intel_vgpu_type *intel_gvt_find_vgpu_type(struct intel_gvt *gvt,
++		const char *name)
++{
++	const char *driver_name =
++		dev_driver_string(&gvt->gt->i915->drm.pdev->dev);
++	int i;
++
++	name += strlen(driver_name) + 1;
++	for (i = 0; i < gvt->num_types; i++) {
++		struct intel_vgpu_type *t = &gvt->types[i];
++
++		if (!strncmp(t->name, name, sizeof(t->name)))
++			return t;
++	}
++
++	return NULL;
++}
++
++static ssize_t available_instances_show(struct kobject *kobj,
++					struct device *dev,
+ 					char *buf)
+ {
+ 	struct intel_vgpu_type *type;
+ 	unsigned int num = 0;
+-	struct intel_gvt *gvt = kdev_to_i915(mtype_get_parent_dev(mtype))->gvt;
++	void *gvt = kdev_to_i915(dev)->gvt;
+ 
+-	type = &gvt->types[mtype_get_type_group_id(mtype)];
++	type = intel_gvt_find_vgpu_type(gvt, kobject_name(kobj));
+ 	if (!type)
+ 		num = 0;
+ 	else
+@@ -165,19 +183,19 @@ static ssize_t available_instances_show(struct mdev_type *mtype,
+ 	return sprintf(buf, "%u\n", num);
+ }
+ 
+-static ssize_t device_api_show(struct mdev_type *mtype,
+-			       struct mdev_type_attribute *attr, char *buf)
++static ssize_t device_api_show(struct kobject *kobj, struct device *dev,
++					char *buf)
+ {
+ 	return sprintf(buf, "%s\n", VFIO_DEVICE_API_PCI_STRING);
+ }
+ 
+-static ssize_t description_show(struct mdev_type *mtype,
+-				struct mdev_type_attribute *attr, char *buf)
++static ssize_t description_show(struct kobject *kobj, struct device *dev,
++					char *buf)
+ {
+ 	struct intel_vgpu_type *type;
+-	struct intel_gvt *gvt = kdev_to_i915(mtype_get_parent_dev(mtype))->gvt;
++	void *gvt = kdev_to_i915(dev)->gvt;
+ 
+-	type = &gvt->types[mtype_get_type_group_id(mtype)];
++	type = intel_gvt_find_vgpu_type(gvt, kobject_name(kobj));
+ 	if (!type)
+ 		return 0;
+ 
+@@ -791,7 +809,7 @@ static void kvmgt_put_vfio_device(void *vgpu)
+ 	vfio_device_put(vdev->vfio_device);
+ }
+ 
+-static int intel_vgpu_create(struct mdev_device *mdev)
++static int intel_vgpu_create(struct kobject *kobj, struct mdev_device *mdev)
+ {
+ 	struct intel_vgpu *vgpu = NULL;
+ 	struct intel_vgpu_type *type;
+@@ -802,8 +820,10 @@ static int intel_vgpu_create(struct mdev_device *mdev)
+ 	pdev = mdev_parent_dev(mdev);
+ 	gvt = kdev_to_i915(pdev)->gvt;
+ 
+-	type = &gvt->types[mdev_get_type_group_id(mdev)];
++	type = intel_gvt_find_vgpu_type(gvt, kobject_name(kobj));
+ 	if (!type) {
++		gvt_vgpu_err("failed to find type %s to create\n",
++						kobject_name(kobj));
+ 		ret = -EINVAL;
+ 		goto out;
+ 	}
+@@ -1757,8 +1777,8 @@ static struct mdev_parent_ops intel_vgpu_ops = {
+ 	.create			= intel_vgpu_create,
+ 	.remove			= intel_vgpu_remove,
+ 
+-	.open_device		= intel_vgpu_open_device,
+-	.close_device		= intel_vgpu_close_device,
++	.open			= intel_vgpu_open_device,
++	.release		= intel_vgpu_close_device,
+ 
+ 	.read			= intel_vgpu_read,
+ 	.write			= intel_vgpu_write,
+@@ -1810,7 +1830,7 @@ static int kvmgt_page_track_add(unsigned long handle, u64 gfn)
+ 		return -EINVAL;
+ 	}
+ 
+-	write_lock(&kvm->mmu_lock);
++	spin_lock(&kvm->mmu_lock);
+ 
+ 	if (kvmgt_gfn_is_write_protected(info, gfn))
+ 		goto out;
+@@ -1819,7 +1839,7 @@ static int kvmgt_page_track_add(unsigned long handle, u64 gfn)
+ 	kvmgt_protect_table_add(info, gfn);
+ 
+ out:
+-	write_unlock(&kvm->mmu_lock);
++	spin_unlock(&kvm->mmu_lock);
+ 	srcu_read_unlock(&kvm->srcu, idx);
+ 	return 0;
+ }
+@@ -1844,7 +1864,7 @@ static int kvmgt_page_track_remove(unsigned long handle, u64 gfn)
+ 		return -EINVAL;
+ 	}
+ 
+-	write_lock(&kvm->mmu_lock);
++	spin_lock(&kvm->mmu_lock);
+ 
+ 	if (!kvmgt_gfn_is_write_protected(info, gfn))
+ 		goto out;
+@@ -1853,7 +1873,7 @@ static int kvmgt_page_track_remove(unsigned long handle, u64 gfn)
+ 	kvmgt_protect_table_del(info, gfn);
+ 
+ out:
+-	write_unlock(&kvm->mmu_lock);
++	spin_unlock(&kvm->mmu_lock);
+ 	srcu_read_unlock(&kvm->srcu, idx);
+ 	return 0;
+ }
+@@ -1879,7 +1899,7 @@ static void kvmgt_page_track_flush_slot(struct kvm *kvm,
+ 	struct kvmgt_guest_info *info = container_of(node,
+ 					struct kvmgt_guest_info, track_node);
+ 
+-	write_lock(&kvm->mmu_lock);
++	spin_lock(&kvm->mmu_lock);
+ 	for (i = 0; i < slot->npages; i++) {
+ 		gfn = slot->base_gfn + i;
+ 		if (kvmgt_gfn_is_write_protected(info, gfn)) {
+@@ -1888,7 +1908,7 @@ static void kvmgt_page_track_flush_slot(struct kvm *kvm,
+ 			kvmgt_protect_table_del(info, gfn);
+ 		}
+ 	}
+-	write_unlock(&kvm->mmu_lock);
++	spin_unlock(&kvm->mmu_lock);
+ }
+ 
+ static bool __kvmgt_vgpu_exist(struct intel_vgpu *vgpu, struct kvm *kvm)
+diff --git a/drivers/gpu/drm/i915/i915_debugger.c b/drivers/gpu/drm/i915/i915_debugger.c
+index dfbfae9..812d209 100644
+--- a/drivers/gpu/drm/i915/i915_debugger.c
++++ b/drivers/gpu/drm/i915/i915_debugger.c
+@@ -10,6 +10,7 @@
+ #include <linux/mman.h>
+ #include <linux/ptrace.h>
+ #include <linux/dma-buf.h>
++#include <linux/swap.h>
+ 
+ #include "gem/i915_gem_context.h"
+ #include "gem/i915_gem_mman.h"
+diff --git a/drivers/gpu/drm/i915/i915_drv.h b/drivers/gpu/drm/i915/i915_drv.h
+index 586ab07..008abde 100644
+--- a/drivers/gpu/drm/i915/i915_drv.h
++++ b/drivers/gpu/drm/i915/i915_drv.h
+@@ -40,7 +40,6 @@
+ 
+ #include <drm/drm_connector.h>
+ #include <drm/i915_cp_fw_hdcp_interface.h>
+-#include <drm/ttm/ttm_device.h>
+ 
+ #include "display/intel_cdclk.h"
+ #include "display/intel_display.h"
+@@ -917,9 +916,6 @@ struct drm_i915_private {
+ 	/* Mutex to protect the above hdcp component related values. */
+ 	struct mutex hdcp_comp_mutex;
+ 
+-	/* The TTM device structure. */
+-	struct ttm_device bdev;
+-
+ 	bool bind_ctxt_ready;
+ 
+ 	atomic_t level4_wa_disabled;
+-- 
+2.31.0
+

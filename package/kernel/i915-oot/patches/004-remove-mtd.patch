@@ -1,0 +1,54 @@
+--- a/drivers/gpu/drm/i915/fabric/fw.c
++++ b/drivers/gpu/drm/i915/fabric/fw.c
+@@ -869,6 +869,7 @@ end:
+ 	return err;
+ }
+ 
++#ifdef CONFIG_MTD
+ static int read_spi_data(struct fdev *dev, loff_t offset, size_t size, void *buf, const char *desc)
+ {
+ 	size_t bytes_read = 0;
+@@ -886,6 +887,12 @@ static int read_spi_data(struct fdev *de
+ 
+ 	return err;
+ }
++#else
++static int read_spi_data(struct fdev *dev, loff_t offset, size_t size, void *buf, const char *desc)
++{
++	return -ENODEV;
++}
++#endif
+ 
+ /**
+  * check_and_extract_ini_data() - Check and if necessary extract INIBIN data for subdevice
+@@ -1507,6 +1514,7 @@ end:
+ 	return err;
+ }
+ 
++#ifdef CONFIG_MTD
+ static int spi_driver_match_fn(struct device *dev, void *data)
+ {
+ 	return strcmp(dev_driver_string(dev), I915_SPI_DRIVER_NAME_AUX) == 0 ||
+@@ -1617,6 +1625,12 @@ cleanup:
+ 
+ 	return err;
+ }
++#else
++static int request_pscdata_from_spi(struct fdev *dev)
++{
++	return -ENODEV;
++}
++#endif
+ 
+ static void release_pscdata(struct fdev *dev)
+ {
+@@ -1884,7 +1898,9 @@ static void fetch_platform_specific_conf
+ end:
+ 
+ 	if (dev->psc.mtd) {
++#ifdef CONFIG_MTD
+ 		put_mtd_device(dev->psc.mtd);
++#endif
+ 		dev->psc.mtd = NULL;
+ 	}
+ 
