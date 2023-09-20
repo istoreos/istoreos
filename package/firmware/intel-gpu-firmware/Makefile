@@ -85,9 +85,9 @@ define Package/i915-oot-firmware/install
 
 	## huc
 	# METEORLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_huc_8.3.7.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_huc_8.3.7_gsc.bin $(1)/lib/firmware/i915/
 	# DG2
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_huc_7.10.3.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_huc_7.10.3_gsc.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_P ALDERLAKE_P_N ALDERLAKE_S ROCKETLAKE TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
 	# DG1
