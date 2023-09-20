@@ -105,6 +105,10 @@ define Package/i915-oot-firmware/install
 	# SKYLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_huc_2.0.0.bin $(1)/lib/firmware/i915/
 
+	## gsc
+	# METEORLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_gsc_102.0.0.7366.bin $(1)/lib/firmware/i915/
+
 endef
 
 $(eval $(call BuildPackage,i915-oot-firmware))
