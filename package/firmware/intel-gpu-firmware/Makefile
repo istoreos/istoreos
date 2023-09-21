@@ -44,8 +44,12 @@ define Package/i915-oot-firmware/install
 	## guc
 	# METEORLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_guc_70.6.8.bin $(1)/lib/firmware/i915/
+	# PONTEVECCHIO
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/pvc_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# DG2
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	# XEHPSDV (skip for i915-oot driver not support yet)
+	# $(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/xehpsdv_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_P
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_S ALDERLAKE_P_N ROCKETLAKE TIGERLAKE
@@ -70,6 +74,8 @@ define Package/i915-oot-firmware/install
 	## huc
 	# METEORLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_huc_8.3.7_gsc.bin $(1)/lib/firmware/i915/
+	# PONTEVECCHIO
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/pvc_huc_7.8.7.bin $(1)/lib/firmware/i915/
 	# DG2
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_huc_7.10.3_gsc.bin $(1)/lib/firmware/i915/
 	# DG1
