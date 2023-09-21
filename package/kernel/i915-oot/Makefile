@@ -53,7 +53,7 @@ define KernelPackage/drm-i915-oot
 	$(PKG_BUILD_DIR)/drivers/gpu/drm/i915/gvt/kvmgt.ko \
 	$(PKG_BUILD_DIR)/drivers/gpu/drm/i915/fabric/iaf.ko
   AUTOLOAD:=$(call AutoProbe,i915)
-  MODPARAMS.i915:=enable_guc=3 max_vfs=7 enable_gvt=1
+  MODPARAMS.i915:=enable_guc=3 max_vfs=7 enable_gvt=1 force_probe=*
 endef
 
 define KernelPackage/drm-i915-oot/description
