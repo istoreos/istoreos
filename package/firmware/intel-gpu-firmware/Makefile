@@ -33,15 +33,25 @@ define Package/i915-oot-firmware/install
 	# don't include firmwares in package/firmware/linux-firmware/intel.mk:i915-firmware
 
 	# drivers/gpu/drm/i915/display/intel_dmc.c:intel_dmc_ucode_init
+	# METEORLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_dmc_ver2_12.bin $(1)/lib/firmware/i915/
+	# DG2
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_dmc_ver2_07.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_P ALDERLAKE_P_N
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_dmc_ver2_16.bin $(1)/lib/firmware/i915/
 
 	# drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c:INTEL_UC_FIRMWARE_DEFS
 	## guc
+	# METEORLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_guc_70.6.8.bin $(1)/lib/firmware/i915/
+	# DG2
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_P
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_S ALDERLAKE_P_N ROCKETLAKE TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	# DG1
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# JASPERLAKE ELKHARTLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/ehl_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# ICELAKE
@@ -56,6 +66,18 @@ define Package/i915-oot-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/bxt_guc_70.7.0.bin $(1)/lib/firmware/i915/
 	# SKYLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+
+	## huc
+	# METEORLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_huc_8.3.7_gsc.bin $(1)/lib/firmware/i915/
+	# DG2
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_huc_7.10.3_gsc.bin $(1)/lib/firmware/i915/
+	# DG1
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_huc_7.9.3.bin $(1)/lib/firmware/i915/
+
+	## gsc
+	# METEORLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_gsc_102.0.0.7366.bin $(1)/lib/firmware/i915/
 
 endef
 
