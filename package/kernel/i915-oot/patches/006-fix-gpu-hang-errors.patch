@@ -1,0 +1,28 @@
+From 72e08c7c45c470c990cd8b61e46e99c18026ad69 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 21 Sep 2023 10:58:09 +0800
+Subject: [PATCH] fix "GPU HANG" errors on N5105
+
+fix https://github.com/intel-gpu/intel-gpu-i915-backports/issues/126
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/gpu/drm/i915/gt/intel_engine_cs.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/i915/gt/intel_engine_cs.c b/drivers/gpu/drm/i915/gt/intel_engine_cs.c
+index 37bd700..52eccfa 100644
+--- a/drivers/gpu/drm/i915/gt/intel_engine_cs.c
++++ b/drivers/gpu/drm/i915/gt/intel_engine_cs.c
+@@ -551,7 +551,7 @@ static int intel_engine_setup(struct intel_gt *gt, enum intel_engine_id id,
+ 		engine->flags |= I915_ENGINE_HAS_EU_PRIORITY;
+ 
+ 		/* EU attention is not available on VFs */
+-		if(!IS_SRIOV_VF(gt->i915))
++		if (HAS_SRIOV(i915) && !IS_SRIOV_VF(i915))
+ 			engine->flags |= I915_ENGINE_HAS_EU_ATTENTION;
+ 
+ 		/* we only care about run alone on platforms that have a CCS */
+-- 
+2.31.0
+
