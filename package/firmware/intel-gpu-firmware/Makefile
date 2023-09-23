@@ -98,8 +98,6 @@ define Package/i915-oot-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
 	# DG1
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_huc_7.9.3.bin $(1)/lib/firmware/i915/
-	# ICELAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/icl_huc_9.0.0.bin $(1)/lib/firmware/i915/
 	# COMETLAKE (REV >= 5)
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/cml_huc_4.0.0.bin $(1)/lib/firmware/i915/
 	# COMETLAKE COFFEELAKE KABYLAKE
