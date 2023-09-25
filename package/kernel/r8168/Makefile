@@ -16,7 +16,7 @@ define KernelPackage/$(PKG_NAME)
   SUBMENU:=Network Devices
   VERSION:=$(LINUX_VERSION)+$(PKG_VERSION)-$(PKG_RELEASE)
   FILES:=$(PKG_BUILD_DIR)/src/r8168.ko
-  AUTOLOAD:=$(call AutoProbe,r8168)
+  AUTOLOAD:=$(call AutoLoad,35,r8168)
 endef
 
 define KernelPackage/$(PKG_NAME)/description
