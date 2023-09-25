@@ -34,6 +34,16 @@ define KernelPackage/r8125/description
   This package contains a driver for Realtek r8125 chipsets.
 endef
 
+define KernelPackage/r8125/install
+	$(INSTALL_DIR) $(1)/etc/modules-pending.d
+	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
+endef
+
+define Package/kmod-r8125/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || rm -f /etc/modules-pending.d/$(NAME)
+endef
+
 define Build/Compile
 	+$(KERNEL_MAKE) M=$(PKG_BUILD_DIR)/src modules
 endef
