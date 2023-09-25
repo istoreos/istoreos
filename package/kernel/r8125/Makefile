@@ -27,7 +27,7 @@ define KernelPackage/r8125
   SUBMENU:=Network Devices
   VERSION:=$(LINUX_VERSION)+$(PKG_VERSION)-$(BOARD)-$(PKG_RELEASE)
   FILES:= $(PKG_BUILD_DIR)/src/r8125.ko
-  AUTOLOAD:=$(call AutoProbe,r8125)
+  AUTOLOAD:=$(call AutoLoad,35,r8125)
 endef
 
 define KernelPackage/r8125/description
