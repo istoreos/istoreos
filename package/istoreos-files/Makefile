@@ -37,6 +37,9 @@ define Package/$(PKG_NAME)/install
 	$(CP) ./files/* $(1)/
 endef
 
+define Package/base-files/conffiles
+/etc/config/kmods
+endef
 
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
