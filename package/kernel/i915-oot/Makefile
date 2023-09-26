@@ -44,7 +44,7 @@ define KernelPackage/drm-i915-oot
   URL:=https://github.com/intel-gpu/intel-gpu-i915-backports
   MAINTAINER:=jjm2473 <jjm2473@gmail.com>
   TITLE:=Intel i915 backports
-  DEPENDS+=+i915-oot-firmware +kmod-drm-kms-helper +kmod-kvm-x86 +kmod-lib-crc32c +kmod-vfio-mdev
+  DEPENDS+=@TARGET_x86 +i915-oot-firmware +kmod-drm-kms-helper +kmod-kvm-x86 +kmod-lib-crc32c +kmod-vfio-mdev
   CONFLICTS:=kmod-drm-i915
   ABI_VERSION:=$(PKG_VERSION)-$(PKG_RELEASE)
   FILES:= \
@@ -58,6 +58,33 @@ endef
 
 define KernelPackage/drm-i915-oot/description
 Backported Intel i915 driver
+endef
+
+define KernelPackage/drm-i915-coex
+  $(call KernelPackage/drm-i915-oot)
+  TITLE:=Intel i915 backports (coexist)
+  DEPENDS+=kmod-drm-i915
+  CONFLICTS:=kmod-drm-i915-oot
+endef
+
+define KernelPackage/drm-i915-coex/description
+Backported Intel i915 driver (coexist with drm-i915)
+endef
+
+define KernelPackage/drm-i915-coex/install
+	mv $(1)/$(MODULES_SUBDIR) $(1)/i915-oot
+	mv $(1)/etc/modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/i915-oot/drm-i915
+	rm -rf $(1)/etc/modules.d
+	$(INSTALL_DIR) $(1)/$(MODULES_SUBDIR)
+	mv $(1)/i915-oot $(1)/$(MODULES_SUBDIR)/
+	mv $(1)/$(MODULES_SUBDIR)/i915-oot/i915-compat.ko $(1)/$(MODULES_SUBDIR)/
+
+	$(INSTALL_DIR) $(1)/etc/modules-pending.d
+	touch $(1)/etc/modules-pending.d/i915-oot
+
+	$(INSTALL_DIR) $(1)/etc/init.d
+	$(INSTALL_BIN) ./files/i915_oot.init $(1)/etc/init.d/i915_oot
+	$(INSTALL_BIN) ./files/i915_oot_done.init $(1)/etc/init.d/i915_oot_done
 endef
 
 MAKE_OPTS:= -C "$(PKG_BUILD_DIR)" \
@@ -97,3 +124,4 @@ define KernelPackage/drm-i915-oot/install
 endef
 
 $(eval $(call KernelPackage,drm-i915-oot))
+$(eval $(call KernelPackage,drm-i915-coex))

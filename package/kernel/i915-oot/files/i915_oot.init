@@ -1,0 +1,35 @@
+#!/bin/sh /etc/rc.common
+
+START=09
+
+boot() {
+	local kmod
+	local enable="$( uci -q get kmods.kmods.enable )"
+	if echo "$enable" | grep -qFw "i915-oot" ; then
+		local FAILFILE=/etc/config/.i915_boot
+		local count=$(cat $FAILFILE)
+		[[ -n "$count" ]] || count=0
+		[[ $count -le 2 ]] || return 0
+		count=$(( $count + 1 ))
+		echo "$count" > $FAILFILE
+		sync $FAILFILE
+		[[ $count -le 2 ]] || return 0
+
+		local release="$(uname -r)"
+		[[ -n "$release" ]] || return 0
+		ls /lib/modules/$release/i915-oot/ 2>/dev/null | while read kmod; do
+			if [[ "$kmod" = "*.ko" ]]; then
+				[[ -f /lib/modules/$release/$kmod ]] || continue
+				mount --bind /lib/modules/$release/i915-oot/$kmod /lib/modules/$release/$kmod
+			else
+				if [[ -f /etc/modules.d/$kmod ]]; then
+					mount --bind /lib/modules/$release/i915-oot/$kmod /etc/modules.d/$kmod
+				else
+					local target=$(ls /etc/modules.d/ 2>/dev/null | grep "^[0-9_-]*-$kmod\$" | head -1)
+					[[ -n "$target" ]] || continue
+					mount --bind /lib/modules/$release/i915-oot/$kmod /etc/modules.d/$target
+				fi
+			fi
+		done
+	fi
+}
