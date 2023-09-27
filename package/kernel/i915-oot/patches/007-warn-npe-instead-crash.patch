@@ -1,0 +1,41 @@
+From e1d93c026d552f602f49a9cebedc4f76ba25e4d0 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 27 Sep 2023 18:25:19 +0800
+Subject: [PATCH] warn on NPE instead of crash
+
+fix crash on J4125
+---
+ drivers/gpu/drm/i915/gem/i915_gemfs.c | 3 +++
+ drivers/gpu/drm/i915/i915_active.c    | 3 +++
+ 2 files changed, 6 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/gem/i915_gemfs.c b/drivers/gpu/drm/i915/gem/i915_gemfs.c
+index 46b9a17..23c065d 100644
+--- a/drivers/gpu/drm/i915/gem/i915_gemfs.c
++++ b/drivers/gpu/drm/i915/gem/i915_gemfs.c
+@@ -56,5 +56,8 @@ err:
+ 
+ void i915_gemfs_fini(struct drm_i915_private *i915)
+ {
++	if (WARN_ON(IS_ERR_OR_NULL(i915))) {
++		return;
++	}
+ 	kern_unmount(i915->mm.gemfs);
+ }
+diff --git a/drivers/gpu/drm/i915/i915_active.c b/drivers/gpu/drm/i915/i915_active.c
+index 8c40919..a529d35 100644
+--- a/drivers/gpu/drm/i915/i915_active.c
++++ b/drivers/gpu/drm/i915/i915_active.c
+@@ -188,6 +188,9 @@ active_work(struct work_struct *wrk)
+ static void
+ active_retire(struct i915_active *ref)
+ {
++	if (WARN_ON(IS_ERR_OR_NULL(ref))) {
++		return;
++	}
+ 	GEM_BUG_ON(!atomic_read(&ref->count));
+ 	if (atomic_add_unless(&ref->count, -1, 1))
+ 		return;
+-- 
+2.31.0
+
