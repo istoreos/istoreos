@@ -218,6 +218,14 @@ define Package/i915-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
 	# CANNONLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cnl_dmc_ver1_07.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	# KABYLAKE || COFFEELAKE || COMETLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_dmc_ver1_27.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_dmc_ver1_07.bin $(1)/lib/firmware/i915/
 
 	# ROCKETLAKE | TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_35.2.0.bin $(1)/lib/firmware/i915/
@@ -225,6 +233,16 @@ define Package/i915-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_33.0.4.bin $(1)/lib/firmware/i915/
 	# ICELAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_guc_33.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE (REV >= 5)
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_guc_33.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE COFFEELAKE KABYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_guc_33.0.0.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_guc_33.0.0.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_guc_33.0.0.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_guc_33.0.0.bin $(1)/lib/firmware/i915/
 
 	# ROCKETLAKE | TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_huc_7.5.0.bin $(1)/lib/firmware/i915/
@@ -232,5 +250,16 @@ define Package/i915-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
 	# ICELAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE (REV >= 5)
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# COMETLAKE COFFEELAKE KABYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# GEMINILAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	# BROXTON
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_huc_2.0.0.bin $(1)/lib/firmware/i915/
+	# SKYLAKE
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_huc_2.0.0.bin $(1)/lib/firmware/i915/
+
 endef
 $(eval $(call BuildPackage,i915-firmware))

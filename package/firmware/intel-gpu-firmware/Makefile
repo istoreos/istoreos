@@ -47,14 +47,6 @@ define Package/i915-oot-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkl_dmc_ver2_03.bin $(1)/lib/firmware/i915/
 	# DISPLAY_VER >= 12
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_dmc_ver2_12.bin $(1)/lib/firmware/i915/
-	# GEMINILAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/glk_dmc_ver1_04.bin $(1)/lib/firmware/i915/
-	# KABYLAKE || COFFEELAKE || COMETLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/kbl_dmc_ver1_04.bin $(1)/lib/firmware/i915/
-	# SKYLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_dmc_ver1_27.bin $(1)/lib/firmware/i915/
-	# BROXTON
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/bxt_dmc_ver1_07.bin $(1)/lib/firmware/i915/
 
 	# drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c:INTEL_UC_FIRMWARE_DEFS
 	## guc
@@ -98,16 +90,6 @@ define Package/i915-oot-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
 	# DG1
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_huc_7.9.3.bin $(1)/lib/firmware/i915/
-	# COMETLAKE (REV >= 5)
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/cml_huc_4.0.0.bin $(1)/lib/firmware/i915/
-	# COMETLAKE COFFEELAKE KABYLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/kbl_huc_4.0.0.bin $(1)/lib/firmware/i915/
-	# GEMINILAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/glk_huc_4.0.0.bin $(1)/lib/firmware/i915/
-	# BROXTON
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/bxt_huc_2.0.0.bin $(1)/lib/firmware/i915/
-	# SKYLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_huc_2.0.0.bin $(1)/lib/firmware/i915/
 
 	## gsc
 	# METEORLAKE
