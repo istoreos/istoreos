@@ -142,9 +142,11 @@ define KernelPackage/dma-buf
   TITLE:=DMA shared buffer support
   HIDDEN:=1
   KCONFIG:=CONFIG_DMA_SHARED_BUFFER
-  ifeq ($(strip $(CONFIG_EXTERNAL_KERNEL_TREE)),"")
-    ifeq ($(strip $(CONFIG_KERNEL_GIT_CLONE_URI)),"")
-      FILES:=$(LINUX_DIR)/drivers/dma-buf/dma-shared-buffer.ko
+  ifndef CONFIG_TARGET_rockchip_rk35xx
+    ifeq ($(strip $(CONFIG_EXTERNAL_KERNEL_TREE)),"")
+      ifeq ($(strip $(CONFIG_KERNEL_GIT_CLONE_URI)),"")
+        FILES:=$(LINUX_DIR)/drivers/dma-buf/dma-shared-buffer.ko
+      endif
     endif
   endif
   AUTOLOAD:=$(call AutoLoad,20,dma-shared-buffer)
