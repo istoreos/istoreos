@@ -135,6 +135,11 @@ start()
 		return 1
 	fi
 
+	[ "$( uci -q get system.@system[0].zram_enabled )" = "1" ] || {
+		logger -s -t zram_start -p daemon.notice "zram swap is disabled"
+		return 1
+	}
+
 	local zram_dev="$( zram_getdev )"
 
 	[ -e "$zram_dev" ] || {
