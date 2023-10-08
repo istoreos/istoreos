@@ -67,6 +67,7 @@ enum MPP_DEVICE_TYPE {
 	MPP_DEVICE_VEPU22	= 24, /* 0x01000000 */
 
 	MPP_DEVICE_IEP2		= 28, /* 0x10000000 */
+	MPP_DEVICE_VDPP		= 29, /* 0x20000000 */
 	MPP_DEVICE_BUTT,
 };
 
@@ -88,6 +89,7 @@ enum MPP_DRIVER_TYPE {
 	MPP_DRIVER_RKVDEC2,
 	MPP_DRIVER_RKVENC2,
 	MPP_DRIVER_AV1DEC,
+	MPP_DRIVER_VDPP,
 	MPP_DRIVER_BUTT,
 };
 
@@ -346,6 +348,7 @@ struct mpp_dev {
 	struct mpp_iommu_info *iommu_info;
 	int (*fault_handler)(struct iommu_domain *iommu, struct device *iommu_dev,
 			     unsigned long iova, int status, void *arg);
+	resource_size_t io_base;
 
 	atomic_t reset_request;
 	atomic_t session_index;
@@ -540,6 +543,8 @@ struct mpp_taskqueue {
 	unsigned long core_idle;
 	u32 core_id_max;
 	u32 core_count;
+	unsigned long dev_active_flags;
+	u32 iommu_fault;
 };
 
 struct mpp_reset_group {
@@ -896,5 +901,6 @@ extern struct platform_driver rockchip_av1_iommu_driver;
 extern int av1dec_driver_register(struct platform_driver *drv);
 extern void av1dec_driver_unregister(struct platform_driver *drv);
 extern struct bus_type av1dec_bus;
+extern struct platform_driver rockchip_vdpp_driver;
 
 #endif

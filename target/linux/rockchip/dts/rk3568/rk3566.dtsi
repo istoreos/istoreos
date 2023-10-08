@@ -38,7 +38,7 @@
 };
 
 &rkisp {
-	rockchip,iq-feature = /bits/ 64 <0x3FBF7FE67FF>;
+	rockchip,iq-feature = /bits/ 64 <0x1BFBF7FE67FF>;
 };
 
 &usbdrd_dwc3 {
@@ -54,6 +54,7 @@
 /delete-node/ &gmac0_clkin;
 /delete-node/ &gmac0_xpcsclk;
 /delete-node/ &gmac0;
+/delete-node/ &gmac_uio0;
 /delete-node/ &pcie30_phy_grf;
 /delete-node/ &pcie30phy;
 /delete-node/ &pcie3x1;

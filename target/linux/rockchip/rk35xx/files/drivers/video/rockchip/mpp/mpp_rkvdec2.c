@@ -19,8 +19,10 @@
 
 #include <linux/devfreq_cooling.h>
 #include <soc/rockchip/rockchip_ipa.h>
+#include <soc/rockchip/rockchip_dmc.h>
 #include <soc/rockchip/rockchip_opp_select.h>
 #include <soc/rockchip/rockchip_system_monitor.h>
+#include <soc/rockchip/rockchip_iommu.h>
 
 #ifdef CONFIG_PM_DEVFREQ
 #include "../drivers/devfreq/governor.h"
@@ -47,6 +49,15 @@ static struct mpp_hw_info rkvdec_rk356x_hw_info = {
 	.link_info = &rkvdec_link_rk356x_hw_info,
 };
 
+static struct mpp_hw_info rkvdec_vdpu382_hw_info = {
+	.reg_num = RKVDEC_REG_NUM,
+	.reg_id = RKVDEC_REG_HW_ID_INDEX,
+	.reg_start = RKVDEC_REG_START_INDEX,
+	.reg_end = RKVDEC_REG_END_INDEX,
+	.reg_en = RKVDEC_REG_START_EN_INDEX,
+	.link_info = &rkvdec_link_vdpu382_hw_info,
+};
+
 /*
  * file handle translate information
  */
@@ -54,27 +65,27 @@ static const u16 trans_tbl_h264d[] = {
 	128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
 	161, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176,
 	177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
-	192, 193, 194, 195, 196, 197
+	192, 193, 194, 195, 196, 197, 198, 199
 };
 
 static const u16 trans_tbl_h265d[] = {
 	128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
 	161, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176,
 	177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
-	192, 193, 194, 195, 196, 197
+	192, 193, 194, 195, 196, 197, 198, 199
 };
 
 static const u16 trans_tbl_vp9d[] = {
 	128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
 	160, 162, 164, 165, 166, 167, 168, 169, 170, 171, 172, 180, 181, 182, 183,
-	184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197
+	184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199
 };
 
 static const u16 trans_tbl_avs2d[] = {
 	128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
 	161, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176,
 	177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191,
-	192, 193, 194, 195, 196, 197
+	192, 193, 194, 195, 196, 197, 198, 199
 };
 
 static struct mpp_trans_info rkvdec_v2_trans[] = {
@@ -297,7 +308,7 @@ void *rkvdec2_alloc_task(struct mpp_session *session,
 }
 
 static void *rkvdec2_rk3568_alloc_task(struct mpp_session *session,
-				struct mpp_task_msgs *msgs)
+				       struct mpp_task_msgs *msgs)
 {
 	u32 fmt;
 	struct mpp_task *mpp_task = NULL;
@@ -412,7 +423,7 @@ static int rkvdec2_isr(struct mpp_dev *mpp)
 		return IRQ_HANDLED;
 	}
 	mpp_task->hw_cycles = mpp_read(mpp, RKVDEC_PERF_WORKING_CNT);
-	mpp_time_diff_with_hw_time(mpp_task, dec->core_clk_info.real_rate_hz);
+	mpp_time_diff_with_hw_time(mpp_task, dec->cycle_clk->real_rate_hz);
 	mpp->cur_task = NULL;
 	task = to_rkvdec2_task(mpp_task);
 	task->irq_status = mpp->irq_status;
@@ -995,6 +1006,7 @@ static int rkvdec2_init(struct mpp_dev *mpp)
 	mpp_set_clk_info_rate_hz(&dec->cabac_clk_info, CLK_MODE_DEFAULT, 200 * MHZ);
 	mpp_set_clk_info_rate_hz(&dec->hevc_cabac_clk_info, CLK_MODE_DEFAULT, 300 * MHZ);
 
+	dec->cycle_clk = &dec->aclk_info;
 	/* Get normal max workload from dtsi */
 	of_property_read_u32(mpp->dev->of_node,
 			     "rockchip,default-max-load", &dec->default_max_load);
@@ -1133,12 +1145,55 @@ static int rkvdec2_set_freq(struct mpp_dev *mpp,
 	return 0;
 }
 
+static int rkvdec2_soft_reset(struct mpp_dev *mpp)
+{
+	int ret = 0;
+
+	/*
+	 * for rk3528 and rk3562
+	 * use mmu reset instead of rkvdec soft reset
+	 * rkvdec will reset together when rkvdec_mmu force reset
+	 */
+	ret = rockchip_iommu_force_reset(mpp->dev);
+	if (ret)
+		mpp_err("soft mmu reset fail, ret %d\n", ret);
+	mpp_write(mpp, RKVDEC_REG_INT_EN, 0);
+
+	return ret;
+
+}
+
+static int rkvdec2_sip_reset(struct mpp_dev *mpp)
+{
+	mpp_debug_enter();
+
+	if (IS_REACHABLE(CONFIG_ROCKCHIP_SIP)) {
+		/* sip reset */
+		rockchip_dmcfreq_lock();
+		sip_smc_vpu_reset(0, 0, 0);
+		rockchip_dmcfreq_unlock();
+	} else {
+		rkvdec2_reset(mpp);
+	}
+
+	mpp_debug_leave();
+
+	return 0;
+}
+
 int rkvdec2_reset(struct mpp_dev *mpp)
 {
 	struct rkvdec2_dev *dec = to_rkvdec2_dev(mpp);
+	int ret = 0;
 
 	mpp_debug_enter();
-	if (dec->rst_a && dec->rst_h) {
+
+	/* safe reset first*/
+	ret = rkvdec2_soft_reset(mpp);
+
+	/* cru reset */
+	if (ret && dec->rst_a && dec->rst_h) {
+		mpp_err("soft reset timeout, use cru reset\n");
 		mpp_pmu_idle_request(mpp, true);
 		mpp_safe_reset(dec->rst_niu_a);
 		mpp_safe_reset(dec->rst_niu_h);
@@ -1178,7 +1233,16 @@ static struct mpp_hw_ops rkvdec_rk3568_hw_ops = {
 	.clk_off = rkvdec2_clk_off,
 	.get_freq = rkvdec2_get_freq,
 	.set_freq = rkvdec2_set_freq,
-	.reset = rkvdec2_reset,
+	.reset = rkvdec2_sip_reset,
+};
+
+static struct mpp_hw_ops rkvdec_rk3588_hw_ops = {
+	.init = rkvdec2_init,
+	.clk_on = rkvdec2_clk_on,
+	.clk_off = rkvdec2_clk_off,
+	.get_freq = rkvdec2_get_freq,
+	.set_freq = rkvdec2_set_freq,
+	.reset = rkvdec2_sip_reset,
 };
 
 static struct mpp_dev_ops rkvdec_v2_dev_ops = {
@@ -1224,6 +1288,22 @@ static const struct mpp_dev_var rkvdec_rk3568_data = {
 	.dev_ops = &rkvdec_rk3568_dev_ops,
 };
 
+static const struct mpp_dev_var rkvdec_vdpu382_data = {
+	.device_type = MPP_DEVICE_RKVDEC,
+	.hw_info = &rkvdec_vdpu382_hw_info,
+	.trans_info = rkvdec_v2_trans,
+	.hw_ops = &rkvdec_v2_hw_ops,
+	.dev_ops = &rkvdec_v2_dev_ops,
+};
+
+static const struct mpp_dev_var rkvdec_rk3588_data = {
+	.device_type = MPP_DEVICE_RKVDEC,
+	.hw_info = &rkvdec_v2_hw_info,
+	.trans_info = rkvdec_v2_trans,
+	.hw_ops = &rkvdec_rk3588_hw_ops,
+	.dev_ops = &rkvdec_v2_dev_ops,
+};
+
 static const struct of_device_id mpp_rkvdec2_dt_match[] = {
 	{
 		.compatible = "rockchip,rkv-decoder-v2",
@@ -1238,6 +1318,19 @@ static const struct of_device_id mpp_rkvdec2_dt_match[] = {
 #ifdef CONFIG_CPU_RK3588
 	{
 		.compatible = "rockchip,rkv-decoder-v2-ccu",
+		.data = &rkvdec_rk3588_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RK3528
+	{
+		.compatible = "rockchip,rkv-decoder-rk3528",
+		.data = &rkvdec_vdpu382_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RK3562
+	{
+		.compatible = "rockchip,rkv-decoder-rk3562",
+		.data = &rkvdec_vdpu382_data,
 	},
 #endif
 	{},
@@ -1256,14 +1349,25 @@ static int rkvdec2_ccu_probe(struct platform_device *pdev)
 	struct rkvdec2_ccu *ccu;
 	struct resource *res;
 	struct device *dev = &pdev->dev;
+	u32 ccu_mode;
 
 	ccu = devm_kzalloc(dev, sizeof(*ccu), GFP_KERNEL);
 	if (!ccu)
 		return -ENOMEM;
 
 	ccu->dev = dev;
+	/* use task-level soft ccu default */
+	ccu->ccu_mode = RKVDEC2_CCU_TASK_SOFT;
 	atomic_set(&ccu->power_enabled, 0);
+	INIT_LIST_HEAD(&ccu->unused_list);
+	INIT_LIST_HEAD(&ccu->used_list);
 	platform_set_drvdata(pdev, ccu);
+
+	if (!of_property_read_u32(dev->of_node, "rockchip,ccu-mode", &ccu_mode)) {
+		if (ccu_mode <= RKVDEC2_CCU_MODE_NULL || ccu_mode >= RKVDEC2_CCU_MODE_BUTT)
+			ccu_mode = RKVDEC2_CCU_TASK_SOFT;
+		ccu->ccu_mode = (enum RKVDEC2_CCU_MODE)ccu_mode;
+	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ccu");
 	if (!res) {
@@ -1277,12 +1381,6 @@ static int rkvdec2_ccu_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	device_init_wakeup(dev, true);
-	pm_runtime_enable(dev);
-	/* power domain autosuspend delay 2s */
-	pm_runtime_set_autosuspend_delay(dev, 2000);
-	pm_runtime_use_autosuspend(dev);
-
 	ccu->aclk_info.clk = devm_clk_get(dev, "aclk_ccu");
 	if (!ccu->aclk_info.clk)
 		mpp_err("failed on clk_get ccu aclk\n");
@@ -1293,6 +1391,13 @@ static int rkvdec2_ccu_probe(struct platform_device *pdev)
 	else
 		mpp_err("failed on clk_get ccu reset\n");
 
+	/* power domain autosuspend delay 2s */
+	pm_runtime_set_autosuspend_delay(dev, 2000);
+	pm_runtime_use_autosuspend(dev);
+	device_init_wakeup(dev, true);
+	pm_runtime_enable(dev);
+
+	dev_info(dev, "ccu-mode: %d\n", ccu->ccu_mode);
 	return 0;
 }
 
@@ -1389,6 +1494,22 @@ static int rkvdec2_alloc_rcbbuf(struct platform_device *pdev, struct rkvdec2_dev
 	if (!ret && dec->rcb_min_width)
 		dev_info(dev, "min_width %u\n", dec->rcb_min_width);
 
+	/* if have, read rcb_info */
+	dec->rcb_info_count = device_property_count_u32(dev, "rockchip,rcb-info");
+	if (dec->rcb_info_count > 0 &&
+	    dec->rcb_info_count <= (sizeof(dec->rcb_infos) / sizeof(u32))) {
+		int i;
+
+		ret = device_property_read_u32_array(dev, "rockchip,rcb-info",
+						     dec->rcb_infos, dec->rcb_info_count);
+		if (!ret) {
+			dev_info(dev, "rcb_info_count %u\n", dec->rcb_info_count);
+			for (i = 0; i < dec->rcb_info_count; i += 2)
+				dev_info(dev, "[%u, %u]\n",
+					 dec->rcb_infos[i], dec->rcb_infos[i+1]);
+		}
+	}
+
 	return 0;
 
 err_sram_map:
@@ -1403,6 +1524,7 @@ static int rkvdec2_core_probe(struct platform_device *pdev)
 	struct rkvdec2_dev *dec;
 	struct mpp_dev *mpp;
 	struct device *dev = &pdev->dev;
+	irq_handler_t irq_proc = NULL;
 
 	dec = devm_kzalloc(dev, sizeof(*dec), GFP_KERNEL);
 	if (!dec)
@@ -1426,29 +1548,44 @@ static int rkvdec2_core_probe(struct platform_device *pdev)
 		dev_err(dev, "probe sub driver failed\n");
 		return ret;
 	}
+	dec->mmu_base = ioremap(dec->mpp.io_base + 0x600, 0x80);
+	if (!dec->mmu_base)
+		dev_err(dev, "mmu base map failed!\n");
+
 	/* attach core to ccu */
 	ret = rkvdec2_attach_ccu(dev, dec);
 	if (ret) {
 		dev_err(dev, "attach ccu failed\n");
 		return ret;
 	}
-	/* power domain autosuspend delay 2s */
-	pm_runtime_set_autosuspend_delay(dev, 2000);
-	pm_runtime_use_autosuspend(dev);
 
 	/* alloc rcb buffer */
 	rkvdec2_alloc_rcbbuf(pdev, dec);
 
 	/* set device for link */
-	rkvdec2_ccu_link_init(pdev, dec);
+	ret = rkvdec2_ccu_link_init(pdev, dec);
+	if (ret)
+		return ret;
 
 	mpp->dev_ops->alloc_task = rkvdec2_ccu_alloc_task;
-	mpp->dev_ops->task_worker = rkvdec2_soft_ccu_worker;
-	kthread_init_work(&mpp->work, rkvdec2_soft_ccu_worker);
+	if (dec->ccu->ccu_mode == RKVDEC2_CCU_TASK_SOFT) {
+		mpp->dev_ops->task_worker = rkvdec2_soft_ccu_worker;
+		irq_proc = rkvdec2_soft_ccu_irq;
+	} else if (dec->ccu->ccu_mode == RKVDEC2_CCU_TASK_HARD) {
+		if (mpp->core_id == 0 && mpp->task_capacity > 1) {
+			dec->link_dec->task_capacity = mpp->task_capacity;
+			ret = rkvdec2_ccu_alloc_table(dec, dec->link_dec);
+			if (ret)
+				return ret;
+		}
+		mpp->dev_ops->task_worker = rkvdec2_hard_ccu_worker;
+		irq_proc = rkvdec2_hard_ccu_irq;
+	}
+	mpp->iommu_info->hdl = rkvdec2_ccu_iommu_fault_handle;
+	kthread_init_work(&mpp->work, mpp->dev_ops->task_worker);
 
-	mpp->fault_handler = rkvdec2_ccu_iommu_fault_handle;
 	/* get irq request */
-	ret = devm_request_threaded_irq(dev, mpp->irq, rkvdec2_soft_ccu_irq, NULL,
+	ret = devm_request_threaded_irq(dev, mpp->irq, irq_proc, NULL,
 					IRQF_SHARED, dev_name(dev), mpp);
 	if (ret) {
 		dev_err(dev, "register interrupter runtime failed\n");
@@ -1551,8 +1688,9 @@ static int rkvdec2_free_rcbbuf(struct platform_device *pdev, struct rkvdec2_dev 
 
 	if (dec->rcb_page) {
 		size_t page_size = PAGE_ALIGN(dec->rcb_size - dec->sram_size);
+		int order = min(get_order(page_size), MAX_ORDER);
 
-		__free_pages(dec->rcb_page, get_order(page_size));
+		__free_pages(dec->rcb_page, order);
 	}
 	if (dec->rcb_iova) {
 		domain = dec->mpp.iommu_info->domain;
@@ -1574,7 +1712,10 @@ static int rkvdec2_remove(struct platform_device *pdev)
 		struct rkvdec2_dev *dec = to_rkvdec2_dev(mpp);
 
 		dev_info(dev, "remove device\n");
-
+		if (dec->mmu_base) {
+			iounmap(dec->mmu_base);
+			dec->mmu_base = NULL;
+		}
 		rkvdec2_free_rcbbuf(pdev, dec);
 		mpp_dev_remove(mpp);
 		rkvdec2_procfs_remove(mpp);

@@ -35,24 +35,24 @@
 #include <linux/kfifo.h>
 #include <linux/kthread.h>
 #include <linux/sched/rt.h>
-#include <../drivers/staging/android/fiq_debugger/fiq_debugger.h>
+#include "fiq_debugger.h"
 #include <linux/irqchip/arm-gic.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <linux/soc/rockchip/rk_fiq_debugger.h>
+#include "rk_fiq_debugger.h"
 #include <linux/console.h>
 
 #ifdef CONFIG_FIQ_DEBUGGER_TRUST_ZONE
 #include <linux/rockchip/rockchip_sip.h>
 #endif
-
-#define UART_USR	0x1f	/* In: UART Status Register */
+#define UART_USR			0x1f /* In: UART Status Register */
 #define UART_USR_RX_FIFO_FULL		0x10 /* Receive FIFO full */
 #define UART_USR_RX_FIFO_NOT_EMPTY	0x08 /* Receive FIFO not empty */
 #define UART_USR_TX_FIFO_EMPTY		0x04 /* Transmit FIFO empty */
 #define UART_USR_TX_FIFO_NOT_FULL	0x02 /* Transmit FIFO not full */
 #define UART_USR_BUSY			0x01 /* UART busy indicator */
 #define UART_SRR			0x22 /* software reset register */
+#define RK_UART_RFL			0x21 /* UART Receive Fifo Level Register */
 
 struct rk_fiq_debugger {
 	int irq;
@@ -150,7 +150,7 @@ static int debug_port_init(struct platform_device *pdev)
 
 static int debug_getc(struct platform_device *pdev)
 {
-	unsigned int lsr;
+	unsigned int lsr, usr, rfl, iir;
 	struct rk_fiq_debugger *t;
 	unsigned int temp;
 	static unsigned int n;
@@ -160,8 +160,22 @@ static int debug_getc(struct platform_device *pdev)
 	/*
 	 * Clear uart interrupt status
 	 */
-	rk_fiq_read(t, UART_USR);
+	iir = rk_fiq_read(t, UART_IIR);
+	usr = rk_fiq_read(t, UART_USR);
 	lsr = rk_fiq_read_lsr(t);
+
+	/*
+	 * There are ways to get Designware-based UARTs into a state where
+	 * they are asserting UART_IIR_RX_TIMEOUT but there is no actual
+	 * data available.  If we see such a case then we'll do a bogus
+	 * read.  If we don't do this then the "RX TIMEOUT" interrupt will
+	 * fire forever.
+	 */
+	if ((iir & 0x3f) == UART_IIR_RX_TIMEOUT) {
+		rfl = rk_fiq_read(t, RK_UART_RFL);
+		if (!(lsr & (UART_LSR_DR | UART_LSR_BI)) && !(usr & 0x1) && (rfl == 0))
+			rk_fiq_read(t, UART_RX);
+	}
 
 	if (lsr & UART_LSR_DR) {
 		temp = rk_fiq_read(t, UART_RX);
@@ -400,7 +414,7 @@ int sdei_fiq_debugger_is_enabled(void)
 	return rk_fiq_sdei.fiq_en;
 }
 
-int fiq_sdei_event_callback(u32 event, struct pt_regs *regs, void *arg)
+static int fiq_sdei_event_callback(u32 event, struct pt_regs *regs, void *arg)
 {
 	int cpu_id = get_logical_index(read_cpuid_mpidr() &
 				       MPIDR_HWID_BITMASK);
@@ -409,7 +423,7 @@ int fiq_sdei_event_callback(u32 event, struct pt_regs *regs, void *arg)
 	return 0;
 }
 
-void rk_fiq_sdei_event_sw_cpu(int wait_disable)
+static void rk_fiq_sdei_event_sw_cpu(int wait_disable)
 {
 	unsigned long affinity;
 	int cnt = 100000;
@@ -431,7 +445,7 @@ void rk_fiq_sdei_event_sw_cpu(int wait_disable)
 	rk_fiq_sdei.cur_cpu = rk_fiq_sdei.sw_cpu;
 }
 
-int fiq_sdei_sw_cpu_event_callback(u32 event, struct pt_regs *regs, void *arg)
+static int fiq_sdei_sw_cpu_event_callback(u32 event, struct pt_regs *regs, void *arg)
 {
 	int cnt = 10000;
 	int ret = 0;
@@ -483,7 +497,7 @@ static int fiq_dbg_sdei_cpu_off_migrate_fiq(unsigned int cpu)
 	int cnt = 10000;
 
 	if (rk_fiq_sdei.cur_cpu == cpu) {
-		target_cpu = cpumask_first(cpu_online_mask);
+		target_cpu = cpumask_any_but(cpu_online_mask, cpu);
 		_rk_fiq_dbg_sdei_switch_cpu(target_cpu, 1);
 
 		while (rk_fiq_sdei.cur_cpu == cpu && cnt) {
@@ -524,6 +538,7 @@ static struct notifier_block fiq_dbg_sdei_pm_nb = {
 static int fiq_debugger_sdei_enable(struct rk_fiq_debugger *t)
 {
 	int ret, cpu, i;
+	int is_dyn_event = false;
 
 	ret = sip_fiq_debugger_sdei_get_event_id(&rk_fiq_sdei.event_id,
 						 &rk_fiq_sdei.cpu_sw_event_id,
@@ -532,6 +547,17 @@ static int fiq_debugger_sdei_enable(struct rk_fiq_debugger *t)
 	if (ret) {
 		pr_err("%s: get event id error!\n", __func__);
 		return ret;
+	}
+
+	/* If we can't get a valid fiq event, use dynamic event instead */
+	if (rk_fiq_sdei.event_id == 0) {
+		ret = sdei_interrupt_bind(serial_hwirq, &rk_fiq_sdei.event_id);
+		if (ret) {
+			pr_err("%s: bind intr:%d error!\n", __func__, serial_hwirq);
+			return ret;
+		}
+
+		is_dyn_event = true;
 	}
 
 	ret = cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
@@ -612,6 +638,9 @@ err:
 	unregister_pm_notifier(&fiq_dbg_sdei_pm_nb);
 	sdei_event_unregister(rk_fiq_sdei.event_id);
 
+	if (is_dyn_event)
+		sdei_interrupt_release(rk_fiq_sdei.event_id);
+
 	return ret;
 }
 
@@ -633,7 +662,7 @@ static void rk_fiq_debugger_enable_debug(struct platform_device *pdev, bool val)
 	sip_fiq_debugger_enable_debug(val);
 }
 
-static void fiq_debugger_uart_irq_tf(struct pt_regs *_pt_regs, u64 cpu)
+static void fiq_debugger_uart_irq_tf(struct pt_regs *_pt_regs, unsigned long cpu)
 {
 	fiq_debugger_fiq(_pt_regs, cpu);
 }
@@ -681,7 +710,7 @@ static int fiq_debugger_cpu_offine_migrate_fiq(unsigned int cpu)
 
 	if ((sip_fiq_debugger_is_enabled()) &&
 	    (sip_fiq_debugger_get_target_cpu() == cpu)) {
-		target_cpu = cpumask_first(cpu_online_mask);
+		target_cpu = cpumask_any_but(cpu_online_mask, cpu);
 		sip_fiq_debugger_switch_cpu(target_cpu);
 	}
 
@@ -759,9 +788,9 @@ exit:
 }
 #endif
 
-void rk_serial_debug_init(void __iomem *base, phys_addr_t phy_base,
-			  int irq, int signal_irq,
-			  int wakeup_irq, unsigned int baudrate)
+static void rk_serial_debug_init(void __iomem *base, phys_addr_t phy_base,
+				 int irq, int signal_irq,
+				 int wakeup_irq, unsigned int baudrate)
 {
 	struct rk_fiq_debugger *t = NULL;
 	struct platform_device *pdev = NULL;
@@ -883,7 +912,7 @@ out2:
 	kfree(t);
 }
 
-void rk_serial_debug_init_dummy(void)
+static void rk_serial_debug_init_dummy(void)
 {
 	struct rk_fiq_debugger *t = NULL;
 	struct platform_device *pdev = NULL;

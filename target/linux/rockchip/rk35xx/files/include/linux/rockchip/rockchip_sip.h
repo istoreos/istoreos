@@ -55,6 +55,7 @@
 #define RK_SIP_FIQ_CTRL			0x82000024
 #define SIP_HDCP_CONFIG			0x82000025
 #define SIP_WDT_CFG			0x82000026
+#define SIP_HDMIRX_CFG			0x82000027
 
 #define TRUSTED_OS_HDCPKEY_INIT		0xB7000003
 
@@ -193,6 +194,16 @@ enum {
 	WDT_PING = 2,
 };
 
+/* SIP_HDMIRX_CONFIG child configs */
+enum {
+	HDMIRX_AUTO_TOUCH_EN = 0,
+	HDMIRX_REG_PRE_FETCH = 1,
+	HDMIRX_INFO_NOTIFY = 2,
+};
+
+struct pt_regs;
+typedef void (*sip_fiq_debugger_uart_irq_tf_cb_t)(struct pt_regs *_pt_regs, unsigned long cpu);
+
 /*
  * Rules: struct arm_smccc_res contains result and data, details:
  *
@@ -227,7 +238,7 @@ ulong sip_cpu_logical_map_mpidr(u32 cpu);
 /***************************fiq debugger **************************************/
 void sip_fiq_debugger_enable_fiq(bool enable, uint32_t tgt_cpu);
 void sip_fiq_debugger_enable_debug(bool enable);
-int sip_fiq_debugger_uart_irq_tf_init(u32 irq_id, void *callback_fn);
+int sip_fiq_debugger_uart_irq_tf_init(u32 irq_id, sip_fiq_debugger_uart_irq_tf_cb_t callback_fn);
 int sip_fiq_debugger_set_print_port(u32 port_phyaddr, u32 baudrate);
 int sip_fiq_debugger_request_share_memory(void);
 int sip_fiq_debugger_get_target_cpu(void);
@@ -237,6 +248,7 @@ int sip_fiq_debugger_is_enabled(void);
 int sip_fiq_debugger_sdei_get_event_id(u32 *fiq, u32 *sw_cpu, u32 *flag);
 int sip_fiq_control(u32 sub_func, u32 irq, unsigned long data);
 int sip_wdt_config(u32 sub_func, u32 arg1, u32 arg2, u32 arg3);
+int sip_hdmirx_config(u32 sub_func, u32 arg1, u32 arg2, u32 arg3);
 int sip_hdcpkey_init(u32 hdcp_id);
 #else
 static inline struct arm_smccc_res sip_smc_get_atf_version(void)
@@ -347,7 +359,7 @@ static inline void sip_fiq_debugger_enable_fiq
 
 static inline void sip_fiq_debugger_enable_debug(bool enable) { return; }
 static inline int sip_fiq_debugger_uart_irq_tf_init(u32 irq_id,
-						    void *callback_fn)
+						    sip_fiq_debugger_uart_irq_tf_cb_t callback_fn)
 {
 	return 0;
 }
@@ -380,6 +392,14 @@ static inline int sip_wdt_config(u32 sub_func,
 				 u32 arg3)
 {
 	return 0;
+}
+
+static inline int sip_hdmirx_config(u32 sub_func,
+				    u32 arg1,
+				    u32 arg2,
+				    u32 arg3)
+{
+	return SIP_RET_NOT_SUPPORTED;
 }
 
 static inline int sip_hdcpkey_init(u32 hdcp_id)

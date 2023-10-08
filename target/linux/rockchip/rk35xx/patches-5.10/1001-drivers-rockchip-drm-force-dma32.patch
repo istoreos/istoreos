@@ -7,11 +7,9 @@ Subject: [PATCH] drivers/rockchip_drm_gem: force dma32 for RGA
  drivers/gpu/drm/rockchip/rockchip_drm_gem.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_gem.c b/drivers/gpu/drm/rockchip/rockchip_drm_gem.c
-index 5e71093c9..ebf30b381 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_gem.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_gem.c
-@@ -613,7 +613,7 @@ rockchip_gem_alloc_object(struct drm_device *drm, unsigned int size,
+@@ -618,7 +618,7 @@ rockchip_gem_alloc_object(struct drm_dev
  	struct rockchip_gem_object *rk_obj;
  	struct drm_gem_object *obj;
  
@@ -20,6 +18,3 @@ index 5e71093c9..ebf30b381 100644
  	gfp_t gfp_mask = GFP_HIGHUSER | __GFP_RECLAIMABLE | __GFP_DMA32;
  #else
  	gfp_t gfp_mask = GFP_HIGHUSER | __GFP_RECLAIMABLE;
--- 
-2.31.0
-

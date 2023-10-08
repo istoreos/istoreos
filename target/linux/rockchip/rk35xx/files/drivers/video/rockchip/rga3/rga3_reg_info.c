@@ -93,14 +93,12 @@ static void RGA3_set_reg_win0_info(u8 *base, struct rga3_req *msg)
 	dw = msg->win0.dst_act_w;
 	dh = msg->win0.dst_act_h;
 
-	if (msg->win0.rotate_mode != 0) {
-		if (rotate_mode) {
-			sh = msg->win0.src_act_w;
-			sw = msg->win0.src_act_h;
-		} else {
-			sw = msg->win0.src_act_w;
-			sh = msg->win0.src_act_h;
-		}
+	if (rotate_mode) {
+		sh = msg->win0.src_act_w;
+		sw = msg->win0.src_act_h;
+	} else {
+		sw = msg->win0.src_act_w;
+		sh = msg->win0.src_act_h;
 	}
 
 	if (sw > dw) {
@@ -291,7 +289,7 @@ static void RGA3_set_reg_win0_info(u8 *base, struct rga3_req *msg)
 	}
 
 	/* rotate & mirror */
-	if (msg->win1.yrgb_addr == 0) {
+	if (msg->win0.rotate_mode == 1) {
 		reg =
 			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_ROT)) |
 			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_ROT(rotate_mode)));
@@ -301,36 +299,23 @@ static void RGA3_set_reg_win0_info(u8 *base, struct rga3_req *msg)
 		reg =
 			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_YMIRROR)) |
 			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_YMIRROR(ymirror)));
-
-		/* scale */
-		*bRGA3_WIN0_SCL_FAC = param_x | param_y << 16;
-
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY(x_by)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP(x_up)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY(y_by)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP(y_up)));
-	} else {
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY(1)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP(0)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY(1)));
-		reg =
-			((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP)) |
-			 (s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP(0)));
 	}
+
+	/* scale */
+	*bRGA3_WIN0_SCL_FAC = param_x | param_y << 16;
+
+	reg =
+		((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY)) |
+			(s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_BY(x_by)));
+	reg =
+		((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP)) |
+			(s_RGA3_WIN0_RD_CTRL_SW_WIN0_HOR_UP(x_up)));
+	reg =
+		((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY)) |
+			(s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_BY(y_by)));
+	reg =
+		((reg & (~m_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP)) |
+			(s_RGA3_WIN0_RD_CTRL_SW_WIN0_VER_UP(y_up)));
 
 	/* rd_mode */
 	reg =
@@ -359,19 +344,36 @@ static void RGA3_set_reg_win0_info(u8 *base, struct rga3_req *msg)
 
 	*bRGA3_WIN0_RD_CTRL = reg;
 
-	/* stride need align to 16 */
-	if (msg->win0.rd_mode != 1)
+	switch (msg->win0.rd_mode) {
+	case 0: /* raster */
 		stride = (((msg->win0.vir_w * pixel_width) + 15) & ~15) >> 2;
-	else
-		stride = ((msg->win0.vir_w + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win0.format))
+			uv_stride = ((msg->win0.vir_w + 15) & ~15) >> 2;
+		else
+			uv_stride = stride;
+		break;
 
-	if (msg->win0.format == RGA_FORMAT_YCbCr_420_SP
-		|| msg->win0.format == RGA_FORMAT_YCrCb_420_SP
-		|| msg->win0.format == RGA_FORMAT_YCbCr_420_SP_10B
-		|| msg->win0.format == RGA_FORMAT_YCrCb_420_SP_10B)
-		uv_stride = ((msg->win0.vir_w + 15) & ~15) >> 2;
-	else
-		uv_stride = stride;
+	case 1: /* fbc */
+		stride = ((msg->win0.vir_w + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win0.format))
+			uv_stride = ((msg->win0.vir_w + 15) & ~15) >> 2;
+		else
+			uv_stride = stride;
+		break;
+
+	case 2: /* tile 8*8 */
+		/*
+		 * tile 8*8 mode 8 lines of data are read/written at one time,
+		 * so stride needs * 8. YUV420 only has 4 lines of UV data, so
+		 * it needs to >>1.
+		 */
+		stride = (((msg->win0.vir_w * pixel_width * 8) + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win0.format))
+			uv_stride = ((((msg->win0.vir_w * 8) + 15) & ~15) >> 1) >> 2;
+		else
+			uv_stride = stride;
+		break;
+	}
 
 	*bRGA3_WIN0_Y_BASE = (u32) msg->win0.yrgb_addr;
 	*bRGA3_WIN0_U_BASE = (u32) msg->win0.uv_addr;
@@ -723,19 +725,31 @@ static void RGA3_set_reg_win1_info(u8 *base, struct rga3_req *msg)
 
 	*bRGA3_WIN1_RD_CTRL = reg;
 
-	/* stride need align to 16 */
-	if (msg->win1.rd_mode != 1)
+	switch (msg->win1.rd_mode) {
+	case 0: /* raster */
 		stride = (((msg->win1.vir_w * pixel_width) + 15) & ~15) >> 2;
-	else
-		stride = ((msg->win1.vir_w + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win1.format))
+			uv_stride = ((msg->win1.vir_w + 15) & ~15) >> 2;
+		else
+			uv_stride = stride;
+		break;
 
-	if (msg->win1.format == RGA_FORMAT_YCbCr_420_SP
-		|| msg->win1.format == RGA_FORMAT_YCrCb_420_SP
-		|| msg->win1.format == RGA_FORMAT_YCbCr_420_SP_10B
-		|| msg->win1.format == RGA_FORMAT_YCrCb_420_SP_10B)
-		uv_stride = ((msg->win1.vir_w + 15) & ~15) >> 2;
-	else
-		uv_stride = stride;
+	case 1: /* fbc */
+		stride = ((msg->win1.vir_w + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win1.format))
+			uv_stride = ((msg->win1.vir_w + 15) & ~15) >> 2;
+		else
+			uv_stride = stride;
+		break;
+
+	case 2: /* tile 8*8 */
+		stride = (((msg->win1.vir_w * pixel_width * 8) + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win1.format))
+			uv_stride = ((((msg->win1.vir_w * 8) + 15) & ~15) >> 1) >> 2;
+		else
+			uv_stride = stride;
+		break;
+	}
 
 	*bRGA3_WIN1_Y_BASE = (u32) msg->win1.yrgb_addr;
 	*bRGA3_WIN1_U_BASE = (u32) msg->win1.uv_addr;
@@ -949,16 +963,20 @@ static void RGA3_set_reg_wr_info(u8 *base, struct rga3_req *msg)
 	*bRGA3_WR_RD_CTRL = reg;
 	*bRGA3_WR_FBCD_CTRL = fbcd_reg;
 
-	/* stride need align to 16 */
-	if (msg->wr.rd_mode != 1) {
+	switch (msg->wr.rd_mode) {
+	case 0: /* raster */
 		stride = (((msg->wr.vir_w * pixel_width) + 15) & ~15) >> 2;
-		*bRGA3_WR_U_BASE = (u32) msg->wr.uv_addr;
 		uv_stride = ((msg->wr.vir_w + 15) & ~15) >> 2;
-	} else {
+
+		*bRGA3_WR_U_BASE = (u32) msg->wr.uv_addr;
+
+		break;
+
+	case 1: /* fbc */
 		stride = ((msg->wr.vir_w + 15) & ~15) >> 2;
 		/* need to calculate fbcd header size */
 		vir_h = ((msg->wr.vir_h + 15) & ~15);
-		*bRGA3_WR_U_BASE = (u32) (msg->wr.uv_addr + ((stride * vir_h)>>2));
+
 		/* RGBA8888 */
 		if (wr_format == 0x6)
 			uv_stride = ((msg->wr.vir_w + 15) & ~15);
@@ -974,6 +992,20 @@ static void RGA3_set_reg_wr_info(u8 *base, struct rga3_req *msg)
 		/* yuv422 10bit */
 		else if (wr_format == 0x3)
 			uv_stride = (((msg->wr.vir_w + 15) & ~15) >> 3) * 5;
+
+		*bRGA3_WR_U_BASE = (u32) (msg->wr.uv_addr + ((stride * vir_h)>>2));
+
+		break;
+
+	case 2: /* tile 8*8 */
+		stride = (((msg->wr.vir_w * pixel_width * 8) + 15) & ~15) >> 2;
+		if (rga_is_yuv420_semi_planar_format(msg->win0.format))
+			uv_stride = ((((msg->wr.vir_w * 8) + 15) & ~15) >> 1) >> 2;
+		else
+			uv_stride = stride;
+
+		*bRGA3_WR_U_BASE = (u32) msg->wr.uv_addr;
+		break;
 	}
 
 	*bRGA3_WR_Y_BASE = (u32) msg->wr.yrgb_addr;
@@ -1387,18 +1419,18 @@ static void rga_cmd_to_rga3_cmd(struct rga_req *req_rga, struct rga3_req *req)
 			if (req->win0.x_offset || req->win0.y_offset) {
 				req->win0.src_act_w = req->win0.src_act_w + req->win0.x_offset;
 				req->win0.src_act_h = req->win0.src_act_h + req->win0.y_offset;
-				req->win0.dst_act_w = req_rga->pat.act_w + req->win0.x_offset;
-				req->win0.dst_act_h = req_rga->pat.act_h + req->win0.y_offset;
+				req->win0.dst_act_w = req_rga->dst.act_w + req->win0.x_offset;
+				req->win0.dst_act_h = req_rga->dst.act_h + req->win0.y_offset;
 
 				req->win0.x_offset = 0;
 				req->win0.y_offset = 0;
 			} else {
-				req->win0.dst_act_w = req_rga->pat.act_w;
-				req->win0.dst_act_h = req_rga->pat.act_h;
+				req->win0.dst_act_w = req_rga->dst.act_w;
+				req->win0.dst_act_h = req_rga->dst.act_h;
 			}
 			/* set win1 dst size */
-			req->win1.dst_act_w = req_rga->pat.act_w;
-			req->win1.dst_act_h = req_rga->pat.act_h;
+			req->win1.dst_act_w = req_rga->dst.act_w;
+			req->win1.dst_act_h = req_rga->dst.act_h;
 		} else {
 			/* A+B->B mode */
 			set_win_info(&req->win0, &req_rga->dst);

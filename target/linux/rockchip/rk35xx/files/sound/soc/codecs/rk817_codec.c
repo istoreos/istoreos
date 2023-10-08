@@ -892,8 +892,7 @@ static int rk817_hw_params(struct snd_pcm_substream *substream,
 			   struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_component *component = asoc_rtd_to_codec(rtd, 0)->component;
+	struct snd_soc_component *component = dai->component;
 	struct rk817_codec_priv *rk817 = snd_soc_component_get_drvdata(component);
 	unsigned int rate = params_rate(params);
 	unsigned char apll_cfg3_val;
@@ -946,14 +945,16 @@ static int rk817_hw_params(struct snd_pcm_substream *substream,
 	 * is before playback/capture_path_put, therefore, we need to configure
 	 * APLL_CFG3/DTOP_DIGEN_CLKE/DDAC_SR_LMT0 for different sample rates.
 	 */
-	snd_soc_component_write(component, RK817_CODEC_APLL_CFG3, apll_cfg3_val);
-	/* The 0x00 contains ADC_DIG_CLK_DIS and DAC_DIG_CLK_DIS */
-	snd_soc_component_update_bits(component, RK817_CODEC_DTOP_DIGEN_CLKE,
-				      dtop_digen_clke, 0x00);
-	snd_soc_component_update_bits(component, RK817_CODEC_DDAC_SR_LMT0,
-				      DACSRT_MASK, dtop_digen_sr_lmt0);
-	snd_soc_component_update_bits(component, RK817_CODEC_DTOP_DIGEN_CLKE,
-				      dtop_digen_clke, dtop_digen_clke);
+	if (!((substream->stream == SNDRV_PCM_STREAM_CAPTURE) && rk817->pdmdata_out_enable)) {
+		snd_soc_component_write(component, RK817_CODEC_APLL_CFG3, apll_cfg3_val);
+		/* The 0x00 contains ADC_DIG_CLK_DIS and DAC_DIG_CLK_DIS */
+		snd_soc_component_update_bits(component, RK817_CODEC_DTOP_DIGEN_CLKE,
+					      dtop_digen_clke, 0x00);
+		snd_soc_component_update_bits(component, RK817_CODEC_DDAC_SR_LMT0,
+					      DACSRT_MASK, dtop_digen_sr_lmt0);
+		snd_soc_component_update_bits(component, RK817_CODEC_DTOP_DIGEN_CLKE,
+					      dtop_digen_clke, dtop_digen_clke);
+	}
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -1145,6 +1146,10 @@ static int rk817_suspend(struct snd_soc_component *component)
 
 static int rk817_resume(struct snd_soc_component *component)
 {
+	struct rk817_codec_priv *rk817 = snd_soc_component_get_drvdata(component);
+
+	rk817_capture_path_config(component, OFF, rk817->capture_path);
+	rk817_playback_path_config(component, OFF, rk817->playback_path);
 	return 0;
 }
 

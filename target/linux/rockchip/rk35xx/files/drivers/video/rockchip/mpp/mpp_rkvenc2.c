@@ -43,6 +43,7 @@
 #define RKVENC_MAX_CORE_NUM			4
 #define RKVENC_MAX_DCHS_ID			4
 #define RKVENC_MAX_SLICE_FIFO_LEN		256
+#define RKVENC_SCLR_DONE_STA			BIT(2)
 
 #define to_rkvenc_info(info)		\
 		container_of(info, struct rkvenc_hw_info, hw)
@@ -56,10 +57,12 @@ enum RKVENC_FORMAT_TYPE {
 	RKVENC_FMT_BASE		= 0x0000,
 	RKVENC_FMT_H264E	= RKVENC_FMT_BASE + 0,
 	RKVENC_FMT_H265E	= RKVENC_FMT_BASE + 1,
+	RKVENC_FMT_JPEGE	= RKVENC_FMT_BASE + 2,
 
 	RKVENC_FMT_OSD_BASE	= 0x1000,
 	RKVENC_FMT_H264E_OSD	= RKVENC_FMT_OSD_BASE + 0,
 	RKVENC_FMT_H265E_OSD	= RKVENC_FMT_OSD_BASE + 1,
+	RKVENC_FMT_JPEGE_OSD	= RKVENC_FMT_OSD_BASE + 2,
 	RKVENC_FMT_BUTT,
 };
 
@@ -224,6 +227,10 @@ struct rkvenc_task {
 	u32 slice_wr_cnt;
 	u32 slice_rd_cnt;
 	DECLARE_KFIFO(slice_info, union rkvenc2_slice_len_info, RKVENC_MAX_SLICE_FIFO_LEN);
+
+	/* jpege bitstream */
+	struct mpp_dma_buffer *bs_buf;
+	u32 offset_bs;
 };
 
 #define RKVENC_MAX_RCB_NUM		(4)
@@ -275,6 +282,11 @@ struct rkvenc_dev {
 	dma_addr_t sram_iova;
 	u32 sram_enabled;
 	struct page *rcb_page;
+
+#ifdef CONFIG_PM_DEVFREQ
+	struct rockchip_opp_info opp_info;
+	struct monitor_dev_info *mdev_info;
+#endif
 };
 
 struct rkvenc_ccu {
@@ -358,6 +370,75 @@ static struct rkvenc_hw_info rkvenc_v2_hw_info = {
 	.err_mask = 0x03f0,
 };
 
+static struct rkvenc_hw_info rkvenc_540c_hw_info = {
+	.hw = {
+		.reg_num = 254,
+		.reg_id = 0,
+		.reg_en = 4,
+		.reg_start = 160,
+		.reg_end = 253,
+	},
+	.reg_class = RKVENC_CLASS_BUTT,
+	.reg_msg[RKVENC_CLASS_BASE] = {
+		.base_s = 0x0000,
+		.base_e = 0x0120,
+	},
+	.reg_msg[RKVENC_CLASS_PIC] = {
+		.base_s = 0x0270,
+		.base_e = 0x0480,
+	},
+	.reg_msg[RKVENC_CLASS_RC] = {
+		.base_s = 0x1000,
+		.base_e = 0x110c,
+	},
+	.reg_msg[RKVENC_CLASS_PAR] = {
+		.base_s = 0x1700,
+		.base_e = 0x19cc,
+	},
+	.reg_msg[RKVENC_CLASS_SQI] = {
+		.base_s = 0x2000,
+		.base_e = 0x20fc,
+	},
+	.reg_msg[RKVENC_CLASS_SCL] = {
+		.base_s = 0x21e0,
+		.base_e = 0x2dfc,
+	},
+	.reg_msg[RKVENC_CLASS_OSD] = {
+		.base_s = 0x3000,
+		.base_e = 0x326c,
+	},
+	.reg_msg[RKVENC_CLASS_ST] = {
+		.base_s = 0x4000,
+		.base_e = 0x424c,
+	},
+	.reg_msg[RKVENC_CLASS_DEBUG] = {
+		.base_s = 0x5000,
+		.base_e = 0x5354,
+	},
+	.fd_class = RKVENC_CLASS_FD_BUTT,
+	.fd_reg[RKVENC_CLASS_FD_BASE] = {
+		.class = RKVENC_CLASS_PIC,
+		.base_fmt = RKVENC_FMT_BASE,
+	},
+	.fd_reg[RKVENC_CLASS_FD_OSD] = {
+		.class = RKVENC_CLASS_OSD,
+		.base_fmt = RKVENC_FMT_OSD_BASE,
+	},
+	.fmt_reg = {
+		.class = RKVENC_CLASS_PIC,
+		.base = 0x0300,
+		.bitpos = 0,
+		.bitlen = 2,
+	},
+	.enc_start_base = 0x0010,
+	.enc_clr_base = 0x0014,
+	.int_en_base = 0x0020,
+	.int_mask_base = 0x0024,
+	.int_clr_base = 0x0028,
+	.int_sta_base = 0x002c,
+	.enc_wdg_base = 0x0038,
+	.err_mask = 0x27d0,
+};
 /*
  * file handle translate information for v2
  */
@@ -381,6 +462,41 @@ static const u16 trans_tbl_h265e_v2_osd[] = {
 	20, 21, 22, 23, 24, 25, 26, 27,
 };
 
+/*
+ * file handle translate information for 540c
+ */
+static const u16 trans_tbl_h264e_540c[] = {
+	4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+	14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+	// /* renc and ref wrap */
+	// 24, 25, 26, 27,
+};
+
+static const u16 trans_tbl_h264e_540c_osd[] = {
+	3, 4, 12, 13, 21, 22, 30, 31,
+	39, 40, 48, 49, 57, 58, 66, 67,
+};
+
+static const u16 trans_tbl_h265e_540c[] = {
+	4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+	14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+};
+
+static const u16 trans_tbl_h265e_540c_osd[] = {
+	3, 4, 12, 13, 21, 22, 30, 31,
+	39, 40, 48, 49, 57, 58, 66, 67,
+};
+
+static const u16 trans_tbl_jpege[] = {
+	100, 101, 102, 103, 104, 105, 106, 107,
+	108, 109, 110,
+};
+
+static const u16 trans_tbl_jpege_osd[] = {
+	81, 82, 90, 91, 99, 100, 108, 109,
+	117, 118, 126, 127, 135, 136, 144, 145,
+};
+
 static struct mpp_trans_info trans_rkvenc_v2[] = {
 	[RKVENC_FMT_H264E] = {
 		.count = ARRAY_SIZE(trans_tbl_h264e_v2),
@@ -397,6 +513,33 @@ static struct mpp_trans_info trans_rkvenc_v2[] = {
 	[RKVENC_FMT_H265E_OSD] = {
 		.count = ARRAY_SIZE(trans_tbl_h265e_v2_osd),
 		.table = trans_tbl_h265e_v2_osd,
+	},
+};
+
+static struct mpp_trans_info trans_rkvenc_540c[] = {
+	[RKVENC_FMT_H264E] = {
+		.count = ARRAY_SIZE(trans_tbl_h264e_540c),
+		.table = trans_tbl_h264e_540c,
+	},
+	[RKVENC_FMT_H264E_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_h264e_540c_osd),
+		.table = trans_tbl_h264e_540c_osd,
+	},
+	[RKVENC_FMT_H265E] = {
+		.count = ARRAY_SIZE(trans_tbl_h265e_540c),
+		.table = trans_tbl_h265e_540c,
+	},
+	[RKVENC_FMT_H265E_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_h265e_540c_osd),
+		.table = trans_tbl_h265e_540c_osd,
+	},
+	[RKVENC_FMT_JPEGE] = {
+		.count = ARRAY_SIZE(trans_tbl_jpege),
+		.table = trans_tbl_jpege,
+	},
+	[RKVENC_FMT_JPEGE_OSD] = {
+		.count = ARRAY_SIZE(trans_tbl_jpege_osd),
+		.table = trans_tbl_jpege_osd,
 	},
 };
 
@@ -423,6 +566,7 @@ static int rkvenc_free_class_msg(struct rkvenc_task *task)
 
 	for (i = 0; i < reg_class; i++) {
 		kfree(task->reg[i].data);
+		task->reg[i].data = NULL;
 		task->reg[i].size = 0;
 	}
 
@@ -567,8 +711,11 @@ static int rkvenc_extract_task_msg(struct mpp_session *session,
 				wreq = &task->w_reqs[task->w_req_cnt];
 				rkvenc_update_req(task, j, req, wreq);
 				data = rkvenc_get_class_reg(task, wreq->offset);
-				if (!data)
+				if (!data) {
+					mpp_err("get class reg fail, offset %08x\n", wreq->offset);
+					ret = -EINVAL;
 					goto fail;
+				}
 				if (copy_from_user(data, wreq->data, wreq->size)) {
 					mpp_err("copy_from_user fail, offset %08x\n", wreq->offset);
 					ret = -EIO;
@@ -774,6 +921,7 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 		u32 off;
 		const u16 *tbl;
 		struct rkvenc_hw_info *hw = task->hw_info;
+		int fd_bs = -1;
 
 		for (i = 0; i < hw->fd_class; i++) {
 			u32 class = hw->fd_reg[i].class;
@@ -783,6 +931,15 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 
 			if (!reg)
 				continue;
+
+			if (fmt == RKVENC_FMT_JPEGE && class == RKVENC_CLASS_PIC && fd_bs == -1) {
+				int bs_index;
+
+				bs_index = mpp->var->trans_info[fmt].table[2];
+				fd_bs = reg[bs_index];
+				task->offset_bs = mpp_query_reg_offset_info(&task->off_inf,
+									    bs_index + ss);
+			}
 
 			ret = mpp_translate_reg_address(session, mpp_task, fmt, reg, NULL);
 			if (ret)
@@ -795,6 +952,15 @@ static void *rkvenc_alloc_task(struct mpp_session *session,
 				mpp_debug(DEBUG_IOMMU, "reg[%d] + offset %d\n", tbl[j] + ss, off);
 				reg[tbl[j]] += off;
 			}
+		}
+
+		if (fd_bs >= 0) {
+			struct mpp_dma_buffer *bs_buf =
+					mpp_dma_find_buffer_fd(session->dma, fd_bs);
+
+			if (bs_buf && task->offset_bs > 0)
+				mpp_dma_buf_sync(bs_buf, 0, task->offset_bs, DMA_TO_DEVICE, false);
+			task->bs_buf = bs_buf;
 		}
 	}
 	rkvenc2_setup_task_id(session->index, task);
@@ -1244,6 +1410,13 @@ static int rkvenc_finish(struct mpp_dev *mpp, struct mpp_task *mpp_task)
 
 	}
 
+	if (task->bs_buf) {
+		u32 bs_size = mpp_read(mpp, 0x4064);
+
+		mpp_dma_buf_sync(task->bs_buf, 0, bs_size / 8 + task->offset_bs,
+				 DMA_FROM_DEVICE, true);
+	}
+
 	/* revert hack for irq status */
 	reg = rkvenc_get_class_reg(task, task->hw_info->int_sta_base);
 	if (reg)
@@ -1504,6 +1677,101 @@ static inline int rkvenc_procfs_ccu_init(struct mpp_dev *mpp)
 }
 #endif
 
+#ifdef CONFIG_PM_DEVFREQ
+static int rk3588_venc_set_read_margin(struct device *dev,
+				       struct rockchip_opp_info *opp_info,
+				       u32 rm)
+{
+	if (!opp_info->grf || !opp_info->volt_rm_tbl)
+		return 0;
+
+	if (rm == opp_info->current_rm || rm == UINT_MAX)
+		return 0;
+
+	dev_dbg(dev, "set rm to %d\n", rm);
+
+	regmap_write(opp_info->grf, 0x214, 0x001c0000 | (rm << 2));
+	regmap_write(opp_info->grf, 0x218, 0x001c0000 | (rm << 2));
+	regmap_write(opp_info->grf, 0x220, 0x003c0000 | (rm << 2));
+	regmap_write(opp_info->grf, 0x224, 0x003c0000 | (rm << 2));
+
+	opp_info->current_rm = rm;
+
+	return 0;
+}
+
+static const struct rockchip_opp_data rk3588_venc_opp_data = {
+	.set_read_margin = rk3588_venc_set_read_margin,
+};
+
+static const struct of_device_id rockchip_rkvenc_of_match[] = {
+	{
+		.compatible = "rockchip,rk3588",
+		.data = (void *)&rk3588_venc_opp_data,
+	},
+	{},
+};
+
+static struct monitor_dev_profile venc_mdevp = {
+	.type = MONITOR_TPYE_DEV,
+	.update_volt = rockchip_monitor_check_rate_volt,
+};
+
+static int rkvenc_devfreq_init(struct mpp_dev *mpp)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	struct clk *clk_core = enc->core_clk_info.clk;
+	struct device *dev = mpp->dev;
+	struct opp_table *reg_table = NULL;
+	struct opp_table *clk_table = NULL;
+	const char *const reg_names[] = { "venc", "mem" };
+	int ret = 0;
+
+	if (!clk_core)
+		return 0;
+
+	if (of_find_property(dev->of_node, "venc-supply", NULL) &&
+	    of_find_property(dev->of_node, "mem-supply", NULL)) {
+		reg_table = dev_pm_opp_set_regulators(dev, reg_names, 2);
+		if (IS_ERR(reg_table))
+			return PTR_ERR(reg_table);
+	} else {
+		reg_table = dev_pm_opp_set_regulators(dev, reg_names, 1);
+		if (IS_ERR(reg_table))
+			return PTR_ERR(reg_table);
+	}
+
+	clk_table = dev_pm_opp_set_clkname(dev, "clk_core");
+	if (IS_ERR(clk_table))
+		return PTR_ERR(clk_table);
+
+	rockchip_get_opp_data(rockchip_rkvenc_of_match, &enc->opp_info);
+	ret = rockchip_init_opp_table(dev, &enc->opp_info, "leakage", "venc");
+	if (ret) {
+		dev_err(dev, "failed to init_opp_table\n");
+		return ret;
+	}
+
+	enc->mdev_info = rockchip_system_monitor_register(dev, &venc_mdevp);
+	if (IS_ERR(enc->mdev_info)) {
+		dev_dbg(dev, "without system monitor\n");
+		enc->mdev_info = NULL;
+	}
+
+	return ret;
+}
+
+static int rkvenc_devfreq_remove(struct mpp_dev *mpp)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+
+	if (enc->mdev_info)
+		rockchip_system_monitor_unregister(enc->mdev_info);
+
+	return 0;
+}
+#endif
+
 static int rkvenc_init(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
@@ -1540,26 +1808,59 @@ static int rkvenc_init(struct mpp_dev *mpp)
 	if (!enc->rst_core)
 		mpp_err("No core reset resource define\n");
 
+#ifdef CONFIG_PM_DEVFREQ
+	ret = rkvenc_devfreq_init(mpp);
+	if (ret)
+		mpp_err("failed to add venc devfreq\n");
+#endif
+
 	return 0;
+}
+
+static int rkvenc_exit(struct mpp_dev *mpp)
+{
+#ifdef CONFIG_PM_DEVFREQ
+	rkvenc_devfreq_remove(mpp);
+#endif
+
+	return 0;
+}
+
+static int rkvenc_soft_reset(struct mpp_dev *mpp)
+{
+	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
+	struct rkvenc_hw_info *hw = enc->hw_info;
+	u32 rst_status = 0;
+	int ret = 0;
+
+	/* safe reset */
+	mpp_write(mpp, hw->int_mask_base, 0x3FF);
+	mpp_write(mpp, hw->enc_clr_base, 0x1);
+	ret = readl_relaxed_poll_timeout(mpp->reg_base + hw->int_sta_base,
+					 rst_status,
+					 rst_status & RKVENC_SCLR_DONE_STA,
+					 0, 5);
+	mpp_write(mpp, hw->int_clr_base, 0xffffffff);
+	mpp_write(mpp, hw->int_sta_base, 0);
+
+	return ret;
+
 }
 
 static int rkvenc_reset(struct mpp_dev *mpp)
 {
 	struct rkvenc_dev *enc = to_rkvenc_dev(mpp);
-	struct rkvenc_hw_info *hw = enc->hw_info;
+	int ret = 0;
 	struct mpp_taskqueue *queue = mpp->queue;
 
 	mpp_debug_enter();
 
-	/* safe reset */
-	mpp_write(mpp, hw->int_mask_base, 0x3FF);
-	mpp_write(mpp, hw->enc_clr_base, 0x1);
-	udelay(5);
-	mpp_write(mpp, hw->int_clr_base, 0xffffffff);
-	mpp_write(mpp, hw->int_sta_base, 0);
+	/* safe reset first*/
+	ret = rkvenc_soft_reset(mpp);
 
 	/* cru reset */
-	if (enc->rst_a && enc->rst_h && enc->rst_core) {
+	if (ret && enc->rst_a && enc->rst_h && enc->rst_core) {
+		mpp_err("soft reset timeout, use cru reset\n");
 		mpp_pmu_idle_request(mpp, true);
 		mpp_safe_reset(enc->rst_a);
 		mpp_safe_reset(enc->rst_h);
@@ -1791,6 +2092,7 @@ task_done_ret:
 
 static struct mpp_hw_ops rkvenc_hw_ops = {
 	.init = rkvenc_init,
+	.exit = rkvenc_exit,
 	.clk_on = rkvenc_clk_on,
 	.clk_off = rkvenc_clk_off,
 	.set_freq = rkvenc_set_freq,
@@ -1837,6 +2139,14 @@ static const struct mpp_dev_var rkvenc_v2_data = {
 	.dev_ops = &rkvenc_dev_ops_v2,
 };
 
+static const struct mpp_dev_var rkvenc_540c_data = {
+	.device_type = MPP_DEVICE_RKVENC,
+	.hw_info = &rkvenc_540c_hw_info.hw,
+	.trans_info = trans_rkvenc_540c,
+	.hw_ops = &rkvenc_hw_ops,
+	.dev_ops = &rkvenc_dev_ops_v2,
+};
+
 static const struct mpp_dev_var rkvenc_ccu_data = {
 	.device_type = MPP_DEVICE_RKVENC,
 	.hw_info = &rkvenc_v2_hw_info.hw,
@@ -1850,6 +2160,18 @@ static const struct of_device_id mpp_rkvenc_dt_match[] = {
 		.compatible = "rockchip,rkv-encoder-v2",
 		.data = &rkvenc_v2_data,
 	},
+#ifdef CONFIG_CPU_RK3528
+	{
+		.compatible = "rockchip,rkv-encoder-rk3528",
+		.data = &rkvenc_540c_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RK3562
+	{
+		.compatible = "rockchip,rkv-encoder-rk3562",
+		.data = &rkvenc_540c_data,
+	},
+#endif
 #ifdef CONFIG_CPU_RK3588
 	{
 		.compatible = "rockchip,rkv-encoder-v2-core",
@@ -2186,8 +2508,9 @@ static int rkvenc2_free_rcbbuf(struct platform_device *pdev, struct rkvenc_dev *
 
 	if (enc->rcb_page) {
 		size_t page_size = PAGE_ALIGN(enc->sram_used - enc->sram_size);
+		int order = min(get_order(page_size), MAX_ORDER);
 
-		__free_pages(enc->rcb_page, get_order(page_size));
+		__free_pages(enc->rcb_page, order);
 	}
 	if (enc->sram_iova) {
 		domain = enc->mpp.iommu_info->domain;

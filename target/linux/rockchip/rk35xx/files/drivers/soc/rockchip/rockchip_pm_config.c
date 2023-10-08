@@ -25,8 +25,8 @@
 #define PM_INVALID_GPIO			0xffff
 #define MAX_ON_OFF_REG_NUM		30
 #define MAX_ON_OFF_REG_PROP_NAME_LEN	60
+#define MAX_CONFIG_PROP_NAME_LEN	60
 
-#ifndef MODULE
 enum rk_pm_state {
 	RK_PM_MEM = 0,
 	RK_PM_MEM_LITE,
@@ -34,11 +34,23 @@ enum rk_pm_state {
 	RK_PM_STATE_MAX
 };
 
+#ifndef MODULE
+static const char * const pm_state_str[RK_PM_STATE_MAX] = {
+	[RK_PM_MEM] = "mem",
+	[RK_PM_MEM_LITE] = "mem-lite",
+	[RK_PM_MEM_ULTRA] = "mem-ultra",
+};
+
 static struct rk_on_off_regulator_list {
 	struct regulator_dev *on_reg_list[MAX_ON_OFF_REG_NUM];
 	struct regulator_dev *off_reg_list[MAX_ON_OFF_REG_NUM];
 } on_off_regs_list[RK_PM_STATE_MAX];
 #endif
+
+static struct rk_sleep_config {
+	u32 mode_config;
+	u32 wakeup_config;
+} sleep_config[RK_PM_STATE_MAX];
 
 static const struct of_device_id pm_match_table[] = {
 	{ .compatible = "rockchip,pm-px30",},
@@ -49,6 +61,8 @@ static const struct of_device_id pm_match_table[] = {
 	{ .compatible = "rockchip,pm-rk3328",},
 	{ .compatible = "rockchip,pm-rk3368",},
 	{ .compatible = "rockchip,pm-rk3399",},
+	{ .compatible = "rockchip,pm-rk3528",},
+	{ .compatible = "rockchip,pm-rk3562",},
 	{ .compatible = "rockchip,pm-rk3568",},
 	{ .compatible = "rockchip,pm-rk3588",},
 	{ .compatible = "rockchip,pm-rv1126",},
@@ -72,84 +86,81 @@ static void rockchip_pm_virt_pwroff_prepare(void)
 	sip_smc_virtual_poweroff();
 }
 
-static int parse_on_off_regulator(struct device_node *node, enum rk_pm_state state)
+static int parse_sleep_config(struct device_node *node, enum rk_pm_state state)
 {
-	char on_prop_name[MAX_ON_OFF_REG_PROP_NAME_LEN] = {0};
-	char off_prop_name[MAX_ON_OFF_REG_PROP_NAME_LEN] = {0};
-	int i, j;
+	char mode_prop_name[MAX_CONFIG_PROP_NAME_LEN];
+	char wkup_prop_name[MAX_CONFIG_PROP_NAME_LEN];
+	struct rk_sleep_config *config;
+
+	if (state == RK_PM_MEM || state >= RK_PM_STATE_MAX)
+		return -EINVAL;
+
+	snprintf(mode_prop_name, sizeof(mode_prop_name),
+		 "sleep-mode-config-%s", pm_state_str[state]);
+	snprintf(wkup_prop_name, sizeof(wkup_prop_name),
+		 "wakeup-config-%s", pm_state_str[state]);
+
+	config = &sleep_config[state];
+
+	if (of_property_read_u32_array(node,
+				       mode_prop_name,
+				       &config->mode_config, 1))
+		pr_info("%s not set sleep-mode-config for %s\n",
+			node->name, pm_state_str[state]);
+
+	if (of_property_read_u32_array(node,
+				       wkup_prop_name,
+				       &config->wakeup_config, 1))
+		pr_info("%s not set wakeup-config for %s\n",
+			node->name, pm_state_str[state]);
+
+	return 0;
+}
+
+static int parse_regulator_list(struct device_node *node,
+				char *prop_name,
+				struct regulator_dev **out_list)
+{
 	struct device_node *dn;
 	struct regulator_dev *reg;
-	struct regulator_dev **on_list;
-	struct regulator_dev **off_list;
+	int i, j;
 
-	switch (state) {
-	case RK_PM_MEM:
-		strncpy(on_prop_name, "rockchip,regulator-on-in-mem",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-		strncpy(off_prop_name, "rockchip,regulator-off-in-mem",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-	break;
-
-	case RK_PM_MEM_LITE:
-		strncpy(on_prop_name, "rockchip,regulator-on-in-mem-lite",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-		strncpy(off_prop_name, "rockchip,regulator-off-in-mem-lite",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-	break;
-
-	case RK_PM_MEM_ULTRA:
-		strncpy(on_prop_name, "rockchip,regulator-on-in-mem-ultra",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-		strncpy(off_prop_name, "rockchip,regulator-off-in-mem-ultra",
-			MAX_ON_OFF_REG_PROP_NAME_LEN);
-	break;
-
-	default:
-		return 0;
-	}
-
-	on_list = on_off_regs_list[state].on_reg_list;
-	off_list = on_off_regs_list[state].off_reg_list;
-
-	if (of_find_property(node, on_prop_name, NULL)) {
+	if (of_find_property(node, prop_name, NULL)) {
 		for (i = 0, j = 0;
-		     (dn = of_parse_phandle(node, on_prop_name, i));
+		     (dn = of_parse_phandle(node, prop_name, i)) && j < MAX_ON_OFF_REG_NUM;
 		     i++) {
 			reg = of_find_regulator_by_node(dn);
 			if (reg == NULL) {
 				pr_warn("failed to find regulator %s for %s\n",
-					dn->name, on_prop_name);
+					dn->name, prop_name);
 			} else {
-				pr_debug("%s on regulator=%s\n", __func__,
+				pr_debug("%s %s regulator=%s\n", __func__,
+					 prop_name,
 					 reg->desc->name);
-				on_list[j++] = reg;
+				out_list[j++] = reg;
 			}
 			of_node_put(dn);
-
-			if (j >= MAX_ON_OFF_REG_NUM)
-				return 0;
 		}
 	}
 
-	if (of_find_property(node, off_prop_name, NULL)) {
-		for (i = 0, j = 0;
-		     (dn = of_parse_phandle(node, off_prop_name, i));
-		     i++) {
-			reg = of_find_regulator_by_node(dn);
-			if (reg == NULL) {
-				pr_warn("failed to find regulator %s for %s\n",
-					dn->name, off_prop_name);
-			} else {
-				pr_debug("%s off regulator=%s\n", __func__,
-					 reg->desc->name);
-				off_list[j++] = reg;
-			}
-			of_node_put(dn);
+	return 0;
+}
 
-			if (j >= MAX_ON_OFF_REG_NUM)
-				return 0;
-		}
-	}
+static int parse_on_off_regulator(struct device_node *node, enum rk_pm_state state)
+{
+	char on_prop_name[MAX_ON_OFF_REG_PROP_NAME_LEN];
+	char off_prop_name[MAX_ON_OFF_REG_PROP_NAME_LEN];
+
+	if (state >= RK_PM_STATE_MAX)
+		return -EINVAL;
+
+	snprintf(on_prop_name, sizeof(on_prop_name),
+		 "rockchip,regulator-on-in-%s", pm_state_str[state]);
+	snprintf(off_prop_name, sizeof(off_prop_name),
+		 "rockchip,regulator-off-in-%s", pm_state_str[state]);
+
+	parse_regulator_list(node, on_prop_name, on_off_regs_list[state].on_reg_list);
+	parse_regulator_list(node, off_prop_name, on_off_regs_list[state].off_reg_list);
 
 	return 0;
 }
@@ -159,8 +170,7 @@ static int pm_config_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match_id;
 	struct device_node *node;
-	u32 mode_config = 0;
-	u32 wakeup_config = 0;
+	struct rk_sleep_config *config = &sleep_config[RK_PM_MEM];
 	u32 pwm_regulator_config = 0;
 	int gpio_temp[10];
 	u32 sleep_debug_en = 0;
@@ -187,17 +197,17 @@ static int pm_config_probe(struct platform_device *pdev)
 
 	if (of_property_read_u32_array(node,
 				       "rockchip,sleep-mode-config",
-				       &mode_config, 1))
+				       &config->mode_config, 1))
 		dev_warn(&pdev->dev, "not set sleep mode config\n");
 	else
-		sip_smc_set_suspend_mode(SUSPEND_MODE_CONFIG, mode_config, 0);
+		sip_smc_set_suspend_mode(SUSPEND_MODE_CONFIG, config->mode_config, 0);
 
 	if (of_property_read_u32_array(node,
 				       "rockchip,wakeup-config",
-				       &wakeup_config, 1))
+				       &config->wakeup_config, 1))
 		dev_warn(&pdev->dev, "not set wakeup-config\n");
 	else
-		sip_smc_set_suspend_mode(WKUP_SOURCE_CONFIG, wakeup_config, 0);
+		sip_smc_set_suspend_mode(WKUP_SOURCE_CONFIG, config->wakeup_config, 0);
 
 	if (of_property_read_u32_array(node,
 				       "rockchip,pwm-regulator-config",
@@ -256,8 +266,10 @@ static int pm_config_probe(struct platform_device *pdev)
 	    virtual_poweroff_en)
 		pm_power_off_prepare = rockchip_pm_virt_pwroff_prepare;
 
-	for (i = RK_PM_MEM; i < RK_PM_STATE_MAX; i++)
+	for (i = RK_PM_MEM; i < RK_PM_STATE_MAX; i++) {
+		parse_sleep_config(node, i);
 		parse_on_off_regulator(node, i);
+	}
 #endif
 
 	return 0;
@@ -271,6 +283,7 @@ static int pm_config_prepare(struct device *dev)
 	enum rk_pm_state state = suspend_state - PM_SUSPEND_MEM;
 	struct regulator_dev **on_list;
 	struct regulator_dev **off_list;
+	struct rk_sleep_config *config, *def_config = &sleep_config[RK_PM_MEM];
 
 	sip_smc_set_suspend_mode(LINUX_PM_STATE,
 				 suspend_state,
@@ -278,6 +291,22 @@ static int pm_config_prepare(struct device *dev)
 
 	if (state >= RK_PM_STATE_MAX)
 		return 0;
+
+	config = &sleep_config[state];
+
+	if (config->mode_config)
+		sip_smc_set_suspend_mode(SUSPEND_MODE_CONFIG,
+					 config->mode_config, 0);
+	else if (def_config->mode_config)
+		sip_smc_set_suspend_mode(SUSPEND_MODE_CONFIG,
+					 def_config->mode_config, 0);
+
+	if (config->wakeup_config)
+		sip_smc_set_suspend_mode(WKUP_SOURCE_CONFIG,
+					 config->wakeup_config, 0);
+	else if (def_config->wakeup_config)
+		sip_smc_set_suspend_mode(WKUP_SOURCE_CONFIG,
+					 def_config->wakeup_config, 0);
 
 	on_list = on_off_regs_list[state].on_reg_list;
 	off_list = on_off_regs_list[state].off_reg_list;

@@ -10,8 +10,6 @@ current using user library only supports legacy ABI
  drivers/video/rockchip/rga3/rga_job.c     |  35 +++++-
  3 files changed, 166 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/video/rockchip/rga3/Kconfig b/drivers/video/rockchip/rga3/Kconfig
-index c8c96b2d6..6084b8e95 100644
 --- a/drivers/video/rockchip/rga3/Kconfig
 +++ b/drivers/video/rockchip/rga3/Kconfig
 @@ -14,6 +14,12 @@ config ROCKCHIP_RGA_ASYNC
@@ -27,8 +25,6 @@ index c8c96b2d6..6084b8e95 100644
  config ROCKCHIP_RGA_PROC_FS
  	bool "Enable RGA procfs"
  	select ROCKCHIP_RGA_DEBUGGER
-diff --git a/drivers/video/rockchip/rga3/include/rga.h b/drivers/video/rockchip/rga3/include/rga.h
-index f6be6eafb..ff0524bf5 100644
 --- a/drivers/video/rockchip/rga3/include/rga.h
 +++ b/drivers/video/rockchip/rga3/include/rga.h
 @@ -866,6 +866,133 @@ struct rga_user_request {
@@ -165,11 +161,9 @@ index f6be6eafb..ff0524bf5 100644
  int rga_mpi_commit(struct rga_mpi_job_t *mpi_job);
  
  #endif /*_RGA_DRIVER_H_*/
-diff --git a/drivers/video/rockchip/rga3/rga_job.c b/drivers/video/rockchip/rga3/rga_job.c
-index 2331429be..c904ca88e 100644
 --- a/drivers/video/rockchip/rga3/rga_job.c
 +++ b/drivers/video/rockchip/rga3/rga_job.c
-@@ -910,6 +910,11 @@ struct rga_request *rga_request_config(struct rga_user_request *user_request)
+@@ -920,6 +920,11 @@ struct rga_request *rga_request_config(s
  	struct rga_request *request;
  	struct rga_req *task_list;
  
@@ -181,7 +175,7 @@ index 2331429be..c904ca88e 100644
  	request_manager = rga_drvdata->pend_request_manager;
  	if (request_manager == NULL) {
  		pr_err("rga_pending_request_manager is null!\n");
-@@ -934,13 +939,36 @@ struct rga_request *rga_request_config(struct rga_user_request *user_request)
+@@ -944,13 +949,36 @@ struct rga_request *rga_request_config(s
  		ret = -ENOMEM;
  		goto err_put_request;
  	}
@@ -219,7 +213,7 @@ index 2331429be..c904ca88e 100644
  
  	spin_lock_irqsave(&request->lock, flags);
  
-@@ -954,7 +982,10 @@ struct rga_request *rga_request_config(struct rga_user_request *user_request)
+@@ -964,7 +992,10 @@ struct rga_request *rga_request_config(s
  	spin_unlock_irqrestore(&request->lock, flags);
  
  	return request;
@@ -231,6 +225,3 @@ index 2331429be..c904ca88e 100644
  err_free_task_list:
  	kfree(task_list);
  err_put_request:
--- 
-2.37.1 (Apple Git-137.1)
-

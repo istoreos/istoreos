@@ -37,7 +37,6 @@
 
 #include "rockchip_drm_drv.h"
 #include "rockchip_drm_vop.h"
-#include "../panel/panel-simple.h"
 
 #define UPDATE(v, h, l)			(((v) << (l)) & GENMASK((h), (l)))
 
@@ -476,7 +475,10 @@ static void dw_mipi_dsi2_encoder_disable(struct drm_encoder *encoder)
 	if (!crtc->state->active_changed)
 		return;
 
-	s->output_if &= ~(dsi2->id ? VOP_OUTPUT_IF_MIPI1 : VOP_OUTPUT_IF_MIPI0);
+	if (dsi2->slave)
+		s->output_if &= ~(VOP_OUTPUT_IF_MIPI1 | VOP_OUTPUT_IF_MIPI0);
+	else
+		s->output_if &= ~(dsi2->id ? VOP_OUTPUT_IF_MIPI1 : VOP_OUTPUT_IF_MIPI0);
 }
 
 static void dw_mipi_dsi2_get_lane_rate(struct dw_mipi_dsi2 *dsi2)
@@ -593,9 +595,9 @@ static void dw_mipi_dsi2_phy_clk_mode_cfg(struct dw_mipi_dsi2 *dsi2)
 	 */
 	val |= NON_CONTINUOUS_CLK;
 
-	/* The Escape clock ranges from 1MHz to 20MHz. */
+	/* The maximum value of the escape clock frequency is 20MHz */
 	sys_clk = clk_get_rate(dsi2->sys_clk) / USEC_PER_SEC;
-	esc_clk_div = DIV_ROUND_UP(sys_clk, 10 * 2);
+	esc_clk_div = DIV_ROUND_UP(sys_clk, 20 * 2);
 	val |= PHY_LPTX_CLK_DIV(esc_clk_div);
 
 	regmap_write(dsi2->regmap, DSI2_PHY_CLK_CFG, val);
@@ -1001,29 +1003,40 @@ static enum drm_mode_status
 dw_mipi_dsi2_connector_mode_valid(struct drm_connector *connector,
 				  struct drm_display_mode *mode)
 {
+	struct dw_mipi_dsi2 *dsi2 = con_to_dsi2(connector);
 	struct videomode vm;
+	u8 min_pixels = dsi2->slave ? 8 : 4;
 
 	drm_display_mode_to_videomode(mode, &vm);
+
+	if (vm.vactive > 16383)
+		return MODE_VIRTUAL_Y;
+
+	if (vm.vsync_len > 1023)
+		return MODE_VSYNC_WIDE;
+
+	if (vm.vback_porch > 1023 || vm.vfront_porch > 1023)
+		return MODE_VBLANK_WIDE;
 
 	/*
 	 * the minimum region size (HSA,HBP,HACT,HFP) is 4 pixels
 	 * which is the ip known issues and limitations.
 	 */
-	if (!(vm.hsync_len < 4 || vm.hback_porch < 4 ||
-	    vm.hfront_porch < 4 || vm.hactive < 4))
+	if (!(vm.hsync_len < min_pixels || vm.hback_porch < min_pixels ||
+	    vm.hfront_porch < min_pixels || vm.hactive < min_pixels))
 		return MODE_OK;
 
-	if (vm.hsync_len < 4)
-		vm.hsync_len = 4;
+	if (vm.hsync_len < min_pixels)
+		vm.hsync_len = min_pixels;
 
-	if (vm.hback_porch < 4)
-		vm.hback_porch = 4;
+	if (vm.hback_porch < min_pixels)
+		vm.hback_porch = min_pixels;
 
-	if (vm.hfront_porch < 4)
-		vm.hfront_porch = 4;
+	if (vm.hfront_porch < min_pixels)
+		vm.hfront_porch = min_pixels;
 
-	if (vm.hactive < 4)
-		vm.hactive = 4;
+	if (vm.hactive < min_pixels)
+		vm.hactive = min_pixels;
 
 	drm_display_mode_from_videomode(&vm, mode);
 
@@ -1610,8 +1623,8 @@ static int dw_mipi_dsi2_probe(struct platform_device *pdev)
 
 	if (dsi2->te_gpio) {
 		ret = devm_request_threaded_irq(dsi2->dev, gpiod_to_irq(dsi2->te_gpio),
-						NULL, dw_mipi_dsi2_te_irq_handler,
-						IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+						dw_mipi_dsi2_te_irq_handler, NULL,
+						IRQF_TRIGGER_RISING | IRQF_ONESHOT,
 						"PANEL-TE", dsi2);
 		if (ret) {
 			dev_err(dsi2->dev, "failed to request TE IRQ: %d\n", ret);

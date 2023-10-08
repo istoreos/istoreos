@@ -13,6 +13,7 @@
 
 #include <linux/iommu.h>
 #include <linux/dma-mapping.h>
+#include <linux/interrupt.h>
 
 struct mpp_dma_buffer {
 	/* link to dma session buffer list */
@@ -103,6 +104,9 @@ int mpp_dma_unmap_kernel(struct mpp_dma_session *dma,
 			 struct mpp_dma_buffer *buffer);
 int mpp_dma_map_kernel(struct mpp_dma_session *dma,
 		       struct mpp_dma_buffer *buffer);
+struct mpp_dma_buffer *mpp_dma_find_buffer_fd(struct mpp_dma_session *dma, int fd);
+void mpp_dma_buf_sync(struct mpp_dma_buffer *buffer, u32 offset, u32 length,
+		      enum dma_data_direction dir, bool for_cpu);
 
 struct mpp_iommu_info *
 mpp_iommu_probe(struct device *dev);
@@ -149,6 +153,18 @@ static inline int mpp_iommu_up_write(struct mpp_iommu_info *info)
 		up_write(&info->rw_sem);
 
 	return 0;
+}
+
+static inline void mpp_iommu_enable_irq(struct mpp_iommu_info *info)
+{
+	if (info && info->got_irq)
+		enable_irq(info->irq);
+}
+
+static inline void mpp_iommu_disable_irq(struct mpp_iommu_info *info)
+{
+	if (info && info->got_irq)
+		disable_irq(info->irq);
 }
 
 #endif

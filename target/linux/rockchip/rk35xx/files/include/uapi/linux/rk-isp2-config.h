@@ -4,13 +4,13 @@
  * Copyright (C) 2017 Rockchip Electronics Co., Ltd.
  */
 
-#ifndef _UAPI_RKISP2_CONFIG_H
-#define _UAPI_RKISP2_CONFIG_H
+#ifndef _UAPI_RK_ISP2_CONFIG_H
+#define _UAPI_RK_ISP2_CONFIG_H
 
 #include <linux/types.h>
 #include <linux/v4l2-controls.h>
 
-#define RKISP_API_VERSION		KERNEL_VERSION(2, 0, 0)
+#define RKISP_API_VERSION		KERNEL_VERSION(2, 2, 1)
 
 /****************ISP SUBDEV IOCTL*****************************/
 
@@ -80,10 +80,10 @@
 	_IOW('V', BASE_VIDIOC_PRIVATE + 106, struct rkisp_mirror_flip)
 
 #define RKISP_CMD_GET_WRAP_LINE \
-	_IOR('V', BASE_VIDIOC_PRIVATE + 107, int)
+	_IOR('V', BASE_VIDIOC_PRIVATE + 107, struct rkisp_wrap_info)
 /* set wrap line before VIDIOC_S_FMT */
 #define RKISP_CMD_SET_WRAP_LINE \
-	_IOW('V', BASE_VIDIOC_PRIVATE + 108, int)
+	_IOW('V', BASE_VIDIOC_PRIVATE + 108, struct rkisp_wrap_info)
 
 #define RKISP_CMD_SET_FPS \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 109, int)
@@ -96,6 +96,9 @@
 
 #define RKISP_CMD_FREE_TB_STREAM_BUF \
 	_IO('V', BASE_VIDIOC_PRIVATE + 112)
+
+#define RKISP_CMD_SET_IQTOOL_CONN_ID \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 113, int)
 /*************************************************************/
 
 #define ISP2X_ID_DPCC			(0)
@@ -353,11 +356,13 @@ struct rkisp_cmsk_win {
 
 /* struct rkisp_cmsk_cfg
  * win: priacy mask window
+ * mosaic_block: Mosaic block size, 0:8x8 1:16x16 2:32x32 3:64x64, share for all windows
  * width_ro: isp full resolution, h_offs + h_size <= width_ro.
  * height_ro: isp full resolution, v_offs + v_size <= height_ro.
  */
 struct rkisp_cmsk_cfg {
 	struct rkisp_cmsk_win win[RKISP_CMSK_WIN_MAX];
+	unsigned int mosaic_block;
 	unsigned int width_ro;
 	unsigned int height_ro;
 } __attribute__ ((packed));
@@ -373,6 +378,7 @@ struct rkisp_stream_info {
 	unsigned int input_frame_loss;
 	unsigned int output_frame_loss;
 	unsigned char stream_on;
+	unsigned char stream_id;
 } __attribute__ ((packed));
 
 /* struct rkisp_mirror_flip
@@ -383,6 +389,11 @@ struct rkisp_mirror_flip {
 	unsigned char mirror;
 	unsigned char flip;
 } __attribute__ ((packed));
+
+struct rkisp_wrap_info {
+	int width;
+	int height;
+};
 
 #define RKISP_TB_STREAM_BUF_MAX 5
 struct rkisp_tb_stream_buf {
@@ -1966,7 +1977,8 @@ struct rkisp_thunderboot_resmem_head {
 	u16 hdr_mode;
 	u16 width;
 	u16 height;
-	u32 bus_fmt;
+	u16 camera_num;
+	u16 camera_index;
 
 	u32 exp_time[3];
 	u32 exp_gain[3];
@@ -1991,4 +2003,4 @@ struct rkisp_thunderboot_shmem {
 	s32 shm_fd;
 } __attribute__ ((packed));
 
-#endif /* _UAPI_RKISP2_CONFIG_H */
+#endif /* _UAPI_RK_ISP2_CONFIG_H */

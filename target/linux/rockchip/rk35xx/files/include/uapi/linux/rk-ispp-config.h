@@ -3,8 +3,8 @@
  * Copyright (C) 2019 Rockchip Electronics Co., Ltd.
  */
 
-#ifndef _UAPI_RKISPP_CONFIG_H
-#define _UAPI_RKISPP_CONFIG_H
+#ifndef _UAPI_RK_ISPP_CONFIG_H
+#define _UAPI_RK_ISPP_CONFIG_H
 
 #include <linux/types.h>
 #include <linux/v4l2-controls.h>
@@ -114,8 +114,10 @@
 	(V4L2_EVENT_PRIVATE_START + 3)
 
 struct rkispp_fec_in_out {
-	int width;
-	int height;
+	int in_width;
+	int in_height;
+	int out_width;
+	int out_height;
 	int in_fourcc;
 	int out_fourcc;
 	int in_pic_fd;

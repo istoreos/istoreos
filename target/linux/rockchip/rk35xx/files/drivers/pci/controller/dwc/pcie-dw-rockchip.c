@@ -42,7 +42,6 @@
 #include <linux/signal.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
-#include <linux/version.h>
 #include <linux/pci-epf.h>
 
 #include "pcie-designware.h"
@@ -183,17 +182,18 @@ struct rk_pcie {
 	bool				supports_clkreq;
 	struct regulator		*vpcie3v3;
 	struct irq_domain		*irq_domain;
-	int				legacy_parent_irq;
 	raw_spinlock_t			intx_lock;
 #ifdef CONFIG_PCIEASPM
 	u16				aspm;
 	u32				l1ss_ctl1;
 #endif
 	struct dentry			*debugfs;
+	u32				msi_vector_num;
 };
 
 struct rk_pcie_of_data {
 	enum rk_pcie_device_mode	mode;
+	u32 msi_vector_num;
 };
 
 #define to_rk_pcie(x)	dev_get_drvdata((x)->dev)
@@ -821,10 +821,13 @@ static int rk_pcie_establish_link(struct dw_pcie *pci)
 			 * more for Gen switch.
 			 */
 			msleep(50);
-			dev_info(pci->dev, "PCIe Link up, LTSSM is 0x%x\n",
-				 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
-			rk_pcie_debug_dump(rk_pcie);
-			return 0;
+			/* In case link drop after linkup, double check it */
+			if (dw_pcie_link_up(pci)) {
+				dev_info(pci->dev, "PCIe Link up, LTSSM is 0x%x\n",
+					 rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS));
+				rk_pcie_debug_dump(rk_pcie);
+				return 0;
+			}
 		}
 
 		dev_info_ratelimited(pci->dev, "PCIe Linking... LTSSM is 0x%x\n",
@@ -857,7 +860,7 @@ static int rk_pcie_init_dma_trx(struct rk_pcie *rk_pcie)
 		goto out;
 	}
 
-	rk_pcie->dma_obj = pcie_dw_dmatest_register(rk_pcie->pci, true);
+	rk_pcie->dma_obj = pcie_dw_dmatest_register(rk_pcie->pci->dev, true);
 	if (IS_ERR(rk_pcie->dma_obj)) {
 		dev_err(rk_pcie->pci->dev, "failed to prepare dmatest\n");
 		return -EINVAL;
@@ -1107,6 +1110,14 @@ static int rk_pcie_msi_host_init(struct pcie_port *pp)
 	return 0;
 }
 
+static void rk_pcie_msi_set_num_vectors(struct pcie_port *pp)
+{
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	struct rk_pcie *rk_pcie = to_rk_pcie(pci);
+
+	pp->num_vectors = rk_pcie->msi_vector_num;
+}
+
 static int rk_pcie_host_init(struct pcie_port *pp)
 {
 	int ret;
@@ -1115,6 +1126,9 @@ static int rk_pcie_host_init(struct pcie_port *pp)
 	dw_pcie_setup_rc(pp);
 
 	ret = rk_pcie_establish_link(pci);
+
+	if (pp->msi_irq > 0)
+		dw_pcie_msi_init(pp);
 
 	return ret;
 }
@@ -1136,6 +1150,9 @@ static int rk_add_pcie_port(struct rk_pcie *rk_pcie, struct platform_device *pde
 		if (pp->msi_irq < 0) {
 			dev_info(dev, "use outband MSI support");
 			rk_pcie_host_ops.msi_host_init = rk_pcie_msi_host_init;
+		} else {
+			dev_info(dev, "max MSI vector is %d\n", rk_pcie->msi_vector_num);
+			rk_pcie_host_ops.set_num_vectors = rk_pcie_msi_set_num_vectors;
 		}
 	}
 
@@ -1309,8 +1326,8 @@ static int rk_pcie_phy_init(struct rk_pcie *rk_pcie)
 	}
 
 	if (rk_pcie->bifurcation)
-		ret = phy_set_mode_ext(rk_pcie->phy, rk_pcie->phy_mode,
-				       PHY_MODE_PCIE_BIFURCATION);
+		phy_set_mode_ext(rk_pcie->phy, rk_pcie->phy_mode,
+				 PHY_MODE_PCIE_BIFURCATION);
 
 	ret = phy_init(rk_pcie->phy);
 	if (ret < 0) {
@@ -1514,6 +1531,11 @@ static const struct rk_pcie_of_data rk_pcie_ep_of_data = {
 	.mode = RK_PCIE_EP_TYPE,
 };
 
+static const struct rk_pcie_of_data rk3528_pcie_rc_of_data = {
+	.mode = RK_PCIE_RC_TYPE,
+	.msi_vector_num = 8,
+};
+
 static const struct of_device_id rk_pcie_of_match[] = {
 	{
 		.compatible = "rockchip,rk1808-pcie",
@@ -1522,6 +1544,14 @@ static const struct of_device_id rk_pcie_of_match[] = {
 	{
 		.compatible = "rockchip,rk1808-pcie-ep",
 		.data = &rk_pcie_ep_of_data,
+	},
+	{
+		.compatible = "rockchip,rk3528-pcie",
+		.data = &rk3528_pcie_rc_of_data,
+	},
+	{
+		.compatible = "rockchip,rk3562-pcie",
+		.data = &rk3528_pcie_rc_of_data,
 	},
 	{
 		.compatible = "rockchip,rk3568-pcie",
@@ -1614,42 +1644,12 @@ static void rk_pcie_legacy_irq_unmask(struct irq_data *d)
 	raw_spin_unlock_irqrestore(&rk_pcie->intx_lock, flags);
 }
 
-#ifdef CONFIG_SMP
-static int rk_pcie_irq_set_affinity(struct irq_data *d,
-				    const struct cpumask *mask_val,
-				    bool force)
-{
-	unsigned int cpu;
-	struct rk_pcie *priv = irq_data_get_irq_chip_data(d);
-
-	if (!force)
-		cpu = cpumask_any_and(mask_val, cpu_online_mask);
-	else
-		cpu = cpumask_first(mask_val);
-
-	if (cpu >= nr_cpu_ids)
-		return -EINVAL;
-
-#if defined(MODULE) && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0))
-	irq_set_affinity_hint(priv->legacy_parent_irq, cpumask_of(cpu));
-#else
-	irq_set_affinity(priv->legacy_parent_irq, cpumask_of(cpu));
-#endif
-	irq_data_update_effective_affinity(d, cpumask_of(cpu));
-
-	return IRQ_SET_MASK_OK_DONE;
-}
-#endif
-
 static struct irq_chip rk_pcie_legacy_irq_chip = {
 	.name		= "rk-pcie-legacy-int",
 	.irq_enable	= rk_pcie_legacy_irq_unmask,
 	.irq_disable	= rk_pcie_legacy_irq_mask,
 	.irq_mask	= rk_pcie_legacy_irq_mask,
 	.irq_unmask	= rk_pcie_legacy_irq_unmask,
-#ifdef CONFIG_SMP
-	.irq_set_affinity = rk_pcie_irq_set_affinity,
-#endif
 	.flags		= IRQCHIP_SKIP_SET_WAKE | IRQCHIP_MASK_ON_SUSPEND,
 };
 
@@ -1942,6 +1942,7 @@ static int rk_pcie_really_probe(void *p)
 	pci->ops = &dw_pcie_ops;
 
 	rk_pcie->mode = mode;
+	rk_pcie->msi_vector_num = data->msi_vector_num;
 	rk_pcie->pci = pci;
 
 	if (of_device_is_compatible(np, "rockchip,rk1808-pcie") ||
@@ -2035,15 +2036,14 @@ retry_regulator:
 	if (!ret) {
 		irq = platform_get_irq_byname(pdev, "legacy");
 		if (irq >= 0) {
-			rk_pcie->legacy_parent_irq = irq;
 			irq_set_chained_handler_and_data(irq, rk_pcie_legacy_int_handler,
 							 rk_pcie);
 			/* Unmask all legacy interrupt from INTA~INTD  */
 			rk_pcie_writel_apb(rk_pcie, PCIE_CLIENT_INTR_MASK_LEGACY,
 					   UNMASK_ALL_LEGACY_INT);
+		} else {
+			dev_info(dev, "missing legacy IRQ resource\n");
 		}
-
-		dev_info(dev, "missing legacy IRQ resource\n");
 	}
 
 	/* Set PCIe mode */
@@ -2087,7 +2087,7 @@ retry_regulator:
 	ret = rk_pcie_init_dma_trx(rk_pcie);
 	if (ret) {
 		dev_err(dev, "failed to add dma extension\n");
-		return ret;
+		goto remove_irq_domain;
 	}
 
 	if (rk_pcie->dma_obj) {
@@ -2225,8 +2225,6 @@ static void rk_pcie_downstream_dev_to_d0(struct rk_pcie *rk_pcie, bool enable)
 		}
 	}
 }
-#else
-static void rk_pcie_downstream_dev_to_d0(struct rk_pcie *rk_pcie, bool enable) { return ; }
 #endif
 
 static int __maybe_unused rockchip_dw_pcie_suspend(struct device *dev)
@@ -2406,6 +2404,9 @@ std_rc_done:
 			goto err;
 	}
 
+	if (rk_pcie->pci->pp.msi_irq > 0)
+		dw_pcie_msi_init(&rk_pcie->pci->pp);
+
 	return 0;
 err:
 	rk_pcie_disable_power(rk_pcie);
@@ -2413,17 +2414,14 @@ err:
 	return ret;
 }
 
+#ifdef CONFIG_PCIEASPM
 static int rockchip_dw_pcie_prepare(struct device *dev)
 {
 	struct rk_pcie *rk_pcie = dev_get_drvdata(dev);
-	u32 val;
 
-	val = rk_pcie_readl_apb(rk_pcie, PCIE_CLIENT_LTSSM_STATUS);
-	if ((val & S_MAX) != S_L0) {
-		dw_pcie_dbi_ro_wr_en(rk_pcie->pci);
-		rk_pcie_downstream_dev_to_d0(rk_pcie, false);
-		dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
-	}
+	dw_pcie_dbi_ro_wr_en(rk_pcie->pci);
+	rk_pcie_downstream_dev_to_d0(rk_pcie, false);
+	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
 
 	return 0;
 }
@@ -2436,10 +2434,13 @@ static void rockchip_dw_pcie_complete(struct device *dev)
 	rk_pcie_downstream_dev_to_d0(rk_pcie, true);
 	dw_pcie_dbi_ro_wr_dis(rk_pcie->pci);
 }
+#endif
 
 static const struct dev_pm_ops rockchip_dw_pcie_pm_ops = {
+#ifdef CONFIG_PCIEASPM
 	.prepare = rockchip_dw_pcie_prepare,
 	.complete = rockchip_dw_pcie_complete,
+#endif
 	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rockchip_dw_pcie_suspend,
 				      rockchip_dw_pcie_resume)
 };

@@ -13,7 +13,7 @@
 #define RKMODULE_API_VERSION		KERNEL_VERSION(0, 1, 0x2)
 
 /* using for rk3588 dual isp unite */
-#define RKMOUDLE_UNITE_EXTEND_PIXEL	32
+#define RKMOUDLE_UNITE_EXTEND_PIXEL	128
 /* using for rv1109 and rv1126 */
 #define RKMODULE_EXTEND_LINE		24
 
@@ -169,6 +169,12 @@
 
 #define RKMODULE_GET_READOUT_LINE_CNT_PER_LINE  \
 	_IOR('V', BASE_VIDIOC_PRIVATE + 36, __u32)
+
+#define RKMODULE_GET_GROUP_ID       \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 37, __u32)
+
+#define RKMODULE_SET_GROUP_ID       \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 38, __u32)
 
 struct rkmodule_i2cdev_info {
 	u8 slave_addr;

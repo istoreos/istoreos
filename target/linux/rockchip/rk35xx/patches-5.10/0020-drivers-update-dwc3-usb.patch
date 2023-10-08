@@ -3288,12 +3288,6 @@ index b06ab85f8..a66f16e88 100644
  	if (prop_idx) {
  		ret = platform_device_add_properties(xhci, props);
  		if (ret) {
-@@ -130,5 +133,4 @@ int dwc3_host_init(struct dwc3 *dwc)
- void dwc3_host_exit(struct dwc3 *dwc)
- {
- 	platform_device_unregister(dwc->xhci);
--	dwc->xhci = NULL;
- }
 diff --git a/drivers/usb/dwc3/trace.c b/drivers/usb/dwc3/trace.c
 index 1b45a9723..8a4fe12bb 100644
 --- a/drivers/usb/dwc3/trace.c

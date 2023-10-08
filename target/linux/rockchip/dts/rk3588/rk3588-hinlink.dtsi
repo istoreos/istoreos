@@ -573,9 +573,9 @@
 	es8388: es8388@11 {
 		compatible = "everest,es8388", "everest,es8323";
 		reg = <0x11>;
-		assigned-clocks = <&cru I2S0_8CH_MCLKOUT>;
+        assigned-clocks = <&mclkout_i2s0>;
 		assigned-clock-rates = <12288000>;
-		clocks = <&cru I2S0_8CH_MCLKOUT>;
+		clocks = <&mclkout_i2s0>;
 		clock-names = "mclk";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s0_mclk>;
@@ -832,6 +832,8 @@
 };
 
 &rkvenc0 {
+	venc-supply = <&vdd_vdenc_s0>;
+	mem-supply = <&vdd_vdenc_mem_s0>;
 	status = "okay";
 };
 
@@ -840,6 +842,8 @@
 };
 
 &rkvenc1 {
+	venc-supply = <&vdd_vdenc_s0>;
+	mem-supply = <&vdd_vdenc_mem_s0>;
 	status = "okay";
 };
 

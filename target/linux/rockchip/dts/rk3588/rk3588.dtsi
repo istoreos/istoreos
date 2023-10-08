@@ -135,6 +135,8 @@
 			phy-names = "usb2-phy", "usb3-phy";
 			phy_type = "utmi_wide";
 			snps,dis_enblslpm_quirk;
+			snps,dis-u1-entry-quirk;
+			snps,dis-u2-entry-quirk;
 			snps,dis-u2-freeclk-exists-quirk;
 			snps,dis-del-phy-power-chg-quirk;
 			snps,dis-tx-ipgap-linecheck-quirk;
@@ -199,8 +201,8 @@
 		interrupt-names = "csi-intr1", "csi-intr2";
 		clocks = <&cru PCLK_CSI_HOST_4>;
 		clock-names = "pclk_csi2host";
-		resets = <&cru SRST_P_CSI_HOST_4>, <&cru SRST_CSIHOST4_VICAP>;
-		reset-names = "srst_csihost_p", "srst_csihost_vicap";
+		resets = <&cru SRST_P_CSI_HOST_4>;
+		reset-names = "srst_csihost_p";
 		status = "disabled";
 	};
 
@@ -213,8 +215,8 @@
 		interrupt-names = "csi-intr1", "csi-intr2";
 		clocks = <&cru PCLK_CSI_HOST_5>;
 		clock-names = "pclk_csi2host";
-		resets = <&cru SRST_P_CSI_HOST_5>, <&cru SRST_CSIHOST5_VICAP>;
-		reset-names = "srst_csihost_p", "srst_csihost_vicap";
+		resets = <&cru SRST_P_CSI_HOST_5>;
+		reset-names = "srst_csihost_p";
 		status = "disabled";
 	};
 
@@ -362,8 +364,8 @@
 		interrupts = <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru PCLK_DP1>, <&cru CLK_AUX16M_1>,
 			 <&cru MCLK_I2S8_8CH_TX>, <&cru MCLK_SPDIF5_DP1>,
-			 <&hclk_vo0>;
-		clock-names = "apb", "aux", "i2s", "spdif", "hclk";
+			 <&hclk_vo0>, <&cru CLK_DP1>;
+		clock-names = "apb", "aux", "i2s", "spdif", "hclk", "hdcp";
 		assigned-clocks = <&cru CLK_AUX16M_1>;
 		assigned-clock-rates = <16000000>;
 		resets = <&cru SRST_DP1>;
@@ -376,7 +378,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			dp1_in: port@0 {
+			port@0 {
 				reg = <0>;
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -398,6 +400,12 @@
 					remote-endpoint = <&vp2_out_dp1>;
 					status = "disabled";
 				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				dp1_out: endpoint { };
 			};
 		};
 	};
@@ -494,7 +502,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			edp1_in: port@0 {
+			port@0 {
 				reg = <0>;
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -516,6 +524,12 @@
 					remote-endpoint = <&vp2_out_edp1>;
 					status = "disabled";
 				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				edp1_out: endpoint { };
 			};
 		};
 	};
@@ -717,6 +731,13 @@
 		};
 	};
 
+	gmac_uio0: uio@fe1b0000 {
+		compatible = "rockchip,uio-gmac";
+		reg = <0x0 0xfe1b0000 0x0 0x10000>;
+		rockchip,ethernet = <&gmac0>;
+		status = "disabled";
+	};
+
 	gmac0: ethernet@fe1b0000 {
 		compatible = "rockchip,rk3588-gmac", "snps,dwmac-4.20a";
 		reg = <0x0 0xfe1b0000 0x0 0x10000>;
@@ -756,15 +777,13 @@
 		};
 
 		gmac0_mtl_rx_setup: rx-queues-config {
-			snps,rx-queues-to-use = <2>;
+			snps,rx-queues-to-use = <1>;
 			queue0 {};
-			queue1 {};
 		};
 
 		gmac0_mtl_tx_setup: tx-queues-config {
-			snps,tx-queues-to-use = <2>;
+			snps,tx-queues-to-use = <1>;
 			queue0 {};
-			queue1 {};
 		};
 	};
 

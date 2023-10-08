@@ -77,6 +77,7 @@ const char *mpp_device_name[MPP_DEVICE_BUTT] = {
 	[MPP_DEVICE_VEPU2_JPEG]		= "VEPU2",
 	[MPP_DEVICE_VEPU22]		= "VEPU22",
 	[MPP_DEVICE_IEP2]		= "IEP2",
+	[MPP_DEVICE_VDPP]		= "VDPP",
 };
 
 const char *enc_info_item_name[ENC_INFO_BUTT] = {
@@ -577,6 +578,12 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 
 	mpp = mpp_get_task_used_device(task, session);
 
+	/* disable core irq */
+	disable_irq(mpp->irq);
+	/* disable mmu irq */
+	if (mpp->iommu_info && mpp->iommu_info->got_irq)
+		disable_irq(mpp->iommu_info->irq);
+
 	/* hardware maybe dead, reset it */
 	mpp_reset_up_read(mpp->reset_group);
 	mpp_dev_reset(mpp);
@@ -589,6 +596,14 @@ static void mpp_task_timeout_work(struct work_struct *work_s)
 
 	/* remove task from taskqueue running list */
 	mpp_taskqueue_pop_running(mpp->queue, task);
+
+	/* enable core irq */
+	enable_irq(mpp->irq);
+	/* enable mmu irq */
+	if (mpp->iommu_info && mpp->iommu_info->got_irq)
+		enable_irq(mpp->iommu_info->irq);
+
+	mpp_taskqueue_trigger_work(mpp);
 }
 
 static int mpp_process_task_default(struct mpp_session *session,
@@ -1029,6 +1044,7 @@ struct mpp_taskqueue *mpp_taskqueue_init(struct device *dev)
 	atomic_set(&queue->reset_request, 0);
 	atomic_set(&queue->detach_count, 0);
 	atomic_set(&queue->task_id, 0);
+	queue->dev_active_flags = 0;
 
 	return queue;
 }
@@ -1052,9 +1068,15 @@ static void mpp_attach_workqueue(struct mpp_dev *mpp,
 		goto done;
 	}
 
+	/*
+	 * multi devices with no multicores share one queue,
+	 * the core_id is default value 0.
+	 */
 	if (queue->cores[core_id]) {
-		dev_err(mpp->dev, "can not attach device with same id %d", core_id);
-		goto done;
+		if (queue->cores[core_id] == mpp)
+			goto done;
+
+		core_id = queue->core_count;
 	}
 
 	queue->cores[core_id] = mpp;
@@ -2109,15 +2131,9 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 		return -ENODEV;
 	}
 
-	if (mpp->task_capacity == 1) {
-		/* power domain autosuspend delay 2s */
-		pm_runtime_set_autosuspend_delay(dev, 2000);
-		pm_runtime_use_autosuspend(dev);
-	} else {
-		dev_info(dev, "link mode task capacity %d\n",
-			 mpp->task_capacity);
-		/* do not setup autosuspend on multi task device */
-	}
+	/* power domain autosuspend delay 2s */
+	pm_runtime_set_autosuspend_delay(dev, 2000);
+	pm_runtime_use_autosuspend(dev);
 
 	kthread_init_work(&mpp->work, mpp_task_worker_default);
 
@@ -2128,7 +2144,6 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 
 	device_init_wakeup(dev, true);
 	pm_runtime_enable(dev);
-
 	mpp->irq = platform_get_irq(pdev, 0);
 	if (mpp->irq < 0) {
 		dev_err(dev, "No interrupt resource found\n");
@@ -2155,6 +2170,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 		ret = -ENOMEM;
 		goto failed;
 	}
+	mpp->io_base = res->start;
 
 	/*
 	 * TODO: here or at the device itself, some device does not
@@ -2177,7 +2193,7 @@ int mpp_dev_probe(struct mpp_dev *mpp,
 		if (mpp->hw_ops->clk_on)
 			mpp->hw_ops->clk_on(mpp);
 
-		hw_info->hw_id = mpp_read(mpp, hw_info->reg_id);
+		hw_info->hw_id = mpp_read(mpp, hw_info->reg_id * sizeof(u32));
 		if (mpp->hw_ops->clk_off)
 			mpp->hw_ops->clk_off(mpp);
 		pm_runtime_put_sync(dev);
@@ -2269,7 +2285,9 @@ irqreturn_t mpp_dev_irq(int irq, void *param)
 			/* normal condition, set state and wake up isr thread */
 			set_bit(TASK_STATE_IRQ, &task->state);
 		}
-		mpp_iommu_dev_deactivate(mpp->iommu_info, mpp);
+
+		if (irq_ret == IRQ_WAKE_THREAD)
+			mpp_iommu_dev_deactivate(mpp->iommu_info, mpp);
 	} else {
 		mpp_debug(DEBUG_IRQ_CHECK, "error, task is null\n");
 	}

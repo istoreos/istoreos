@@ -13,8 +13,6 @@ Subject: [PATCH 06/42] drivers: add rockchip soc drivers
  kernel/rcu/tree_stall.h                       |    3 +
  7 files changed, 1716 insertions(+), 182 deletions(-)
 
-diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
-index 25eb2c1e3..34ddbd148 100644
 --- a/drivers/soc/rockchip/Kconfig
 +++ b/drivers/soc/rockchip/Kconfig
 @@ -1,19 +1,63 @@
@@ -250,8 +248,6 @@ index 25eb2c1e3..34ddbd148 100644
 +	  result of total size by KiB format.
 +
  endif
-diff --git a/drivers/soc/rockchip/Makefile b/drivers/soc/rockchip/Makefile
-index 875032f73..802166aa4 100644
 --- a/drivers/soc/rockchip/Makefile
 +++ b/drivers/soc/rockchip/Makefile
 @@ -2,6 +2,26 @@
@@ -281,8 +277,6 @@ index 875032f73..802166aa4 100644
 +obj-$(CONFIG_RK_CMA_PROCFS) += rk_cma_procfs.o
 +obj-$(CONFIG_RK_DMABUF_PROCFS) += rk_dmabuf_procfs.o
 +obj-$(CONFIG_RK_MEMBLOCK_PROCFS) += rk_memblock_procfs.o
-diff --git a/drivers/soc/rockchip/grf.c b/drivers/soc/rockchip/grf.c
-index 343ff61cc..7b1f24d27 100644
 --- a/drivers/soc/rockchip/grf.c
 +++ b/drivers/soc/rockchip/grf.c
 @@ -5,12 +5,105 @@
@@ -413,7 +407,7 @@ index 343ff61cc..7b1f24d27 100644
  #define RK3036_GRF_SOC_CON0		0x140
  
  static const struct rockchip_grf_value rk3036_defaults[] __initconst = {
-@@ -86,6 +194,19 @@ static const struct rockchip_grf_info rk3328_grf __initconst = {
+@@ -86,6 +194,19 @@ static const struct rockchip_grf_info rk
  	.num_values = ARRAY_SIZE(rk3328_defaults),
  };
  
@@ -433,7 +427,7 @@ index 343ff61cc..7b1f24d27 100644
  #define RK3368_GRF_SOC_CON15		0x43c
  
  static const struct rockchip_grf_value rk3368_defaults[] __initconst = {
-@@ -108,8 +229,48 @@ static const struct rockchip_grf_info rk3399_grf __initconst = {
+@@ -108,8 +229,48 @@ static const struct rockchip_grf_info rk
  	.num_values = ARRAY_SIZE(rk3399_defaults),
  };
  
@@ -482,17 +476,17 @@ index 343ff61cc..7b1f24d27 100644
  		.compatible = "rockchip,rk3036-grf",
  		.data = (void *)&rk3036_grf,
  	}, {
-@@ -121,6 +282,9 @@ static const struct of_device_id rockchip_grf_dt_match[] __initconst = {
- 	}, {
+@@ -122,6 +283,9 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3288-grf",
  		.data = (void *)&rk3288_grf,
-+	}, {
+ 	}, {
 +		.compatible = "rockchip,rk3308-grf",
 +		.data = (void *)&rk3308_grf,
- 	}, {
++	}, {
  		.compatible = "rockchip,rk3328-grf",
  		.data = (void *)&rk3328_grf,
-@@ -130,6 +294,12 @@ static const struct of_device_id rockchip_grf_dt_match[] __initconst = {
+ 	}, {
+@@ -130,6 +294,12 @@ static const struct of_device_id rockchi
  	}, {
  		.compatible = "rockchip,rk3399-grf",
  		.data = (void *)&rk3399_grf,
@@ -505,7 +499,7 @@ index 343ff61cc..7b1f24d27 100644
  	},
  	{ /* sentinel */ },
  };
-@@ -142,20 +312,22 @@ static int __init rockchip_grf_init(void)
+@@ -142,20 +312,22 @@ static int __init rockchip_grf_init(void
  	struct regmap *grf;
  	int ret, i;
  
@@ -531,15 +525,13 @@ index 343ff61cc..7b1f24d27 100644
  	if (IS_ERR(grf)) {
  		pr_err("%s: could not get grf syscon\n", __func__);
  		return PTR_ERR(grf);
-@@ -175,3 +347,6 @@ static int __init rockchip_grf_init(void)
+@@ -175,3 +347,6 @@ static int __init rockchip_grf_init(void
  	return 0;
  }
  postcore_initcall(rockchip_grf_init);
 +
 +MODULE_DESCRIPTION("Rockchip GRF");
 +MODULE_LICENSE("GPL");
-diff --git a/drivers/soc/rockchip/io-domain.c b/drivers/soc/rockchip/io-domain.c
-index b29e829e8..ae8ed0f3c 100644
 --- a/drivers/soc/rockchip/io-domain.c
 +++ b/drivers/soc/rockchip/io-domain.c
 @@ -14,6 +14,13 @@
@@ -630,7 +622,7 @@ index b29e829e8..ae8ed0f3c 100644
  static int rockchip_iodomain_write(struct rockchip_iodomain_supply *supply,
  				   int uV)
  {
-@@ -139,7 +197,7 @@ static int rockchip_iodomain_notify(struct notifier_block *nb,
+@@ -139,7 +197,7 @@ static int rockchip_iodomain_notify(stru
  			return NOTIFY_BAD;
  	}
  
@@ -639,7 +631,7 @@ index b29e829e8..ae8ed0f3c 100644
  	if (ret && event == REGULATOR_EVENT_PRE_VOLTAGE_CHANGE)
  		return NOTIFY_BAD;
  
-@@ -185,6 +243,25 @@ static void rk3288_iodomain_init(struct rockchip_iodomain *iod)
+@@ -185,6 +243,25 @@ static void rk3288_iodomain_init(struct
  		dev_warn(iod->dev, "couldn't update flash0 ctrl\n");
  }
  
@@ -665,7 +657,7 @@ index b29e829e8..ae8ed0f3c 100644
  static void rk3328_iodomain_init(struct rockchip_iodomain *iod)
  {
  	int ret;
-@@ -332,6 +409,19 @@ static const struct rockchip_iodomain_soc_data soc_data_rk3288 = {
+@@ -332,6 +409,19 @@ static const struct rockchip_iodomain_so
  	.init = rk3288_iodomain_init,
  };
  
@@ -685,7 +677,7 @@ index b29e829e8..ae8ed0f3c 100644
  static const struct rockchip_iodomain_soc_data soc_data_rk3328 = {
  	.grf_offset = 0x410,
  	.supply_names = {
-@@ -401,6 +491,21 @@ static const struct rockchip_iodomain_soc_data soc_data_rk3399_pmu = {
+@@ -401,6 +491,21 @@ static const struct rockchip_iodomain_so
  	.init = rk3399_pmu_iodomain_init,
  };
  
@@ -707,7 +699,7 @@ index b29e829e8..ae8ed0f3c 100644
  static const struct rockchip_iodomain_soc_data soc_data_rv1108 = {
  	.grf_offset = 0x404,
  	.supply_names = {
-@@ -431,7 +536,24 @@ static const struct rockchip_iodomain_soc_data soc_data_rv1108_pmu = {
+@@ -431,7 +536,24 @@ static const struct rockchip_iodomain_so
  	},
  };
  
@@ -732,7 +724,7 @@ index b29e829e8..ae8ed0f3c 100644
  	{
  		.compatible = "rockchip,px30-io-voltage-domain",
  		.data = (void *)&soc_data_px30
-@@ -440,22 +562,38 @@ static const struct of_device_id rockchip_iodomain_match[] = {
+@@ -440,22 +562,38 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,px30-pmu-io-voltage-domain",
  		.data = (void *)&soc_data_px30_pmu
  	},
@@ -771,7 +763,7 @@ index b29e829e8..ae8ed0f3c 100644
  	{
  		.compatible = "rockchip,rk3368-io-voltage-domain",
  		.data = &soc_data_rk3368
-@@ -464,6 +602,8 @@ static const struct of_device_id rockchip_iodomain_match[] = {
+@@ -464,6 +602,8 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3368-pmu-io-voltage-domain",
  		.data = &soc_data_rk3368_pmu
  	},
@@ -780,7 +772,7 @@ index b29e829e8..ae8ed0f3c 100644
  	{
  		.compatible = "rockchip,rk3399-io-voltage-domain",
  		.data = &soc_data_rk3399
-@@ -472,6 +612,14 @@ static const struct of_device_id rockchip_iodomain_match[] = {
+@@ -472,6 +612,14 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3399-pmu-io-voltage-domain",
  		.data = &soc_data_rk3399_pmu
  	},
@@ -795,7 +787,7 @@ index b29e829e8..ae8ed0f3c 100644
  	{
  		.compatible = "rockchip,rv1108-io-voltage-domain",
  		.data = &soc_data_rv1108
-@@ -480,10 +628,145 @@ static const struct of_device_id rockchip_iodomain_match[] = {
+@@ -480,10 +628,145 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rv1108-pmu-io-voltage-domain",
  		.data = &soc_data_rv1108_pmu
  	},
@@ -941,7 +933,7 @@ index b29e829e8..ae8ed0f3c 100644
  static int rockchip_iodomain_probe(struct platform_device *pdev)
  {
  	struct device_node *np = pdev->dev.of_node;
-@@ -505,6 +788,11 @@ static int rockchip_iodomain_probe(struct platform_device *pdev)
+@@ -505,6 +788,11 @@ static int rockchip_iodomain_probe(struc
  	match = of_match_node(rockchip_iodomain_match, np);
  	iod->soc_data = match->data;
  
@@ -953,7 +945,7 @@ index b29e829e8..ae8ed0f3c 100644
  	parent = pdev->dev.parent;
  	if (parent && parent->of_node) {
  		iod->grf = syscon_node_to_regmap(parent->of_node);
-@@ -527,6 +815,10 @@ static int rockchip_iodomain_probe(struct platform_device *pdev)
+@@ -527,6 +815,10 @@ static int rockchip_iodomain_probe(struc
  		if (!supply_name)
  			continue;
  
@@ -964,7 +956,7 @@ index b29e829e8..ae8ed0f3c 100644
  		reg = devm_regulator_get_optional(iod->dev, supply_name);
  		if (IS_ERR(reg)) {
  			ret = PTR_ERR(reg);
-@@ -564,8 +856,10 @@ static int rockchip_iodomain_probe(struct platform_device *pdev)
+@@ -564,8 +856,10 @@ static int rockchip_iodomain_probe(struc
  		supply->iod = iod;
  		supply->reg = reg;
  		supply->nb.notifier_call = rockchip_iodomain_notify;
@@ -976,7 +968,7 @@ index b29e829e8..ae8ed0f3c 100644
  		if (ret) {
  			supply->reg = NULL;
  			goto unreg_notify;
-@@ -579,6 +873,8 @@ static int rockchip_iodomain_probe(struct platform_device *pdev)
+@@ -579,6 +873,8 @@ static int rockchip_iodomain_probe(struc
  			supply->reg = NULL;
  			goto unreg_notify;
  		}
@@ -985,7 +977,7 @@ index b29e829e8..ae8ed0f3c 100644
  	}
  
  	if (iod->soc_data->init)
-@@ -623,7 +919,17 @@ static struct platform_driver rockchip_iodomain_driver = {
+@@ -623,7 +919,17 @@ static struct platform_driver rockchip_i
  	},
  };
  
@@ -1004,8 +996,6 @@ index b29e829e8..ae8ed0f3c 100644
  
  MODULE_DESCRIPTION("Rockchip IO-domain driver");
  MODULE_AUTHOR("Heiko Stuebner <heiko@sntech.de>");
-diff --git a/drivers/soc/rockchip/pm_domains.c b/drivers/soc/rockchip/pm_domains.c
-index 54eb6cfc5..f137d4c09 100644
 --- a/drivers/soc/rockchip/pm_domains.c
 +++ b/drivers/soc/rockchip/pm_domains.c
 @@ -5,6 +5,7 @@
@@ -1238,27 +1228,27 @@ index 54eb6cfc5..f137d4c09 100644
 +
 +#define DOMAIN_RK3288_PROTECT(name, pwr, status, req, wakeup)	\
 +	DOMAIN(name, pwr, status, req, req, (req) << 16, wakeup, true)
-+
-+#define DOMAIN_RK3328(name, pwr, status, req, wakeup)		\
-+	DOMAIN_M(name, pwr, pwr, req, (req) << 10, req, wakeup, false)
  
 -#define DOMAIN_RK3288(pwr, status, req, wakeup)		\
 -	DOMAIN(pwr, status, req, req, (req) << 16, wakeup)
-+#define DOMAIN_RK3368(name, pwr, status, req, wakeup)		\
-+	DOMAIN(name, pwr, status, req, (req) << 16, req, wakeup, false)
++#define DOMAIN_RK3328(name, pwr, status, req, wakeup)		\
++	DOMAIN_M(name, pwr, pwr, req, (req) << 10, req, wakeup, false)
  
 -#define DOMAIN_RK3328(pwr, status, req, wakeup)		\
 -	DOMAIN_M(pwr, pwr, req, (req) << 10, req, wakeup)
-+#define DOMAIN_RK3368_PROTECT(name, pwr, status, req, wakeup)	\
-+	DOMAIN(name, pwr, status, req, (req) << 16, req, wakeup, true)
++#define DOMAIN_RK3368(name, pwr, status, req, wakeup)		\
++	DOMAIN(name, pwr, status, req, (req) << 16, req, wakeup, false)
  
 -#define DOMAIN_RK3368(pwr, status, req, wakeup)		\
 -	DOMAIN(pwr, status, req, (req) << 16, req, wakeup)
-+#define DOMAIN_RK3399(name, pwr, status, req, wakeup)		\
-+	DOMAIN(name, pwr, status, req, req, req, wakeup, false)
++#define DOMAIN_RK3368_PROTECT(name, pwr, status, req, wakeup)	\
++	DOMAIN(name, pwr, status, req, (req) << 16, req, wakeup, true)
  
 -#define DOMAIN_RK3399(pwr, status, req, wakeup)		\
 -	DOMAIN(pwr, status, req, req, req, wakeup)
++#define DOMAIN_RK3399(name, pwr, status, req, wakeup)		\
++	DOMAIN(name, pwr, status, req, req, req, wakeup, false)
++
 +#define DOMAIN_RK3399_PROTECT(name, pwr, status, req, wakeup)	\
 +	DOMAIN(name, pwr, status, req, req, req, wakeup, true)
 +
@@ -1276,7 +1266,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  static bool rockchip_pmu_domain_is_idle(struct rockchip_pm_domain *pd)
  {
-@@ -155,20 +308,25 @@ static int rockchip_pmu_set_idle_request(struct rockchip_pm_domain *pd,
+@@ -155,20 +308,25 @@ static int rockchip_pmu_set_idle_request
  	const struct rockchip_domain_info *pd_info = pd->info;
  	struct generic_pm_domain *genpd = &pd->genpd;
  	struct rockchip_pmu *pmu = pd->pmu;
@@ -1306,7 +1296,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	dsb(sy);
  
-@@ -179,23 +337,49 @@ static int rockchip_pmu_set_idle_request(struct rockchip_pm_domain *pd,
+@@ -179,23 +337,49 @@ static int rockchip_pmu_set_idle_request
  					0, 10000);
  	if (ret) {
  		dev_err(pmu->dev,
@@ -1363,7 +1353,7 @@ index 54eb6cfc5..f137d4c09 100644
  static int rockchip_pmu_save_qos(struct rockchip_pm_domain *pd)
  {
  	int i;
-@@ -245,11 +429,174 @@ static int rockchip_pmu_restore_qos(struct rockchip_pm_domain *pd)
+@@ -245,11 +429,174 @@ static int rockchip_pmu_restore_qos(stru
  	return 0;
  }
  
@@ -1538,7 +1528,7 @@ index 54eb6cfc5..f137d4c09 100644
  	/* check idle status for idle-only domains */
  	if (pd->info->status_mask == 0)
  		return !rockchip_pmu_domain_is_idle(pd);
-@@ -260,76 +607,148 @@ static bool rockchip_pmu_domain_is_on(struct rockchip_pm_domain *pd)
+@@ -260,76 +607,148 @@ static bool rockchip_pmu_domain_is_on(st
  	return !(val & pd->info->status_mask);
  }
  
@@ -1581,23 +1571,24 @@ index 54eb6cfc5..f137d4c09 100644
  
 -	if (readx_poll_timeout_atomic(rockchip_pmu_domain_is_on, pd, is_on,
 -				      is_on == on, 0, 10000)) {
+-		dev_err(pmu->dev,
+-			"failed to set domain '%s', val=%d\n",
+-			genpd->name, is_on);
+-		return;
 +	if (is_mem_on) {
 +		ret = rockchip_pmu_domain_mem_reset(pd);
 +		if (ret)
 +			goto error;
-+	}
+ 	}
 +
 +	ret = readx_poll_timeout_atomic(rockchip_pmu_domain_is_on, pd, is_on,
 +					is_on == on, 0, 10000);
 +	if (ret) {
- 		dev_err(pmu->dev,
--			"failed to set domain '%s', val=%d\n",
--			genpd->name, is_on);
--		return;
++		dev_err(pmu->dev,
 +			"failed to set domain '%s', target_on= %d, val=%d\n",
 +			genpd->name, on, is_on);
 +			goto error;
- 	}
++	}
 +	return ret;
 +
 +error:
@@ -1709,16 +1700,16 @@ index 54eb6cfc5..f137d4c09 100644
  	return rockchip_pd_power(pd, true);
  }
  
-@@ -337,9 +756,71 @@ static int rockchip_pd_power_off(struct generic_pm_domain *domain)
+@@ -337,8 +756,70 @@ static int rockchip_pd_power_off(struct
  {
  	struct rockchip_pm_domain *pd = to_rockchip_pd(domain);
  
 +	if (pd->is_ignore_pwr)
 +		return 0;
 +
- 	return rockchip_pd_power(pd, false);
- }
- 
++	return rockchip_pd_power(pd, false);
++}
++
 +int rockchip_pmu_pd_on(struct device *dev)
 +{
 +	struct generic_pm_domain *genpd;
@@ -1751,8 +1742,8 @@ index 54eb6cfc5..f137d4c09 100644
 +	genpd = pd_to_genpd(dev->pm_domain);
 +	pd = to_rockchip_pd(genpd);
 +
-+	return rockchip_pd_power(pd, false);
-+}
+ 	return rockchip_pd_power(pd, false);
+ }
 +EXPORT_SYMBOL(rockchip_pmu_pd_off);
 +
 +bool rockchip_pmu_pd_is_on(struct device *dev)
@@ -1777,11 +1768,10 @@ index 54eb6cfc5..f137d4c09 100644
 +	return is_on;
 +}
 +EXPORT_SYMBOL(rockchip_pmu_pd_is_on);
-+
+ 
  static int rockchip_pd_attach_dev(struct generic_pm_domain *genpd,
  				  struct device *dev)
- {
-@@ -378,14 +859,57 @@ static void rockchip_pd_detach_dev(struct generic_pm_domain *genpd,
+@@ -378,14 +859,57 @@ static void rockchip_pd_detach_dev(struc
  	pm_clk_destroy(dev);
  }
  
@@ -1840,7 +1830,7 @@ index 54eb6cfc5..f137d4c09 100644
  	int error;
  
  	error = of_property_read_u32(node, "reg", &id);
-@@ -401,6 +925,8 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+@@ -401,6 +925,8 @@ static int rockchip_pm_add_one_domain(st
  			node, id);
  		return -EINVAL;
  	}
@@ -1849,7 +1839,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	pd_info = &pmu->info->domain_info[id];
  	if (!pd_info) {
-@@ -415,6 +941,8 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+@@ -415,6 +941,8 @@ static int rockchip_pm_add_one_domain(st
  
  	pd->info = pd_info;
  	pd->pmu = pmu;
@@ -1858,7 +1848,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	pd->num_clks = of_clk_get_parent_count(node);
  	if (pd->num_clks > 0) {
-@@ -443,8 +971,14 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+@@ -443,8 +971,14 @@ static int rockchip_pm_add_one_domain(st
  	if (error)
  		goto err_put_clocks;
  
@@ -1875,7 +1865,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	if (pd->num_qos > 0) {
  		pd->qos_regmap = devm_kcalloc(pmu->dev, pd->num_qos,
-@@ -455,55 +989,119 @@ static int rockchip_pm_add_one_domain(struct rockchip_pmu *pmu,
+@@ -455,55 +989,119 @@ static int rockchip_pm_add_one_domain(st
  			goto err_unprepare_clocks;
  		}
  
@@ -2021,7 +2011,7 @@ index 54eb6cfc5..f137d4c09 100644
  	clk_bulk_unprepare(pd->num_clks, pd->clks);
  err_put_clocks:
  	clk_bulk_put(pd->num_clks, pd->clks);
-@@ -527,9 +1125,9 @@ static void rockchip_pm_remove_one_domain(struct rockchip_pm_domain *pd)
+@@ -527,9 +1125,9 @@ static void rockchip_pm_remove_one_domai
  	clk_bulk_put(pd->num_clks, pd->clks);
  
  	/* protect the zeroing of pm->num_clks */
@@ -2033,7 +2023,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	/* devm will free our memory */
  }
-@@ -566,6 +1164,7 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+@@ -566,6 +1164,7 @@ static int rockchip_pm_add_subdomain(str
  {
  	struct device_node *np;
  	struct generic_pm_domain *child_domain, *parent_domain;
@@ -2041,7 +2031,7 @@ index 54eb6cfc5..f137d4c09 100644
  	int error;
  
  	for_each_child_of_node(parent, np) {
-@@ -606,6 +1205,17 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+@@ -606,6 +1205,17 @@ static int rockchip_pm_add_subdomain(str
  				parent_domain->name, child_domain->name);
  		}
  
@@ -2059,7 +2049,7 @@ index 54eb6cfc5..f137d4c09 100644
  		rockchip_pm_add_subdomain(pmu, np);
  	}
  
-@@ -616,6 +1226,65 @@ static int rockchip_pm_add_subdomain(struct rockchip_pmu *pmu,
+@@ -616,6 +1226,65 @@ err_out:
  	return error;
  }
  
@@ -2125,7 +2115,7 @@ index 54eb6cfc5..f137d4c09 100644
  static int rockchip_pm_domain_probe(struct platform_device *pdev)
  {
  	struct device *dev = &pdev->dev;
-@@ -626,6 +1295,7 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+@@ -626,6 +1295,7 @@ static int rockchip_pm_domain_probe(stru
  	const struct of_device_id *match;
  	const struct rockchip_pmu_info *pmu_info;
  	int error;
@@ -2133,7 +2123,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  	if (!np) {
  		dev_err(dev, "device tree node not found\n");
-@@ -666,6 +1336,14 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+@@ -666,6 +1336,14 @@ static int rockchip_pm_domain_probe(stru
  		return PTR_ERR(pmu->regmap);
  	}
  
@@ -2148,7 +2138,7 @@ index 54eb6cfc5..f137d4c09 100644
  	/*
  	 * Configure power up and down transition delays for CORE
  	 * and GPU domains.
-@@ -708,6 +1386,10 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+@@ -708,6 +1386,10 @@ static int rockchip_pm_domain_probe(stru
  		goto err_out;
  	}
  
@@ -2159,7 +2149,7 @@ index 54eb6cfc5..f137d4c09 100644
  	return 0;
  
  err_out:
-@@ -716,129 +1398,198 @@ static int rockchip_pm_domain_probe(struct platform_device *pdev)
+@@ -716,129 +1398,198 @@ err_out:
  }
  
  static const struct rockchip_domain_info px30_pm_domains[] = {
@@ -2179,8 +2169,8 @@ index 54eb6cfc5..f137d4c09 100644
 +	[PX30_PD_VO]		= DOMAIN_PX30_PROTECT("vo", BIT(13), BIT(13), BIT(7),  false),
 +	[PX30_PD_VI]		= DOMAIN_PX30_PROTECT("vi", BIT(14), BIT(14), BIT(8),  false),
 +	[PX30_PD_GPU]		= DOMAIN_PX30("gpu",        BIT(15), BIT(15), BIT(2),  false),
- };
- 
++};
++
 +#ifdef CONFIG_CPU_RV1126
 +static const struct rockchip_domain_info rv1126_pm_domains[] = {
 +	[RV1126_PD_CRYPTO]	= DOMAIN_RV1126_O("crypto",   BIT(10), BIT(4),  BIT(20), 0x4, false),
@@ -2202,9 +2192,9 @@ index 54eb6cfc5..f137d4c09 100644
 +	[RK1808_PD_PCIE]	= DOMAIN_PX30("pcie",        BIT(9),  BIT(9),  BIT(4), true),
 +	[RK1808_PD_VPU]		= DOMAIN_PX30("vpu",         BIT(13), BIT(13), BIT(7), false),
 +	[RK1808_PD_VIO]		= DOMAIN_PX30_PROTECT("vio", BIT(14), BIT(14), BIT(8), false),
-+};
+ };
 +#endif
-+
+ 
  static const struct rockchip_domain_info rk3036_pm_domains[] = {
 -	[RK3036_PD_MSCH]	= DOMAIN_RK3036(BIT(14), BIT(23), BIT(30), true),
 -	[RK3036_PD_CORE]	= DOMAIN_RK3036(BIT(13), BIT(17), BIT(24), false),
@@ -2451,7 +2441,7 @@ index 54eb6cfc5..f137d4c09 100644
  };
  
  static const struct rockchip_pmu_info px30_pmu = {
-@@ -852,6 +1603,30 @@ static const struct rockchip_pmu_info px30_pmu = {
+@@ -852,6 +1603,30 @@ static const struct rockchip_pmu_info px
  	.domain_info = px30_pm_domains,
  };
  
@@ -2482,7 +2472,7 @@ index 54eb6cfc5..f137d4c09 100644
  static const struct rockchip_pmu_info rk3036_pmu = {
  	.req_offset = 0x148,
  	.idle_offset = 0x14c,
-@@ -976,11 +1751,49 @@ static const struct rockchip_pmu_info rk3399_pmu = {
+@@ -976,11 +1751,49 @@ static const struct rockchip_pmu_info rk
  	.domain_info = rk3399_pm_domains,
  };
  
@@ -2532,7 +2522,7 @@ index 54eb6cfc5..f137d4c09 100644
  	{
  		.compatible = "rockchip,rk3036-power-controller",
  		.data = (void *)&rk3036_pmu,
-@@ -1021,8 +1834,17 @@ static const struct of_device_id rockchip_pm_domain_dt_match[] = {
+@@ -1021,8 +1834,17 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3399-power-controller",
  		.data = (void *)&rk3399_pmu,
  	},
@@ -2550,7 +2540,7 @@ index 54eb6cfc5..f137d4c09 100644
  
  static struct platform_driver rockchip_pm_domain_driver = {
  	.probe = rockchip_pm_domain_probe,
-@@ -1043,3 +1865,12 @@ static int __init rockchip_pm_domain_drv_register(void)
+@@ -1043,3 +1865,12 @@ static int __init rockchip_pm_domain_drv
  	return platform_driver_register(&rockchip_pm_domain_driver);
  }
  postcore_initcall(rockchip_pm_domain_drv_register);
@@ -2563,8 +2553,6 @@ index 54eb6cfc5..f137d4c09 100644
 +
 +MODULE_DESCRIPTION("ROCKCHIP PM Domain Driver");
 +MODULE_LICENSE("GPL");
-diff --git a/drivers/soc/rockchip/rockchip_system_monitor.c b/drivers/soc/rockchip/rockchip_system_monitor.c
-index e5350b3dd..72ade8880 100644
 --- a/drivers/soc/rockchip/rockchip_system_monitor.c
 +++ b/drivers/soc/rockchip/rockchip_system_monitor.c
 @@ -33,8 +33,9 @@
@@ -2578,7 +2566,7 @@ index e5350b3dd..72ade8880 100644
  #include "../../opp/opp.h"
  #include "../../regulator/internal.h"
  #include "../../thermal/thermal_core.h"
-@@ -1785,6 +1786,7 @@ static struct notifier_block rockchip_monitor_fb_nb = {
+@@ -1813,6 +1814,7 @@ static struct notifier_block rockchip_mo
  	.notifier_call = rockchip_monitor_fb_notifier,
  };
  
@@ -2586,7 +2574,7 @@ index e5350b3dd..72ade8880 100644
  static int rockchip_eink_devfs_notifier(struct notifier_block *nb,
  					unsigned long action, void *ptr)
  {
-@@ -1805,6 +1807,7 @@ static int rockchip_eink_devfs_notifier(struct notifier_block *nb,
+@@ -1833,6 +1835,7 @@ static int rockchip_eink_devfs_notifier(
  static struct notifier_block rockchip_monitor_ebc_nb = {
  	.notifier_call = rockchip_eink_devfs_notifier,
  };
@@ -2594,7 +2582,7 @@ index e5350b3dd..72ade8880 100644
  
  static void system_monitor_early_min_volt_function(struct work_struct *work)
  {
-@@ -1872,9 +1875,9 @@ static int rockchip_system_monitor_probe(struct platform_device *pdev)
+@@ -1900,9 +1903,9 @@ static int rockchip_system_monitor_probe
  
  	if (fb_register_client(&rockchip_monitor_fb_nb))
  		dev_err(dev, "failed to register fb nb\n");
@@ -2606,8 +2594,6 @@ index e5350b3dd..72ade8880 100644
  	schedule_delayed_work(&system_monitor_early_min_volt_work,
  			      msecs_to_jiffies(30000));
  
-diff --git a/kernel/rcu/tree_stall.h b/kernel/rcu/tree_stall.h
-index 251a9af37..52cf14bff 100644
 --- a/kernel/rcu/tree_stall.h
 +++ b/kernel/rcu/tree_stall.h
 @@ -15,6 +15,7 @@
@@ -2618,7 +2604,7 @@ index 251a9af37..52cf14bff 100644
  
  #ifdef CONFIG_PROVE_RCU
  #define RCU_STALL_DELAY_DELTA		(5 * HZ)
-@@ -534,6 +535,8 @@ static void print_other_cpu_stall(unsigned long gp_seq, unsigned long gps)
+@@ -534,6 +535,8 @@ static void print_other_cpu_stall(unsign
  
  	rcu_check_gp_kthread_starvation();
  
@@ -2627,6 +2613,3 @@ index 251a9af37..52cf14bff 100644
  	panic_on_rcu_stall();
  
  	rcu_force_quiescent_state();  /* Kick them all. */
--- 
-2.37.1 (Apple Git-137.1)
-
