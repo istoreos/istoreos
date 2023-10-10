@@ -33,6 +33,15 @@ define U-Boot/Default
   PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
 endef
 
+# RK3528 boards
+define U-Boot/easepi-rk3528
+  NAME:=RK3528 Generic
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3528
+  ATF:=$(RK3528_ATF)
+  DDR:=$(RK3528_DDR)
+  SOC:=rk3528
+endef
+
 # RK3568 boards
 define U-Boot/easepi-rk3568
   NAME:=RK3568 Generic
@@ -59,7 +68,7 @@ define U-Boot/easepi-rk3588
   SOC:=rk3588
 endef
 
-UBOOT_TARGETS := easepi-rk3568 xgp-rk3568 easepi-rk3588
+UBOOT_TARGETS := easepi-rk3568 easepi-rk3588 easepi-rk3528 xgp-rk3568
 
 UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 
