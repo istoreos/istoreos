@@ -37,6 +37,9 @@ rockchip_setup_interfaces()
 	hinlink,h88k-v3)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3 eth4' 'eth0'
 		;;
+	hlink,h28k)
+		ucidef_set_interfaces_lan_wan 'eth0' 'eth1'
+		;;
 	*)
 		ucidef_set_interface_lan 'eth0'
 		[ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.docker_nat >/dev/null || uci -q batch <<-EOF
@@ -70,6 +73,7 @@ rockchip_setup_macs()
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6s|\
 	friendlyelec,nanopi-r6c|\
+	hlink,h28k|\
 	hinlink,h88k-*|\
 	hinlink,h88k|\
 	hinlink,opc-h69k|\

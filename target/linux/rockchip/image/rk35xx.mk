@@ -155,6 +155,20 @@ $(call Device/rk3588_combined_hinlink)
 endef
 TARGET_DEVICES += hinlink_h88k
 
+define Device/hinlink_rk3528
+$(call Device/rk3528)
+  DEVICE_VENDOR := HINLINK
+  DEVICE_PACKAGES := kmod-r8168 kmod-thermal
+endef
+
+define Device/hlink_h28k
+$(call Device/hinlink_rk3528)
+  DEVICE_VENDOR := Hlink
+  DEVICE_MODEL := H28K
+  SUPPORTED_DEVICES += hlink,h28k
+endef
+TARGET_DEVICES += hlink_h28k
+
 define Device/jsy_h1
 $(call Device/rk3568)
   DEVICE_VENDOR := JSY
