@@ -262,6 +262,48 @@ board_wait_wifi() {
 	esac
 }
 
+set_gpio() {
+	# ref package/base-files/files/etc/init.d/gpio_switch
+	local gpio_pin="$1"
+	local value="$2"
+
+	[ -z "$gpio_pin" ] &&  return 1
+
+	local gpio_path
+	if [ -n "$(echo "$gpio_pin" | grep -E "^[0-9]+$")" ]; then
+		gpio_path="/sys/class/gpio/gpio${gpio_pin}"
+
+		# export GPIO pin for access
+		[ -d "$gpio_path" ] || {
+			echo "$gpio_pin" >/sys/class/gpio/export
+			# we need to wait a bit until the GPIO appears
+			[ -d "$gpio_path" ] || sleep 1
+		}
+
+		# direction attribute only exists if the kernel supports changing the
+		# direction of a GPIO
+		if [ -e "${gpio_path}/direction" ]; then
+			# set the pin to output with high or low pin value
+			{ [ "$value" = "0" ] && echo "low" || echo "high"; } \
+				>"$gpio_path/direction"
+		else
+			{ [ "$value" = "0" ] && echo "0" || echo "1"; } \
+				>"$gpio_path/value"
+		fi
+	fi
+}
+
+board_gpio_defaults() {
+	case $(board_name) in
+	hinlink,hnas)
+		# set GPIO4_A7 to high, deassert SATA PM chip
+		set_gpio 135
+	;;
+	esac
+}
+
+board_gpio_defaults
+
 board_fixup_iface_name
 
 board_set_iface_smp_affinity
