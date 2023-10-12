@@ -49,6 +49,14 @@ define Device/rk3588_combined_hinlink
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3528
+  SOC := rk3528
+  DEVICE_DTS_DIR := ../dts/rk3528
+  DEVICE_DTS = $$(SOC)-$$(lastword $$(subst _, ,$$(DEVICE_NAME)))
+  UBOOT_DEVICE_NAME := easepi-rk3528
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3528 | pine64-img | gzip | append-metadata
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
