@@ -71,6 +71,7 @@ board_fixup_iface_name() {
 		fi
 		;;
 	jsy,h1|\
+	hinlink,hnas|\
 	hinlink,opc-h66k)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0001:11:00.0" ]]; then
@@ -186,6 +187,7 @@ board_set_iface_smp_affinity() {
 	jsy,h1|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
+	hinlink,hnas|\
 	hinlink,opc-h66k)
 		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
 			set_iface_cpumask 4 "eth0"

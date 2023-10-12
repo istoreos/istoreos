@@ -207,7 +207,7 @@
 		vin-supply = <&vcc3v3_sys>;
 	};
 
-	vcc3v3_pcie: gpio-regulator {
+	vcc3v3_pcie: vcc3v3-pcie {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_pcie";
 		regulator-min-microvolt = <3300000>;
@@ -258,6 +258,7 @@
 };
 
 &combphy0_us {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
 	status = "okay";
 };
 
@@ -861,7 +862,7 @@
 
 &u2phy0_otg {
 	vbus-supply = <&vcc5v0_otg>;
-	status = "okay";
+	status = "disabled";
 };
 
 &u2phy1_host {
@@ -901,6 +902,10 @@
 &usbdrd_dwc3 {
 	dr_mode = "host";
 	extcon = <&usb2phy0>;
+	phys = <&u2phy0_otg>; /* only USB2.0 */
+	phy-names = "usb2-phy"; /* only USB2.0 */
+	maximum-speed = "high-speed"; /* only USB2.0 */
+	snps,dis_u2_susphy_quirk; /* only USB2.0 */
 	status = "disabled";
 };
 

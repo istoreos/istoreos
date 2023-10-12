@@ -396,6 +396,7 @@
 
 &u2phy0_otg {
     vbus-supply = <&vcc5v0_sys>;
+	rockchip,vbus-always-on;
     status = "okay";
 };
 
@@ -514,7 +515,7 @@
         };
     };
 
-    stata {
+    sata {
         sata_pm_reset: sata-pm-reset {
             rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_output_high>;
         };

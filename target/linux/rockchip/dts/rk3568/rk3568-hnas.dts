@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+* Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+*/
+
+/dts-v1/;
+
+#include "rk3568-hinlink.dtsi"
+
+/ {
+	model = "HINLINK HNAS Board";
+	compatible = "hinlink,hnas", "rockchip,rk3568";
+
+	reg-sata-pm-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "reg_sata_pm_pwr";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+		regulator-boot-on;
+		enable-active-high;
+		gpio = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_pm_pwr>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	reg-sata-pm-reset {
+		compatible = "regulator-fixed";
+		regulator-name = "reg_sata_pm_reset";
+		regulator-always-on;
+		regulator-boot-on;
+		startup-delay-us = <5000>;
+		enable-active-high;
+		gpio = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_pm_reset>;
+	};
+
+	vcc5v0_sata0_pwr: vcc5v0-sata0-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_sata0_pwr";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_sata0_pwr_en>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	disk-leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&led_disk1_en>,
+			<&led_disk2_en>,
+			<&led_disk3_en>,
+			<&led_disk4_en>;
+
+		led-disk1 {
+			gpios = <&gpio3 RK_PB6 GPIO_ACTIVE_HIGH>;
+			label = "green:disk1";
+		};
+		led-disk2 {
+			gpios = <&gpio3 RK_PB5 GPIO_ACTIVE_HIGH>;
+			label = "green:disk2";
+		};
+		led-disk3 {
+			gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
+			label = "green:disk3";
+		};
+		led-disk4 {
+			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
+			label = "green:disk4";
+		};
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		cooling-levels = <0 0x66 0x88 0xaa 0xcc 0xff>;
+		#cooling-cells = <2>;
+		fan-supply = <&vcc5v0_sys>;
+		pwms = <&pwm0 0 50000 0>;
+	};
+};
+
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	status = "disabled";
+};
+
+&pwm0 {
+	status = "okay";
+};
+
+&i2c5 {
+	status = "disabled";
+};
+
+&combphy0_us {
+	// pinctrl-names = "default";
+	// pinctrl-0 = <&sata_pm_reset>;
+	status = "okay";
+};
+
+&sata0 {
+	target-supply = <&vcc5v0_sata0_pwr>;
+};
+
+&u2phy0_host {
+	phy-supply = <&vcc5v0_sys>;
+	status = "okay";
+};
+
+&u2phy0_otg {
+	vbus-supply = <&vcc5v0_sys>;
+	rockchip,vbus-always-on;
+	status = "okay";
+};
+
+&u2phy1_host {
+	phy-supply = <&vcc5v0_sys>;
+	status = "okay";
+};
+
+&u2phy1_otg {
+	phy-supply = <&vcc5v0_sys>;
+	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	status = "okay";
+};
+
+&usbdrd30 {
+	status = "okay";
+};
+
+&soc_thermal {
+	trips {
+		cpu_warm: cpu_warm {
+			temperature = <50000>;
+			hysteresis = <3000>;
+			type = "active";
+		};
+
+		cpu_hot: cpu_hot {
+			temperature = <60000>;
+			hysteresis = <3000>;
+			type = "active";
+		};
+	};
+
+	cooling-maps {
+		map2 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 3>;
+		};
+
+		map3 {
+			trip = <&cpu_hot>;
+			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
+		};
+	};
+};
+
+&pinctrl {
+	sata {
+		sata_pm_pwr: sata-pm-pwr {
+			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		sata_pm_reset: sata-pm-reset {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		vcc5v0_sata0_pwr_en: vcc5v0-sata0-pwr-en {
+			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	leds {
+		led_disk1_en: led-disk1-en {
+			rockchip,pins = <3 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_disk2_en: led-disk2-en {
+			rockchip,pins = <3 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_disk3_en: led-disk3-en {
+			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_disk4_en: led-disk4-en {
+			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};

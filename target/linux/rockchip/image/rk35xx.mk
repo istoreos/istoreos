@@ -99,6 +99,13 @@ $(call Device/rk3568_combined_hinlink)
 endef
 TARGET_DEVICES += hinlink_opc-h6xk
 
+define Device/hinlink_hnas
+$(call Device/hinlink_common)
+  DEVICE_MODEL := HNAS
+  SUPPORTED_DEVICES += hinlink,hnas
+endef
+TARGET_DEVICES += hinlink_hnas
+
 define Device/friendlyarm_nanopi-r5s
 $(call Device/rk3568)
 $(call Device/rk3568_combined_friendlyelec)

@@ -32,6 +32,7 @@ friendlyelec,nanopi-r5c)
 	;;
 hinlink,h88k-*|\
 hinlink,h88k|\
+hinlink,hnas|\
 hinlink,opc-h69k|\
 hinlink,opc-h68k|\
 hinlink,opc-h66k)
