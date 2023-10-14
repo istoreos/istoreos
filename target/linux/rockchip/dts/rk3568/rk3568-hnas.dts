@@ -14,14 +14,14 @@
 	reg-sata-pm-pwr {
 		compatible = "regulator-fixed";
 		regulator-name = "reg_sata_pm_pwr";
-		regulator-min-microvolt = <5000000>;
-		regulator-max-microvolt = <5000000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 		regulator-boot-on;
 		enable-active-high;
 		gpio = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&sata_pm_pwr>, <&sata_pm_reset>;
+		pinctrl-0 = <&sata_pm_pwr>, <&sata_pm_reset_low>;
 		vin-supply = <&vcc5v0_sys>;
 	};
 
@@ -30,7 +30,7 @@
 		regulator-name = "reg_sata_pm_reset";
 		regulator-always-on;
 		regulator-boot-on;
-		startup-delay-us = <5000>;
+		startup-delay-us = <12000>;
 		enable-active-high;
 		gpio = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
@@ -109,7 +109,7 @@
 
 &combphy0_us {
 	// pinctrl-names = "default";
-	// pinctrl-0 = <&sata_pm_reset_up>;
+	// pinctrl-0 = <&sata_pm_reset_high>;
 	status = "okay";
 };
 
@@ -180,7 +180,13 @@
 			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 		sata_pm_reset: sata-pm-reset {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		sata_pm_reset_low: sata-pm-reset-low {
 			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_output_low>;
+		};
+		sata_pm_reset_high: sata-pm-reset-high {
+			rockchip,pins = <4 RK_PA7 RK_FUNC_GPIO &pcfg_output_high>;
 		};
 		vcc5v0_sata0_pwr_en: vcc5v0-sata0-pwr-en {
 			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;

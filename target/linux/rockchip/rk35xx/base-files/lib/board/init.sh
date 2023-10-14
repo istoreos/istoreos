@@ -298,6 +298,7 @@ board_gpio_defaults() {
 	hinlink,hnas)
 		# set GPIO4_A7 to high, deassert SATA PM chip
 		set_gpio 135
+		sleep 2
 	;;
 	esac
 }
