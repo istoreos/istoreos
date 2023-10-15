@@ -9,3 +9,4 @@ src-git third https://github.com/jjm2473/openwrt-third.git;main
 
 # compat for 21.02
 src-git compat https://github.com/jjm2473/openwrt-compat.git;21.02
+src-git kiddin9 https://github.com/kiddin9/openwrt-packages.git
