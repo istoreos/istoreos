@@ -186,6 +186,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += jsy_h1
 
+define Device/yyy_h1
+$(call Device/rk3568)
+  DEVICE_VENDOR := YYY
+  DEVICE_MODEL := H1
+  DEVICE_DTS := rk3568-yyy-h1
+  SUPPORTED_DEVICES += yyy,h1
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio
+endef
+TARGET_DEVICES += yyy_h1
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
   DEVICE_VENDOR := NLnet

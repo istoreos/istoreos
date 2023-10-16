@@ -185,6 +185,7 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	jsy,h1|\
+	yyy,h1|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,hnas|\

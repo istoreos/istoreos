@@ -1,0 +1,126 @@
+/dts-v1/;
+
+#include "rk3568-linkease.dtsi"
+
+/ {
+	compatible = "yyy,h1", "rockchip,rk3568";
+	model = "YYY H1";
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		cooling-levels = <0 0x66 0x88 0xaa 0xcc 0xff>;
+		#cooling-cells = <2>;
+		fan-supply = <&vcc5v0_sys>;
+		pwms = <&pwm2 0 50000 0>;
+	};
+    lcd_backlight: lcd-backlight {
+        compatible = "gpio-backlight";
+        gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
+    };
+};
+
+&u2phy0_host {
+	status = "okay";
+};
+
+// MULTI_PHY1
+// USB3_HOST1 phy &u2phy0_host
+&usbhost30 {
+	status = "okay";
+};
+
+&usbhost_dwc3 {
+	status = "okay";
+};
+
+// MULTI_PHY2
+&pcie2x1 {
+	status = "okay";
+
+	pcie@00 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_1: pcie-eth@10,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0x22b>;
+		};
+	};
+};
+
+&pwm_leds {
+	led-blue {
+		label = "blue";
+		pwms = <&pwm1 0 50000 0>;
+		max-brightness = <255>;
+	};
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-0 = <&pwm2m1_pins>;
+	status = "okay";
+};
+
+&spi2 {
+	num-cs = <1>;
+	pinctrl-0 = <&spi2m1_cs0 &spi2m1_pins>;
+	pinctrl-1 = <&spi2m1_cs0 &spi2m1_pins_hs>;
+	status = "okay";
+	lcd@0 {
+		status = "okay";
+		compatible = "sitronix,st7789v";
+		reg = <0>;
+		spi-max-frequency = <32000000>;   //SPI时钟32M
+		spi-cpol;
+		spi-cpha;
+		// rotation = <90>;                    //屏幕旋转90度
+		width = <172>;
+		height = <320>;
+		width-mm = <18>;
+		height-mm = <33>;
+		rgb;                           //颜色格式RGB
+		fps = <30>;                      //刷新30帧率
+		regwidth = <8>;
+		buswidth = <8>;                   //总线宽度8
+		reset-gpios = <&gpio3 RK_PB3 GPIO_ACTIVE_HIGH>;
+		dc-gpios = <&gpio3 RK_PB4 GPIO_ACTIVE_HIGH>;
+		debug = <0>;                     //不开启调试
+		backlight = <&lcd_backlight>;
+		power-supply = <&vcc3v3_sys>;
+	};
+};
+
+&soc_thermal {
+	trips {
+		cpu_warm: cpu_warm {
+			temperature = <50000>;
+			hysteresis = <3000>;
+			type = "active";
+		};
+
+		cpu_hot: cpu_hot {
+			temperature = <60000>;
+			hysteresis = <3000>;
+			type = "active";
+		};
+	};
+
+	cooling-maps {
+		map2 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 3>;
+		};
+
+		map3 {
+			trip = <&cpu_hot>;
+			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
+		};
+	};
+};

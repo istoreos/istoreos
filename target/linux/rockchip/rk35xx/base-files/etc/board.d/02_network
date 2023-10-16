@@ -82,6 +82,7 @@ rockchip_setup_macs()
 	hinlink,opc-h66k|\
 	hinlink,hnas|\
 	jsy,h1|\
+	yyy,h1|\
 	lyt,t68m|\
 	nlnet,xgp|\
 	fastrhino,r66s|\
