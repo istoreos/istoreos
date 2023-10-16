@@ -53,6 +53,20 @@ endef
 
 $(eval $(call KernelPackage,backlight-pwm))
 
+define KernelPackage/backlight-gpio
+	SUBMENU:=$(VIDEO_MENU)
+	TITLE:=GPIO Backlight support
+	DEPENDS:=@GPIO_SUPPORT +kmod-backlight
+	KCONFIG:=CONFIG_BACKLIGHT_GPIO
+	FILES:=$(LINUX_DIR)/drivers/video/backlight/gpio_backlight.ko
+	AUTOLOAD:=$(call AutoProbe,video gpio_backlight)
+endef
+
+define KernelPackage/backlight-gpio/description
+	Kernel module for GPIO based Backlight support.
+endef
+
+$(eval $(call KernelPackage,backlight-gpio))
 
 define KernelPackage/fb
   SUBMENU:=$(VIDEO_MENU)
@@ -240,6 +254,20 @@ endef
 
 $(eval $(call KernelPackage,fb-tft-ili9486))
 
+define KernelPackage/fb-tft-st7789v
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=FB driver for the ST7789V LCD Controller
+  DEPENDS:=+kmod-fb-tft
+  KCONFIG:=CONFIG_FB_TFT_ST7789V
+  FILES:=$(LINUX_DIR)/drivers/staging/fbtft/fb_st7789v.ko
+  AUTOLOAD:=$(call AutoLoad,09,fb_st7789v)
+endef
+
+define KernelPackage/fb-tft-st7789v/description
+  FB driver for the ST7789V LCD Controller
+endef
+
+$(eval $(call KernelPackage,fb-tft-st7789v))
 
 define KernelPackage/drm
   SUBMENU:=$(VIDEO_MENU)
@@ -389,6 +417,22 @@ define KernelPackage/drm-imx-ldb/description
 endef
 
 $(eval $(call KernelPackage,drm-imx-ldb))
+
+define KernelPackage/drm-st7789v
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=Sitronix ST7789V panel support
+  DEPENDS:=+kmod-backlight +kmod-spi-bitbang
+  KCONFIG:=CONFIG_DRM_PANEL_SITRONIX_ST7789V \
+	CONFIG_DRM_PANEL=y
+  FILES:=$(LINUX_DIR)/drivers/gpu/drm/panel/panel-sitronix-st7789v.ko
+  AUTOLOAD:=$(call AutoLoad,08,panel-sitronix-st7789v)
+endef
+
+define KernelPackage/drm-st7789v/description
+  Direct Rendering Manager (DRM) support for Sitronix ST7789V panel
+endef
+
+$(eval $(call KernelPackage,drm-st7789v))
 
 define KernelPackage/drm-radeon
   SUBMENU:=$(VIDEO_MENU)
