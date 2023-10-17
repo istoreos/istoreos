@@ -429,7 +429,7 @@ $(eval $(call KernelPackage,usb2-pci))
 
 define KernelPackage/usb-dwc2
   TITLE:=DWC2 USB controller driver
-  DEPENDS:=+USB_GADGET_SUPPORT:kmod-usb-gadget +kmod-usb-roles
+  DEPENDS:=@!TARGET_rockchip_rk35xx +USB_GADGET_SUPPORT:kmod-usb-gadget +kmod-usb-roles
   KCONFIG:= \
 	CONFIG_USB_PCI=y \
 	CONFIG_USB_DWC2 \
@@ -455,6 +455,7 @@ $(eval $(call KernelPackage,usb-dwc2))
 
 define KernelPackage/usb-dwc3
   TITLE:=DWC3 USB controller driver
+  DEPENDS:=@!TARGET_rockchip_rk35xx
   KCONFIG:= \
 	CONFIG_USB_DWC3 \
 	CONFIG_USB_DWC3_HOST=y \
