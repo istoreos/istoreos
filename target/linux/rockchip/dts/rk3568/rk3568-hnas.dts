@@ -114,6 +114,10 @@
 };
 
 &sata0 {
+	/**
+	 * Uncomment this line to enable FBS
+	 */
+	// compatible = "rockchip,rk-ahci", "snps,dwc-ahci"; 
 	target-supply = <&vcc5v0_sata0_pwr>;
 };
 
