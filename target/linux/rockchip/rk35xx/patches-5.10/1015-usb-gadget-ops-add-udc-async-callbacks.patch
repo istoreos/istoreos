@@ -1,0 +1,126 @@
+From 0643d6ef73914ca547ed1278205e19d5c6bed5e9 Mon Sep 17 00:00:00 2001
+From: Alan Stern <stern@rowland.harvard.edu>
+Date: Thu, 20 May 2021 16:21:44 -0400
+Subject: [PATCH] UPSTREAM: USB: UDC core: Add udc_async_callbacks gadget op
+
+The Gadget API has a theoretical race when a gadget driver is unbound.
+Although the pull-up is turned off before the driver's ->unbind
+callback runs, if the USB cable were to be unplugged at just the wrong
+moment there would be nothing to prevent the UDC driver from invoking
+the ->disconnect callback after the unbind has finished.  In theory,
+other asynchronous callbacks could also happen during the time before
+the UDC driver's udc_stop routine is called, and the gadget driver
+would not be prepared to handle any of them.
+
+We need a way to tell UDC drivers to stop issuing asynchronous (that is,
+->suspend, ->resume, ->disconnect, ->reset, or ->setup) callbacks at
+some point after the pull-up has been turned off and before the
+->unbind callback runs.  This patch adds a new ->udc_async_callbacks
+callback to the usb_gadget_ops structure for precisely this purpose,
+and it adds the corresponding support to the UDC core.
+
+Later patches in this series add support for udc_async_callbacks to
+several UDC drivers.
+
+Acked-by: Felipe Balbi <balbi@kernel.org>
+Signed-off-by: Alan Stern <stern@rowland.harvard.edu>
+Link: https://lore.kernel.org/r/20210520202144.GC1216852@rowland.harvard.edu
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Bug: 192984564
+Change-Id: Ib50e7292436fe2067cdd6d9e953549f74a2513a9
+(cherry picked from commit 7dc0c55e9f302e7048e040ee4437437bbea1e2cd)
+Signed-off-by: Jack Pham <jackp@codeaurora.org>
+---
+ drivers/usb/gadget/udc/core.c | 49 +++++++++++++++++++++++++++++++++++
+ include/linux/usb/gadget.h    |  1 +
+ 2 files changed, 50 insertions(+)
+
+diff --git a/drivers/usb/gadget/udc/core.c b/drivers/usb/gadget/udc/core.c
+index 347fab20f..715fda0be 100644
+--- a/drivers/usb/gadget/udc/core.c
++++ b/drivers/usb/gadget/udc/core.c
+@@ -1131,6 +1131,53 @@ static inline void usb_gadget_udc_set_speed(struct usb_udc *udc,
+ 		gadget->ops->udc_set_speed(gadget, s);
+ }
+ 
++/**
++ * usb_gadget_enable_async_callbacks - tell usb device controller to enable asynchronous callbacks
++ * @udc: The UDC which should enable async callbacks
++ *
++ * This routine is used when binding gadget drivers.  It undoes the effect
++ * of usb_gadget_disable_async_callbacks(); the UDC driver should enable IRQs
++ * (if necessary) and resume issuing callbacks.
++ *
++ * This routine will always be called in process context.
++ */
++static inline void usb_gadget_enable_async_callbacks(struct usb_udc *udc)
++{
++	struct usb_gadget *gadget = udc->gadget;
++
++	if (gadget->ops->udc_async_callbacks)
++		gadget->ops->udc_async_callbacks(gadget, true);
++}
++
++/**
++ * usb_gadget_disable_async_callbacks - tell usb device controller to disable asynchronous callbacks
++ * @udc: The UDC which should disable async callbacks
++ *
++ * This routine is used when unbinding gadget drivers.  It prevents a race:
++ * The UDC driver doesn't know when the gadget driver's ->unbind callback
++ * runs, so unless it is told to disable asynchronous callbacks, it might
++ * issue a callback (such as ->disconnect) after the unbind has completed.
++ *
++ * After this function runs, the UDC driver must suppress all ->suspend,
++ * ->resume, ->disconnect, ->reset, and ->setup callbacks to the gadget driver
++ * until async callbacks are again enabled.  A simple-minded but effective
++ * way to accomplish this is to tell the UDC hardware not to generate any
++ * more IRQs.
++ *
++ * Request completion callbacks must still be issued.  However, it's okay
++ * to defer them until the request is cancelled, since the pull-up will be
++ * turned off during the time period when async callbacks are disabled.
++ *
++ * This routine will always be called in process context.
++ */
++static inline void usb_gadget_disable_async_callbacks(struct usb_udc *udc)
++{
++	struct usb_gadget *gadget = udc->gadget;
++
++	if (gadget->ops->udc_async_callbacks)
++		gadget->ops->udc_async_callbacks(gadget, false);
++}
++
+ /**
+  * usb_udc_release - release the usb_udc struct
+  * @dev: the dev member within usb_udc
+@@ -1343,6 +1390,7 @@ static void usb_gadget_remove_driver(struct usb_udc *udc)
+ 	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
+ 
+ 	usb_gadget_disconnect(udc->gadget);
++	usb_gadget_disable_async_callbacks(udc);
+ 	if (udc->gadget->irq)
+ 		synchronize_irq(udc->gadget->irq);
+ 	udc->driver->unbind(udc->gadget);
+@@ -1422,6 +1470,7 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
+ 		driver->unbind(udc->gadget);
+ 		goto err1;
+ 	}
++	usb_gadget_enable_async_callbacks(udc);
+ 	usb_udc_connect_control(udc);
+ 
+ 	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
+diff --git a/include/linux/usb/gadget.h b/include/linux/usb/gadget.h
+index ee04ef214..171b24372 100644
+--- a/include/linux/usb/gadget.h
++++ b/include/linux/usb/gadget.h
+@@ -325,6 +325,7 @@ struct usb_gadget_ops {
+ 	void	(*udc_set_speed)(struct usb_gadget *, enum usb_device_speed);
+ 	void	(*udc_set_ssp_rate)(struct usb_gadget *gadget,
+ 			enum usb_ssp_rate rate);
++	void	(*udc_async_callbacks)(struct usb_gadget *gadget, bool enable);
+ 	struct usb_ep *(*match_ep)(struct usb_gadget *,
+ 			struct usb_endpoint_descriptor *,
+ 			struct usb_ss_ep_comp_descriptor *);
+-- 
+2.31.0
+

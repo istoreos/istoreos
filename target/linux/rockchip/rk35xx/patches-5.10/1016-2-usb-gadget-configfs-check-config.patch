@@ -1,0 +1,39 @@
+From a0ed4b1516e9fe831ffa80f250d2e59f6aeb6408 Mon Sep 17 00:00:00 2001
+From: Wesley Cheng <wcheng@codeaurora.org>
+Date: Sat, 10 Jul 2021 02:13:11 -0700
+Subject: [PATCH] FROMGIT: usb: gadget: configfs: Check USB configuration
+ before adding
+
+Ensure that the USB gadget is able to support the configuration being
+added based on the number of endpoints required from all interfaces.  This
+is for accounting for any bandwidth or space limitations.
+
+Signed-off-by: Wesley Cheng <wcheng@codeaurora.org>
+Link: https://lore.kernel.org/r/1625908395-5498-3-git-send-email-wcheng@codeaurora.org
+Signed-off-by: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+(cherry picked from commit 7adf9e3adc398e5d5b7af91e5fdfafa70e86dd36
+ https://git.kernel.org/pub/scm/linux/kernel/git/gregkh/usb.git usb-next)
+Signed-off-by: Greg Kroah-Hartman <gregkh@google.com>
+Change-Id: I956c5f1a707770d5b6bf52dbe0512654df38edd4
+---
+ drivers/usb/gadget/configfs.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/usb/gadget/configfs.c b/drivers/usb/gadget/configfs.c
+index d51ea1c05..fc9fcb2a9 100644
+--- a/drivers/usb/gadget/configfs.c
++++ b/drivers/usb/gadget/configfs.c
+@@ -1404,6 +1404,10 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
+ 				goto err_purge_funcs;
+ 			}
+ 		}
++		ret = usb_gadget_check_config(cdev->gadget);
++		if (ret)
++			goto err_purge_funcs;
++
+ 		usb_ep_autoconfig_reset(cdev->gadget);
+ 	}
+ 	if (cdev->use_os_string) {
+-- 
+2.31.0
+
