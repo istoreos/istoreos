@@ -13,6 +13,13 @@ getdisk() {
         echo usb`echo "$usb" | sed 's/[-.]/_/g'`
         return 0
     fi
+    local sata=`echo "$path" | grep -oE '/ata\d+/host\d+/target\d+:[^:]+'`
+    if [ -n "$sata" ]; then
+        sata=`echo "$sata" | sed -r 's#/ata(\d+)/host\d+/target\d+:(.+)#sata\1.\2#'`
+        sata=${sata%%.0}
+        echo "/$sata/"
+        return 0
+    fi
     case "$DISK" in
         sd*)
             echo "$path" | grep -oE '/ata[0-9]+/' | sed 's/ata/sata/g' ;;
