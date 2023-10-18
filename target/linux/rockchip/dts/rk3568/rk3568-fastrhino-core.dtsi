@@ -916,7 +916,6 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "host";
 	extcon = <&usb2phy0>;
 	status = "okay";
 };

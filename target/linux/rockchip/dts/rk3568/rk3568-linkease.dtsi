@@ -609,7 +609,6 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "host";
 	extcon = <&usb2phy0>;
 	// phys = <&u2phy0_otg>; /* only USB2.0 */
 	// phy-names = "usb2-phy"; /* only USB2.0 */
