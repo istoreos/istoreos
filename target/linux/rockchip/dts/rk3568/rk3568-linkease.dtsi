@@ -839,4 +839,13 @@
 			rockchip,pins = <0 RK_PC7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	lcd {
+		/omit-if-no-ref/
+		spi_lcd_pins: spi-lcd-pins {
+			rockchip,pins =
+				<3 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>,
+				<3 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
