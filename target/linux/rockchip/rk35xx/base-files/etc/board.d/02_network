@@ -42,7 +42,7 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan 'eth0' 'eth1'
 		;;
 	*)
-		ucidef_set_interface_lan 'eth0'
+		ucidef_set_interface_lan 'eth0' 'dhcp'
 		[ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.docker_nat >/dev/null || uci -q batch <<-EOF
 			set firewall.docker_nat=nat
 			set firewall.docker_nat.name='DockerNAT'
