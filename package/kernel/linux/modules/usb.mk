@@ -122,6 +122,25 @@ endef
 
 $(eval $(call KernelPackage,usb-lib-composite))
 
+define KernelPackage/usb-gadget-audio
+  TITLE:=USB Audio Gadget Support
+  KCONFIG:=CONFIG_USB_AUDIO
+  DEPENDS:=+kmod-usb-gadget +kmod-usb-lib-composite
+  FILES:= \
+	  $(LINUX_DIR)/drivers/usb/gadget/legacy/g_audio.ko \
+	  $(LINUX_DIR)/drivers/usb/gadget/function/u_audio.ko \
+	  $(LINUX_DIR)/drivers/usb/gadget/function/usb_f_uac2.ko
+  AUTOLOAD:=$(call AutoLoad,52,usb_f_uac2)
+  $(call AddDepends/sound)
+  $(call AddDepends/usb)
+endef
+
+define KernelPackage/usb-gadget-audio/description
+  Kernel support for USB Audio Gadget.
+endef
+
+$(eval $(call KernelPackage,usb-gadget-audio))
+
 define KernelPackage/usb-gadget-hid
   TITLE:=USB HID Gadget Support
   KCONFIG:=CONFIG_USB_G_HID
@@ -250,6 +269,24 @@ endef
 
 $(eval $(call KernelPackage,usb-gadget-cdc-composite))
 
+
+define KernelPackage/usb-gadget-webcam
+  TITLE:=USB Webcam Gadget Support
+  KCONFIG:=CONFIG_USB_G_WEBCAM
+  DEPENDS:=+kmod-usb-gadget +kmod-usb-lib-composite +kmod-video-videobuf2
+  FILES:= \
+	  $(LINUX_DIR)/drivers/usb/gadget/legacy/g_webcam.ko \
+	  $(LINUX_DIR)/drivers/usb/gadget/function/usb_f_uvc.ko
+  AUTOLOAD:=$(call AutoLoad,52,usb_f_uvc)
+  $(call AddDepends/video)
+  $(call AddDepends/usb)
+endef
+
+define KernelPackage/usb-gadget-webcam/description
+  Kernel support for USB Webcam Gadget.
+endef
+
+$(eval $(call KernelPackage,usb-gadget-webcam))
 
 define KernelPackage/usb-uhci
   TITLE:=Support for UHCI controllers
