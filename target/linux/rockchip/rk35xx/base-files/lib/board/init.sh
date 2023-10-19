@@ -304,7 +304,20 @@ board_gpio_defaults() {
 	esac
 }
 
+board_otg_defaults() {
+	case $(board_name) in
+	jsy,h1|\
+	yyy,h1|\
+	fastrhino,r66s|\
+	fastrhino,r68s)
+		echo host >/sys/kernel/debug/usb/fcc00000.dwc3/mode
+	;;
+	esac
+}
+
 board_gpio_defaults
+
+board_otg_defaults
 
 board_fixup_iface_name
 
