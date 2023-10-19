@@ -539,7 +539,7 @@
 };
 
 // USB2 PHY
-// USB2 PHY0 (for USB3.0 HOST)
+// USB2 PHY0 (for USB3.0 OTG/HOST)
 &usb2phy0 {
 	status = "okay";
 };
@@ -552,12 +552,13 @@
 
 // USB2 PHY0 port1 USB3_HOST1_D
 &u2phy0_host {
+	phy-supply = <&vcc5v0_usb2>;
 	status = "disabled";
 };
 
-// USB2 PHY1 (for USB2.0 HOST)
+// USB2 PHY1 (for USB2.0 HOSTs)
 &usb2phy1 {
-	status = "okay";
+	status = "disabled";
 };
 
 // USB2 PHY1 port0 USB2_HOST2_D
@@ -568,7 +569,7 @@
 // USB2 PHY1 port1 USB2_HOST3_D
 &u2phy1_host {
 	phy-supply = <&vcc5v0_usb2>;
-	status = "okay";
+	status = "disabled";
 };
 
 // USB2 HOST
@@ -583,11 +584,11 @@
 
 // USB2_HOST3
 &usb_host1_ehci {
-	status = "okay";
+	status = "disabled";
 };
 
 &usb_host1_ohci {
-	status = "okay";
+	status = "disabled";
 };
 
 // START MULTI_PHY

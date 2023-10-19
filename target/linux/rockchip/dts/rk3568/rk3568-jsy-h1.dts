@@ -52,3 +52,22 @@
 &sata2 {
 	status = "okay";
 };
+
+// USB2 PHY1 (for USB2.0 HOST)
+&usb2phy1 {
+	status = "okay";
+};
+
+// USB2 PHY1 port1 USB2_HOST3_D
+&u2phy1_host {
+	status = "okay";
+};
+
+// USB2_HOST3
+&usb_host1_ehci {
+	status = "okay";
+};
+
+&usb_host1_ohci {
+	status = "okay";
+};

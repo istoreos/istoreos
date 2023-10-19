@@ -34,6 +34,7 @@
 	};
 };
 
+// USB2 PHY0 port1 USB3_HOST1_D
 &u2phy0_host {
 	status = "okay";
 };
