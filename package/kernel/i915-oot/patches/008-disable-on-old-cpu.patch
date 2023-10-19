@@ -1,0 +1,32 @@
+From ff27d2cccdcb7186e9a6a20e4d72af0633af2bf7 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 19 Oct 2023 17:08:20 +0800
+Subject: [PATCH] disable on old cpu
+
+---
+ drivers/gpu/drm/i915/i915_pci.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/i915/i915_pci.c b/drivers/gpu/drm/i915/i915_pci.c
+index eaa1112..fc12a5e 100644
+--- a/drivers/gpu/drm/i915/i915_pci.c
++++ b/drivers/gpu/drm/i915/i915_pci.c
+@@ -1318,6 +1318,7 @@ static const struct intel_device_info mtl_info = {
+  * PCI ID matches, otherwise we'll use the wrong info struct above.
+  */
+ static const struct pci_device_id pciidlist[] = {
++#if 0
+ 	INTEL_I830_IDS(&i830_info),
+ 	INTEL_I845G_IDS(&i845g_info),
+ 	INTEL_I85X_IDS(&i85x_info),
+@@ -1378,6 +1379,7 @@ static const struct pci_device_id pciidlist[] = {
+ 	INTEL_CML_GT2_IDS(&cml_gt2_info),
+ 	INTEL_CML_U_GT1_IDS(&cml_gt1_info),
+ 	INTEL_CML_U_GT2_IDS(&cml_gt2_info),
++#endif
+ 	INTEL_ICL_11_IDS(&icl_info),
+ 	INTEL_EHL_IDS(&ehl_info),
+ 	INTEL_JSL_IDS(&jsl_info),
+-- 
+2.31.0
+

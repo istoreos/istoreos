@@ -5,7 +5,7 @@ include $(INCLUDE_DIR)/kernel.mk
 PKG_NAME:=i915-oot
 
 PKG_VERSION:=23.6.28
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_SOURCE_URL:=https://github.com/intel-gpu/intel-gpu-i915-backports/archive/refs/tags/
 PKG_HASH:=0e962a0c656b365649262dbba317f8bbe9cad5357bc906a45b3a982600092321
 
