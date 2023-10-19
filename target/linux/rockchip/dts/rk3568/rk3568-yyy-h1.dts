@@ -90,7 +90,7 @@
 	pinctrl-1 = <&spi2m1_cs0 &spi2m1_pins_hs>;
 	status = "okay";
 	lcd@0 {
-		status = "okay";
+		status = "disabled";
 		compatible = "sitronix,st7789v";
 		reg = <0>;
 		spi-max-frequency = <32000000>;   //SPI时钟32M
@@ -112,6 +112,14 @@
 		debug = <0>;                     //不开启调试
 		backlight = <&lcd_backlight>;
 		power-supply = <&vcc3v3_sys>;
+	};
+	spidev@0 {
+		compatible = "rockchip,spidev";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi_lcd_pins>;
+		status = "okay";
 	};
 };
 
