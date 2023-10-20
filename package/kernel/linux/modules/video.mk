@@ -421,7 +421,7 @@ $(eval $(call KernelPackage,drm-imx-ldb))
 define KernelPackage/drm-st7789v
   SUBMENU:=$(VIDEO_MENU)
   TITLE:=Sitronix ST7789V panel support
-  DEPENDS:=+kmod-backlight +kmod-spi-bitbang
+  DEPENDS:=+kmod-drm +kmod-backlight +kmod-spi-bitbang
   KCONFIG:=CONFIG_DRM_PANEL_SITRONIX_ST7789V \
 	CONFIG_DRM_PANEL=y
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/panel/panel-sitronix-st7789v.ko
