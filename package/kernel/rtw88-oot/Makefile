@@ -7,7 +7,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=rtw88-usb
+PKG_NAME:=rtw88-oot
 PKG_VERSION:=2023-06-28
 PKG_RELEASE:=1
 
@@ -27,59 +27,35 @@ include $(INCLUDE_DIR)/package.mk
 TAR_OPTIONS+= --strip-components 1
 TAR_CMD=$(HOST_TAR) -C $(1) $(TAR_OPTIONS)
 
-define KernelPackage/rtw88-default
+define KernelPackage/rtw88-oot
   SUBMENU:=Wireless Drivers
-  TITLE:=Realtek rtw88 family usb driver
-  DEPENDS:=+kmod-mac80211 +kmod-usb-core \
+  TITLE:=Realtek rtw88 family wireless driver (OOT)
+  DEPENDS:=@PCI_SUPPORT +kmod-mac80211 +kmod-usb-core \
+	+rtl8723du-firmware +rtl8821ce-firmware \
+	+rtl8822be-firmware +rtl8822ce-firmware \
 	+@DRIVER_11N_SUPPORT +@DRIVER_11AC_SUPPORT
-endef
-
-define KernelPackage/rtw88-usb
-  $(KernelPackage/rtw88-default)
-  HIDDEN:=1
-  FILES:= \
-	$(PKG_BUILD_DIR)/rtw_core.ko \
-	$(PKG_BUILD_DIR)/rtw_usb.ko
-endef
-
-define KernelPackage/rtl8723du
-  $(KernelPackage/rtw88-default)
-  TITLE:=Realtek RTL8723DU support
-  DEPENDS+=+kmod-rtw88-usb +rtl8723du-firmware
+  CONFLICTS:=kmod-rtw88
   FILES:= \
 	$(PKG_BUILD_DIR)/rtw_8723d.ko \
-	$(PKG_BUILD_DIR)/rtw_8723du.ko
-  AUTOLOAD:=$(call AutoProbe,rtw_8723du)
-endef
-
-define KernelPackage/rtl8821cu
-  $(KernelPackage/rtw88-default)
-  TITLE:=Realtek RTL8821CU support
-  DEPENDS+=+kmod-rtw88-usb +rtl8821ce-firmware
-  FILES:= \
+	$(PKG_BUILD_DIR)/rtw_8723du.ko \
+	$(PKG_BUILD_DIR)/rtw_8723de.ko \
 	$(PKG_BUILD_DIR)/rtw_8821c.ko \
-	$(PKG_BUILD_DIR)/rtw_8821cu.ko
-  AUTOLOAD:=$(call AutoProbe,rtw_8821cu)
-endef
-
-define KernelPackage/rtl8822bu
-  $(KernelPackage/rtw88-default)
-  TITLE:=Realtek RTL8822BU support
-  DEPENDS+=+kmod-rtw88-usb +rtl8822be-firmware
-  FILES:= \
+	$(PKG_BUILD_DIR)/rtw_8821cu.ko \
+	$(PKG_BUILD_DIR)/rtw_8821ce.ko \
 	$(PKG_BUILD_DIR)/rtw_8822b.ko \
-	$(PKG_BUILD_DIR)/rtw_8822bu.ko
-  AUTOLOAD:=$(call AutoProbe,rtw_8822bu)
+	$(PKG_BUILD_DIR)/rtw_8822bu.ko \
+	$(PKG_BUILD_DIR)/rtw_8822be.ko \
+	$(PKG_BUILD_DIR)/rtw_8822c.ko \
+	$(PKG_BUILD_DIR)/rtw_8822cu.ko \
+	$(PKG_BUILD_DIR)/rtw_8822ce.ko \
+	$(PKG_BUILD_DIR)/rtw_core.ko \
+	$(PKG_BUILD_DIR)/rtw_usb.ko \
+	$(PKG_BUILD_DIR)/rtw_pci.ko
+  AUTOLOAD:=$(call AutoProbe,rtw_8822ce rtw_8822cu rtw_8822be rtw_8822bu rtw_8821ce rtw_8821cu rtw_8723de rtw_8723du)
 endef
 
-define KernelPackage/rtl8822cu
-  $(KernelPackage/rtw88-default)
-  TITLE:=Realtek RTL8822CU support
-  DEPENDS+=+kmod-rtw88-usb +rtl8822ce-firmware
-  FILES:= \
-	$(PKG_BUILD_DIR)/rtw_8822c.ko \
-	$(PKG_BUILD_DIR)/rtw_8822cu.ko
-  AUTOLOAD:=$(call AutoProbe,rtw_8822cu)
+define KernelPackage/rtw88-oot/description
+  This package contains a driver for Realtek RTL8822B[EU]/RTL8822C[EU]/RTL8821C[EU]/RTL8723D[EU] Family Controller.
 endef
 
 NOSTDINC_FLAGS := \
@@ -102,8 +78,4 @@ define Build/Compile
 		modules
 endef
 
-$(eval $(call KernelPackage,rtw88-usb))
-$(eval $(call KernelPackage,rtl8723du))
-$(eval $(call KernelPackage,rtl8821cu))
-$(eval $(call KernelPackage,rtl8822bu))
-$(eval $(call KernelPackage,rtl8822cu))
+$(eval $(call KernelPackage,rtw88-oot))
