@@ -471,6 +471,25 @@ endef
 $(eval $(call KernelPackage,loop))
 
 
+define KernelPackage/mpt3sas
+  SUBMENU:=$(BLOCK_MENU)
+  TITLE:=LSI MPT Fusion SAS 3.0 & SAS 2.0 Device Driver
+  DEPENDS:=@TARGET_x86 +kmod-libsas +kmod-scsi-core +kmod-scsi-raid
+  KCONFIG:= \
+	CONFIG_SCSI_MPT3SAS \
+	CONFIG_SCSI_MPT2SAS_MAX_SGE=128 \
+	CONFIG_SCSI_MPT3SAS_MAX_SGE=128
+  FILES:=$(LINUX_DIR)/drivers/scsi/mpt3sas/mpt3sas.ko
+  AUTOLOAD:=$(call AutoLoad,40,mpt3sas,1)
+endef
+
+define KernelPackage/mpt3sas/description
+ Kernel support for the Marvell SAS SCSI adapters
+endef
+
+$(eval $(call KernelPackage,mpt3sas))
+
+
 define KernelPackage/mvsas
   SUBMENU:=$(BLOCK_MENU)
   TITLE:=Marvell 88SE6440 SAS/SATA driver
@@ -554,6 +573,19 @@ define KernelPackage/scsi-generic
 endef
 
 $(eval $(call KernelPackage,scsi-generic))
+
+
+define KernelPackage/scsi-raid
+  SUBMENU:=$(BLOCK_MENU)
+  TITLE:=RAID Domain Transport Attributes
+  DEPENDS:=+kmod-scsi-core
+  KCONFIG:= \
+	CONFIG_RAID_ATTRS
+  FILES:= \
+	$(LINUX_DIR)/drivers/scsi/raid_class.ko
+endef
+
+$(eval $(call KernelPackage,scsi-raid))
 
 
 define KernelPackage/cdrom
