@@ -1,14 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=intel-gpu-firmware
-PKG_VERSION:=682.20
+PKG_VERSION:=682.38
 PKG_RELEASE:=1
 
-I915_FW_TAG:=23WW35.5_682.20
+I915_FW_TAG:=23WW39.5_682.38
 PKG_SOURCE_URL_FILE:=$(I915_FW_TAG).tar.gz
 PKG_SOURCE:=intel-gpu-firmware-$(PKG_SOURCE_URL_FILE)
 PKG_SOURCE_URL:=https://github.com/intel-gpu/intel-gpu-firmware/archive/refs/tags/
-PKG_HASH:=1ab6d68103b70b999a469f815156931463571cb1d2440e1041110b3cf9b18fc7
+PKG_HASH:=dfd69d64291532ee58d8194a93534353f61f319b760fe3f2971d78c0a2de911f
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -53,31 +53,31 @@ define Package/i915-oot-firmware/install
 	# METEORLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/mtl_guc_70.6.8.bin $(1)/lib/firmware/i915/
 	# PONTEVECCHIO
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/pvc_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/pvc_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# DG2
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg2_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# XEHPSDV (skip for i915-oot driver not support yet)
-	# $(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/xehpsdv_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	# $(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/xehpsdv_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_P
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/adlp_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# ALDERLAKE_S ALDERLAKE_P_N ROCKETLAKE TIGERLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/tgl_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# DG1
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/dg1_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# JASPERLAKE ELKHARTLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/ehl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/ehl_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# ICELAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/icl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/icl_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# COMETLAKE (REV >= 5)
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/cml_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/cml_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# COMETLAKE COFFEELAKE KABYLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/kbl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/kbl_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# GEMINILAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/glk_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/glk_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# BROXTON
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/bxt_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/bxt_guc_70.9.1.bin $(1)/lib/firmware/i915/
 	# SKYLAKE
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_guc_70.7.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/skl_guc_70.9.1.bin $(1)/lib/firmware/i915/
 
 	## huc
 	# METEORLAKE

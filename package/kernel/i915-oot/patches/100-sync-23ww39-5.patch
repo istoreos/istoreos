@@ -1,0 +1,1541 @@
+commit a3425614b0cfc7a389629ece842a397a2566862d
+Merge: a8fa9f0 b358c07
+Author: Liangbin Lian <jjm2473@gmail.com>
+Date:   Tue Oct 24 15:34:55 2023 +0800
+
+    Merge branch 'openwrt-5.15' into openwrt-5.10
+    
+    * openwrt-5.15:
+      Backport-Release for DII PSB I915-23.6 Branch: I915_23.6.37_PSB_230425.49
+    
+    # Conflicts:
+    #       backport-include/backport/backport_macro.h
+    #       drivers/gpu/drm/i915/display/intel_dp_mst.c
+
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index d278985..4d73de8 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,4 +1,17 @@
+ # ChangeLog
++## Release I915_23WW39.5_682.38_23.6.37_230425.49
++* i915: Support SLES 15 SP5
++* i915: Support RHEL 9.0
++* i915: Fix the issue that L3 Fabric/PUNIT FATAL error injection during WL leads to MCE but Host didn’t Reboot.
++* i915: Fix RHEL 8.6 DKMS build issue
++* i915: Fix performance drop seen with pt-cosmic tagger on max
++* i915: Update to enhance mdfi error severity reporting
++* i915: Update behavior of PRELIM_I915_GEM_VM_BIND_MAKE_RESIDENT while VM_BIND is held by user
++* i915: Fix for deadlock between vm_unbind and memory eviction
++* i915: Fix for circular locking in gem object unbind
++* i915: Fix for crash when allocating huge memory seen on max
++* i915: Update to load and use GuC fw v70.9.1
++
+ ## Release I915_23WW35.5_682.20_23.6.28_230425.37
+ * i915: fix to prevent invalid eu stall data after RC6 on max
+ * i915: fix for spechpc hang seen on max
+diff --git a/Makefile b/Makefile
+index 9ac376f..3662778 100644
+--- a/Makefile
++++ b/Makefile
+@@ -104,13 +104,14 @@ Kconfig.versions: Kconfig.kernel
+ 	@set -e ; if true ;\
+ 	then 										\
+ 		kver=$$($(MAKE) --no-print-directory -C $(KLIB_BUILD) kernelversion |	\
+-			sed 's/^\(\([3-5]\|2\.6\)\.[0-9]\+\).*/\1/;t;d')		;\
++			sed 's/^\(\([3-6]\|2\.6\)\.[0-9]\+\).*/\1/;t;d')		;\
+ 		test "$$kver" != "" || echo "Kernel version parse failed!"		;\
+ 		test "$$kver" != ""							;\
+ 		kvers="$$(seq 14 39 | sed 's/^/2.6./')"					;\
+ 		kvers="$$kvers $$(seq 0 19 | sed 's/^/3./')"				;\
+ 		kvers="$$kvers $$(seq 0 20 | sed 's/^/4./')"				;\
+-		kvers="$$kvers $$(seq 0 99 | sed 's/^/5./')"				;\
++		kvers="$$kvers $$(seq 0 20 | sed 's/^/5./')"				;\
++		kvers="$$kvers $$(seq 0 99 | sed 's/^/6./')"				;\
+ 		print=0									;\
+ 		for v in $$kvers ; do							\
+ 			if [ "$$print" = "1" ] ; then					\
+diff --git a/Makefile.backport b/Makefile.backport
+index 9461c8b..0612e44 100644
+--- a/Makefile.backport
++++ b/Makefile.backport
+@@ -18,8 +18,8 @@ CUSTOM_KERN_ID ?=
+ EXTENDED_VERSION_X = 0
+ EXTENDED_VERSION_Y = 0
+ EXTENDED_VERSION_Z = 0
+-RPM_DISTRIBUTIONS := SLES15_SP4 RHEL_9.2 RHEL_9.0 RHEL_8.6 RHEL_8.5 VANILLA_5.15LTS CUSTOM_KERN_1
+-DEB_DISTRIBUTIONS := UBUNTU_OEM_22.04 UBUNTU_OEM_20.04 UBUNTU_22.04_SERVER VANILLA_5.15LTS UBUNTU_22.04_DESKTOP
++RPM_DISTRIBUTIONS := SLES15_SP5 SLES15_SP4 RHEL_9.2 RHEL_9.0 RHEL_8.6 RHEL_8.5 VANILLA_5.15LTS VANILLA_6.1LTS CUSTOM_KERN_1
++DEB_DISTRIBUTIONS := UBUNTU_OEM_22.04 UBUNTU_OEM_20.04 UBUNTU_22.04_SERVER VANILLA_5.15LTS VANILLA_6.1LTS UBUNTU_22.04_DESKTOP
+ OS_DISTRO_NAME ?=
+ #
+ #Custom kernel specific
+@@ -35,10 +35,11 @@ ifneq (, $(OS_DISTRIBUTION))
+ 	ADD_KER_VER = 1
+ endif
+ 
++get_kernel_version = $(strip $(shell expr $(1).$(2)))
+ ifneq (,$(filter $(DEB_PKG_DISTRO_TARGETS), $(MAKECMDGOALS)))
+ 	OS_DISTRIBUTION ?= UBUNTU_22.04_SERVER
+ else ifneq (,$(filter $(RPM_PKG_DISTRO_TARGETS), $(MAKECMDGOALS)))
+-	OS_DISTRIBUTION ?= SLES15_SP4
++	OS_DISTRIBUTION ?= SLES15_SP5
+ endif
+ 
+ BKPT_VER=$(shell cat versions | grep BACKPORTS_RELEASE_TAG | cut -d "_" -f 6 | cut -d "\"" -f 1 | cut -d "-" -f 1 2>/dev/null || echo 1)
+@@ -119,13 +120,16 @@ endif
+ endif
+ else ifeq ($(OSV_NAME),)
+ # check for mainline and vanilla kernels using kernel versions
+-ifeq ($(shell expr $(BASE_KERN) \== 5.15), 1)
++ifeq ($(shell expr $(BASE_KERN) \== $(call  get_kernel_version,6,1)), 1)
++OSV_NAME = VANILLA_6.1LTS
++ADD_KV = $(shell cat versions | grep "$(OSV_NAME)_KERNEL_VERSION" | cut -d '"' -f 2)
++else ifeq ($(shell expr $(BASE_KERN) \== $(call  get_kernel_version,5,15)), 1)
+ OSV_NAME = VANILLA_5.15LTS
+ ADD_KV = $(shell cat versions | grep "$(OSV_NAME)_KERNEL_VERSION" | cut -d '"' -f 2)
+ else ifneq ($(CUSTOM_KERN_1_VER),)
+ OSV_NAME := $(shell echo $(CUSTOM_KERN_1_VER) | tr '[:lower:]' '[:upper:]')
+ OSV_KV_SUPPORTED = $(shell cat versions | grep "$(OSV_NAME)_KERNEL_VERSION" | cut -d "\"" -f 2 2>/dev/null || echo 1)
+-else ifeq ($(shell expr $(BASE_KERN) \== 5.19), 1)
++else ifeq ($(shell expr $(BASE_KERN) \== $(call  get_kernel_version,5,19)), 1)
+ OSV_NAME = UBUNTU_22.04_SERVER
+ ADD_KV = $(shell cat versions | grep "$(OSV_NAME)_KERNEL_VERSION" | cut -d '"' -f 2)
+ else
+@@ -318,9 +322,11 @@ else
+ ifeq ($(shell expr $(BASE_KERN) \== 5.15), 1)
+ 	@echo 'UBUNTU_$(OSV_VER)_SERVER_KERNEL_VERSION="$(BASE_KERNEL_NAME)"' >> versions
+ else ifeq ($(shell expr $(BASE_KERN) \> 5.15), 1)
++ifeq ($(shell expr $(BASE_KERN) \!= $(call  get_kernel_version,5,19)), 1)
+ 	@echo 'UBUNTU_$(OSV_VER)_DESKTOP_KERNEL_VERSION="$(BASE_KERNEL_NAME)"' >> versions
+ endif
+ endif
++endif
+ endif
+ 	$(call filechk,osv_version_ubuntu.h)
+ else ifeq ($(OSV_NAME), SUSE)
+diff --git a/README.md b/README.md
+index 570bba0..bf08630 100644
+--- a/README.md
++++ b/README.md
+@@ -22,18 +22,19 @@ This repository contains following drivers.
+ Each project is tagged consistently, so when pulling these repos, pull the same tag.
+ 
+ ## Branches
+-backport/main will point to the currently supported version of Ubuntu®, SLES® 15 SP4 and RHEL® onwards.
++backport/RELEASE_2335_23.6 will point to the currently supported version of Ubuntu®, SLES® 15 SP4 and RHEL® onwards.
+ 
+ ## Supported OS Kernel/Distribution
+   Our current backport supports the following OS Distribution.
+ 
+ | OS Distribution | OS Version | Kernel Version  | Installation Instructions |
+ |---  |---  |---  |--- |
+-| Ubuntu® Desktop | 22.04 | 5.19 generic | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/docs/README_ubuntu.md) |
+-| Ubuntu® Server | 22.04 | 5.15 generic | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/docs/README_ubuntu.md) |
+-| SLES® | 15SP4 |  5.14.21.150400 |  [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/docs/README_sles.md) |
+-| RHEL® | 9.2 |  5.14.0-284 |  [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/docs/README_redhat.md) |
+-| Vanilla LTS|  |  5.15 | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/docs/README_vanilla.md) |
+-
++| Ubuntu® Desktop | 22.04 | 6.2 generic | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_ubuntu.md) |
++| Ubuntu® Server | 22.04 | 5.15 generic | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_ubuntu.md) |
++| SLES® | 15SP5 |  5.14.21.150500 |  [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_sles.md) |
++| SLES® | 15SP4 |  5.14.21.150400 |  [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_sles.md) |
++| RHEL® | 9.2 |  5.14.0-284 |  [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_redhat.md) |
++| Vanilla LTS|  |  6.1  | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_vanilla.md) |
++| Vanilla LTS|  |  5.15 | [README](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/docs/README_vanilla.md) |
+ ## Product Releases:
+ Please refer [Releases](https://dgpu-docs.intel.com/releases/index.html)
+diff --git a/backport-include/backport/backport_macro.h b/backport-include/backport/backport_macro.h
+index e2ab166..f4bafaf 100644
+--- a/backport-include/backport/backport_macro.h
++++ b/backport-include/backport/backport_macro.h
+@@ -4,6 +4,97 @@
+ #include <linux/kconfig.h>
+ #include <backport/autoconf.h>
+ 
++#if (LINUX_VERSION_IS_GEQ(6,4,5) || \
++		LINUX_VERSION_IN_RANGE(6,1,42, 6,2,0) || \
++		(SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0) && SUSE_LOCAL_VERSION_IS_GEQ(55,12)))
++/*
++ * 104d79eb58aa
++ * drm/dp_mst: Clear MSG_RDY flag before sending new message
++ */
++#define BPM_DRM_DP_MST_HPD_IRQ_IS_NOT_PRESENT
++#endif
++
++#if (LINUX_VERSION_IS_GEQ(6,2,0))
++/*
++ * 4b21d25bf519c9
++ *  overflow: Introduce overflows_type() and castable_to_type()
++ */
++#define BPM_OVERFLOWS_TYPE_AVAILABLE
++
++/*
++ * e3c92eb4a84fb
++ * drm/ttm: rework on ttm_resource to use size_t type
++ */
++#define BPM_STRUCT_TTM_RESOURCE_NUM_PAGES_NOT_PRESENT
++
++/*
++ * 3c202d14a9d73
++ * prandom: remove prandom_u32_max()
++ */
++#define BPM_PRANDOM_U32_MAX_NOT_PRESENT
++
++/*
++ * 6e1ca48d0669b
++ * folio-compat: remove lru_cache_add()
++ */
++#define BPM_LRU_CACHE_ADD_API_NOT_PRESENT
++
++/*
++ * afb0ff78c13c51
++ * drm/fb-helper: Rename drm_fb_helper_unregister_fbi() to use _info postfix
++ */
++#define BPM_DRM_FB_HELPER_ALLOC_UNREGISTER_FBI_NOT_PRESENT
++
++/*
++ * 9877d8f6bc
++ *  drm/fb_helper: Rename field fbdev to info in struct drm_fb_helper
++ */
++#define BPM_STRUCT_DRM_FB_HELPER_FBDEV_NOT_PRESENT
++
++/*
++ * 90b575f52c6
++ * drm/edid: detach debugfs EDID override from EDID property update
++ */
++#define BPM_STRUCT_DRM_CONNECTOR_OVERRIDE_EDID_NOT_PRESENT
++#endif
++
++#if (LINUX_VERSION_IS_GEQ(6,1,0))
++/*
++ * cce32e4e38c6
++ * drm/atomic-helper: Remove _HELPER_ infix from DRM_PLANE_HELPER_NO_SCALING
++ */
++#define BPM_DRM_PLANE_HELPER_NO_SCALING_NOT_PRESENT
++
++/*
++ * de492c83cae prandom: remove unused functions
++ */
++#define BPM_GET_RANDOM_INT_NOT_PRESENT
++
++/*
++ * f683b9d61319 i915: use the VMA iterator
++ */
++#define BPM_STRUCT_VM_AREA_STRUCT_VM_NEXT_NOT_PRESENT
++#endif
++
++#if (LINUX_VERSION_IS_GEQ(6,1,0) || \
++		(SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0) && SUSE_LOCAL_VERSION_IS_GEQ(55,12)))
++/*
++ * 4d07b0bc40
++ * drm/display/dp_mst: Move all payload info into the atomic state
++ */
++#define BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++#define BPM_DRM_DP_MST_TOPOLOGY_MGR_INIT_NO_LANE_PRESENT
++#endif
++
++#if (LINUX_VERSION_IS_GEQ(6,0,0))
++
++/*
++ * e33c267ab70d
++ * mm: shrinkers: provide shrinkers with names
++ */
++#define BPM_REGISTER_SHRINKER_SECOND_ARG_NOT_PRESENT
++
++#endif
+ #if (LINUX_VERSION_IS_GEQ(6,0,0) || \
+                 REDHAT_RELEASE_VERSION_IS_GEQ(9,2) || \
+ 		SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0))
+@@ -37,6 +128,18 @@
+ 
+ #endif
+ 
++#if (LINUX_VERSION_IS_LESS(6,0,0))
++#if !(REDHAT_RELEASE_VERSION_IS_GEQ(9,2) || \
++		SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0))
++
++/*
++ * 64e06652e348 agp/intel: Rename intel-gtt symbols
++ */
++#define BPM_INTEL_GMCH_GTT_RENAMED
++
++#endif
++#endif
++
+ #if (LINUX_VERSION_IS_GEQ(5,19,0) || \
+ 		REDHAT_RELEASE_VERSION_IS_GEQ(9,2) || \
+ 		SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0))
+@@ -110,6 +213,16 @@
+  */
+ #define BPM_PAGECACHE_WRITE_BEGIN_AND_END_NOT_PRESENT
+ 
++/*
++ * 68189fef88c7 fs: Change try_to_free_buffers() to take a folio
++ */
++#define BPM_CANCEL_DIRTY_PAGE_NOT_PRESENT
++
++/*
++ * 7bc80a5462c3 dma-buf: add enum dma_resv_usage v4
++ */
++#define BPM_DMA_RESV_TEST_SIGNALED_BOOLEAN_ARG_NOT_PRESENT
++
+ #elif (LINUX_VERSION_IN_RANGE(5,18,0, 5,19,0) || \
+ 		REDHAT_RELEASE_VERSION_IS_EQL(9,1))
+ 
+@@ -454,21 +567,6 @@
+  *  Upstream Patches not merged in any kernel yet
+  */
+ 
+-/*
+- * DII changes outside i915 yet to upstream. 
+- * as on DII tag 5899
+- */
+-
+-#if !(REDHAT_RELEASE_VERSION_IS_GEQ(9,2) || \
+-		SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0))
+-/*
+- * 64fa30f9ffc0ed Backport and fix intel-gtt split
+- */
+-
+-#define INTEL_GMCH_GTT_RENAMED
+-
+-#endif
+-
+ /*
+  * Introduced in DII_5943
+  * 00b5f7aad3d989: Post-migration driver recovery
+@@ -510,6 +608,14 @@
+ #define BPM_MEI_AUX_BUS_AVAILABLE
+ #endif
+ 
++/* SLES15SP5 section only */
++#if SUSE_RELEASE_VERSION_IS_GEQ(1,15,5,0)
++/*
++ * 4dea97f8636d
++ * lib/bitmap: change type of bitmap_weight to unsigned long
++ */
++#define BPM_BITMAP_WEIGHT_RETURN_TYPE_CHANGED
++#endif
+ 
+ #if LINUX_VERSION_IS_LESS(5,13,0)
+ /*
+@@ -527,6 +633,7 @@
+ #define BPM_VMA_SET_FILE_NOT_PRESENT
+ #define BPM_IS_COW_MAPPING_NOT_PRESENT
+ #define BPM_SWIOTLB_NR_TBL_NO_ARG_PRESENT
++#define BPM_DRM_DP_MST_TOPOLOGY_MGR_INIT_NO_LANE_PRESENT
+ #endif
+ 
+ #endif /* _BP_LINUX_BACKPORT_MACRO_H */
+diff --git a/backport-include/drm/drm_atomic_helper.h b/backport-include/drm/drm_atomic_helper.h
+new file mode 100644
+index 0000000..6235479
+--- /dev/null
++++ b/backport-include/drm/drm_atomic_helper.h
+@@ -0,0 +1,34 @@
++/*
++ * Copyright (C) 2014 Red Hat
++ * Copyright (C) 2014 Intel Corp.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
++ * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR
++ * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
++ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
++ * OTHER DEALINGS IN THE SOFTWARE.
++ *
++ * Authors:
++ * Rob Clark <robdclark@gmail.com>
++ * Daniel Vetter <daniel.vetter@ffwll.ch>
++ */
++
++#ifndef _BPM_DRM_ATOMIC_HELPER_H_
++#define _BPM_DRM_ATOMIC_HELPER_H_
++#include_next <drm/drm_atomic_helper.h>
++#ifdef BPM_DRM_PLANE_HELPER_NO_SCALING_NOT_PRESENT
++#define DRM_PLANE_HELPER_NO_SCALING DRM_PLANE_NO_SCALING
++#endif
++#endif
+diff --git a/backport-include/drm/drm_dp_mst_helper.h b/backport-include/drm/drm_dp_mst_helper.h
+index 321c9a5..5d4a4d9 100644
+--- a/backport-include/drm/drm_dp_mst_helper.h
++++ b/backport-include/drm/drm_dp_mst_helper.h
+@@ -26,6 +26,11 @@
+ #ifdef BPM_DRM_DP_HELPER_DIR_DISPLAY_PRESENT
+ #include_next <drm/display/drm_dp_mst_helper.h>
+ #include <drm/drm_dp_helper.h>
++
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++#define drm_dp_atomic_release_vcpi_slots drm_dp_atomic_release_time_slots
++#endif
++
+ #elif defined(BPM_DRM_DP_HELPER_DIR_DP_PRESENT)
+ #include_next <drm/dp/drm_dp_mst_helper.h>
+ #else
+diff --git a/backport-include/drm/drm_fb_helper.h b/backport-include/drm/drm_fb_helper.h
+new file mode 100644
+index 0000000..acc2f4a
+--- /dev/null
++++ b/backport-include/drm/drm_fb_helper.h
+@@ -0,0 +1,38 @@
++/*
++ * Copyright (c) 2006-2009 Red Hat Inc.
++ * Copyright (c) 2006-2008 Intel Corporation
++ * Copyright (c) 2007 Dave Airlie <airlied@linux.ie>
++ *
++ * DRM framebuffer helper functions
++ *
++ * Permission to use, copy, modify, distribute, and sell this software and its
++ * documentation for any purpose is hereby granted without fee, provided that
++ * the above copyright notice appear in all copies and that both that copyright
++ * notice and this permission notice appear in supporting documentation, and
++ * that the name of the copyright holders not be used in advertising or
++ * publicity pertaining to distribution of the software without specific,
++ * written prior permission.  The copyright holders make no representations
++ * about the suitability of this software for any purpose.  It is provided "as
++ * is" without express or implied warranty.
++ *
++ * THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
++ * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO
++ * EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY SPECIAL, INDIRECT OR
++ * CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
++ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
++ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
++ * OF THIS SOFTWARE.
++ *
++ * Authors:
++ *      Dave Airlie <airlied@linux.ie>
++ *      Jesse Barnes <jesse.barnes@intel.com>
++ */
++
++#ifndef BACKPORT_DRM_FB_HELPER_H
++#define BACKPORT_DRM_FB_HELPER_H
++#include_next<drm/drm_fb_helper.h>
++#ifdef BPM_DRM_FB_HELPER_ALLOC_UNREGISTER_FBI_NOT_PRESENT
++#define drm_fb_helper_alloc_fbi drm_fb_helper_alloc_info
++#define drm_fb_helper_unregister_fbi drm_fb_helper_unregister_info
++#endif
++#endif /* BACKPORT_DRM_FB_HELPER_H */
+diff --git a/backport-include/drm/intel-gtt.h b/backport-include/drm/intel-gtt.h
+index 2240674..b9d41a2 100644
+--- a/backport-include/drm/intel-gtt.h
++++ b/backport-include/drm/intel-gtt.h
+@@ -6,7 +6,7 @@
+ 
+ #include_next <drm/intel-gtt.h>
+ 
+-#ifdef INTEL_GMCH_GTT_RENAMED
++#ifdef BPM_INTEL_GMCH_GTT_RENAMED
+ 
+ #define intel_gmch_gtt_get intel_gtt_get
+ #define intel_gmch_enable_gtt intel_enable_gtt
+diff --git a/backport-include/linux/bitmap.h b/backport-include/linux/bitmap.h
+new file mode 100644
+index 0000000..18def97
+--- /dev/null
++++ b/backport-include/linux/bitmap.h
+@@ -0,0 +1,18 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __BACKPORT_BITMAP_H
++#define __BACKPORT_BITMAP_H
++#include_next <linux/bitmap.h>
++#include <linux/version.h>
++
++#ifdef BPM_BITMAP_WEIGHT_RETURN_TYPE_CHANGED
++#define bitmap_weight LINUX_I915_BACKPORT(bitmap_weight)
++static __always_inline
++unsigned int bitmap_weight(const unsigned long *src, unsigned int nbits)
++{
++	if (small_const_nbits(nbits))
++		return hweight_long(*src & BITMAP_LAST_WORD_MASK(nbits));
++	return __bitmap_weight(src, nbits);
++}
++#endif
++
++#endif /* __BACKPORT_BITMAP_H */
+diff --git a/backport-include/linux/dma-resv.h b/backport-include/linux/dma-resv.h
+index 1d5c9e7..98b75df 100644
+--- a/backport-include/linux/dma-resv.h
++++ b/backport-include/linux/dma-resv.h
+@@ -10,6 +10,11 @@
+ #define dma_resv_reserve_shared dma_resv_reserve_fences
+ #endif
+ 
++#ifdef BPM_DMA_RESV_TEST_SIGNALED_BOOLEAN_ARG_NOT_PRESENT
++bool backport_dma_resv_test_signaled(struct dma_resv *obj, bool test_all);
++#define dma_resv_test_signaled backport_dma_resv_test_signaled
++#endif
++
+ #ifdef DMA_RESV_EXCL_UNLOCKED_NOT_PRESENT
+ 
+ /**
+diff --git a/backport-include/linux/mm.h b/backport-include/linux/mm.h
+index 35d801d..1242629 100644
+--- a/backport-include/linux/mm.h
++++ b/backport-include/linux/mm.h
+@@ -1,3 +1,4 @@
++/* SPDX-License-Identifier: GPL-2.0 */
+ #ifndef __BACKPORT_MM_H
+ #define __BACKPORT_MM_H
+ #include_next <linux/mm.h>
+@@ -78,6 +79,11 @@ static inline void *folio_address(const struct folio *folio)
+ 	return page_address(&folio->page);
+ }
+ 
++#ifdef BPM_REGISTER_SHRINKER_SECOND_ARG_NOT_PRESENT
++int backport_register_shrinker(struct shrinker *shrinker);
++#define register_shrinker backport_register_shrinker
++#endif
++
+ #endif /* FOLIO_ADDRESS_PRESENT */
+ 
+ #ifdef BPM_VMA_SET_FILE_NOT_PRESENT
+diff --git a/backport-include/linux/random.h b/backport-include/linux/random.h
+index 58e3796..3b4c409 100644
+--- a/backport-include/linux/random.h
++++ b/backport-include/linux/random.h
+@@ -49,4 +49,12 @@ static inline u32 get_random_u32(void)
+ }
+ #endif
+ 
++#ifdef BPM_GET_RANDOM_INT_NOT_PRESENT
++#define get_random_int get_random_long
++#endif
++
++#ifdef BPM_PRANDOM_U32_MAX_NOT_PRESENT
++#define prandom_u32_max get_random_u32_below
++#endif
++
+ #endif /* __BACKPORT_RANDOM_H */
+diff --git a/backport-include/linux/swap.h b/backport-include/linux/swap.h
+new file mode 100644
+index 0000000..2529035
+--- /dev/null
++++ b/backport-include/linux/swap.h
+@@ -0,0 +1,18 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++/*
++ * Written by Mark Hemment, 1996 (markhe@nextd.demon.co.uk).
++ *
++ * (C) SGI 2006, Christoph Lameter
++ *      Cleaned up and restructured to ease the addition of alternative
++ *      implementations of SLAB allocators.
++ * (C) Linux Foundation 2008-2013
++ *      Unified interface for all slab allocators
++ */
++
++#ifndef _BACKPORT_LINUX_SWAP_H
++#define _BACKPORT_LINUX_SWAP_H
++#include_next<linux/swap.h>
++#ifdef BPM_LRU_CACHE_ADD_API_NOT_PRESENT
++void lru_cache_add(struct page *page);
++#endif
++#endif
+diff --git a/compat/Makefile b/compat/Makefile
+index b1e979c..b084e95 100644
+--- a/compat/Makefile
++++ b/compat/Makefile
+@@ -42,5 +42,5 @@ compat-$(CPTCFG_KERNEL_5_5) += backport-5.5.o
+ compat-$(CPTCFG_KERNEL_5_13) += backport-5.13.o
+ compat-$(CPTCFG_KERNEL_5_15) += backport-5.15.o
+ compat-y += backport-5.10.o backport-5.19.o
+-compat-y += slub.o slab.o ptrace.o
++compat-y += slub.o slab.o ptrace.o vmscan.o swap.o dma-resv.o
+ i915-compat-y += $(compat-y)
+diff --git a/compat/dma-resv.c b/compat/dma-resv.c
+new file mode 100644
+index 0000000..b807eac
+--- /dev/null
++++ b/compat/dma-resv.c
+@@ -0,0 +1,46 @@
++// SPDX-License-Identifier: MIT
++/*
++ * Copyright (C) 2012-2014 Canonical Ltd (Maarten Lankhorst)
++ *
++ * Based on bo.c which bears the following copyright notice,
++ * but is dual licensed:
++ *
++ * Copyright (c) 2006-2009 VMware, Inc., Palo Alto, CA., USA
++ * All Rights Reserved.
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the
++ * "Software"), to deal in the Software without restriction, including
++ * without limitation the rights to use, copy, modify, merge, publish,
++ * distribute, sub license, and/or sell copies of the Software, and to
++ * permit persons to whom the Software is furnished to do so, subject to
++ * the following conditions:
++ *
++ * The above copyright notice and this permission notice (including the
++ * next paragraph) shall be included in all copies or substantial portions
++ * of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
++ * THE COPYRIGHT HOLDERS, AUTHORS AND/OR ITS SUPPLIERS BE LIABLE FOR ANY CLAIM,
++ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
++ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
++ * USE OR OTHER DEALINGS IN THE SOFTWARE.
++ *
++ **************************************************************************/
++
++#include <linux/dma-resv.h>
++
++#ifdef BPM_DMA_RESV_TEST_SIGNALED_BOOLEAN_ARG_NOT_PRESENT
++#undef dma_resv_test_signaled
++
++bool backport_dma_resv_test_signaled(struct dma_resv *obj, bool test_all)
++{
++         return dma_resv_test_signaled(obj, DMA_RESV_USAGE_READ);
++}
++
++#define dma_resv_test_signaled backport_dma_resv_test_signaled
++EXPORT_SYMBOL(dma_resv_test_signaled);
++
++#endif
+diff --git a/compat/swap.c b/compat/swap.c
+new file mode 100644
+index 0000000..43ac0f3
+--- /dev/null
++++ b/compat/swap.c
+@@ -0,0 +1,26 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ *  linux/mm/swap.c
++ *
++ *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
++ */
++
++/*
++ * This file contains the default values for the operation of the
++ * Linux VM subsystem. Fine-tuning documentation can be found in
++ * Documentation/admin-guide/sysctl/vm.rst.
++ * Started 18.12.91
++ * Swap aging added 23.2.95, Stephen Tweedie.
++ * Buffermem limits added 12.3.98, Rik van Riel.
++ */
++
++#include <linux/pagemap.h>
++#include <linux/swap.h>
++
++#ifdef BPM_LRU_CACHE_ADD_API_NOT_PRESENT
++void lru_cache_add(struct page *page)
++{
++       folio_add_lru(page_folio(page));
++}
++EXPORT_SYMBOL(lru_cache_add);
++#endif
+diff --git a/compat/vmscan.c b/compat/vmscan.c
+new file mode 100644
+index 0000000..a1d6a26
+--- /dev/null
++++ b/compat/vmscan.c
+@@ -0,0 +1,22 @@
++// SPDX-License-Identifier: GPL-2.0
++/*
++ *  Copyright (C) 1991, 1992, 1993, 1994  Linus Torvalds
++ *
++ *  Swap reorganised 29.12.95, Stephen Tweedie.
++ *  kswapd added: 7.1.96  sct
++ *  Removed kswapd_ctl limits, and swap out as many pages as needed
++ *  to bring the system back to freepages.high: 2.4.97, Rik van Riel.
++ *  Zone aware kswapd started 02/00, Kanoj Sarcar (kanoj@sgi.com).
++ *  Multiqueue VM started 5.8.00, Rik van Riel.
++ */
++
++#include<linux/mm.h>
++#ifdef BPM_REGISTER_SHRINKER_SECOND_ARG_NOT_PRESENT
++#undef register_shrinker
++int backport_register_shrinker(struct shrinker *shrinker)
++{
++         return register_shrinker(shrinker,"drm-i915_gem");
++}
++#define register_shrinker backport_register_shrinker
++EXPORT_SYMBOL(register_shrinker);
++#endif
+diff --git a/docs/README_redhat.md b/docs/README_redhat.md
+index 44abe43..f184f41 100644
+--- a/docs/README_redhat.md
++++ b/docs/README_redhat.md
+@@ -6,7 +6,7 @@
+ | RHEL | 9.2 | 5.14.0-284 |
+ 
+   The kernel header used at the time of backporting may not be compatible with the latest version at the time of installation.
+-  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/versions) file to get information on the kernel version being used during backporting.
++  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/versions) file to get information on the kernel version being used during backporting.
+ 
+   In case of any issue with the latest kernel, please install the kernel version mentioned in version file for appropriate OS version.
+ 
+diff --git a/docs/README_sles.md b/docs/README_sles.md
+index fab8e69..b064a77 100644
+--- a/docs/README_sles.md
++++ b/docs/README_sles.md
+@@ -4,16 +4,20 @@
+ 
+ | OS Distribution | OS Version | Kernel Version  |
+ |---  |---  |---  |
++| SLES | 15SP5 | 5.14.21.150500 |
+ | SLES | 15SP4 | 5.14.21.150400 |
+ 
+   The kernel header used at the time of backporting may not be compatible with the latest version at the time of installation.
+-  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/versions) file to get information on the kernel version being used during backporting.
++  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/versions) file to get information on the kernel version being used during backporting.
+ 
+   In case of any issue with the latest kernel, please install the kernel version mentioned in version file for appropriate OS version.
+ 
+ ```
+ $sudo zypper ref -s && sudo zypper install -y kernel-default-<SLES15_SP4_KERNEL_VERSION> \
+ kernel-syms-<SLES15_SP4_KERNEL_VERSION>
++or
++$sudo zypper ref -s && sudo zypper install -y kernel-default-<SLES15_SP5_KERNEL_VERSION> \
++kernel-syms-<SLES15_SP5_KERNEL_VERSION>
+ 
+ Example:
+        $sudo zypper ref -s && sudo zypper install -y kernel-default-5.14.21-150400.24.11 \
+@@ -90,6 +94,7 @@ Generated outout:
+     i915dkmsrpm-pkg  -  Build DKMS rpm package
+ 
+    ##### List of RPM supported osv kernel versions #####
++   SLES15_SP5
+    SLES15_SP4
+ ```
+ Above  will create rpm packages at $HOME/rpmbuild/RPMS/x86_64/
+diff --git a/docs/README_ubuntu.md b/docs/README_ubuntu.md
+index d4be33c..888d415 100644
+--- a/docs/README_ubuntu.md
++++ b/docs/README_ubuntu.md
+@@ -5,12 +5,12 @@
+ 
+ | OS Distribution | OS Version | Kernel Version  |
+ |---  |---  |---  |
+-| Ubuntu® | 22.04 Desktop | 5.19 generic |
++| Ubuntu® | 22.04 Desktop | 6.2 generic |
+ | | 22.04 Server| 5.15 generic |
+ 
+ 
+   The kernel header used at the time of backporting may not be compatible with the latest version at the time of installation.
+-  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/versions) file to check value of UBUNTU_22.04_DESKTOP_KERNEL_VERSION/UBUNTU_22.04_SERVER_KERNEL_VERSION for Ubuntu. It will point to the kernel version which is being used during backporting.
++  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/versions) file to check value of UBUNTU_22.04_DESKTOP_KERNEL_VERSION/UBUNTU_22.04_SERVER_KERNEL_VERSION for Ubuntu. It will point to the kernel version which is being used during backporting.
+ 
+   In case of an issue with the latest kernel, please install the kernel version mentioned in version file for appropriate OS version.
+ 
+@@ -20,8 +20,8 @@ $sudo apt install linux-headers-<UBUNTU_22.04_DESKTOP_KERNEL_VERSION> \
+ linux-image-unsigned-<UBUNTU_22.04_DESKTOP_KERNEL_VERSION>
+ 
+ Example:
+-       $sudo apt install linux-headers-5.19.0-50-generic \
+-       linux-image-unsigned-5.19.0-50-generic
++       $sudo apt install linux-headers-6.2.0-26-generic \
++       linux-image-unsigned-6.2.0-26-generic
+ ```
+   Ubuntu 22.04 Server:
+ ```
+diff --git a/docs/README_vanilla.md b/docs/README_vanilla.md
+index 25b6eba..3834edd 100644
+--- a/docs/README_vanilla.md
++++ b/docs/README_vanilla.md
+@@ -5,11 +5,12 @@
+ 
+ | OS Distribution | Kernel Version  |
+ |---  |---  |
++| Vanilla | 6.1 LTS  |
+ | Vanilla | 5.15 LTS |
+ 
+ 
+   The kernel header used at the time of backporting may not be compatible with the latest version at the time of installation.
+-  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/main/versions) file to check value of VANILLA_5.15LTS_KERNEL_VERSION for Vanilla. It will point to the kernel version which is being used during backporting.
++  Please refer [Version](https://github.com/intel-gpu/intel-gpu-i915-backports/blob/backport/RELEASE_2335_23.6/versions) file to check value of VANILLA_6.1LTS_KERNEL_VERSION or VANILLA_5.15LTS_KERNEL_VERSION for Vanilla. It will point to the kernel version which is being used during backporting.
+ 
+   In case of an issue with the latest kernel, please install the kernel version mentioned in version file for appropriate OS version.
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_dp.c b/drivers/gpu/drm/i915/display/intel_dp.c
+index 6374182..56e4e32 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp.c
++++ b/drivers/gpu/drm/i915/display/intel_dp.c
+@@ -4014,9 +4014,13 @@ intel_dp_mst_hpd_irq(struct intel_dp *intel_dp, u8 *esi, u8 *ack)
+ {
+ 	bool handled = false;
+ 
++#ifdef BPM_DRM_DP_MST_HPD_IRQ_IS_NOT_PRESENT
++	drm_dp_mst_hpd_irq_handle_event(&intel_dp->mst_mgr, esi, ack, &handled);
++#else
+ 	drm_dp_mst_hpd_irq(&intel_dp->mst_mgr, esi, &handled);
+ 	if (handled)
+ 		ack[1] |= esi[1] & (DP_DOWN_REP_MSG_RDY | DP_UP_REQ_MSG_RDY);
++#endif
+ 
+ 	if (esi[1] & DP_CP_IRQ) {
+ 		intel_hdcp_handle_cp_irq(intel_dp->attached_connector);
+diff --git a/drivers/gpu/drm/i915/display/intel_dp_mst.c b/drivers/gpu/drm/i915/display/intel_dp_mst.c
+index b31e8f7..d3da72d 100644
+--- a/drivers/gpu/drm/i915/display/intel_dp_mst.c
++++ b/drivers/gpu/drm/i915/display/intel_dp_mst.c
+@@ -52,6 +52,9 @@ static int intel_dp_mst_compute_link_config(struct intel_encoder *encoder,
+ 	struct drm_atomic_state *state = crtc_state->uapi.state;
+ 	struct intel_dp_mst_encoder *intel_mst = enc_to_mst(encoder);
+ 	struct intel_dp *intel_dp = &intel_mst->primary->dp;
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	struct drm_dp_mst_topology_state *mst_state;
++#endif
+ 	struct intel_connector *connector =
+ 		to_intel_connector(conn_state->connector);
+ 	struct drm_i915_private *i915 = to_i915(connector->base.dev);
+@@ -60,9 +63,25 @@ static int intel_dp_mst_compute_link_config(struct intel_encoder *encoder,
+ 	bool constant_n = drm_dp_has_quirk(&intel_dp->desc, DP_DPCD_QUIRK_CONSTANT_N);
+ 	int bpp, slots = -EINVAL;
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	mst_state = drm_atomic_get_mst_topology_state(state, &intel_dp->mst_mgr);
++	if (IS_ERR(mst_state))
++		return PTR_ERR(mst_state);
++#endif
++
+ 	crtc_state->lane_count = limits->max_lane_count;
+ 	crtc_state->port_clock = limits->max_rate;
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	// TODO: Handle pbn_div changes by adding a new MST helper
++	if (!mst_state->pbn_div) {
++		mst_state->pbn_div = drm_dp_get_vc_payload_bw(&intel_dp->mst_mgr,
++							      limits->max_rate,
++							      limits->max_lane_count);
++	}
++#endif
++
++
+ 	for (bpp = limits->max_bpp; bpp >= limits->min_bpp; bpp -= 2 * 3) {
+ 		crtc_state->pipe_bpp = bpp;
+ 
+@@ -70,12 +89,17 @@ static int intel_dp_mst_compute_link_config(struct intel_encoder *encoder,
+ 						       bpp,
+ 						       false);
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++		slots = drm_dp_atomic_find_time_slots(state, &intel_dp->mst_mgr,
++						      connector->port, crtc_state->pbn);
++#else
+ 		slots = drm_dp_atomic_find_vcpi_slots(state, &intel_dp->mst_mgr,
+ 						      connector->port,
+ 						      crtc_state->pbn,
+ 						      drm_dp_get_vc_payload_bw(
+ 									       crtc_state->port_clock,
+ 									       crtc_state->lane_count));
++#endif
+ 		if (slots == -EDEADLK)
+ 			return slots;
+ 		if (slots >= 0)
+@@ -146,9 +170,15 @@ static int intel_dp_dsc_mst_compute_link_config(struct intel_encoder *encoder,
+ 						       bpp << 4,
+ 						       true);
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++		slots = drm_dp_atomic_find_time_slots(state, &intel_dp->mst_mgr,
++						      connector->port,
++						      crtc_state->pbn);
++#else
+ 		slots = drm_dp_atomic_find_vcpi_slots(state, &intel_dp->mst_mgr,
+ 						      connector->port,
+ 						      crtc_state->pbn, 0);
++#endif
+ 
+ 		drm_dbg_kms(&i915->drm, "Trying bpp %d got %d pbn %d slots\n",
+ 					bpp, crtc_state->pbn, slots);
+@@ -455,15 +485,25 @@ static void intel_mst_disable_dp(struct intel_atomic_state *state,
+ 	struct intel_connector *connector =
+ 		to_intel_connector(old_conn_state->connector);
+ 	struct drm_i915_private *i915 = to_i915(connector->base.dev);
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	struct drm_dp_mst_topology_state *mst_state =
++		drm_atomic_get_mst_topology_state(&state->base, &intel_dp->mst_mgr);
++	struct drm_dp_mst_atomic_payload *payload =
++		drm_atomic_get_mst_payload_state(mst_state, connector->port);
++#else
+ 	int ret;
++#endif
+ 
+ 	drm_dbg_kms(&i915->drm, "active links %d\n",
+ 		    intel_dp->active_mst_links);
+ 
+ 	intel_hdcp_disable(intel_mst->connector);
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	drm_dp_remove_payload(&intel_dp->mst_mgr, mst_state,
++					payload, payload);
++#else
+ 	drm_dp_mst_reset_vcpi_slots(&intel_dp->mst_mgr, connector->port);
+-
+ #ifdef DRM_PAYLOAD_PART1_START_SLOT_PRESENT
+ 	ret = drm_dp_update_payload_part1(&intel_dp->mst_mgr, 1);
+ #else
+@@ -473,6 +513,8 @@ static void intel_mst_disable_dp(struct intel_atomic_state *state,
+ 		drm_dbg_kms(&i915->drm, "failed to update payload %d\n", ret);
+ 	}
+ 
++#endif
++
+ 	intel_audio_codec_disable(encoder, old_crtc_state, old_conn_state);
+ }
+ 
+@@ -499,7 +541,9 @@ static void intel_mst_post_disable_dp(struct intel_atomic_state *state,
+ 
+ 	intel_disable_transcoder(old_crtc_state);
+ 
++#ifndef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
+ 	drm_dp_update_payload_part2(&intel_dp->mst_mgr);
++#endif
+ 
+ 	clear_act_sent(encoder, old_crtc_state);
+ 
+@@ -508,7 +552,9 @@ static void intel_mst_post_disable_dp(struct intel_atomic_state *state,
+ 
+ 	wait_for_act_sent(encoder, old_crtc_state);
+ 
++#ifndef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
+ 	drm_dp_mst_deallocate_vcpi(&intel_dp->mst_mgr, connector->port);
++#endif
+ 
+ 	intel_ddi_disable_transcoder_func(old_crtc_state);
+ 
+@@ -577,6 +623,10 @@ static void intel_mst_pre_enable_dp(struct intel_atomic_state *state,
+ 	struct intel_connector *connector =
+ 		to_intel_connector(conn_state->connector);
+ 	int ret;
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	struct drm_dp_mst_topology_state *mst_state =
++		drm_atomic_get_new_mst_topology_state(&state->base, &intel_dp->mst_mgr);
++#endif
+ 	bool first_mst_stream;
+ 
+ 	/* MST encoders are bound to a crtc, not to a connector,
+@@ -601,6 +651,7 @@ static void intel_mst_pre_enable_dp(struct intel_atomic_state *state,
+ 		dig_port->base.pre_enable(state, &dig_port->base,
+ 						pipe_config, NULL);
+ 
++#ifndef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
+ 	ret = drm_dp_mst_allocate_vcpi(&intel_dp->mst_mgr,
+ 				       connector->port,
+ 				       pipe_config->pbn,
+@@ -609,12 +660,22 @@ static void intel_mst_pre_enable_dp(struct intel_atomic_state *state,
+ 		drm_err(&dev_priv->drm, "failed to allocate vcpi\n");
+ 
+ 	intel_dp->active_mst_links++;
++#endif
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	ret = drm_dp_add_payload_part1(&intel_dp->mst_mgr, mst_state,
++				       drm_atomic_get_mst_payload_state(mst_state, connector->port));
++	if (ret < 0)
++		drm_err(&dev_priv->drm, "Failed to create MST payload for %s: %d\n",
++			connector->base.name, ret);
++#else
+ #ifdef DRM_PAYLOAD_PART1_START_SLOT_PRESENT
+ 	ret = drm_dp_update_payload_part1(&intel_dp->mst_mgr, 1);
+ #else
+ 	ret = drm_dp_update_payload_part1(&intel_dp->mst_mgr);
+ #endif
++#endif
++
+ 
+ 	/*
+ 	 * Before Gen 12 this is not done as part of
+@@ -637,6 +698,11 @@ static void intel_mst_enable_dp(struct intel_atomic_state *state,
+ 	struct intel_dp_mst_encoder *intel_mst = enc_to_mst(encoder);
+ 	struct intel_digital_port *dig_port = intel_mst->primary;
+ 	struct intel_dp *intel_dp = &dig_port->dp;
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	struct intel_connector *connector = to_intel_connector(conn_state->connector);
++	struct drm_dp_mst_topology_state *mst_state =
++		drm_atomic_get_new_mst_topology_state(&state->base, &intel_dp->mst_mgr);
++#endif
+ 	struct drm_i915_private *dev_priv = to_i915(encoder->base.dev);
+ 	enum transcoder trans = pipe_config->cpu_transcoder;
+ 
+@@ -665,8 +731,12 @@ static void intel_mst_enable_dp(struct intel_atomic_state *state,
+ 
+ 	wait_for_act_sent(encoder, pipe_config);
+ 
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	drm_dp_add_payload_part2(&intel_dp->mst_mgr, &state->base,
++				 drm_atomic_get_mst_payload_state(mst_state, connector->port));
++#else
+ 	drm_dp_update_payload_part2(&intel_dp->mst_mgr);
+-
++#endif
+ 	if (DISPLAY_VER(dev_priv) >= 14 && pipe_config->fec_enable)
+ 		intel_de_rmw(dev_priv, MTL_CHICKEN_TRANS(trans), 0,
+ 			     FECSTALL_DIS_DPTSTREAM_DPTTG);
+@@ -1111,8 +1181,10 @@ intel_dp_mst_encoder_init(struct intel_digital_port *dig_port, int conn_base_id)
+ 	struct intel_dp *intel_dp = &dig_port->dp;
+ 	enum port port = dig_port->base.port;
+ 	int ret;
+-//	int max_source_rate =
+-//		intel_dp->source_rates[intel_dp->num_source_rates - 1];
++#ifndef BPM_DRM_DP_MST_TOPOLOGY_MGR_INIT_NO_LANE_PRESENT
++	int max_source_rate =
++		intel_dp->source_rates[intel_dp->num_source_rates - 1];
++#endif
+ 
+ 	if (!HAS_DP_MST(i915) || intel_dp_is_edp(intel_dp))
+ 		return 0;
+@@ -1127,11 +1199,16 @@ intel_dp_mst_encoder_init(struct intel_digital_port *dig_port, int conn_base_id)
+ 
+ 	/* create encoders */
+ 	intel_dp_create_fake_mst_encoders(dig_port);
++#ifdef BPM_DRM_DP_MST_TOPOLOGY_MGR_INIT_NO_LANE_PRESENT
++	ret = drm_dp_mst_topology_mgr_init(&intel_dp->mst_mgr, &i915->drm,
++					&intel_dp->aux, 16, 3, conn_base_id);
++#else
+ 	ret = drm_dp_mst_topology_mgr_init(&intel_dp->mst_mgr, &i915->drm,
+ 					   &intel_dp->aux, 16, 3,
+-//					   dig_port->max_lanes,
+-//					   max_source_rate,
++					   dig_port->max_lanes,
++					   max_source_rate,
+ 					   conn_base_id);
++#endif
+ 	if (ret) {
+ 		intel_dp->mst_mgr.cbs = NULL;
+ 		return ret;
+diff --git a/drivers/gpu/drm/i915/display/intel_fbdev.c b/drivers/gpu/drm/i915/display/intel_fbdev.c
+index 4d5eb22..b7865fb 100644
+--- a/drivers/gpu/drm/i915/display/intel_fbdev.c
++++ b/drivers/gpu/drm/i915/display/intel_fbdev.c
+@@ -632,7 +632,11 @@ void intel_fbdev_set_suspend(struct drm_device *dev, int state, bool synchronous
+ 	if (!ifbdev || !ifbdev->vma)
+ 		return;
+ 
++#ifdef BPM_STRUCT_DRM_FB_HELPER_FBDEV_NOT_PRESENT
++	info = ifbdev->helper.info;
++#else
+ 	info = ifbdev->helper.fbdev;
++#endif
+ 
+ 	if (synchronous) {
+ 		/* Flush any pending work to turn the console on, and then
+diff --git a/drivers/gpu/drm/i915/display/intel_hdcp.c b/drivers/gpu/drm/i915/display/intel_hdcp.c
+index 2b3dc40..8670300 100644
+--- a/drivers/gpu/drm/i915/display/intel_hdcp.c
++++ b/drivers/gpu/drm/i915/display/intel_hdcp.c
+@@ -33,8 +33,34 @@
+ 
+ static int intel_conn_to_vcpi(struct intel_connector *connector)
+ {
++#ifdef BPM_DRM_DP_MST_PORT_VCPI_NOT_PRESENT
++	struct drm_dp_mst_topology_mgr *mgr;
++	struct drm_dp_mst_atomic_payload *payload;
++	struct drm_dp_mst_topology_state *mst_state;
++	int vcpi = 0;
++
++	if (!connector->port)
++		return 0;
++	mgr = connector->port->mgr;
++
++	drm_modeset_lock(&mgr->base.lock, NULL);
++	mst_state = to_drm_dp_mst_topology_state(mgr->base.state);
++	payload = drm_atomic_get_mst_payload_state(mst_state, connector->port);
++	if (drm_WARN_ON(mgr->dev, !payload))
++		goto out;
++
++	vcpi = payload->vcpi;
++	if (drm_WARN_ON(mgr->dev, vcpi < 0)) {
++		vcpi = 0;
++		goto out;
++	}
++out:
++	drm_modeset_unlock(&mgr->base.lock);
++	return vcpi;
++#else
+ 	/* For HDMI this is forced to be 0x0. For DP SST also this is 0x0. */
+ 	return connector->port	? connector->port->vcpi.vcpi : 0;
++#endif
+ }
+ 
+ /*
+diff --git a/drivers/gpu/drm/i915/display/intel_hdmi.c b/drivers/gpu/drm/i915/display/intel_hdmi.c
+index 55d1ecd..1307681 100644
+--- a/drivers/gpu/drm/i915/display/intel_hdmi.c
++++ b/drivers/gpu/drm/i915/display/intel_hdmi.c
+@@ -2391,10 +2391,16 @@ intel_hdmi_dp_dual_mode_detect(struct drm_connector *connector, bool has_edid)
+ 		/* An overridden EDID imply that we want this port for testing.
+ 		 * Make sure not to set limits for that port.
+ 		 */
++#ifdef BPM_STRUCT_DRM_CONNECTOR_OVERRIDE_EDID_NOT_PRESENT
++               if (has_edid && !connector->force &&
++                   intel_bios_is_port_dp_dual_mode(dev_priv, port))
++#else
+ 		if (has_edid && !connector->override_edid &&
+-		    intel_bios_is_port_dp_dual_mode(dev_priv, port)) {
++		    intel_bios_is_port_dp_dual_mode(dev_priv, port))
++#endif
++		{
+ 			drm_dbg_kms(&dev_priv->drm,
+-				    "Assuming DP dual mode adaptor presence based on VBT\n");
++					"Assuming DP dual mode adaptor presence based on VBT\n");
+ 			type = DRM_DP_DUAL_MODE_TYPE1_DVI;
+ 		} else {
+ 			type = DRM_DP_DUAL_MODE_NONE;
+diff --git a/drivers/gpu/drm/i915/fabric/routing_logic.c b/drivers/gpu/drm/i915/fabric/routing_logic.c
+index dde6605..88ddd68 100644
+--- a/drivers/gpu/drm/i915/fabric/routing_logic.c
++++ b/drivers/gpu/drm/i915/fabric/routing_logic.c
+@@ -6,6 +6,7 @@
+ 
+ #include <linux/bitmap.h>
+ #include <linux/bitfield.h>
++#include <linux/version.h>
+ 
+ #include "csr.h"
+ #include "routing_logic.h"
+@@ -781,6 +782,7 @@ static int unicast_route_pair(struct routing_uft *uft,
+ 	return unicast_route_pair_via(uft, sd_src, sd_dst, ports, num_ports);
+ }
+ 
++#if KERNEL_VERSION(6, 1, 0) > LINUX_VERSION_CODE
+ static int find_nth_bit(unsigned long *mask, unsigned long len, unsigned long n)
+ {
+ 	int bit = find_first_bit(mask, len);
+@@ -796,6 +798,7 @@ static int find_nth_bit(unsigned long *mask, unsigned long len, unsigned long n)
+ 
+ 	return bit;
+ }
++#endif
+ 
+ /**
+  * unicast_route_local - Route the FIDs local to the sd via the bridge ports.
+diff --git a/drivers/gpu/drm/i915/gem/i915_gem_userptr.c b/drivers/gpu/drm/i915/gem/i915_gem_userptr.c
+index 708015c..917377d 100644
+--- a/drivers/gpu/drm/i915/gem/i915_gem_userptr.c
++++ b/drivers/gpu/drm/i915/gem/i915_gem_userptr.c
+@@ -90,22 +90,35 @@ struct userptr_chunk {
+ static int __userptr_chunk(struct mmu_interval_notifier *notifier,
+ 			   struct scatterlist *sg,
+ 			   unsigned long start,
+-			   unsigned long max)
++			   unsigned long max,
++			   unsigned long flags)
+ {
+ 	struct page *pages[MAX_STACK_ALLOC / sizeof(struct page *)];
+ 	unsigned long count = 0;
+ 	int err;
+ 
++	/*
++	 * Currently when we break out of multi-threaded mode (FOLL_FAST_ONLY)
++	 * we completely replay in single-threaded mode, clearing any
++	 * in-progress chunking.
++	 *
++	 * A possible optimization here would be to keep the chunking that has
++	 * already happened to this point and only replay the pages which
++	 * haven't yet been pinned. For now, take the brute force approach.
++	 */
++
+ 	kthread_use_mm(notifier->mm);
+ 	do {
+ 		unsigned long addr = start + (count << PAGE_SHIFT);
+ 		int n = min_t(int, max - count, ARRAY_SIZE(pages));
+ 
+-		err = pin_user_pages_fast(addr & PAGE_MASK, n,
+-					  addr & ~PAGE_MASK,
+-					  pages);
+-		if (err < 0)
++		err = pin_user_pages_fast(addr, n, flags, pages);
++		if (err <= 0) {
++			if (flags & FOLL_FAST_ONLY)
++				err = -EAGAIN;
++			GEM_BUG_ON(err == 0);
+ 			goto out;
++		}
+ 
+ 		for (n = 0; n < err; n++) {
+ 			sg_set_page(sg, pages[n], PAGE_SIZE, 0);
+@@ -131,7 +144,8 @@ static void userptr_chunk(struct work_struct *wrk)
+ 
+ 	err = __userptr_chunk(notifier,
+ 			      memset(chunk, 0, sizeof(*chunk)),
+-			      addr, count);
++			      addr & PAGE_MASK, count,
++			      (addr & ~PAGE_MASK) | FOLL_FAST_ONLY);
+ 	i915_sw_fence_set_error_once(fence, err);
+ 	i915_sw_fence_complete(fence);
+ }
+@@ -172,7 +186,8 @@ static int userptr_work(struct dma_fence_work *base)
+ 	struct userptr_work *wrk = container_of(base, typeof(*wrk), base);
+ 	struct drm_i915_gem_object *obj = wrk->obj;
+ 	struct sg_table *sgt = obj->mm.pages;
+-	struct userptr_chunk *chunk = NULL;
++	unsigned long use_threads = FOLL_FAST_ONLY;
++	struct userptr_chunk *chunk;
+ 	struct i915_sw_fence fence;
+ 	unsigned long seq, addr, n;
+ 	struct scatterlist *sg;
+@@ -181,16 +196,17 @@ static int userptr_work(struct dma_fence_work *base)
+ 	addr = obj->userptr.ptr;
+ 	if (!i915_gem_object_is_readonly(obj))
+ 		addr |= FOLL_WRITE | FOLL_FORCE;
+-	BUILD_BUG_ON(FOLL_WRITE & PAGE_MASK);
++	BUILD_BUG_ON((FOLL_WRITE | FOLL_FORCE) & PAGE_MASK);
+ 
+ 	if (!mmget_not_zero(obj->userptr.notifier.mm))
+ 		return -EFAULT;
+ 
+ restart: /* Spread the pagefaulting across the cores (~4MiB per core) */
+ 	err = 0;
++	chunk = NULL;
+ 	i915_sw_fence_init_onstack(&fence);
+ 	seq = mmu_interval_read_begin(&obj->userptr.notifier);
+-	for (n = 0, sg = sgt->sgl; n + SG_MAX_SINGLE_ALLOC < sgt->orig_nents;) {
++	for (n = 0, sg = sgt->sgl; use_threads && n + SG_MAX_SINGLE_ALLOC < sgt->orig_nents;) {
+ 		if (chunk == NULL) {
+ 			chunk = memset(sg, 0, sizeof(*chunk));
+ 
+@@ -213,18 +229,27 @@ restart: /* Spread the pagefaulting across the cores (~4MiB per core) */
+ 			userptr_queue(chunk, to_i915(obj->base.dev)->wq);
+ 			chunk = NULL;
+ 		}
++
++		if (READ_ONCE(fence.error))
++			break;
+ 	}
+ 	i915_sw_fence_commit(&fence);
+ 
+ 	/* Leaving the last chunk for ourselves */
+-	if (chunk) {
++	if (READ_ONCE(fence.error)) {
++		/* Do nothing more if already in error */
++		if (chunk) {
++			memset(chunk, 0, sizeof(*chunk));
++			i915_sw_fence_complete(&fence);
++		}
++	} else if (chunk) {
+ 		chunk->count += sgt->orig_nents;
+ 		userptr_chunk(&chunk->work);
+-		chunk = NULL;
+ 	} else {
+ 		err = __userptr_chunk(&obj->userptr.notifier, sg,
+-				      addr + (n << PAGE_SHIFT),
+-				      sgt->orig_nents - n);
++				      (addr & PAGE_MASK) + (n << PAGE_SHIFT),
++				      sgt->orig_nents - n,
++				      (addr & ~PAGE_MASK) | use_threads);
+ 	}
+ 
+ 	if (n) {
+@@ -248,8 +273,10 @@ restart: /* Spread the pagefaulting across the cores (~4MiB per core) */
+ 	if (err) {
+ err:		unpin_sg(sgt);
+ 
+-		if (err == -EAGAIN)
++		if (err == -EAGAIN) {
++			use_threads = 0;
+ 			goto restart;
++		}
+ 
+ 		sg_mark_end(sgt->sgl);
+ 		sgt->nents = 0;
+@@ -267,30 +294,48 @@ static const struct dma_fence_work_ops userptr_ops = {
+ static int
+ probe_range(struct mm_struct *mm, unsigned long addr, unsigned long len)
+ {
+-	const unsigned long end = addr + len;
+ 	struct vm_area_struct *vma;
++	const unsigned long end = addr + len;
++#ifdef BPM_STRUCT_VM_AREA_STRUCT_VM_NEXT_NOT_PRESENT
++	VMA_ITERATOR(vmi, mm, addr);
++#else
+ 	int ret = -EFAULT;
++#endif
+ 
+ 	if (!mmap_read_trylock(mm))
+ 		return 0;
+ 
++#ifdef BPM_STRUCT_VM_AREA_STRUCT_VM_NEXT_NOT_PRESENT
++	for_each_vma_range(vmi, vma, end) {
++#else
+ 	for (vma = find_vma(mm, addr); vma; vma = vma->vm_next) {
++#endif
+ 		if (vma->vm_start > addr)
+ 			break;
+ 
+ 		if (vma->vm_flags & (VM_IO | VM_PFNMAP))
+ 			break;
+ 
++#ifndef BPM_STRUCT_VM_AREA_STRUCT_VM_NEXT_NOT_PRESENT
+ 		if (vma->vm_end >= end) {
+ 			ret = 0;
+ 			break;
+ 		}
++#endif
++
+ 
+ 		addr = vma->vm_end;
+ 	}
+ 
+ 	mmap_read_unlock(mm);
++#ifdef BPM_STRUCT_VM_AREA_STRUCT_VM_NEXT_NOT_PRESENT
++	if (vma || addr < end)
++		return -EFAULT;
++	return 0;
++#else
+ 	return ret;
++#endif
++
+ }
+ 
+ static int i915_gem_userptr_get_pages(struct drm_i915_gem_object *obj)
+diff --git a/drivers/gpu/drm/i915/gem/i915_gem_vm_bind_object.c b/drivers/gpu/drm/i915/gem/i915_gem_vm_bind_object.c
+index f05e2d9..6327560 100644
+--- a/drivers/gpu/drm/i915/gem/i915_gem_vm_bind_object.c
++++ b/drivers/gpu/drm/i915/gem/i915_gem_vm_bind_object.c
+@@ -689,11 +689,13 @@ static int vma_bind_insert(struct i915_vma *vma, u64 pin_flags)
+ 	int ret = 0;
+ 
+ 	for_i915_gem_ww(&ww, ret, true) {
+-		ret = i915_gem_object_lock(vm->root_obj, &ww);
+-		if (ret)
+-			continue;
+-
+ 		if (pin_flags) {
++			if (!i915_vm_page_fault_enabled(vm)) {
++				ret = i915_gem_object_lock(vm->root_obj, &ww);
++				if (ret)
++					continue;
++			}
++
+ 			ret = i915_gem_object_lock(vma->obj, &ww);
+ 			if (ret)
+ 				continue;
+@@ -706,6 +708,10 @@ static int vma_bind_insert(struct i915_vma *vma, u64 pin_flags)
+ 			__i915_vma_unpin(vma);
+ 		}
+ 
++		ret = i915_gem_object_lock(vm->root_obj, &ww);
++		if (ret)
++			continue;
++
+ 		list_move_tail(&vma->vm_bind_link, &vm->vm_bind_list);
+ 		i915_vm_bind_it_insert(vma, &vm->va);
+ 	}
+diff --git a/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c b/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
+index df73325..c849152 100644
+--- a/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
++++ b/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
+@@ -113,8 +113,8 @@ static int vf_handshake_with_guc(struct intel_iov *iov)
+ 		return -EREMCHG;
+ 	}
+ 
+-	/* XXX we only support one version, there must be a match */
+-	if (major != GUC_VF_VERSION_LATEST_MAJOR || minor != GUC_VF_VERSION_LATEST_MINOR)
++	/* XXX backwards breaking changes are not supported */
++	if (major != GUC_VF_VERSION_LATEST_MAJOR || minor < GUC_VF_VERSION_LATEST_MINOR)
+ 		goto fail;
+ 
+ 	dev_info(iov_to_dev(iov), "%s interface version %u.%u.%u.%u\n",
+diff --git a/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c b/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
+index 95ea425..ac78ef1 100644
+--- a/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
++++ b/drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c
+@@ -86,24 +86,24 @@ void intel_uc_fw_change_status(struct intel_uc_fw *uc_fw,
+  */
+ #define INTEL_GUC_FIRMWARE_DEFS(fw_def, guc_maj, guc_mmp) \
+ 	fw_def(METEORLAKE,   0, guc_mmp(mtl,  70, 6, 8)) \
+-	fw_def(PONTEVECCHIO, 0, guc_mmp(pvc,  70, 7, 0)) \
+-	fw_def(DG2,          0, guc_mmp(dg2,  70, 7, 0)) \
+-	fw_def(XEHPSDV,  0, guc_mmp(xehpsdv,  70, 7, 0)) \
+-	fw_def(ALDERLAKE_P,  0, guc_mmp(adlp, 70, 7, 0)) \
+-	fw_def(ALDERLAKE_S,  0, guc_mmp(tgl,  70, 7, 0)) \
+-	fw_def(DG1,          0, guc_mmp(dg1,  70, 7, 0)) \
+-	fw_def(ROCKETLAKE,   0, guc_mmp(tgl,  70, 7, 0)) \
+-	fw_def(TIGERLAKE,    0, guc_mmp(tgl,  70, 7, 0)) \
+-	fw_def(JASPERLAKE,   0, guc_mmp(ehl,  70, 7, 0)) \
+-	fw_def(ELKHARTLAKE,  0, guc_mmp(ehl,  70, 7, 0)) \
+-	fw_def(ICELAKE,      0, guc_mmp(icl,  70, 7, 0)) \
+-	fw_def(COMETLAKE,    5, guc_mmp(cml,  70, 7, 0)) \
+-	fw_def(COMETLAKE,    0, guc_mmp(kbl,  70, 7, 0)) \
+-	fw_def(COFFEELAKE,   0, guc_mmp(kbl,  70, 7, 0)) \
+-	fw_def(GEMINILAKE,   0, guc_mmp(glk,  70, 7, 0)) \
+-	fw_def(KABYLAKE,     0, guc_mmp(kbl,  70, 7, 0)) \
+-	fw_def(BROXTON,      0, guc_mmp(bxt,  70, 7, 0)) \
+-	fw_def(SKYLAKE,      0, guc_mmp(skl,  70, 7, 0))
++	fw_def(PONTEVECCHIO, 0, guc_mmp(pvc,  70, 9, 1)) \
++	fw_def(DG2,          0, guc_mmp(dg2,  70, 9, 1)) \
++	fw_def(XEHPSDV,  0, guc_mmp(xehpsdv,  70, 9, 1)) \
++	fw_def(ALDERLAKE_P,  0, guc_mmp(adlp, 70, 9, 1)) \
++	fw_def(ALDERLAKE_S,  0, guc_mmp(tgl,  70, 9, 1)) \
++	fw_def(DG1,          0, guc_mmp(dg1,  70, 9, 1)) \
++	fw_def(ROCKETLAKE,   0, guc_mmp(tgl,  70, 9, 1)) \
++	fw_def(TIGERLAKE,    0, guc_mmp(tgl,  70, 9, 1)) \
++	fw_def(JASPERLAKE,   0, guc_mmp(ehl,  70, 9, 1)) \
++	fw_def(ELKHARTLAKE,  0, guc_mmp(ehl,  70, 9, 1)) \
++	fw_def(ICELAKE,      0, guc_mmp(icl,  70, 9, 1)) \
++	fw_def(COMETLAKE,    5, guc_mmp(cml,  70, 9, 1)) \
++	fw_def(COMETLAKE,    0, guc_mmp(kbl,  70, 9, 1)) \
++	fw_def(COFFEELAKE,   0, guc_mmp(kbl,  70, 9, 1)) \
++	fw_def(GEMINILAKE,   0, guc_mmp(glk,  70, 9, 1)) \
++	fw_def(KABYLAKE,     0, guc_mmp(kbl,  70, 9, 1)) \
++	fw_def(BROXTON,      0, guc_mmp(bxt,  70, 9, 1)) \
++	fw_def(SKYLAKE,      0, guc_mmp(skl,  70, 9, 1))
+ 
+ #define INTEL_HUC_FIRMWARE_DEFS(fw_def, huc_raw, huc_mmp, huc_gsc) \
+ 	fw_def(METEORLAKE,   0, huc_gsc(mtl,  8, 3, 7)) \
+diff --git a/drivers/gpu/drm/i915/i915_gem.c b/drivers/gpu/drm/i915/i915_gem.c
+index 264c4fd..06f86fe 100644
+--- a/drivers/gpu/drm/i915/i915_gem.c
++++ b/drivers/gpu/drm/i915/i915_gem.c
+@@ -178,6 +178,13 @@ try_again:
+ 		if (!vma)
+ 			goto close_vm;
+ 
++		/* Always wait for a pending unbind before checking activity */
++		if (!ww_mutex_is_locked(&vm->root_obj->base.resv->lock)) {
++			ret = i915_vma_wait_for_bind(vma);
++			if (ret)
++				goto put_vma;
++		}
++
+ 		if (!(flags & I915_GEM_OBJECT_UNBIND_ACTIVE) &&
+ 		    i915_vma_is_active(vma)) {
+ 			ret = -EBUSY;
+diff --git a/drivers/gpu/drm/i915/i915_irq.c b/drivers/gpu/drm/i915/i915_irq.c
+index 00799c9..3561d29 100644
+--- a/drivers/gpu/drm/i915/i915_irq.c
++++ b/drivers/gpu/drm/i915/i915_irq.c
+@@ -3000,6 +3000,7 @@ gen12_soc_hw_error_handler(struct intel_gt *gt,
+ {
+ 	void __iomem * const regs = gt->uncore->regs;
+ 	unsigned long mst_glb_errstat, slv_glb_errstat, lcl_errstat, index;
++	u32 ieh_header;
+ 	u32 errbit;
+ 	u32 base = SOC_XEHPSDV_BASE;
+ 	u32 slave_base = SOC_XEHPSDV_SLAVE_BASE;
+@@ -3104,6 +3105,16 @@ gen12_soc_hw_error_handler(struct intel_gt *gt,
+ 		log_gt_hw_err(gt, "SOC_LOCAL_ERR_STAT_MASTER_REG_%s:0x%08lx\n",
+ 			      hardware_error_type_to_str(hw_err), lcl_errstat);
+ 		for_each_set_bit(errbit, &lcl_errstat, SOC_HW_ERR_MAX_BITS) {
++			if (errbit == PVC_SOC_MDFI_EAST || errbit == PVC_SOC_MDFI_SOUTH) {
++			       ieh_header = raw_reg_read(regs, LOCAL_FIRST_IEH_HEADER_LOG_REG);
++			       log_gt_hw_err(gt, "LOCAL_FIRST_IEH_HEADER_LOG_REG:0x%08x\n",
++					     ieh_header);
++
++			       if (ieh_header != MDFI_SEVERITY(hw_err)) {
++				       lcl_errstat &= ~REG_BIT(errbit);
++				       continue;
++			       }
++			}
+ 			index = SOC_ERR_INDEX(INTEL_GT_SOC_IEH0, INTEL_SOC_REG_LOCAL, hw_err, errbit);
+ 			update_soc_hw_error_cnt(gt, index);
+ 			log_soc_hw_error(gt, index, hw_err);
+diff --git a/drivers/gpu/drm/i915/i915_reg.h b/drivers/gpu/drm/i915/i915_reg.h
+index 836a7cd..9976174 100644
+--- a/drivers/gpu/drm/i915/i915_reg.h
++++ b/drivers/gpu/drm/i915/i915_reg.h
+@@ -5975,6 +5975,12 @@ enum gt_vctr_registers {
+ 						_SLM_ECC_ERROR_CNT : \
+ 						_SLM_UNCORR_ECC_ERROR_CNT)
+ 
++#define LOCAL_FIRST_IEH_HEADER_LOG_REG	_MMIO(0x2822b0)
++#define MDFI_SEVERITY_FATAL		0x00330000
++#define MDFI_SEVERITY_NONFATAL		0x00310000
++#define MDFI_SEVERITY(x)		((x) == HARDWARE_ERROR_FATAL ? \
++						MDFI_SEVERITY_FATAL : \
++						MDFI_SEVERITY_NONFATAL)
+ /* VF_CAPABILITY_REGISTER */
+ #define GEN12_VF_CAP_REG		_MMIO(0x1901f8)
+ #define   GEN12_VF			REG_BIT(0)
+diff --git a/drivers/gpu/drm/i915/i915_scatterlist.c b/drivers/gpu/drm/i915/i915_scatterlist.c
+index b0ac3d6..41e8d1d 100644
+--- a/drivers/gpu/drm/i915/i915_scatterlist.c
++++ b/drivers/gpu/drm/i915/i915_scatterlist.c
+@@ -185,7 +185,11 @@ struct sg_table *i915_sg_from_buddy_resource(struct ttm_resource *res,
+ 					     u64 region_start)
+ {
+ 	struct i915_ttm_buddy_resource *bman_res = to_ttm_buddy_resource(res);
++#ifdef BPM_STRUCT_TTM_RESOURCE_NUM_PAGES_NOT_PRESENT
++	const u64 size = res->size;
++#else
+ 	const u64 size = res->num_pages << PAGE_SHIFT;
++#endif
+ 	const u64 max_segment = rounddown(UINT_MAX, PAGE_SIZE);
+ 	struct i915_buddy_mm *mm = bman_res->mm;
+ 	struct list_head *blocks = &bman_res->blocks;
+@@ -200,7 +204,12 @@ struct sg_table *i915_sg_from_buddy_resource(struct ttm_resource *res,
+ 	if (!st)
+ 		return ERR_PTR(-ENOMEM);
+ 
+-	if (sg_alloc_table(st, res->num_pages, GFP_KERNEL)) {
++#ifdef BPM_STRUCT_TTM_RESOURCE_NUM_PAGES_NOT_PRESENT
++	if (sg_alloc_table(st, PFN_UP(res->size), GFP_KERNEL))
++#else
++	if (sg_alloc_table(st, res->num_pages, GFP_KERNEL))
++#endif
++	{
+ 		kfree(st);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+diff --git a/drivers/gpu/drm/i915/i915_user_extensions.c b/drivers/gpu/drm/i915/i915_user_extensions.c
+index edde99b..31981ce 100644
+--- a/drivers/gpu/drm/i915/i915_user_extensions.c
++++ b/drivers/gpu/drm/i915/i915_user_extensions.c
+@@ -52,8 +52,13 @@ int i915_user_extensions(struct i915_user_extension __user *ext,
+ 		if (err)
+ 			return err;
+ 
++#ifdef BPM_OVERFLOWS_TYPE_AVAILABLE
++		if (get_user(next, &ext->next_extension) ||
++		    overflows_type(next, uintptr_t))
++#else
+ 		if (get_user(next, &ext->next_extension) ||
+ 		    overflows_type(next, ext))
++#endif
+ 			return -EFAULT;
+ 
+ 		ext = u64_to_user_ptr(next);
+diff --git a/drivers/gpu/drm/i915/i915_utils.h b/drivers/gpu/drm/i915/i915_utils.h
+index 0540d61..ebd50e4 100644
+--- a/drivers/gpu/drm/i915/i915_utils.h
++++ b/drivers/gpu/drm/i915/i915_utils.h
+@@ -123,8 +123,10 @@ bool i915_error_injected(void);
+ #endif
+ 
+ /* Note we don't consider signbits :| */
++#ifndef overflows_type
+ #define overflows_type(x, T) \
+ 	(sizeof(x) > sizeof(T) && (x) >> BITS_PER_TYPE(T))
++#endif
+ 
+ static inline bool
+ __check_struct_size(size_t base, size_t arr, size_t count, size_t *size)
+diff --git a/versions b/versions
+index 9cfedd9..5b9aaa0 100644
+--- a/versions
++++ b/versions
+@@ -1,8 +1,10 @@
+-BACKPORTS_RELEASE_TAG="I915_23.6.28_PSB_230425.37"
+-DII_KERNEL_TAG="I915-23.6.28"
+-DII_KERNEL_HEAD="b15df0443cce7"
+-UBUNTU_22.04_SERVER_KERNEL_VERSION="5.15.0-79"
+-UBUNTU_22.04_DESKTOP_KERNEL_VERSION="5.19.0-50"
+-VANILLA_5.15LTS_KERNEL_VERSION="5.15.127"
+-SLES15_SP4_KERNEL_VERSION="5.14.21-150400.24.81"
+-RHEL_9.2_KERNEL_VERSION="5.14.0-284.11.1"
++BACKPORTS_RELEASE_TAG="I915_23.6.37_PSB_230425.49"
++DII_KERNEL_TAG="I915-23.6.37"
++DII_KERNEL_HEAD="4fe86e410616e"
++UBUNTU_22.04_SERVER_KERNEL_VERSION="5.15.0-85"
++UBUNTU_22.04_DESKTOP_KERNEL_VERSION="6.2.0-34"
++VANILLA_5.15LTS_KERNEL_VERSION="5.15.132"
++SLES15_SP4_KERNEL_VERSION="5.14.21-150400.24.84"
++SLES15_SP5_KERNEL_VERSION="5.14.21-150500.55.22"
++RHEL_9.0_KERNEL_VERSION="5.14.0-70.30.1"
++RHEL_9.2_KERNEL_VERSION="5.14.0-284.18.1"
