@@ -12,14 +12,6 @@ json_is_a network object && exit 0
 ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
 if [ $ETHNUM == 1 ]; then
     ucidef_set_interface_lan 'eth0'
-    [ -f /rom/note -o -f /etc/config/network ] || uci -q get firewall.docker_nat >/dev/null || uci -q batch <<-EOF
-        set firewall.docker_nat=nat
-        set firewall.docker_nat.name='DockerNAT'
-        set firewall.docker_nat.proto='all'
-        set firewall.docker_nat.src='lan'
-        set firewall.docker_nat.target='MASQUERADE'
-        set firewall.docker_nat.extra='-i docker0'
-EOF
 else
     [ -d /sys/class/net/eth0 ] && ucidef_set_interface_wan 'eth0'
     interface=""
