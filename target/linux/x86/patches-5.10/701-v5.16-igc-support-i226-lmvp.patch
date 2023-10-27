@@ -1,0 +1,53 @@
+From 8f20571db5270d549a087318840fd1312fad4051 Mon Sep 17 00:00:00 2001
+From: Sasha Neftin <sasha.neftin@intel.com>
+Date: Tue, 31 Aug 2021 10:39:02 +0300
+Subject: [PATCH] igc: Add new device ID
+
+Add new device ID for the next step of the silicon and
+reflect the I226_LMVP part.
+
+Signed-off-by: Sasha Neftin <sasha.neftin@intel.com>
+Tested-by: Nechama Kraus <nechamax.kraus@linux.intel.com>
+Signed-off-by: Tony Nguyen <anthony.l.nguyen@intel.com>
+---
+ drivers/net/ethernet/intel/igc/igc_base.c | 1 +
+ drivers/net/ethernet/intel/igc/igc_hw.h   | 1 +
+ drivers/net/ethernet/intel/igc/igc_main.c | 1 +
+ 3 files changed, 3 insertions(+)
+
+diff --git a/drivers/net/ethernet/intel/igc/igc_base.c b/drivers/net/ethernet/intel/igc/igc_base.c
+index 30b1f02cef150f..2612a58fc52a4e 100644
+--- a/drivers/net/ethernet/intel/igc/igc_base.c
++++ b/drivers/net/ethernet/intel/igc/igc_base.c
+@@ -207,6 +207,7 @@ static s32 igc_get_invariants_base(struct igc_hw *hw)
+ 	case IGC_DEV_ID_I225_K2:
+ 	case IGC_DEV_ID_I226_K:
+ 	case IGC_DEV_ID_I225_LMVP:
++	case IGC_DEV_ID_I226_LMVP:
+ 	case IGC_DEV_ID_I225_IT:
+ 	case IGC_DEV_ID_I226_LM:
+ 	case IGC_DEV_ID_I226_V:
+diff --git a/drivers/net/ethernet/intel/igc/igc_hw.h b/drivers/net/ethernet/intel/igc/igc_hw.h
+index 4e0203336c6bfe..587db7483f2557 100644
+--- a/drivers/net/ethernet/intel/igc/igc_hw.h
++++ b/drivers/net/ethernet/intel/igc/igc_hw.h
+@@ -24,6 +24,7 @@
+ #define IGC_DEV_ID_I225_K2			0x3101
+ #define IGC_DEV_ID_I226_K			0x3102
+ #define IGC_DEV_ID_I225_LMVP			0x5502
++#define IGC_DEV_ID_I226_LMVP			0x5503
+ #define IGC_DEV_ID_I225_IT			0x0D9F
+ #define IGC_DEV_ID_I226_LM			0x125B
+ #define IGC_DEV_ID_I226_V			0x125C
+diff --git a/drivers/net/ethernet/intel/igc/igc_main.c b/drivers/net/ethernet/intel/igc/igc_main.c
+index 7ffb1045f00c22..8e448288ee2657 100644
+--- a/drivers/net/ethernet/intel/igc/igc_main.c
++++ b/drivers/net/ethernet/intel/igc/igc_main.c
+@@ -48,6 +48,7 @@ static const struct pci_device_id igc_pci_tbl[] = {
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_K2), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_K), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_LMVP), board_base },
++	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_LMVP), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_IT), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_LM), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_V), board_base },

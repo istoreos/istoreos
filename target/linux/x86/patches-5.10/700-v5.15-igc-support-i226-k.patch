@@ -1,0 +1,41 @@
+From bfa5e98c9de466bfe25a9b4bf6ef9122aee2d06a Mon Sep 17 00:00:00 2001
+From: Sasha Neftin <sasha.neftin@intel.com>
+Date: Thu, 10 Dec 2020 11:08:12 -0800
+Subject: [PATCH] igc: Add new device ID
+
+Add new device ID for the next step of the silicon and
+reflect the I226_K part.
+
+Signed-off-by: Sasha Neftin <sasha.neftin@intel.com>
+Tested-by: Aaron Brown <aaron.f.brown@intel.com>
+Signed-off-by: Tony Nguyen <anthony.l.nguyen@intel.com>
+Signed-off-by: David S. Miller <davem@davemloft.net>
+---
+ drivers/net/ethernet/intel/igc/igc_base.c | 1 +
+ drivers/net/ethernet/intel/igc/igc_main.c | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/net/ethernet/intel/igc/igc_base.c b/drivers/net/ethernet/intel/igc/igc_base.c
+index fd37d2c203af78..d0700d48ecf9ba 100644
+--- a/drivers/net/ethernet/intel/igc/igc_base.c
++++ b/drivers/net/ethernet/intel/igc/igc_base.c
+@@ -205,6 +205,7 @@ static s32 igc_get_invariants_base(struct igc_hw *hw)
+ 	case IGC_DEV_ID_I220_V:
+ 	case IGC_DEV_ID_I225_K:
+ 	case IGC_DEV_ID_I225_K2:
++	case IGC_DEV_ID_I226_K:
+ 	case IGC_DEV_ID_I225_LMVP:
+ 	case IGC_DEV_ID_I225_IT:
+ 	case IGC_DEV_ID_I226_LM:
+diff --git a/drivers/net/ethernet/intel/igc/igc_main.c b/drivers/net/ethernet/intel/igc/igc_main.c
+index b673ac1199bbc7..afd6a62da29dd8 100644
+--- a/drivers/net/ethernet/intel/igc/igc_main.c
++++ b/drivers/net/ethernet/intel/igc/igc_main.c
+@@ -46,6 +46,7 @@ static const struct pci_device_id igc_pci_tbl[] = {
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I220_V), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_K), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_K2), board_base },
++	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_K), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_LMVP), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I225_IT), board_base },
+ 	{ PCI_VDEVICE(INTEL, IGC_DEV_ID_I226_LM), board_base },
