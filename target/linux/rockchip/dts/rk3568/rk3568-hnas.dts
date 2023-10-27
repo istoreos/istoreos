@@ -84,7 +84,7 @@
 
 	fan: pwm-fan {
 		compatible = "pwm-fan";
-		cooling-levels = <0 0x66 0x88 0xaa 0xcc 0xff>;
+		cooling-levels = <0 0x55 0x66 0x88 0xaa 0xcc 0xff>;
 		#cooling-cells = <2>;
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm0 0 50000 0>;
@@ -152,29 +152,42 @@
 
 &soc_thermal {
 	trips {
+
 		cpu_warm: cpu_warm {
-			temperature = <50000>;
+			temperature = <60000>;
 			hysteresis = <3000>;
 			type = "active";
 		};
 
 		cpu_hot: cpu_hot {
-			temperature = <60000>;
+			temperature = <65000>;
 			hysteresis = <3000>;
 			type = "active";
+		};
+
+		cpu_idle: cpu_idle {
+			temperature = <45000>;
+			hysteresis = <3000>;
+			type = "passive";
 		};
 	};
 
 	cooling-maps {
 		map2 {
 			trip = <&cpu_warm>;
-			cooling-device = <&fan THERMAL_NO_LIMIT 3>;
+			cooling-device = <&fan 3 4>;
 		};
 
 		map3 {
 			trip = <&cpu_hot>;
-			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
+			cooling-device = <&fan 5 THERMAL_NO_LIMIT>;
 		};
+
+		map4 {
+			trip = <&cpu_idle>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 2>;
+		};
+
 	};
 };
 
