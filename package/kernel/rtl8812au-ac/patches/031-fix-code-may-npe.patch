@@ -1,0 +1,16 @@
+--- a/os_dep/linux/os_intfs.c
++++ b/os_dep/linux/os_intfs.c
+@@ -1457,11 +1457,11 @@ static int rtw_ndev_notifier_call(struct
+ 	if (ndev == NULL)
+ 		return NOTIFY_DONE;
+ 
+-	adapter = rtw_netdev_priv(ndev);
+-
+ 	if (!is_rtw_ndev(ndev))
+ 		return NOTIFY_DONE;
+ 
++	adapter = rtw_netdev_priv(ndev);
++
+ 	RTW_INFO(FUNC_NDEV_FMT" state:%lu\n", FUNC_NDEV_ARG(ndev), state);
+ 
+ 	switch (state) {
