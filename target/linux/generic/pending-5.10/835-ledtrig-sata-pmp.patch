@@ -1,0 +1,260 @@
+From 86884eaf288a8ca29ef5ee049de8c5b9d854ca1f Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 30 Oct 2023 13:53:40 +0800
+Subject: [PATCH] drivers/ata: sata pmp supports led trigger
+
+---
+ drivers/ata/Kconfig       | 18 ++++++++++++++
+ drivers/ata/libata-core.c | 50 +++++++++++++++++++++++++++++++++++++++
+ drivers/ata/libata-pmp.c  | 42 ++++++++++++++++++++++++++++++++
+ drivers/ata/libata.h      |  8 +++++++
+ include/linux/libata.h    |  7 +++++-
+ 5 files changed, 124 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/ata/Kconfig b/drivers/ata/Kconfig
+index 52bbc559f..aa8972fda 100644
+--- a/drivers/ata/Kconfig
++++ b/drivers/ata/Kconfig
+@@ -83,6 +83,14 @@ config ATA_LEDS
+ 
+ 	  If unsure, say N.
+ 
++config ATA_LINK_SUPPORTS_LEDS
++	bool
++	depends on LEDS_CLASS && LEDS_TRIGGERS
++	default y
++
++config ATA_LINK_LEDS
++	bool
++
+ config ATA_ACPI
+ 	bool "ATA ACPI Support"
+ 	depends on ACPI
+@@ -118,6 +126,16 @@ config SATA_PMP
+ 	  This option adds support for SATA Port Multipliers
+ 	  (the SATA version of an ethernet hub, or SAS expander).
+ 
++config SATA_PMP_LEDS
++	bool "support SATA Port Multiplier port LED triggers"
++	depends on SATA_PMP && ATA_LINK_SUPPORTS_LEDS
++	select ATA_LINK_LEDS
++	help
++	  This option adds a LED trigger for each registered SATA Port Multiplier port.
++	  It is used to drive disk activity leds connected via GPIO.
++
++	  If unsure, say N.
++
+ if HAS_DMA
+ 
+ comment "Controllers with non-SFF native interface"
+diff --git a/drivers/ata/libata-core.c b/drivers/ata/libata-core.c
+index bc69bf8a2..96b6af4fc 100644
+--- a/drivers/ata/libata-core.c
++++ b/drivers/ata/libata-core.c
+@@ -663,6 +663,41 @@ static inline void ata_led_act(struct ata_port *ap)
+ }
+ #endif
+ 
++#ifdef CONFIG_ATA_LINK_LEDS
++#define ATA_LINK_BLINK_DELAY 40 /* ms */
++static inline void ata_link_led_act(struct ata_link *link)
++{
++	unsigned long led_delay = ATA_LINK_BLINK_DELAY;
++
++	if (likely(!link->ledtrig || link->offline))
++		return;
++
++	led_trigger_blink_oneshot(link->ledtrig, &led_delay, &led_delay, !link->offline);
++}
++
++static inline void ata_link_led_link(struct ata_link *link, int offline)
++{
++	unsigned long led_delay = ATA_LINK_BLINK_DELAY << 1;
++	link->offline = offline;
++
++	if (likely(!link->ledtrig))
++		return;
++
++	led_trigger_blink_oneshot(link->ledtrig, &led_delay, &led_delay, !offline);
++}
++
++int ata_link_trig_activate(struct led_classdev *led_cdev)
++{
++	char (*ledtrig_name)[12] = (char (*)[12])led_cdev->trigger->name;
++	struct ata_link *link =
++		container_of(ledtrig_name, struct ata_link, ledtrig_name);
++
++	led_set_brightness(led_cdev, link->offline ? LED_OFF : LED_FULL);
++	return 0;
++}
++
++#endif
++
+ /**
+  *	ata_build_rw_tf - Build ATA taskfile for given read/write request
+  *	@tf: Target ATA taskfile
+@@ -2984,9 +3019,15 @@ static void sata_print_link_status(struct ata_link *link)
+ 		tmp = (sstatus >> 4) & 0xf;
+ 		ata_link_info(link, "SATA link up %s (SStatus %X SControl %X)\n",
+ 			      sata_spd_string(tmp), sstatus, scontrol);
++#ifdef CONFIG_ATA_LINK_LEDS
++		ata_link_led_link(link, 0);
++#endif
+ 	} else {
+ 		ata_link_info(link, "SATA link down (SStatus %X SControl %X)\n",
+ 			      sstatus, scontrol);
++#ifdef CONFIG_ATA_LINK_LEDS
++		ata_link_led_link(link, 1);
++#endif
+ 	}
+ }
+ 
+@@ -4572,6 +4613,10 @@ struct ata_queued_cmd *ata_qc_new_init(struct ata_device *dev, int tag)
+ 	ata_led_act(ap);
+ #endif
+ 
++#ifdef CONFIG_ATA_LINK_LEDS
++	ata_link_led_act(dev->link);
++#endif
++
+ 	qc = __ata_qc_from_tag(ap, tag);
+ 	qc->tag = qc->hw_tag = tag;
+ 	qc->scsicmd = NULL;
+@@ -5248,6 +5293,11 @@ void ata_link_init(struct ata_port *ap, struct ata_link *link, int pmp)
+ 	link->active_tag = ATA_TAG_POISON;
+ 	link->hw_sata_spd_limit = UINT_MAX;
+ 
++#ifdef CONFIG_ATA_LINK_LEDS
++	link->offline = 0;
++	link->ledtrig = NULL;
++#endif
++
+ 	/* can't use iterator, ap isn't initialized yet */
+ 	for (i = 0; i < ATA_MAX_DEVICES; i++) {
+ 		struct ata_device *dev = &link->device[i];
+diff --git a/drivers/ata/libata-pmp.c b/drivers/ata/libata-pmp.c
+index 79f2aeeb4..a0f62c609 100644
+--- a/drivers/ata/libata-pmp.c
++++ b/drivers/ata/libata-pmp.c
+@@ -355,6 +355,16 @@ static int sata_pmp_init_links (struct ata_port *ap, int nr_ports)
+ 				goto err_tlink;
+ 			}
+ 		}
++#ifdef CONFIG_SATA_PMP_LEDS
++		for (i = 0; i < SATA_PMP_MAX_PORTS; i++) {
++			struct ata_link *link = &pmp_link[i];
++			link->ledtrig = NULL;
++			link->offline = 1;
++			snprintf(link->ledtrig_name,
++				sizeof(link->ledtrig_name), "ata%up%u",
++				ap->print_id, link->pmp);
++		}
++#endif
+ 	}
+ 
+ 	for (i = 0; i < nr_ports; i++) {
+@@ -366,6 +376,23 @@ static int sata_pmp_init_links (struct ata_port *ap, int nr_ports)
+ 		ehc->i.action |= ATA_EH_RESET;
+ 	}
+ 
++#ifdef CONFIG_SATA_PMP_LEDS
++	for (i = 0; i < nr_ports; i++) {
++		struct ata_link *link = &pmp_link[i];
++		link->ledtrig = kzalloc(sizeof(struct led_trigger), GFP_KERNEL);
++		if (unlikely(!link->ledtrig))
++			continue;
++
++		link->ledtrig->name = link->ledtrig_name;
++		link->ledtrig->activate = ata_link_trig_activate;
++
++		if (led_trigger_register(link->ledtrig)) {
++			kfree(link->ledtrig);
++			link->ledtrig = NULL;
++		}
++	}
++#endif
++
+ 	return 0;
+   err_tlink:
+ 	while (--i >= 0)
+@@ -562,6 +589,10 @@ static void sata_pmp_detach(struct ata_device *dev)
+ 	struct ata_port *ap = link->ap;
+ 	struct ata_link *tlink;
+ 	unsigned long flags;
++#ifdef CONFIG_SATA_PMP_LEDS
++	int i;
++	struct ata_link *pmp_link = ap->pmp_link;
++#endif
+ 
+ 	ata_dev_info(dev, "Port Multiplier detaching\n");
+ 
+@@ -578,6 +609,17 @@ static void sata_pmp_detach(struct ata_device *dev)
+ 	ap->nr_pmp_links = 0;
+ 	link->pmp = 0;
+ 	spin_unlock_irqrestore(ap->lock, flags);
++
++#ifdef CONFIG_SATA_PMP_LEDS
++	for (i = 0; i < SATA_PMP_MAX_PORTS; i++) {
++		struct ata_link *link = &pmp_link[i];
++		if (link->ledtrig) {
++			led_trigger_unregister(link->ledtrig);
++			kfree(link->ledtrig);
++			link->ledtrig = NULL;
++		}
++	}
++#endif
+ }
+ 
+ /**
+diff --git a/drivers/ata/libata.h b/drivers/ata/libata.h
+index 68cdd81d7..535ad49fd 100644
+--- a/drivers/ata/libata.h
++++ b/drivers/ata/libata.h
+@@ -12,6 +12,10 @@
+ #ifndef __LIBATA_H__
+ #define __LIBATA_H__
+ 
++#ifdef CONFIG_ATA_LINK_LEDS
++#include <linux/leds.h>
++#endif
++
+ #define DRV_NAME	"libata"
+ #define DRV_VERSION	"3.00"	/* must be exactly four chars */
+ 
+@@ -255,4 +259,8 @@ static inline void zpodd_disable_run_wake(struct ata_device *dev) {}
+ static inline void zpodd_post_poweron(struct ata_device *dev) {}
+ #endif /* CONFIG_SATA_ZPODD */
+ 
++#ifdef CONFIG_ATA_LINK_LEDS
++int ata_link_trig_activate(struct led_classdev *led_cdev);
++#endif
++
+ #endif /* __LIBATA_H__ */
+diff --git a/include/linux/libata.h b/include/linux/libata.h
+index 2b8a5c96e..6ca774968 100644
+--- a/include/linux/libata.h
++++ b/include/linux/libata.h
+@@ -23,7 +23,7 @@
+ #include <linux/cdrom.h>
+ #include <linux/sched.h>
+ #include <linux/async.h>
+-#ifdef CONFIG_ATA_LEDS
++#if defined(CONFIG_ATA_LEDS) || defined(CONFIG_ATA_LINK_LEDS)
+ #include <linux/leds.h>
+ #endif
+ 
+@@ -808,6 +808,11 @@ struct ata_link {
+ 	struct ata_device	device[ATA_MAX_DEVICES];
+ 
+ 	unsigned long		last_lpm_change; /* when last LPM change happened */
++#ifdef CONFIG_ATA_LINK_LEDS
++	unsigned int		offline;
++	struct led_trigger	*ledtrig;
++	char			ledtrig_name[12];
++#endif
+ };
+ #define ATA_LINK_CLEAR_BEGIN		offsetof(struct ata_link, active_tag)
+ #define ATA_LINK_CLEAR_END		offsetof(struct ata_link, device[0])
+-- 
+2.31.0
+
