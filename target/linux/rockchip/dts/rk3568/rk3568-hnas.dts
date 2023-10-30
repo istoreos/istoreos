@@ -6,6 +6,7 @@
 /dts-v1/;
 
 #include "rk3568-hinlink.dtsi"
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "HINLINK HNAS Board";
@@ -65,20 +66,28 @@
 			<&led_disk4_en>;
 
 		led-disk1 {
+			function = LED_FUNCTION_DISK_ACTIVITY;
 			gpios = <&gpio3 RK_PB6 GPIO_ACTIVE_HIGH>;
 			label = "green:disk1";
+			linux,default-trigger = "ata1p3";
 		};
 		led-disk2 {
+			function = LED_FUNCTION_DISK_ACTIVITY;
 			gpios = <&gpio3 RK_PB5 GPIO_ACTIVE_HIGH>;
 			label = "green:disk2";
+			linux,default-trigger = "ata1p0";
 		};
 		led-disk3 {
+			function = LED_FUNCTION_DISK_ACTIVITY;
 			gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
 			label = "green:disk3";
+			linux,default-trigger = "ata1p2";
 		};
 		led-disk4 {
+			function = LED_FUNCTION_DISK_ACTIVITY;
 			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
 			label = "green:disk4";
+			linux,default-trigger = "ata1p1";
 		};
 	};
 
