@@ -93,7 +93,7 @@
 
 	fan: pwm-fan {
 		compatible = "pwm-fan";
-		cooling-levels = <0 0x55 0x66 0x88 0xaa 0xcc 0xff>;
+		cooling-levels = <0 0x55 0x66 0x77 0x88 0x99 0xbb 0xcc 0xff>;
 		#cooling-cells = <2>;
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm0 0 50000 0>;
@@ -163,14 +163,20 @@
 	trips {
 
 		cpu_warm: cpu_warm {
-			temperature = <60000>;
-			hysteresis = <3000>;
+			temperature = <65000>;
+			hysteresis = <5000>;
 			type = "active";
 		};
 
 		cpu_hot: cpu_hot {
-			temperature = <65000>;
-			hysteresis = <3000>;
+			temperature = <85000>;
+			hysteresis = <5000>;
+			type = "active";
+		};
+
+		cpu_hall: cpu_hall {
+			temperature = <95000>;
+			hysteresis = <5000>;
 			type = "active";
 		};
 
@@ -183,18 +189,23 @@
 
 	cooling-maps {
 		map2 {
-			trip = <&cpu_warm>;
-			cooling-device = <&fan 3 4>;
+			trip = <&cpu_idle>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 2>;
 		};
 
 		map3 {
-			trip = <&cpu_hot>;
-			cooling-device = <&fan 5 THERMAL_NO_LIMIT>;
+			trip = <&cpu_warm>;
+			cooling-device = <&fan 2 4>;
 		};
 
 		map4 {
-			trip = <&cpu_idle>;
-			cooling-device = <&fan THERMAL_NO_LIMIT 2>;
+			trip = <&cpu_hot>;
+			cooling-device = <&fan 4 6>;
+		};
+
+		map5 {
+			trip = <&cpu_hall>;
+			cooling-device = <&fan 6 THERMAL_NO_LIMIT>;
 		};
 
 	};
