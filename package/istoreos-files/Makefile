@@ -24,6 +24,18 @@ define Package/$(PKG_NAME)/description
  The iStoreOS.
 endef
 
+define Package/istoreos-intl
+  SECTION:=base
+  CATEGORY:=Base system
+  TITLE:=iStoreOS intl
+  MAINTAINER:=jjm2473 <jjm2473@gmail.com>
+  DEPENDS:=$(PKG_NAME)
+endef
+
+define Package/istoreos-intl/description
+ iStoreOS internationalization.
+endef
+
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 endef
@@ -74,4 +86,9 @@ true
 
 endef
 
+define Package/istoreos-intl/install
+	$(CP) ./intl/* $(1)/
+endef
+
 $(eval $(call BuildPackage,istoreos-files))
+$(eval $(call BuildPackage,istoreos-intl))
