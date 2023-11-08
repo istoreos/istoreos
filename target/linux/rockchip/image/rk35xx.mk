@@ -26,6 +26,11 @@ define Device/rk3568_combined_hinlink
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3568_combined_nlnet
+  IMAGE/combined.img.gz := boot-combined | boot-script rk3568-nlnet | pine64-img | gzip | append-metadata
+  IMAGES := combined.img.gz
+endef
+
 define Device/rk3588
   SOC := rk3588
   DEVICE_DTS_DIR := ../dts/rk3588
@@ -198,10 +203,12 @@ TARGET_DEVICES += yyy_h1
 
 define Device/nlnet_xgp
 $(call Device/rk3568)
+$(call Device/rk3568_combined_nlnet)
   DEVICE_VENDOR := NLnet
   DEVICE_MODEL := XiGuaPi
   UBOOT_DEVICE_NAME := xgp-rk3568
   SUPPORTED_DEVICES += nlnet,xgp
   DEVICE_PACKAGES := kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
+  DEVICE_DTS := rk3568-xgp rk3568-xgp-v3
 endef
 TARGET_DEVICES += nlnet_xgp
