@@ -54,7 +54,7 @@ dd if="$ROOTFSIMAGE" of="$OUTPUT" bs=512 seek="$ROOTFSOFFSET" conv=notrunc
 echo "RESET000" | dd of="$OUTPUT" bs=512 seek="$USERDATAOFFSET" conv=notrunc,sync count=1
 
 if [ -n "$GUID" ]; then
-    [ -n "$PADDING" ] && dd if=/dev/zero of="$OUTPUT" bs=512 seek="$((USERDATAOFFSET + USERDATASIZE))" conv=notrunc count="$sect"
+    [ -n "$PADDING" ] && dd if=/dev/zero of="$OUTPUT" bs=512 seek="$((USERDATAOFFSET + USERDATASIZE))" conv=notrunc count="$(( ($sect + 0x7) & 0x1fff8 ))"
     mkfs.fat --invariant -n kernel -C "$OUTPUT.kernel" -S 512 "$((KERNELSIZE / 1024))"
     LC_ALL=C dos_dircopy "$KERNELDIR" /
 else
