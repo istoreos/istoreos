@@ -179,6 +179,7 @@ Package/iwlwifi-firmware-ax201 = $(call Package/firmware-default,Intel AX201 fir
 define Package/iwlwifi-firmware-ax201/install
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-QuZ-a0-hr-b0-66.ucode $(1)/lib/firmware
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-hr-b0-64.ucode $(1)/lib/firmware
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-ax201))
 
