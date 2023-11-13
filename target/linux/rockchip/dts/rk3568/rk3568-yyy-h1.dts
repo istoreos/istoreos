@@ -100,11 +100,9 @@
 		spi-max-frequency = <32000000>;   //SPI时钟32M
 		// spi-cpol;
 		// spi-cpha;
-		// rotation = <90>;                    //屏幕旋转90度
-		width = <172>;
-		height = <320>;
-		width-mm = <18>;
-		height-mm = <33>;
+		rotate = <90>;                    //屏幕旋转90度
+		// width = <172>;
+		// height = <320>;
 		rgb;                           //颜色格式RGB
 		fps = <30>;                      //刷新30帧率
 		// regwidth = <8>;
