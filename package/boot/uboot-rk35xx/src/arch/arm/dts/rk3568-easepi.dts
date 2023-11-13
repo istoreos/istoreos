@@ -154,6 +154,7 @@
 		pmic-reset-func = <0>;
 		/* not save the PMIC_POWER_EN register in uboot */
 		not-save-power-en = <1>;
+		long-press-off-time-sec = <10>;
 
 		vcc1-supply = <&vcc3v3_sys>;
 		vcc2-supply = <&vcc3v3_sys>;
