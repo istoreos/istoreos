@@ -182,7 +182,7 @@ $(call Device/rk3568)
   DEVICE_MODEL := H1
   DEVICE_DTS := rk3568-jsy-h1
   SUPPORTED_DEVICES += jsy,h1
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-thermal
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-thermal kmod-leds-pwm
 endef
 TARGET_DEVICES += jsy_h1
 
@@ -192,7 +192,7 @@ $(call Device/rk3568)
   DEVICE_MODEL := H1
   DEVICE_DTS := rk3568-yyy-h1
   SUPPORTED_DEVICES += yyy,h1
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
 endef
 TARGET_DEVICES += yyy_h1
 
@@ -202,7 +202,7 @@ $(call Device/rk3568)
   DEVICE_MODEL := H1
   DEVICE_DTS := rk3568-idiskk-h1
   SUPPORTED_DEVICES += idiskk,h1
-  DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio
+  DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
 endef
 TARGET_DEVICES += idiskk_h1
 

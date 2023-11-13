@@ -1,6 +1,7 @@
 ARCH:=aarch64
 CPU_TYPE:=cortex-a53
 BOARDNAME:=RK3568/RK3588 boards (64 bit)
+FEATURES+=pwm
 
 DEFAULT_PACKAGES+=kmod-r8125 ethtool
 
