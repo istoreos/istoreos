@@ -9,28 +9,6 @@
 		lcd-backlight = &lcd_backlight;
 	};
 
-	pwm-fan {
-		compatible = "pwm-fan";
-		cooling-levels = <0 0x66 0x88 0xaa 0xcc 0xff>;
-		#cooling-cells = <2>;
-		fan-supply = <&vcc5v0_sys>;
-		pwms = <&pwm2 0 50000 0>;
-		status = "disabled";
-	};
-
-	fan: gpio-fan {
-		compatible = "gpio-fan";
-		gpios = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
-		#cooling-cells = <2>;
-		gpio-fan,speed-map =
-			   <0 0>,
-			<1000 0>,
-			<2000 1>,
-			<3000 1>,
-			<4000 1>,
-			<5000 1>;
-	};
-
 	lcd_backlight: lcd-backlight {
 		compatible = "gpio-backlight";
 		gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_HIGH>;
@@ -74,11 +52,6 @@
 	status = "okay";
 };
 
-&pwm2 {
-	pinctrl-0 = <&pwm2m1_pins>;
-	status = "disabled";
-};
-
 &spi2 {
 	num-cs = <1>;
 	pinctrl-0 = <&spi2m1_cs0 &spi2m1_pins>;
@@ -113,33 +86,5 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&spi_lcd_pins>;
 		status = "okay";
-	};
-};
-
-&soc_thermal {
-	trips {
-		cpu_warm: cpu_warm {
-			temperature = <50000>;
-			hysteresis = <3000>;
-			type = "active";
-		};
-
-		cpu_hot: cpu_hot {
-			temperature = <60000>;
-			hysteresis = <3000>;
-			type = "active";
-		};
-	};
-
-	cooling-maps {
-		map2 {
-			trip = <&cpu_warm>;
-			cooling-device = <&fan THERMAL_NO_LIMIT 3>;
-		};
-
-		map3 {
-			trip = <&cpu_hot>;
-			cooling-device = <&fan 4 THERMAL_NO_LIMIT>;
-		};
 	};
 };
