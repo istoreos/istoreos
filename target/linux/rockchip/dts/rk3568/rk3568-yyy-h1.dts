@@ -6,6 +6,9 @@
 / {
 	compatible = "yyy,h1", "rockchip,rk3568";
 	model = "YYY H1";
+	aliases {
+		lcd-backlight = &lcd_backlight;
+	};
 
 	pwm-fan {
 		compatible = "pwm-fan";

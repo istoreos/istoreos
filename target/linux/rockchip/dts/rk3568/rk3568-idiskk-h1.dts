@@ -5,6 +5,9 @@
 / {
 	compatible = "idiskk,h1", "rockchip,rk3568";
 	model = "iDiskk H1";
+	aliases {
+		lcd-backlight = &lcd_backlight;
+	};
 
 	pwm-fan {
 		compatible = "pwm-fan";
