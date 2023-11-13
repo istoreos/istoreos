@@ -134,42 +134,6 @@
 		vin-supply = <&vcc5v0_usb_hdd>;
 	};
 
-	// VCC3V3_PI6C for PCIE clock power
-	vcc3v3_pcie_clk: vcc3v3-pcie-clk-regulator {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc3v3_pcie_clk_en>;
-		regulator-name = "vcc3v3_pcie_clk";
-		regulator-always-on;
-		regulator-boot-on;
-		vin-supply = <&vcc5v0_sys>;
-	};
-
-	// PI6C_OE for PCIE clock enable, active low
-	vcc3v3_pcie_clk_oe: vcc3v3-pcie-clk-oe-regulator {
-		compatible = "regulator-fixed";
-		gpio = <&gpio3 RK_PA7 GPIO_ACTIVE_LOW>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&vcc3v3_pcie_clk_oe_en>;
-		regulator-name = "vcc3v3_pcie_clk_oe";
-		regulator-always-on;
-		regulator-boot-on;
-		startup-delay-us = <5000>;
-		vin-supply = <&vcc3v3_pcie_clk>;
-	};
-
-	vcc3v3_pcie30: vcc3v3-pcie-30-regulator {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc3v3_pcie30";
-		regulator-always-on;
-		regulator-boot-on;
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		vin-supply = <&dc_12v>;
-	};
-
 	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
@@ -516,26 +480,38 @@
 };
 
 // NETWORK
+&gmac0 {
+    phy-mode = "rgmii";
+    clock_in_out = "output";
 
-// PCIE3
-&pcie30phy {
-	status = "okay";
+    snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
+    snps,reset-active-low;
+    /* Reset time is 20ms, 100ms for rtl8211f */
+    snps,reset-delays-us = <0 20000 100000>;
+
+    assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+    assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>, <&cru CLK_MAC0_2TOP>;
+    assigned-clock-rates = <0>, <125000000>;
+
+    pinctrl-names = "default";
+    pinctrl-0 = <&gmac0_miim
+            &gmac0_tx_bus2
+            &gmac0_rx_bus2
+            &gmac0_rgmii_clk
+            &gmac0_rgmii_bus>;
+
+    tx_delay = <0x3c>;
+    rx_delay = <0x2f>;
+
+    phy-handle = <&rgmii_phy0>;
+    status = "disabled";
 };
 
-/* PCIE3.0_1 */
-&pcie3x1 {
-	rockchip,bifurcation;
-	reset-gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_pcie30>;
-	status = "okay";
-};
-
-/* PCIE3.0_2 */
-&pcie3x2 {
-	rockchip,bifurcation;
-	reset-gpios = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_pcie30>;
-	status = "okay";
+&mdio0 {
+    rgmii_phy0: phy@0 {
+        compatible = "ethernet-phy-ieee802.3-c22";
+        reg = <0x0>;
+    };
 };
 
 // USB2 PHY

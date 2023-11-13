@@ -1,6 +1,7 @@
 /dts-v1/;
 
 #include "rk3568-linkease.dtsi"
+#include "rk3568-linkease-pcie30.dtsi"
 
 / {
 	compatible = "jsy,h1", "rockchip,rk3568";
