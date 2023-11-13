@@ -308,6 +308,7 @@ board_otg_defaults() {
 	case $(board_name) in
 	jsy,h1|\
 	yyy,h1|\
+	idiskk,h1|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		echo host >/sys/kernel/debug/usb/fcc00000.dwc3/mode

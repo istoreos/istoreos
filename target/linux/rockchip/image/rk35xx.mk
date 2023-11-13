@@ -196,6 +196,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += yyy_h1
 
+define Device/idiskk_h1
+$(call Device/rk3568)
+  DEVICE_VENDOR := iDiskk
+  DEVICE_MODEL := H1
+  DEVICE_DTS := rk3568-idiskk-h1
+  SUPPORTED_DEVICES += idiskk,h1
+  DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio
+endef
+TARGET_DEVICES += idiskk_h1
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
   DEVICE_VENDOR := NLnet
