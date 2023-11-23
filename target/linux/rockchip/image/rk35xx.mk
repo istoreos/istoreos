@@ -201,6 +201,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += yyy_h1
 
+define Device/JP_TVbox
+$(call Device/rk3568)
+  DEVICE_VENDOR := JP
+  DEVICE_MODEL := TVbox
+  DEVICE_DTS := rk3566-JP TVbox
+  SUPPORTED_DEVICES += JP,TVbox
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += JP_TVbox
+
 define Device/idiskk_h1
 $(call Device/rk3568)
   DEVICE_VENDOR := iDiskk
