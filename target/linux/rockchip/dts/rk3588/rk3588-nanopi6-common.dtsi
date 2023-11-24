@@ -649,6 +649,7 @@
 };
 
 &usbdrd_dwc3_0 {
+	dr_mode = "host";
 	extcon = <&u2phy0>;
 	snps,xhci-trb-ent-quirk;
 	status = "okay";
