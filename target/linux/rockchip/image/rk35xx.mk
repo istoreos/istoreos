@@ -211,6 +211,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += idiskk_h1
 
+define Device/jp_tvbox
+$(call Device/rk3568)
+  DEVICE_VENDOR := jp
+  DEVICE_MODEL := tvbox
+  DEVICE_DTS := rk3566-jp-tvbox
+  SUPPORTED_DEVICES += jp,tvbox
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
+endef
+TARGET_DEVICES += jp_tvbox
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
