@@ -85,6 +85,7 @@ rockchip_setup_macs()
 	jsy,h1|\
 	yyy,h1|\
 	idiskk,h1|\
+        jp,tvbox|\
 	lyt,t68m|\
 	nlnet,xgp|\
 	fastrhino,r66s|\
