@@ -309,7 +309,6 @@ board_otg_defaults() {
 	jsy,h1|\
 	yyy,h1|\
 	idiskk,h1|\
-        jp,tvbox|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		echo host >/sys/kernel/debug/usb/fcc00000.dwc3/mode
