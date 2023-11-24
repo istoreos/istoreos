@@ -241,7 +241,8 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	hlink,h28k)
-		set_iface_cpumask c eth0
+		set_iface_cpumask 5 eth0
+		set_iface_cpumask b eth1
 		;;
 	esac
 }
