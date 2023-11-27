@@ -1,20 +1,10 @@
---- a/arch/arm/dts/rk3399-nanopi-r4s.dts	2023-04-26 21:31:21.089126862 +0800
-+++ b/arch/arm/dts/rk3399-nanopi-r4s.dts	2023-04-26 21:34:16.929275627 +0800
-@@ -66,7 +66,7 @@
- };
- 
- &emmc_phy {
--	status = "disabled";
-+	status = "okay";
- };
- 
- &fusb0 {
-@@ -110,7 +110,7 @@
- };
- 
- &sdhci {
--	status = "disabled";
-+	status = "okay";
- };
- 
- &sdio0 {
+--- a/arch/arm/dts/Makefile	2023-11-27 13:48:02.837161973 +0800
++++ b/arch/arm/dts/Makefile	2023-11-27 13:48:39.325231312 +0800
+@@ -134,6 +134,7 @@
+ 	rk3399-nanopi-m4b.dtb \
+ 	rk3399-nanopi-neo4.dtb \
+ 	rk3399-nanopi-r4s.dtb \
++	rk3399-nanopi-r4se.dtb \
+ 	rk3399-orangepi.dtb \
+ 	rk3399-pinebook-pro.dtb \
+ 	rk3399-puma-haikou.dtb \
