@@ -62,6 +62,11 @@ define Device/rk3528
   IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3528 | pine64-img | gzip | append-metadata
 endef
 
+define Device/rk3566
+$(call Device/rk3568)
+  SOC := rk3566
+endef
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
@@ -211,8 +216,17 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += idiskk_h1
 
+define Device/ynn_ynnnas
+  $(call Device/rk3566)
+  DEVICE_VENDOR := YingNiuNiu
+  DEVICE_MODEL := NAS
+  SUPPORTED_DEVICES += ynn,nas
+  DEVICE_PACKAGES := kmod-scsi-core
+endef
+TARGET_DEVICES += ynn_ynnnas
+
 define Device/jp_tvbox
-$(call Device/rk3568)
+$(call Device/rk3566)
   DEVICE_VENDOR := jp
   DEVICE_MODEL := tvbox
   DEVICE_DTS := rk3566-jp-tvbox

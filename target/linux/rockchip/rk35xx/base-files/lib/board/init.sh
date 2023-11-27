@@ -244,6 +244,11 @@ board_set_iface_smp_affinity() {
 		set_iface_cpumask 5 eth0
 		set_iface_cpumask b eth1
 		;;
+	ynn,nas|\
+	jp,tvbox|\
+	hsa,bh2)
+		set_iface_cpumask 2 "eth0"
+		;;
 	esac
 }
 
