@@ -143,6 +143,14 @@ board_fixup_iface_name() {
 			rename_iface lan2 eth2
 		fi
 		;;
+	armsom,sige7-v1)
+		device="$(get_iface_device eth1)"
+		if [[ "$device" = "0004:41:00.0" ]]; then
+			rename_iface eth1 wan
+			rename_iface eth0 eth1
+			rename_iface wan eth0
+		fi
+		;;
 	esac
 }
 
@@ -202,6 +210,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth1" "eth1-16"
 		fi
 		;;
+	armsom,sige7-v1|\
 	friendlyelec,nanopi-r6s|\
 	friendlyelec,nanopi-r6c)
 		set_iface_cpumask 2 eth0

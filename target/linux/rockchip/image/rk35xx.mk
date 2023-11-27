@@ -67,6 +67,14 @@ $(call Device/rk3568)
   SOC := rk3566
 endef
 
+define Device/armsom_sige7-v1
+$(call Device/rk3588)
+  DEVICE_VENDOR := ArmSoM
+  DEVICE_MODEL := sige7
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += armsom_sige7-v1
+
 define Device/fastrhino_common
 $(call Device/rk3568)
   DEVICE_VENDOR := FastRhino
