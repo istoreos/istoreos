@@ -54,11 +54,6 @@ uci -q batch <<-EOF >/dev/null
 EOF
 
 uci -q batch <<-EOF >/dev/null
-    set upnpd.config.ipv6_disable=1
-    commit upnpd
-EOF
-
-uci -q batch <<-EOF >/dev/null
     set luci.apply.rollback=30
     set luci.apply.holdoff=2
     commit luci
