@@ -52,3 +52,13 @@ define Device/radxa_rock-pi-4a
   IMAGE/sysupgrade.img.gz := boot-common | boot-script | pine64-img | gzip | append-metadata
 endef
 TARGET_DEVICES += radxa_rock-pi-4a
+
+define Device/rockchip_rk3308_evb
+  DEVICE_VENDOR := Rochckip
+  DEVICE_MODEL := RK3308 EVB
+  SOC := rk3308
+  UBOOT_DEVICE_NAME := evb-rk3308
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3308 | pine64-img | gzip | append-metadata
+  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
+endef
+TARGET_DEVICES += rockchip_rk3308_evb
