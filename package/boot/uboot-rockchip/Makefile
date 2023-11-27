@@ -14,11 +14,23 @@ PKG_MAINTAINER:=Tobias Maedel <openwrt@tbspace.de>
 
 include $(INCLUDE_DIR)/u-boot.mk
 include $(INCLUDE_DIR)/package.mk
+include ../arm-trusted-firmware-rockchip-vendor/atf-version.mk
 
 define U-Boot/Default
   BUILD_TARGET:=rockchip
   UENV:=default
   HIDDEN:=1
+endef
+
+
+# RK3308 boards
+
+define U-Boot/evb-rk3308
+  BUILD_SUBTARGET:=armv8
+  NAME:=RK3308 EVB
+  DEPENDS:=+PACKAGE_u-boot-evb-rk3308:trusted-firmware-a-rk3308
+  PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
+  ATF:=$(RK3308_ATF)
 endef
 
 
@@ -79,6 +91,7 @@ define U-Boot/rockpro64-rk3399
 endef
 
 UBOOT_TARGETS := \
+  evb-rk3308 \
   nanopi-r4s-rk3399 \
   nanopi-r4se-rk3399 \
   rock-pi-4-rk3399 \

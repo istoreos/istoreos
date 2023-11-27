@@ -1,3 +1,6 @@
+RK3308_ATF:=rk3308_bl31_v2.26.elf
+RK3308_DDR:=rk3308_ddr_589MHz_uart4_m0_v2.07.bin
+
 RK3528_ATF:=rk3528_bl31_v1.13.elf
 RK3528_DDR:=rk3528_ddr_1056MHz_v1.05.bin
 
