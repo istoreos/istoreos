@@ -1,0 +1,117 @@
+From 9fcf74b274a1dc5bcda37c34470061ef1e1130dd Mon Sep 17 00:00:00 2001
+From: Tobias Schramm <t.schramm@manjaro.org>
+Date: Tue, 1 Jun 2021 18:48:00 +0200
+Subject: [PATCH] arm64: dts: rockchip: add USB support to rk3308.dtsi
+
+The Rockchip RK3308 features an integrated USB 2.0 phy, an USB OTG
+controller and OHCI/EHCI interfaces.
+This patch adds all of those to the RK3308 dtsi and thereby enables USB
+support on the RK3308.
+
+Signed-off-by: Tobias Schramm <t.schramm@manjaro.org>
+Signed-off-by: Johan Jonker <jbx6244@gmail.com>
+Link: https://lore.kernel.org/r/20210601164800.7670-6-jbx6244@gmail.com
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ arch/arm64/boot/dts/rockchip/rk3308.dtsi | 74 +++++++++++++++++++++++-
+ 1 file changed, 73 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/rockchip/rk3308.dtsi b/arch/arm64/boot/dts/rockchip/rk3308.dtsi
+index 0c5fa9801e6fd0..4fca2c4a53223c 100644
+--- a/arch/arm64/boot/dts/rockchip/rk3308.dtsi
++++ b/arch/arm64/boot/dts/rockchip/rk3308.dtsi
+@@ -164,7 +164,7 @@
+ 
+ 	grf: grf@ff000000 {
+ 		compatible = "rockchip,rk3308-grf", "syscon", "simple-mfd";
+-		reg = <0x0 0xff000000 0x0 0x10000>;
++		reg = <0x0 0xff000000 0x0 0x08000>;
+ 
+ 		reboot-mode {
+ 			compatible = "syscon-reboot-mode";
+@@ -177,6 +177,42 @@
+ 		};
+ 	};
+ 
++	usb2phy_grf: syscon@ff008000 {
++		compatible = "rockchip,rk3308-usb2phy-grf", "syscon", "simple-mfd";
++		reg = <0x0 0xff008000 0x0 0x4000>;
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		u2phy: usb2phy@100 {
++			compatible = "rockchip,rk3308-usb2phy";
++			reg = <0x100 0x10>;
++			assigned-clocks = <&cru USB480M>;
++			assigned-clock-parents = <&u2phy>;
++			clocks = <&cru SCLK_USBPHY_REF>;
++			clock-names = "phyclk";
++			clock-output-names = "usb480m_phy";
++			#clock-cells = <0>;
++			status = "disabled";
++
++			u2phy_otg: otg-port {
++				interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>,
++					     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
++				interrupt-names = "otg-bvalid", "otg-id",
++						  "linestate";
++				#phy-cells = <0>;
++				status = "disabled";
++			};
++
++			u2phy_host: host-port {
++				interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
++				interrupt-names = "linestate";
++				#phy-cells = <0>;
++				status = "disabled";
++			};
++		};
++	};
++
+ 	detect_grf: syscon@ff00b000 {
+ 		compatible = "rockchip,rk3308-detect-grf", "syscon", "simple-mfd";
+ 		reg = <0x0 0xff00b000 0x0 0x1000>;
+@@ -586,6 +622,42 @@
+ 		status = "disabled";
+ 	};
+ 
++	usb20_otg: usb@ff400000 {
++		compatible = "rockchip,rk3308-usb", "rockchip,rk3066-usb",
++			     "snps,dwc2";
++		reg = <0x0 0xff400000 0x0 0x40000>;
++		interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&cru HCLK_OTG>;
++		clock-names = "otg";
++		dr_mode = "otg";
++		g-np-tx-fifo-size = <16>;
++		g-rx-fifo-size = <280>;
++		g-tx-fifo-size = <256 128 128 64 32 16>;
++		phys = <&u2phy_otg>;
++		phy-names = "usb2-phy";
++		status = "disabled";
++	};
++
++	usb_host_ehci: usb@ff440000 {
++		compatible = "generic-ehci";
++		reg = <0x0 0xff440000 0x0 0x10000>;
++		interrupts = <GIC_SPI 71 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&cru HCLK_HOST>, <&cru HCLK_HOST_ARB>, <&u2phy>;
++		phys = <&u2phy_host>;
++		phy-names = "usb";
++		status = "disabled";
++	};
++
++	usb_host_ohci: usb@ff450000 {
++		compatible = "generic-ohci";
++		reg = <0x0 0xff450000 0x0 0x10000>;
++		interrupts = <GIC_SPI 72 IRQ_TYPE_LEVEL_HIGH>;
++		clocks = <&cru HCLK_HOST>, <&cru HCLK_HOST_ARB>, <&u2phy>;
++		phys = <&u2phy_host>;
++		phy-names = "usb";
++		status = "disabled";
++	};
++
+ 	sdmmc: mmc@ff480000 {
+ 		compatible = "rockchip,rk3308-dw-mshc", "rockchip,rk3288-dw-mshc";
+ 		reg = <0x0 0xff480000 0x0 0x4000>;
