@@ -35,6 +35,16 @@ define U-Boot/evb-rk3308
   ATF:=$(RK3308_ATF)
 endef
 
+define U-Boot/armsom-rk3308
+  BUILD_SUBTARGET:=armv8
+  NAME:=ArmSoM RK3308 boards
+  BUILD_DEVICES:= \
+    armsom_p2-pro
+  DEPENDS:=+PACKAGE_u-boot-armsom-rk3308:trusted-firmware-a-rk3308
+  PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
+  ATF:=$(RK3308_ATF)
+endef
+
 
 # RK3328 boards
 
@@ -94,6 +104,7 @@ endef
 
 UBOOT_TARGETS := \
   evb-rk3308 \
+  armsom-rk3308 \
   nanopi-r4s-rk3399 \
   nanopi-r4se-rk3399 \
   rock-pi-4-rk3399 \

@@ -1,0 +1,10 @@
+--- a/arch/arm64/boot/dts/rockchip/Makefile	2023-11-28 12:56:41.360444647 +0800
++++ b/arch/arm64/boot/dts/rockchip/Makefile	2023-11-28 12:57:26.612492915 +0800
+@@ -2,6 +2,7 @@
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += px30-evb.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3308-evb.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3308-roc-cc.dtb
++dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3308-p2-pro.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3318-a95x-z2.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3326-odroid-go2.dtb
+ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3328-a1.dtb

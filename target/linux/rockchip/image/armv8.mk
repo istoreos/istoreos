@@ -62,3 +62,13 @@ define Device/rockchip_rk3308_evb
   DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
 endef
 TARGET_DEVICES += rockchip_rk3308_evb
+
+define Device/armsom_p2-pro
+  DEVICE_VENDOR := ArmSoM
+  DEVICE_MODEL := P2 Pro
+  SOC := rk3308
+  UBOOT_DEVICE_NAME := armsom-rk3308
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3308-uart2 | pine64-img | gzip | append-metadata
+  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
+endef
+TARGET_DEVICES += armsom_p2-pro

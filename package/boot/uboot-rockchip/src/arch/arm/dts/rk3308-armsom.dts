@@ -1,0 +1,27 @@
+/dts-v1/;
+#include "rk3308-evb.dts"
+
+/ {
+	model = "ArmSoM RK3308 boards";
+	compatible = "armsom,rk3308", "rockchip,rk3308";
+
+	chosen {
+		stdout-path = "serial2:1500000n8";
+	};
+
+	gpio-keys {
+		status = "disabled";
+	};
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&emmc {
+	status = "okay";
+};
+
+&sdmmc {
+	status = "okay";
+};
