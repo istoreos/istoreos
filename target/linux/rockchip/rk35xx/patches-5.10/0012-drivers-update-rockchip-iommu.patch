@@ -5,14 +5,11 @@ Subject: [PATCH 12/42] drivers: update rockchip iommu
 
 ---
  drivers/iommu/Kconfig          |   3 +-
- drivers/iommu/dma-iommu.c      |  57 +++
- drivers/iommu/io-pgtable-arm.c | 243 +++++----
- drivers/iommu/iommu.c          | 156 ++++--
- drivers/iommu/iova.c           | 232 ++++++++-
+ drivers/iommu/dma-iommu.c      |  35 ++
+ drivers/iommu/iova.c           | 158 +++++-
  drivers/iommu/rockchip-iommu.c | 878 ++++++++++++++++++++++++++++++---
- include/linux/iommu.h          |  29 +-
- include/linux/iova.h           |  13 +
- 8 files changed, 1401 insertions(+), 210 deletions(-)
+ include/linux/iova.h           |  12 +
+ 6 files changed, 1105 insertions(+), 121 deletions(-)
 
 diff --git a/drivers/iommu/Kconfig b/drivers/iommu/Kconfig
 index 04878caf6..fe1256b01 100644
@@ -29,10 +26,10 @@ index 04878caf6..fe1256b01 100644
  	select IOMMU_API
  	select ARM_DMA_USE_IOMMU
 diff --git a/drivers/iommu/dma-iommu.c b/drivers/iommu/dma-iommu.c
-index d1539b739..383ae9631 100644
+index d1539b739..3e534207e 100644
 --- a/drivers/iommu/dma-iommu.c
 +++ b/drivers/iommu/dma-iommu.c
-@@ -372,6 +372,52 @@ static int iommu_dma_deferred_attach(struct device *dev,
+@@ -372,6 +372,34 @@ static int iommu_dma_deferred_attach(struct device *dev,
  	return 0;
  }
  
@@ -64,39 +61,10 @@ index d1539b739..383ae9631 100644
 +}
 +EXPORT_SYMBOL(iommu_dma_reserve_iova);
 +
-+/*
-+ * Should be called prior to using dma-apis.
-+ */
-+int iommu_dma_enable_best_fit_algo(struct device *dev)
-+{
-+	struct iommu_domain *domain;
-+	struct iova_domain *iovad;
-+
-+	domain = iommu_get_domain_for_dev(dev);
-+	if (!domain || !domain->iova_cookie)
-+		return -EINVAL;
-+
-+	iovad = &((struct iommu_dma_cookie *)domain->iova_cookie)->iovad;
-+	iovad->best_fit = true;
-+	return 0;
-+}
-+EXPORT_SYMBOL(iommu_dma_enable_best_fit_algo);
-+
  /**
   * dma_info_to_prot - Translate DMA API directions and attributes to IOMMU API
   *                    page flags.
-@@ -388,6 +434,10 @@ static int dma_info_to_prot(enum dma_data_direction dir, bool coherent,
- 
- 	if (attrs & DMA_ATTR_PRIVILEGED)
- 		prot |= IOMMU_PRIV;
-+	if (attrs & DMA_ATTR_SYS_CACHE_ONLY)
-+		prot |= IOMMU_SYS_CACHE;
-+	if (attrs & DMA_ATTR_SYS_CACHE_ONLY_NWA)
-+		prot |= IOMMU_SYS_CACHE_NWA;
- 
- 	switch (dir) {
- 	case DMA_BIDIRECTIONAL:
-@@ -1192,6 +1242,13 @@ void iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size)
+@@ -1192,6 +1220,13 @@ void iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size)
  		dev->dma_ops = &iommu_dma_ops;
  	}
  
@@ -110,765 +78,8 @@ index d1539b739..383ae9631 100644
  	return;
  out_err:
  	 pr_warn("Failed to set up IOMMU for device %s; retaining platform DMA ops\n",
-diff --git a/drivers/iommu/io-pgtable-arm.c b/drivers/iommu/io-pgtable-arm.c
-index e1cd31c0e..614c4b232 100644
---- a/drivers/iommu/io-pgtable-arm.c
-+++ b/drivers/iommu/io-pgtable-arm.c
-@@ -46,6 +46,9 @@
- #define ARM_LPAE_PGD_SIZE(d)						\
- 	(sizeof(arm_lpae_iopte) << (d)->pgd_bits)
- 
-+#define ARM_LPAE_PTES_PER_TABLE(d)					\
-+	(ARM_LPAE_GRANULE(d) >> ilog2(sizeof(arm_lpae_iopte)))
-+
- /*
-  * Calculate the index at level l used to map virtual address a using the
-  * pagetable in d.
-@@ -119,6 +122,8 @@
- #define ARM_LPAE_MAIR_ATTR_IDX_CACHE	1
- #define ARM_LPAE_MAIR_ATTR_IDX_DEV	2
- #define ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE	3
-+#define ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE_NWA		4
-+#define ARM_LPAE_MAIR_ATTR_IDX_ICACHE_OCACHE_NWA	5
- 
- #define ARM_MALI_LPAE_TTBR_ADRMODE_TABLE (3u << 0)
- #define ARM_MALI_LPAE_TTBR_READ_INNER	BIT(2)
-@@ -232,70 +237,77 @@ static void __arm_lpae_free_pages(void *pages, size_t size,
- 	free_pages((unsigned long)pages, get_order(size));
- }
- 
--static void __arm_lpae_sync_pte(arm_lpae_iopte *ptep,
-+static void __arm_lpae_sync_pte(arm_lpae_iopte *ptep, int num_entries,
- 				struct io_pgtable_cfg *cfg)
- {
- 	dma_sync_single_for_device(cfg->iommu_dev, __arm_lpae_dma_addr(ptep),
--				   sizeof(*ptep), DMA_TO_DEVICE);
-+				   sizeof(*ptep) * num_entries, DMA_TO_DEVICE);
- }
- 
--static void __arm_lpae_set_pte(arm_lpae_iopte *ptep, arm_lpae_iopte pte,
--			       struct io_pgtable_cfg *cfg)
-+static void __arm_lpae_clear_pte(arm_lpae_iopte *ptep, struct io_pgtable_cfg *cfg)
- {
--	*ptep = pte;
-+
-+	*ptep = 0;
- 
- 	if (!cfg->coherent_walk)
--		__arm_lpae_sync_pte(ptep, cfg);
-+		__arm_lpae_sync_pte(ptep, 1, cfg);
- }
- 
- static size_t __arm_lpae_unmap(struct arm_lpae_io_pgtable *data,
- 			       struct iommu_iotlb_gather *gather,
--			       unsigned long iova, size_t size, int lvl,
--			       arm_lpae_iopte *ptep);
-+			       unsigned long iova, size_t size, size_t pgcount,
-+			       int lvl, arm_lpae_iopte *ptep);
- 
- static void __arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
- 				phys_addr_t paddr, arm_lpae_iopte prot,
--				int lvl, arm_lpae_iopte *ptep)
-+				int lvl, int num_entries, arm_lpae_iopte *ptep)
- {
- 	arm_lpae_iopte pte = prot;
-+	struct io_pgtable_cfg *cfg = &data->iop.cfg;
-+	size_t sz = ARM_LPAE_BLOCK_SIZE(lvl, data);
-+	int i;
- 
- 	if (data->iop.fmt != ARM_MALI_LPAE && lvl == ARM_LPAE_MAX_LEVELS - 1)
- 		pte |= ARM_LPAE_PTE_TYPE_PAGE;
- 	else
- 		pte |= ARM_LPAE_PTE_TYPE_BLOCK;
- 
--	pte |= paddr_to_iopte(paddr, data);
-+	for (i = 0; i < num_entries; i++)
-+		ptep[i] = pte | paddr_to_iopte(paddr + i * sz, data);
- 
--	__arm_lpae_set_pte(ptep, pte, &data->iop.cfg);
-+	if (!cfg->coherent_walk)
-+		__arm_lpae_sync_pte(ptep, num_entries, cfg);
- }
- 
- static int arm_lpae_init_pte(struct arm_lpae_io_pgtable *data,
- 			     unsigned long iova, phys_addr_t paddr,
--			     arm_lpae_iopte prot, int lvl,
-+			     arm_lpae_iopte prot, int lvl, int num_entries,
- 			     arm_lpae_iopte *ptep)
- {
--	arm_lpae_iopte pte = *ptep;
--
--	if (iopte_leaf(pte, lvl, data->iop.fmt)) {
--		/* We require an unmap first */
--		WARN_ON(!selftest_running);
--		return -EEXIST;
--	} else if (iopte_type(pte, lvl) == ARM_LPAE_PTE_TYPE_TABLE) {
--		/*
--		 * We need to unmap and free the old table before
--		 * overwriting it with a block entry.
--		 */
--		arm_lpae_iopte *tblp;
--		size_t sz = ARM_LPAE_BLOCK_SIZE(lvl, data);
--
--		tblp = ptep - ARM_LPAE_LVL_IDX(iova, lvl, data);
--		if (__arm_lpae_unmap(data, NULL, iova, sz, lvl, tblp) != sz) {
--			WARN_ON(1);
--			return -EINVAL;
-+	int i;
-+
-+	for (i = 0; i < num_entries; i++)
-+		if (iopte_leaf(ptep[i], lvl, data->iop.fmt)) {
-+			/* We require an unmap first */
-+			WARN_ON(!selftest_running);
-+			return -EEXIST;
-+		} else if (iopte_type(ptep[i], lvl) == ARM_LPAE_PTE_TYPE_TABLE) {
-+			/*
-+			 * We need to unmap and free the old table before
-+			 * overwriting it with a block entry.
-+			 */
-+			arm_lpae_iopte *tblp;
-+			size_t sz = ARM_LPAE_BLOCK_SIZE(lvl, data);
-+
-+			tblp = ptep - ARM_LPAE_LVL_IDX(iova, lvl, data);
-+			if (__arm_lpae_unmap(data, NULL, iova + i * sz, sz, 1,
-+					     lvl, tblp) != sz) {
-+				WARN_ON(1);
-+				return -EINVAL;
-+			}
- 		}
--	}
- 
--	__arm_lpae_init_pte(data, paddr, prot, lvl, ptep);
-+	__arm_lpae_init_pte(data, paddr, prot, lvl, num_entries, ptep);
- 	return 0;
- }
- 
-@@ -324,7 +336,7 @@ static arm_lpae_iopte arm_lpae_install_table(arm_lpae_iopte *table,
- 		return old;
- 
- 	/* Even if it's not ours, there's no point waiting; just kick it */
--	__arm_lpae_sync_pte(ptep, cfg);
-+	__arm_lpae_sync_pte(ptep, 1, cfg);
- 	if (old == curr)
- 		WRITE_ONCE(*ptep, new | ARM_LPAE_PTE_SW_SYNC);
- 
-@@ -332,20 +344,30 @@ static arm_lpae_iopte arm_lpae_install_table(arm_lpae_iopte *table,
- }
- 
- static int __arm_lpae_map(struct arm_lpae_io_pgtable *data, unsigned long iova,
--			  phys_addr_t paddr, size_t size, arm_lpae_iopte prot,
--			  int lvl, arm_lpae_iopte *ptep, gfp_t gfp)
-+			  phys_addr_t paddr, size_t size, size_t pgcount,
-+			  arm_lpae_iopte prot, int lvl, arm_lpae_iopte *ptep,
-+			  gfp_t gfp, size_t *mapped)
- {
- 	arm_lpae_iopte *cptep, pte;
- 	size_t block_size = ARM_LPAE_BLOCK_SIZE(lvl, data);
- 	size_t tblsz = ARM_LPAE_GRANULE(data);
- 	struct io_pgtable_cfg *cfg = &data->iop.cfg;
-+	int ret = 0, num_entries, max_entries, map_idx_start;
- 
- 	/* Find our entry at the current level */
--	ptep += ARM_LPAE_LVL_IDX(iova, lvl, data);
-+	map_idx_start = ARM_LPAE_LVL_IDX(iova, lvl, data);
-+	ptep += map_idx_start;
- 
- 	/* If we can install a leaf entry at this level, then do so */
--	if (size == block_size)
--		return arm_lpae_init_pte(data, iova, paddr, prot, lvl, ptep);
-+	if (size == block_size) {
-+		max_entries = ARM_LPAE_PTES_PER_TABLE(data) - map_idx_start;
-+		num_entries = min_t(int, pgcount, max_entries);
-+		ret = arm_lpae_init_pte(data, iova, paddr, prot, lvl, num_entries, ptep);
-+		if (!ret && mapped)
-+			*mapped += num_entries * size;
-+
-+		return ret;
-+	}
- 
- 	/* We can't allocate tables at the final level */
- 	if (WARN_ON(lvl >= ARM_LPAE_MAX_LEVELS - 1))
-@@ -362,7 +384,7 @@ static int __arm_lpae_map(struct arm_lpae_io_pgtable *data, unsigned long iova,
- 		if (pte)
- 			__arm_lpae_free_pages(cptep, tblsz, cfg);
- 	} else if (!cfg->coherent_walk && !(pte & ARM_LPAE_PTE_SW_SYNC)) {
--		__arm_lpae_sync_pte(ptep, cfg);
-+		__arm_lpae_sync_pte(ptep, 1, cfg);
- 	}
- 
- 	if (pte && !iopte_leaf(pte, lvl, data->iop.fmt)) {
-@@ -374,7 +396,8 @@ static int __arm_lpae_map(struct arm_lpae_io_pgtable *data, unsigned long iova,
- 	}
- 
- 	/* Rinse, repeat */
--	return __arm_lpae_map(data, iova, paddr, size, prot, lvl + 1, cptep, gfp);
-+	return __arm_lpae_map(data, iova, paddr, size, pgcount, prot, lvl + 1,
-+			      cptep, gfp, mapped);
- }
- 
- static arm_lpae_iopte arm_lpae_prot_to_pte(struct arm_lpae_io_pgtable *data,
-@@ -413,9 +436,19 @@ static arm_lpae_iopte arm_lpae_prot_to_pte(struct arm_lpae_io_pgtable *data,
- 		if (prot & IOMMU_MMIO)
- 			pte |= (ARM_LPAE_MAIR_ATTR_IDX_DEV
- 				<< ARM_LPAE_PTE_ATTRINDX_SHIFT);
-+		else if ((prot & IOMMU_CACHE) && (prot & IOMMU_SYS_CACHE_NWA))
-+			pte |= (ARM_LPAE_MAIR_ATTR_IDX_ICACHE_OCACHE_NWA
-+				<< ARM_LPAE_PTE_ATTRINDX_SHIFT);
-+		/* IOMMU_CACHE + IOMMU_SYS_CACHE equivalent to IOMMU_CACHE */
- 		else if (prot & IOMMU_CACHE)
- 			pte |= (ARM_LPAE_MAIR_ATTR_IDX_CACHE
- 				<< ARM_LPAE_PTE_ATTRINDX_SHIFT);
-+		else if (prot & IOMMU_SYS_CACHE)
-+			pte |= (ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE
-+				<< ARM_LPAE_PTE_ATTRINDX_SHIFT);
-+		else if (prot & IOMMU_SYS_CACHE_NWA)
-+			pte |= (ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE_NWA
-+				<< ARM_LPAE_PTE_ATTRINDX_SHIFT);
- 	}
- 
- 	/*
-@@ -441,8 +474,9 @@ static arm_lpae_iopte arm_lpae_prot_to_pte(struct arm_lpae_io_pgtable *data,
- 	return pte;
- }
- 
--static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
--			phys_addr_t paddr, size_t size, int iommu_prot, gfp_t gfp)
-+static int arm_lpae_map_pages(struct io_pgtable_ops *ops, unsigned long iova,
-+			      phys_addr_t paddr, size_t pgsize, size_t pgcount,
-+			      int iommu_prot, gfp_t gfp, size_t *mapped)
- {
- 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
- 	struct io_pgtable_cfg *cfg = &data->iop.cfg;
-@@ -455,7 +489,7 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
- 	if (!(iommu_prot & (IOMMU_READ | IOMMU_WRITE)))
- 		return 0;
- 
--	if (WARN_ON(!size || (size & cfg->pgsize_bitmap) != size))
-+	if (WARN_ON(!pgsize || (pgsize & cfg->pgsize_bitmap) != pgsize))
- 		return -EINVAL;
- 
- 	if (cfg->quirks & IO_PGTABLE_QUIRK_ARM_TTBR1)
-@@ -464,7 +498,8 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
- 		return -ERANGE;
- 
- 	prot = arm_lpae_prot_to_pte(data, iommu_prot);
--	ret = __arm_lpae_map(data, iova, paddr, size, prot, lvl, ptep, gfp);
-+	ret = __arm_lpae_map(data, iova, paddr, pgsize, pgcount, prot, lvl,
-+			     ptep, gfp, mapped);
- 	/*
- 	 * Synchronise all PTE updates for the new mapping before there's
- 	 * a chance for anything to kick off a table walk for the new iova.
-@@ -474,6 +509,14 @@ static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
- 	return ret;
- }
- 
-+
-+static int arm_lpae_map(struct io_pgtable_ops *ops, unsigned long iova,
-+			phys_addr_t paddr, size_t size, int iommu_prot, gfp_t gfp)
-+{
-+	return arm_lpae_map_pages(ops, iova, paddr, size, 1, iommu_prot, gfp,
-+				  NULL);
-+}
-+
- static void __arm_lpae_free_pgtable(struct arm_lpae_io_pgtable *data, int lvl,
- 				    arm_lpae_iopte *ptep)
- {
-@@ -517,14 +560,15 @@ static size_t arm_lpae_split_blk_unmap(struct arm_lpae_io_pgtable *data,
- 				       struct iommu_iotlb_gather *gather,
- 				       unsigned long iova, size_t size,
- 				       arm_lpae_iopte blk_pte, int lvl,
--				       arm_lpae_iopte *ptep)
-+				       arm_lpae_iopte *ptep, size_t pgcount)
- {
- 	struct io_pgtable_cfg *cfg = &data->iop.cfg;
- 	arm_lpae_iopte pte, *tablep;
- 	phys_addr_t blk_paddr;
- 	size_t tablesz = ARM_LPAE_GRANULE(data);
- 	size_t split_sz = ARM_LPAE_BLOCK_SIZE(lvl, data);
--	int i, unmap_idx = -1;
-+	int ptes_per_table = ARM_LPAE_PTES_PER_TABLE(data);
-+	int i, unmap_idx_start = -1, num_entries = 0, max_entries;
- 
- 	if (WARN_ON(lvl == ARM_LPAE_MAX_LEVELS))
- 		return 0;
-@@ -533,18 +577,21 @@ static size_t arm_lpae_split_blk_unmap(struct arm_lpae_io_pgtable *data,
- 	if (!tablep)
- 		return 0; /* Bytes unmapped */
- 
--	if (size == split_sz)
--		unmap_idx = ARM_LPAE_LVL_IDX(iova, lvl, data);
-+	if (size == split_sz) {
-+		unmap_idx_start = ARM_LPAE_LVL_IDX(iova, lvl, data);
-+		max_entries = ptes_per_table - unmap_idx_start;
-+		num_entries = min_t(int, pgcount, max_entries);
-+	}
- 
- 	blk_paddr = iopte_to_paddr(blk_pte, data);
- 	pte = iopte_prot(blk_pte);
- 
--	for (i = 0; i < tablesz / sizeof(pte); i++, blk_paddr += split_sz) {
-+	for (i = 0; i < ptes_per_table; i++, blk_paddr += split_sz) {
- 		/* Unmap! */
--		if (i == unmap_idx)
-+		if (i >= unmap_idx_start && i < (unmap_idx_start + num_entries))
- 			continue;
- 
--		__arm_lpae_init_pte(data, blk_paddr, pte, lvl, &tablep[i]);
-+		__arm_lpae_init_pte(data, blk_paddr, pte, lvl, 1, &tablep[i]);
- 	}
- 
- 	pte = arm_lpae_install_table(tablep, ptep, blk_pte, data);
-@@ -559,76 +606,92 @@ static size_t arm_lpae_split_blk_unmap(struct arm_lpae_io_pgtable *data,
- 			return 0;
- 
- 		tablep = iopte_deref(pte, data);
--	} else if (unmap_idx >= 0) {
--		io_pgtable_tlb_add_page(&data->iop, gather, iova, size);
--		return size;
-+	} else if (unmap_idx_start >= 0) {
-+		for (i = 0; i < num_entries; i++)
-+			io_pgtable_tlb_add_page(&data->iop, gather, iova + i * size, size);
-+
-+		return num_entries * size;
- 	}
- 
--	return __arm_lpae_unmap(data, gather, iova, size, lvl, tablep);
-+	return __arm_lpae_unmap(data, gather, iova, size, pgcount, lvl, tablep);
- }
- 
- static size_t __arm_lpae_unmap(struct arm_lpae_io_pgtable *data,
- 			       struct iommu_iotlb_gather *gather,
--			       unsigned long iova, size_t size, int lvl,
--			       arm_lpae_iopte *ptep)
-+			       unsigned long iova, size_t size, size_t pgcount,
-+			       int lvl, arm_lpae_iopte *ptep)
- {
- 	arm_lpae_iopte pte;
- 	struct io_pgtable *iop = &data->iop;
-+	int i = 0, num_entries, max_entries, unmap_idx_start;
- 
- 	/* Something went horribly wrong and we ran out of page table */
- 	if (WARN_ON(lvl == ARM_LPAE_MAX_LEVELS))
- 		return 0;
- 
--	ptep += ARM_LPAE_LVL_IDX(iova, lvl, data);
-+	unmap_idx_start = ARM_LPAE_LVL_IDX(iova, lvl, data);
-+	ptep += unmap_idx_start;
- 	pte = READ_ONCE(*ptep);
- 	if (WARN_ON(!pte))
- 		return 0;
- 
- 	/* If the size matches this level, we're in the right place */
- 	if (size == ARM_LPAE_BLOCK_SIZE(lvl, data)) {
--		__arm_lpae_set_pte(ptep, 0, &iop->cfg);
--
--		if (!iopte_leaf(pte, lvl, iop->fmt)) {
--			/* Also flush any partial walks */
--			io_pgtable_tlb_flush_walk(iop, iova, size,
--						  ARM_LPAE_GRANULE(data));
--			ptep = iopte_deref(pte, data);
--			__arm_lpae_free_pgtable(data, lvl + 1, ptep);
--		} else if (iop->cfg.quirks & IO_PGTABLE_QUIRK_NON_STRICT) {
--			/*
--			 * Order the PTE update against queueing the IOVA, to
--			 * guarantee that a flush callback from a different CPU
--			 * has observed it before the TLBIALL can be issued.
--			 */
--			smp_wmb();
--		} else {
--			io_pgtable_tlb_add_page(iop, gather, iova, size);
-+		max_entries = ARM_LPAE_PTES_PER_TABLE(data) - unmap_idx_start;
-+		num_entries = min_t(int, pgcount, max_entries);
-+
-+		while (i < num_entries) {
-+			pte = READ_ONCE(*ptep);
-+			if (WARN_ON(!pte))
-+				break;
-+
-+			__arm_lpae_clear_pte(ptep, &iop->cfg);
-+
-+			if (!iopte_leaf(pte, lvl, iop->fmt)) {
-+				/* Also flush any partial walks */
-+				io_pgtable_tlb_flush_walk(iop, iova + i * size, size,
-+							  ARM_LPAE_GRANULE(data));
-+				__arm_lpae_free_pgtable(data, lvl + 1, iopte_deref(pte, data));
-+			} else if (iop->cfg.quirks & IO_PGTABLE_QUIRK_NON_STRICT) {
-+				/*
-+				 * Order the PTE update against queueing the IOVA, to
-+				 * guarantee that a flush callback from a different CPU
-+				 * has observed it before the TLBIALL can be issued.
-+				 */
-+				smp_wmb();
-+			} else {
-+				io_pgtable_tlb_add_page(iop, gather, iova + i * size, size);
-+			}
-+
-+			ptep++;
-+			i++;
- 		}
- 
--		return size;
-+		return i * size;
- 	} else if (iopte_leaf(pte, lvl, iop->fmt)) {
- 		/*
- 		 * Insert a table at the next level to map the old region,
- 		 * minus the part we want to unmap
- 		 */
- 		return arm_lpae_split_blk_unmap(data, gather, iova, size, pte,
--						lvl + 1, ptep);
-+						lvl + 1, ptep, pgcount);
- 	}
- 
- 	/* Keep on walkin' */
- 	ptep = iopte_deref(pte, data);
--	return __arm_lpae_unmap(data, gather, iova, size, lvl + 1, ptep);
-+	return __arm_lpae_unmap(data, gather, iova, size, pgcount, lvl + 1, ptep);
- }
- 
--static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
--			     size_t size, struct iommu_iotlb_gather *gather)
-+static size_t arm_lpae_unmap_pages(struct io_pgtable_ops *ops, unsigned long iova,
-+				   size_t pgsize, size_t pgcount,
-+				   struct iommu_iotlb_gather *gather)
- {
- 	struct arm_lpae_io_pgtable *data = io_pgtable_ops_to_data(ops);
- 	struct io_pgtable_cfg *cfg = &data->iop.cfg;
- 	arm_lpae_iopte *ptep = data->pgd;
- 	long iaext = (s64)iova >> cfg->ias;
- 
--	if (WARN_ON(!size || (size & cfg->pgsize_bitmap) != size))
-+	if (WARN_ON(!pgsize || (pgsize & cfg->pgsize_bitmap) != pgsize || !pgcount))
- 		return 0;
- 
- 	if (cfg->quirks & IO_PGTABLE_QUIRK_ARM_TTBR1)
-@@ -636,7 +699,14 @@ static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
- 	if (WARN_ON(iaext))
- 		return 0;
- 
--	return __arm_lpae_unmap(data, gather, iova, size, data->start_level, ptep);
-+	return __arm_lpae_unmap(data, gather, iova, pgsize, pgcount,
-+				data->start_level, ptep);
-+}
-+
-+static size_t arm_lpae_unmap(struct io_pgtable_ops *ops, unsigned long iova,
-+			     size_t size, struct iommu_iotlb_gather *gather)
-+{
-+	return arm_lpae_unmap_pages(ops, iova, size, 1, gather);
- }
- 
- static phys_addr_t arm_lpae_iova_to_phys(struct io_pgtable_ops *ops,
-@@ -751,7 +821,9 @@ arm_lpae_alloc_pgtable(struct io_pgtable_cfg *cfg)
- 
- 	data->iop.ops = (struct io_pgtable_ops) {
- 		.map		= arm_lpae_map,
-+		.map_pages	= arm_lpae_map_pages,
- 		.unmap		= arm_lpae_unmap,
-+		.unmap_pages	= arm_lpae_unmap_pages,
- 		.iova_to_phys	= arm_lpae_iova_to_phys,
- 	};
- 
-@@ -835,7 +907,11 @@ arm_64_lpae_alloc_pgtable_s1(struct io_pgtable_cfg *cfg, void *cookie)
- 	      (ARM_LPAE_MAIR_ATTR_DEVICE
- 	       << ARM_LPAE_MAIR_ATTR_SHIFT(ARM_LPAE_MAIR_ATTR_IDX_DEV)) |
- 	      (ARM_LPAE_MAIR_ATTR_INC_OWBRWA
--	       << ARM_LPAE_MAIR_ATTR_SHIFT(ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE));
-+	       << ARM_LPAE_MAIR_ATTR_SHIFT(ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE)) |
-+	      (ARM_LPAE_MAIR_ATTR_INC_OWBRANWA
-+	       << ARM_LPAE_MAIR_ATTR_SHIFT(ARM_LPAE_MAIR_ATTR_IDX_INC_OCACHE_NWA)) |
-+	      (ARM_LPAE_MAIR_ATTR_IWBRWA_OWBRANWA
-+	       << ARM_LPAE_MAIR_ATTR_SHIFT(ARM_LPAE_MAIR_ATTR_IDX_ICACHE_OCACHE_NWA));
- 
- 	cfg->arm_lpae_s1_cfg.mair = reg;
- 
-@@ -1089,7 +1165,6 @@ static void __init dummy_tlb_add_page(struct iommu_iotlb_gather *gather,
- static const struct iommu_flush_ops dummy_tlb_ops __initconst = {
- 	.tlb_flush_all	= dummy_tlb_flush_all,
- 	.tlb_flush_walk	= dummy_tlb_flush,
--	.tlb_flush_leaf	= dummy_tlb_flush,
- 	.tlb_add_page	= dummy_tlb_add_page,
- };
- 
-diff --git a/drivers/iommu/iommu.c b/drivers/iommu/iommu.c
-index 9d65557df..793c52826 100644
---- a/drivers/iommu/iommu.c
-+++ b/drivers/iommu/iommu.c
-@@ -8,6 +8,7 @@
- 
- #include <linux/device.h>
- #include <linux/kernel.h>
-+#include <linux/bits.h>
- #include <linux/bug.h>
- #include <linux/types.h>
- #include <linux/init.h>
-@@ -267,11 +268,13 @@ int iommu_probe_device(struct device *dev)
- 	 * support default domains, so the return value is not yet
- 	 * checked.
- 	 */
-+	mutex_lock(&group->mutex);
- 	iommu_alloc_default_domain(group, dev);
- 
- 	if (group->default_domain) {
- 		ret = __iommu_attach_device(group->default_domain, dev);
- 		if (ret) {
-+			mutex_unlock(&group->mutex);
- 			iommu_group_put(group);
- 			goto err_release;
- 		}
-@@ -279,6 +282,7 @@ int iommu_probe_device(struct device *dev)
- 
- 	iommu_create_device_direct_mappings(group, dev);
- 
-+	mutex_unlock(&group->mutex);
- 	iommu_group_put(group);
- 
- 	if (ops->probe_finalize)
-@@ -1958,7 +1962,9 @@ int iommu_attach_device(struct iommu_domain *domain, struct device *dev)
- 	 */
- 	mutex_lock(&group->mutex);
- 	ret = -EINVAL;
--	if (iommu_group_device_count(group) != 1)
-+
-+	/* don't break attach if iommu shared by more than one master */
-+	if (iommu_group_device_count(group) < 1)
- 		goto out_unlock;
- 
- 	ret = __iommu_attach_group(domain, group);
-@@ -2203,7 +2209,8 @@ void iommu_detach_device(struct iommu_domain *domain, struct device *dev)
- 		return;
- 
- 	mutex_lock(&group->mutex);
--	if (iommu_group_device_count(group) != 1) {
-+	/* Don't break detach if iommu shared by more than one master */
-+	if (iommu_group_device_count(group) < 1) {
- 		WARN_ON(1);
- 		goto out_unlock;
- 	}
-@@ -2337,38 +2344,85 @@ phys_addr_t iommu_iova_to_phys(struct iommu_domain *domain, dma_addr_t iova)
- }
- EXPORT_SYMBOL_GPL(iommu_iova_to_phys);
- 
--static size_t iommu_pgsize(struct iommu_domain *domain,
--			   unsigned long addr_merge, size_t size)
-+static size_t iommu_pgsize(struct iommu_domain *domain, unsigned long iova,
-+			   phys_addr_t paddr, size_t size, size_t *count)
- {
--	unsigned int pgsize_idx;
--	size_t pgsize;
-+	unsigned int pgsize_idx, pgsize_idx_next;
-+	unsigned long pgsizes;
-+	size_t offset, pgsize, pgsize_next;
-+	unsigned long addr_merge = paddr | iova;
- 
--	/* Max page size that still fits into 'size' */
--	pgsize_idx = __fls(size);
-+	/* Page sizes supported by the hardware and small enough for @size */
-+	pgsizes = domain->pgsize_bitmap & GENMASK(__fls(size), 0);
- 
--	/* need to consider alignment requirements ? */
--	if (likely(addr_merge)) {
--		/* Max page size allowed by address */
--		unsigned int align_pgsize_idx = __ffs(addr_merge);
--		pgsize_idx = min(pgsize_idx, align_pgsize_idx);
--	}
-+	/* Constrain the page sizes further based on the maximum alignment */
-+	if (likely(addr_merge))
-+		pgsizes &= GENMASK(__ffs(addr_merge), 0);
- 
--	/* build a mask of acceptable page sizes */
--	pgsize = (1UL << (pgsize_idx + 1)) - 1;
-+	/* Make sure we have at least one suitable page size */
-+	BUG_ON(!pgsizes);
- 
--	/* throw away page sizes not supported by the hardware */
--	pgsize &= domain->pgsize_bitmap;
-+	/* Pick the biggest page size remaining */
-+	pgsize_idx = __fls(pgsizes);
-+	pgsize = BIT(pgsize_idx);
-+	if (!count)
-+		return pgsize;
- 
--	/* make sure we're still sane */
--	BUG_ON(!pgsize);
- 
--	/* pick the biggest page */
--	pgsize_idx = __fls(pgsize);
--	pgsize = 1UL << pgsize_idx;
-+	/* Find the next biggest support page size, if it exists */
-+	pgsizes = domain->pgsize_bitmap & ~GENMASK(pgsize_idx, 0);
-+	if (!pgsizes)
-+		goto out_set_count;
-+
-+	pgsize_idx_next = __ffs(pgsizes);
-+	pgsize_next = BIT(pgsize_idx_next);
-+
-+	/*
-+	 * There's no point trying a bigger page size unless the virtual
-+	 * and physical addresses are similarly offset within the larger page.
-+	 */
-+	if ((iova ^ paddr) & (pgsize_next - 1))
-+		goto out_set_count;
-+
-+	/* Calculate the offset to the next page size alignment boundary */
-+	offset = pgsize_next - (addr_merge & (pgsize_next - 1));
- 
-+	/*
-+	 * If size is big enough to accommodate the larger page, reduce
-+	 * the number of smaller pages.
-+	 */
-+	if (offset + pgsize_next <= size)
-+		size = offset;
-+
-+out_set_count:
-+	*count = size >> pgsize_idx;
- 	return pgsize;
- }
- 
-+static int __iommu_map_pages(struct iommu_domain *domain, unsigned long iova,
-+			     phys_addr_t paddr, size_t size, int prot,
-+			     gfp_t gfp, size_t *mapped)
-+{
-+	const struct iommu_ops *ops = domain->ops;
-+	size_t pgsize, count;
-+	int ret;
-+
-+	pgsize = iommu_pgsize(domain, iova, paddr, size, &count);
-+
-+	pr_debug("mapping: iova 0x%lx pa %pa pgsize 0x%zx count %zu\n",
-+			 iova, &paddr, pgsize, count);
-+
-+	if (ops->map_pages) {
-+		ret = ops->map_pages(domain, iova, paddr, pgsize, count, prot,
-+				     gfp, mapped);
-+	} else {
-+		ret = ops->map(domain, iova, paddr, pgsize, prot, gfp);
-+		*mapped = ret ? 0 : pgsize;
-+	}
-+
-+	return ret;
-+}
-+
- static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
- 		       phys_addr_t paddr, size_t size, int prot, gfp_t gfp)
- {
-@@ -2379,7 +2433,7 @@ static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
- 	phys_addr_t orig_paddr = paddr;
- 	int ret = 0;
- 
--	if (unlikely(ops->map == NULL ||
-+	if (unlikely(!(ops->map || ops->map_pages) ||
- 		     domain->pgsize_bitmap == 0UL))
- 		return -ENODEV;
- 
-@@ -2403,18 +2457,21 @@ static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
- 	pr_debug("map: iova 0x%lx pa %pa size 0x%zx\n", iova, &paddr, size);
- 
- 	while (size) {
--		size_t pgsize = iommu_pgsize(domain, iova | paddr, size);
-+		size_t mapped = 0;
- 
--		pr_debug("mapping: iova 0x%lx pa %pa pgsize 0x%zx\n",
--			 iova, &paddr, pgsize);
--		ret = ops->map(domain, iova, paddr, pgsize, prot, gfp);
-+		ret = __iommu_map_pages(domain, iova, paddr, size, prot, gfp,
-+					&mapped);
-+		/*
-+		 * Some pages may have been mapped, even if an error occurred,
-+		 * so we should account for those so they can be unmapped.
-+		 */
-+		size -= mapped;
- 
- 		if (ret)
- 			break;
- 
--		iova += pgsize;
--		paddr += pgsize;
--		size -= pgsize;
-+		iova += mapped;
-+		paddr += mapped;
- 	}
- 
- 	/* unroll mapping in case something went wrong */
-@@ -2434,7 +2491,7 @@ static int _iommu_map(struct iommu_domain *domain, unsigned long iova,
- 
- 	ret = __iommu_map(domain, iova, paddr, size, prot, gfp);
- 	if (ret == 0 && ops->iotlb_sync_map)
--		ops->iotlb_sync_map(domain);
-+		ops->iotlb_sync_map(domain, iova, size);
- 
- 	return ret;
- }
-@@ -2454,6 +2511,19 @@ int iommu_map_atomic(struct iommu_domain *domain, unsigned long iova,
- }
- EXPORT_SYMBOL_GPL(iommu_map_atomic);
- 
-+static size_t __iommu_unmap_pages(struct iommu_domain *domain,
-+				  unsigned long iova, size_t size,
-+				  struct iommu_iotlb_gather *iotlb_gather)
-+{
-+	const struct iommu_ops *ops = domain->ops;
-+	size_t pgsize, count;
-+
-+	pgsize = iommu_pgsize(domain, iova, iova, size, &count);
-+	return ops->unmap_pages ?
-+	       ops->unmap_pages(domain, iova, pgsize, count, iotlb_gather) :
-+	       ops->unmap(domain, iova, pgsize, iotlb_gather);
-+}
-+
- static size_t __iommu_unmap(struct iommu_domain *domain,
- 			    unsigned long iova, size_t size,
- 			    struct iommu_iotlb_gather *iotlb_gather)
-@@ -2463,7 +2533,7 @@ static size_t __iommu_unmap(struct iommu_domain *domain,
- 	unsigned long orig_iova = iova;
- 	unsigned int min_pagesz;
- 
--	if (unlikely(ops->unmap == NULL ||
-+	if (unlikely(!(ops->unmap || ops->unmap_pages) ||
- 		     domain->pgsize_bitmap == 0UL))
- 		return 0;
- 
-@@ -2491,9 +2561,9 @@ static size_t __iommu_unmap(struct iommu_domain *domain,
- 	 * or we hit an area that isn't mapped.
- 	 */
- 	while (unmapped < size) {
--		size_t pgsize = iommu_pgsize(domain, iova, size - unmapped);
--
--		unmapped_page = ops->unmap(domain, iova, pgsize, iotlb_gather);
-+		unmapped_page = __iommu_unmap_pages(domain, iova,
-+						    size - unmapped,
-+						    iotlb_gather);
- 		if (!unmapped_page)
- 			break;
- 
-@@ -2540,6 +2610,18 @@ static size_t __iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
- 	unsigned int i = 0;
- 	int ret;
- 
-+	if (ops->map_sg) {
-+		ret = ops->map_sg(domain, iova, sg, nents, prot, gfp, &mapped);
-+
-+		if (ops->iotlb_sync_map)
-+			ops->iotlb_sync_map(domain, iova, mapped);
-+
-+		if (ret)
-+			goto out_err;
-+
-+		return mapped;
-+	}
-+
- 	while (i <= nents) {
- 		phys_addr_t s_phys = sg_phys(sg);
- 
-@@ -2566,7 +2648,7 @@ static size_t __iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
- 	}
- 
- 	if (ops->iotlb_sync_map)
--		ops->iotlb_sync_map(domain);
-+		ops->iotlb_sync_map(domain, iova, mapped);
- 	return mapped;
- 
- out_err:
 diff --git a/drivers/iommu/iova.c b/drivers/iommu/iova.c
-index 4600e97ac..c710cb413 100644
+index 4600e97ac..dd7468d8d 100644
 --- a/drivers/iommu/iova.c
 +++ b/drivers/iommu/iova.c
 @@ -11,6 +11,8 @@
@@ -947,15 +158,7 @@ index 4600e97ac..c710cb413 100644
  
  void
  init_iova_domain(struct iova_domain *iovad, unsigned long granule,
-@@ -50,6 +112,7 @@ init_iova_domain(struct iova_domain *iovad, unsigned long granule,
- 	iovad->anchor.pfn_lo = iovad->anchor.pfn_hi = IOVA_ANCHOR;
- 	rb_link_node(&iovad->anchor.node, NULL, &iovad->rbroot.rb_node);
- 	rb_insert_color(&iovad->anchor.node, &iovad->rbroot);
-+	iovad->best_fit = false;
- 	init_iova_rcaches(iovad);
- }
- EXPORT_SYMBOL_GPL(init_iova_domain);
-@@ -177,6 +240,24 @@ iova_insert_rbtree(struct rb_root *root, struct iova *iova,
+@@ -177,6 +239,24 @@ iova_insert_rbtree(struct rb_root *root, struct iova *iova,
  	rb_insert_color(&iova->node, root);
  }
  
@@ -980,7 +183,7 @@ index 4600e97ac..c710cb413 100644
  static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
  		unsigned long size, unsigned long limit_pfn,
  			struct iova *new, bool size_aligned)
-@@ -184,11 +265,12 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -184,11 +264,12 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
  	struct rb_node *curr, *prev;
  	struct iova *curr_iova;
  	unsigned long flags;
@@ -995,7 +198,7 @@ index 4600e97ac..c710cb413 100644
  
  	/* Walk the tree backwards */
  	spin_lock_irqsave(&iovad->iova_rbtree_lock, flags);
-@@ -198,15 +280,25 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -198,15 +279,25 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
  
  	curr = __get_cached_rbnode(iovad, limit_pfn);
  	curr_iova = rb_entry(curr, struct iova, node);
@@ -1026,94 +229,7 @@ index 4600e97ac..c710cb413 100644
  		iovad->max32_alloc_size = size;
  		goto iova32_full;
  	}
-@@ -227,6 +319,70 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
- 	return -ENOMEM;
- }
- 
-+static int __alloc_and_insert_iova_best_fit(struct iova_domain *iovad,
-+					    unsigned long size,
-+					    unsigned long limit_pfn,
-+					    struct iova *new, bool size_aligned)
-+{
-+	struct rb_node *curr, *prev;
-+	struct iova *curr_iova, *prev_iova;
-+	unsigned long flags;
-+	unsigned long align_mask = ~0UL;
-+	struct rb_node *candidate_rb_parent;
-+	unsigned long new_pfn, candidate_pfn = ~0UL;
-+	unsigned long gap, candidate_gap = ~0UL;
-+
-+	if (size_aligned)
-+		align_mask <<= limit_align_shift(iovad, fls_long(size - 1));
-+
-+	/* Walk the tree backwards */
-+	spin_lock_irqsave(&iovad->iova_rbtree_lock, flags);
-+	curr = &iovad->anchor.node;
-+	prev = rb_prev(curr);
-+	for (; prev; curr = prev, prev = rb_prev(curr)) {
-+		curr_iova = rb_entry(curr, struct iova, node);
-+		prev_iova = rb_entry(prev, struct iova, node);
-+
-+		limit_pfn = min(limit_pfn, curr_iova->pfn_lo);
-+		new_pfn = (limit_pfn - size) & align_mask;
-+		gap = curr_iova->pfn_lo - prev_iova->pfn_hi - 1;
-+		if ((limit_pfn >= size) && (new_pfn > prev_iova->pfn_hi)
-+				&& (gap < candidate_gap)) {
-+			candidate_gap = gap;
-+			candidate_pfn = new_pfn;
-+			candidate_rb_parent = curr;
-+			if (gap == size)
-+				goto insert;
-+		}
-+	}
-+
-+	curr_iova = rb_entry(curr, struct iova, node);
-+	limit_pfn = min(limit_pfn, curr_iova->pfn_lo);
-+	new_pfn = (limit_pfn - size) & align_mask;
-+	gap = curr_iova->pfn_lo - iovad->start_pfn;
-+	if (limit_pfn >= size && new_pfn >= iovad->start_pfn &&
-+			gap < candidate_gap) {
-+		candidate_gap = gap;
-+		candidate_pfn = new_pfn;
-+		candidate_rb_parent = curr;
-+	}
-+
-+insert:
-+	if (candidate_pfn == ~0UL) {
-+		spin_unlock_irqrestore(&iovad->iova_rbtree_lock, flags);
-+		return -ENOMEM;
-+	}
-+
-+	/* pfn_lo will point to size aligned address if size_aligned is set */
-+	new->pfn_lo = candidate_pfn;
-+	new->pfn_hi = new->pfn_lo + size - 1;
-+
-+	/* If we have 'prev', it's a valid place to start the insertion. */
-+	iova_insert_rbtree(&iovad->rbroot, new, candidate_rb_parent);
-+	spin_unlock_irqrestore(&iovad->iova_rbtree_lock, flags);
-+	return 0;
-+}
-+
- static struct kmem_cache *iova_cache;
- static unsigned int iova_cache_users;
- static DEFINE_MUTEX(iova_cache_mutex);
-@@ -302,8 +458,13 @@ alloc_iova(struct iova_domain *iovad, unsigned long size,
- 	if (!new_iova)
- 		return NULL;
- 
--	ret = __alloc_and_insert_iova_range(iovad, size, limit_pfn + 1,
--			new_iova, size_aligned);
-+	if (iovad->best_fit) {
-+		ret = __alloc_and_insert_iova_best_fit(iovad, size,
-+				limit_pfn + 1, new_iova, size_aligned);
-+	} else {
-+		ret = __alloc_and_insert_iova_range(iovad, size, limit_pfn + 1,
-+				new_iova, size_aligned);
-+	}
- 
- 	if (ret) {
- 		free_iova_mem(new_iova);
-@@ -424,13 +585,16 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
+@@ -424,13 +515,16 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
  	if (!new_iova) {
  		unsigned int cpu;
  
@@ -1131,7 +247,7 @@ index 4600e97ac..c710cb413 100644
  		goto retry;
  	}
  
-@@ -787,6 +951,32 @@ struct iova_cpu_rcache {
+@@ -787,6 +881,32 @@ struct iova_cpu_rcache {
  	struct iova_magazine *prev;
  };
  
@@ -1164,7 +280,7 @@ index 4600e97ac..c710cb413 100644
  static struct iova_magazine *iova_magazine_alloc(gfp_t flags)
  {
  	return kzalloc(sizeof(struct iova_magazine), flags);
-@@ -1046,5 +1236,27 @@ void free_cpu_cached_iovas(unsigned int cpu, struct iova_domain *iovad)
+@@ -1046,5 +1166,27 @@ void free_cpu_cached_iovas(unsigned int cpu, struct iova_domain *iovad)
  	}
  }
  
@@ -2631,77 +1747,11 @@ index e5d86b717..cf4f03f33 100644
 +MODULE_AUTHOR("Simon Xue <xxm@rock-chips.com> and Daniel Kurtz <djkurtz@chromium.org>");
 +MODULE_ALIAS("platform:rockchip-iommu");
 +MODULE_LICENSE("GPL v2");
-diff --git a/include/linux/iommu.h b/include/linux/iommu.h
-index e90c267e7..f7f6ada34 100644
---- a/include/linux/iommu.h
-+++ b/include/linux/iommu.h
-@@ -31,6 +31,18 @@
-  * if the IOMMU page table format is equivalent.
-  */
- #define IOMMU_PRIV	(1 << 5)
-+/*
-+ * Allow caching in a transparent outer level of cache, also known as
-+ * the last-level or system cache, with a read/write allocation policy.
-+ * Does not depend on IOMMU_CACHE. Incompatible with IOMMU_SYS_CACHE_NWA.
-+ */
-+#define IOMMU_SYS_CACHE	(1 << 6)
-+/*
-+ * Allow caching in a transparent outer level of cache, also known as
-+ * the last-level or system cache, with a read allocation policy.
-+ * Does not depend on IOMMU_CACHE. Incompatible with IOMMU_SYS_CACHE.
-+ */
-+#define IOMMU_SYS_CACHE_NWA (1 << 7)
- 
- struct iommu_ops;
- struct iommu_group;
-@@ -190,7 +202,12 @@ struct iommu_iotlb_gather {
-  * @attach_dev: attach device to an iommu domain
-  * @detach_dev: detach device from an iommu domain
-  * @map: map a physically contiguous memory region to an iommu domain
-+ * @map_pages: map a physically contiguous set of pages of the same size to
-+ *             an iommu domain.
-+ * @map_sg: map a scatter-gather list of physically contiguous chunks to
-+ *          an iommu domain.
-  * @unmap: unmap a physically contiguous memory region from an iommu domain
-+ * @unmap_pages: unmap a number of pages of the same size from an iommu domain
-  * @flush_iotlb_all: Synchronously flush all hardware TLBs for this domain
-  * @iotlb_sync_map: Sync mappings created recently using @map to the hardware
-  * @iotlb_sync: Flush all queued ranges from the hardware TLBs and empty flush
-@@ -241,10 +258,20 @@ struct iommu_ops {
- 	void (*detach_dev)(struct iommu_domain *domain, struct device *dev);
- 	int (*map)(struct iommu_domain *domain, unsigned long iova,
- 		   phys_addr_t paddr, size_t size, int prot, gfp_t gfp);
-+	int (*map_pages)(struct iommu_domain *domain, unsigned long iova,
-+			 phys_addr_t paddr, size_t pgsize, size_t pgcount,
-+			 int prot, gfp_t gfp, size_t *mapped);
-+	int (*map_sg)(struct iommu_domain *domain, unsigned long iova,
-+		      struct scatterlist *sg, unsigned int nents, int prot,
-+		      gfp_t gfp, size_t *mapped);
- 	size_t (*unmap)(struct iommu_domain *domain, unsigned long iova,
- 		     size_t size, struct iommu_iotlb_gather *iotlb_gather);
-+	size_t (*unmap_pages)(struct iommu_domain *domain, unsigned long iova,
-+			      size_t pgsize, size_t pgcount,
-+			      struct iommu_iotlb_gather *iotlb_gather);
- 	void (*flush_iotlb_all)(struct iommu_domain *domain);
--	void (*iotlb_sync_map)(struct iommu_domain *domain);
-+	void (*iotlb_sync_map)(struct iommu_domain *domain, unsigned long iova,
-+			       size_t size);
- 	void (*iotlb_sync)(struct iommu_domain *domain,
- 			   struct iommu_iotlb_gather *iotlb_gather);
- 	phys_addr_t (*iova_to_phys)(struct iommu_domain *domain, dma_addr_t iova);
 diff --git a/include/linux/iova.h b/include/linux/iova.h
-index 6c19b09e9..95f5cbf3a 100644
+index 6c19b09e9..ef3d83262 100644
 --- a/include/linux/iova.h
 +++ b/include/linux/iova.h
-@@ -95,6 +95,7 @@ struct iova_domain {
- 						   flush-queues */
- 	atomic_t fq_timer_on;			/* 1 when timer is active, 0
- 						   when not */
-+	bool best_fit;
- };
- 
- static inline unsigned long iova_size(struct iova *iova)
-@@ -155,6 +156,7 @@ struct iova *reserve_iova(struct iova_domain *iovad, unsigned long pfn_lo,
+@@ -155,6 +155,7 @@ struct iova *reserve_iova(struct iova_domain *iovad, unsigned long pfn_lo,
  void copy_reserved_iova(struct iova_domain *from, struct iova_domain *to);
  void init_iova_domain(struct iova_domain *iovad, unsigned long granule,
  	unsigned long start_pfn);
@@ -2709,7 +1759,7 @@ index 6c19b09e9..95f5cbf3a 100644
  bool has_iova_flush_queue(struct iova_domain *iovad);
  int init_iova_flush_queue(struct iova_domain *iovad,
  			  iova_flush_cb flush_cb, iova_entry_dtor entry_dtor);
-@@ -163,6 +165,7 @@ void put_iova_domain(struct iova_domain *iovad);
+@@ -163,6 +164,7 @@ void put_iova_domain(struct iova_domain *iovad);
  struct iova *split_and_remove_iova(struct iova_domain *iovad,
  	struct iova *iova, unsigned long pfn_lo, unsigned long pfn_hi);
  void free_cpu_cached_iovas(unsigned int cpu, struct iova_domain *iovad);
@@ -2717,7 +1767,7 @@ index 6c19b09e9..95f5cbf3a 100644
  #else
  static inline int iova_cache_get(void)
  {
-@@ -236,6 +239,11 @@ static inline void init_iova_domain(struct iova_domain *iovad,
+@@ -236,6 +238,11 @@ static inline void init_iova_domain(struct iova_domain *iovad,
  {
  }
  
@@ -2729,7 +1779,7 @@ index 6c19b09e9..95f5cbf3a 100644
  static inline bool has_iova_flush_queue(struct iova_domain *iovad)
  {
  	return false;
-@@ -270,6 +278,11 @@ static inline void free_cpu_cached_iovas(unsigned int cpu,
+@@ -270,6 +277,11 @@ static inline void free_cpu_cached_iovas(unsigned int cpu,
  					 struct iova_domain *iovad)
  {
  }
@@ -2742,5 +1792,5 @@ index 6c19b09e9..95f5cbf3a 100644
  
  #endif
 -- 
-2.37.1 (Apple Git-137.1)
+2.31.0
 
