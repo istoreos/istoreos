@@ -131,6 +131,10 @@
 	status = "okay";
 };
 
+&avsd {
+	status = "okay";
+};
+
 &combphy0_ps {
 	status = "okay";
 };
@@ -447,7 +451,6 @@
 
 	ir_key1 {
 		rockchip,usercode = <0xc43b>;
-		/* /system/usr/keylayout/Generic.kl */
 		rockchip,key_table =
 			<0xff	KEY_POWER>,
 			<0xef	KEY_LEFT>,
@@ -459,11 +462,11 @@
 			<0xf1	KEY_VOLUMEDOWN>,
 			<0xf3	KEY_VOLUMEUP>,
 			<0xae	KEY_MENU>,
-			<0xeb	172>,
+			<0xeb	KEY_LEFTMETA>,
 			<0xaf	KEY_BACK>,
-			<0xf7	204>,
+			<0xf7	KEY_MODE>,
 			<0xe5	KEY_SYSRQ>,
-			<0xf5	580>;
+			<0xf5	KEY_ESC>;
 	};
 };
 
@@ -589,6 +592,7 @@
 	max-frequency = <200000000>;
 	mmc-hs400-1_8v;
 	mmc-hs400-enhanced-strobe;
+	full-pwr-cycle-in-suspend;
 	status = "okay";
 };
 
@@ -674,6 +678,7 @@
 &vop {
 	assigned-clocks = <&cru ACLK_VOP>;
 	assigned-clock-rates = <800000000>;
+	support-multi-area;
 	status = "okay";
 };
 
@@ -702,3 +707,6 @@
 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 };
 
+&wdt {
+	status = "okay";
+};
