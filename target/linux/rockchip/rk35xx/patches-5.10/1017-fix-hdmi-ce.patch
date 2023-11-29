@@ -1,0 +1,887 @@
+From e922b0b345e849ad8cdf0468a6cba21bf217f24b Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 29 Nov 2023 19:19:59 +0800
+Subject: [PATCH] fix hdmi CE
+
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c |   2 +
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c    |   3 +-
+ drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c  |   3 +-
+ drivers/gpu/drm/rockchip/rockchip_drm_logo.c |   3 +-
+ include/sound/hdmi-codec.h                   |  17 +-
+ include/sound/pcm_iec958.h                   |   8 +
+ include/uapi/linux/cec.h                     |   6 +
+ sound/core/pcm_iec958.c                      | 174 +++++++---
+ sound/soc/codecs/hdmi-codec.c                | 334 ++++++++++++++++---
+ 9 files changed, 454 insertions(+), 96 deletions(-)
+
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+index d9054dfa3..9d03dc0f3 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -2858,8 +2858,10 @@ void dw_hdmi_qp_cec_set_hpd(struct dw_hdmi_qp *hdmi, bool plug_in, bool change)
+ 					   CEC_PHYS_ADDR_INVALID);
+ 
+ 	if (hdmi->bridge.dev) {
++#if IS_REACHABLE(CONFIG_CEC_CORE)
+ 		if (change && hdmi->cec_adap && hdmi->cec_adap->devnode.registered)
+ 			cec_queue_pin_hpd_event(hdmi->cec_adap, plug_in, ktime_get());
++#endif
+ 		drm_bridge_hpd_notify(&hdmi->bridge, status);
+ 	}
+ }
+diff --git a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+index ddcfdc7c4..3d72d9d07 100644
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+@@ -423,12 +423,13 @@ static void repo_hpd_event(struct work_struct *p_work)
+ 		bool change;
+ 
+ 		change = drm_helper_hpd_irq_event(hdmi->bridge.dev);
+-
++#if IS_REACHABLE(CONFIG_CEC_CORE)
+ 		if (change && hdmi->cec_adap &&
+ 		    hdmi->cec_adap->devnode.registered)
+ 			cec_queue_pin_hpd_event(hdmi->cec_adap,
+ 						hdmi->hpd_state,
+ 						ktime_get());
++#endif
+ 		drm_bridge_hpd_notify(&hdmi->bridge, status);
+ 	}
+ }
+diff --git a/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c b/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
+index 084e19192..5c8b3b872 100644
+--- a/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi-rockchip.c
+@@ -3781,7 +3781,8 @@ static void dw_hdmi_rockchip_shutdown(struct platform_device *pdev)
+ 		if (hdmi->hpd_irq)
+ 			disable_irq(hdmi->hpd_irq);
+ 		cancel_delayed_work(&hdmi->work);
+-		flush_workqueue(hdmi->workqueue);
++		if (hdmi->workqueue)
++			flush_workqueue(hdmi->workqueue);
+ 		dw_hdmi_qp_suspend(hdmi->dev, hdmi->hdmi_qp);
+ 	} else {
+ 		if (hdmi->hpd_gpiod) {
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_logo.c b/drivers/gpu/drm/rockchip/rockchip_drm_logo.c
+index 3a19a69a5..c5599fc15 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_logo.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_logo.c
+@@ -203,8 +203,9 @@ void rockchip_free_loader_memory(struct drm_device *drm)
+ 		iommu_unmap(private->domain, logo->dma_addr, ALIGN(logo->size, pg_size));
+ 		rockchip_drm_release_reserve_vm(drm, &logo->logo_reserved_node);
+ 	}
+-
++#ifndef MODULE
+ 	memblock_free(logo->start, logo->size);
++#endif
+ 	rockchip_drm_free_reserved_area(logo->dma_addr, logo->dma_addr + logo->size,
+ 					-1, "drm_logo");
+ 	kfree(logo);
+diff --git a/include/sound/hdmi-codec.h b/include/sound/hdmi-codec.h
+index b55970859..4fc733c8c 100644
+--- a/include/sound/hdmi-codec.h
++++ b/include/sound/hdmi-codec.h
+@@ -34,6 +34,11 @@ struct hdmi_codec_daifmt {
+ 	unsigned int frame_clk_inv:1;
+ 	unsigned int bit_clk_master:1;
+ 	unsigned int frame_clk_master:1;
++	/* bit_fmt could be standard PCM format or
++	 * IEC958 encoded format. ALSA IEC958 plugin will pass
++	 * IEC958_SUBFRAME format to the underneath driver.
++	 */
++	snd_pcm_format_t bit_fmt;
+ };
+ 
+ /*
+@@ -60,12 +65,22 @@ struct hdmi_codec_ops {
+ 
+ 	/*
+ 	 * Configures HDMI-encoder for audio stream.
+-	 * Mandatory
++	 * Having either prepare or hw_params is mandatory.
+ 	 */
+ 	int (*hw_params)(struct device *dev, void *data,
+ 			 struct hdmi_codec_daifmt *fmt,
+ 			 struct hdmi_codec_params *hparms);
+ 
++	/*
++	 * Configures HDMI-encoder for audio stream. Can be called
++	 * multiple times for each setup.
++	 *
++	 * Having either prepare or hw_params is mandatory.
++	 */
++	int (*prepare)(struct device *dev, void *data,
++		       struct hdmi_codec_daifmt *fmt,
++		       struct hdmi_codec_params *hparms);
++
+ 	/*
+ 	 * Shuts down the audio stream.
+ 	 * Mandatory
+diff --git a/include/sound/pcm_iec958.h b/include/sound/pcm_iec958.h
+index 0939aa45e..64e84441c 100644
+--- a/include/sound/pcm_iec958.h
++++ b/include/sound/pcm_iec958.h
+@@ -4,6 +4,14 @@
+ 
+ #include <linux/types.h>
+ 
++int snd_pcm_create_iec958_consumer_default(u8 *cs, size_t len);
++
++int snd_pcm_fill_iec958_consumer(struct snd_pcm_runtime *runtime, u8 *cs,
++				 size_t len);
++
++int snd_pcm_fill_iec958_consumer_hw_params(struct snd_pcm_hw_params *params,
++					   u8 *cs, size_t len);
++
+ int snd_pcm_create_iec958_consumer(struct snd_pcm_runtime *runtime, u8 *cs,
+ 	size_t len);
+ 
+diff --git a/include/uapi/linux/cec.h b/include/uapi/linux/cec.h
+index 7d1a06c52..ebbcb9b01 100644
+--- a/include/uapi/linux/cec.h
++++ b/include/uapi/linux/cec.h
+@@ -516,6 +516,12 @@ struct cec_event {
+ /* Get the connector info */
+ #define CEC_ADAP_G_CONNECTOR_INFO _IOR('a',  10, struct cec_connector_info)
+ 
++/* set cec into standby mode */
++#define CEC_STANDBY		_IOW('a', 10, __u8)
++
++/* set cec wake up function enable */
++#define CEC_FUNC_EN		_IOW('a', 11, int)
++
+ /*
+  * The remainder of this header defines all CEC messages and operands.
+  * The format matters since it the cec-ctl utility parses it to generate
+diff --git a/sound/core/pcm_iec958.c b/sound/core/pcm_iec958.c
+index f9a211cc1..7a1b816f6 100644
+--- a/sound/core/pcm_iec958.c
++++ b/sound/core/pcm_iec958.c
+@@ -9,41 +9,85 @@
+ #include <sound/pcm_params.h>
+ #include <sound/pcm_iec958.h>
+ 
+-static int create_iec958_consumer(uint rate, uint sample_width,
+-				  u8 *cs, size_t len)
++/**
++ * snd_pcm_create_iec958_consumer_default - create default consumer format IEC958 channel status
++ * @cs: channel status buffer, at least four bytes
++ * @len: length of channel status buffer
++ *
++ * Create the consumer format channel status data in @cs of maximum size
++ * @len. When relevant, the configuration-dependant bits will be set as
++ * unspecified.
++ *
++ * Drivers should then call einter snd_pcm_fill_iec958_consumer() or
++ * snd_pcm_fill_iec958_consumer_hw_params() to replace these unspecified
++ * bits by their actual values.
++ *
++ * Drivers may wish to tweak the contents of the buffer after creation.
++ *
++ * Returns: length of buffer, or negative error code if something failed.
++ */
++int snd_pcm_create_iec958_consumer_default(u8 *cs, size_t len)
+ {
+-	unsigned int fs, ws;
+-
+ 	if (len < 4)
+ 		return -EINVAL;
+ 
+-	switch (rate) {
+-	case 32000:
+-		fs = IEC958_AES3_CON_FS_32000;
+-		break;
+-	case 44100:
+-		fs = IEC958_AES3_CON_FS_44100;
+-		break;
+-	case 48000:
+-		fs = IEC958_AES3_CON_FS_48000;
+-		break;
+-	case 88200:
+-		fs = IEC958_AES3_CON_FS_88200;
+-		break;
+-	case 96000:
+-		fs = IEC958_AES3_CON_FS_96000;
+-		break;
+-	case 176400:
+-		fs = IEC958_AES3_CON_FS_176400;
+-		break;
+-	case 192000:
+-		fs = IEC958_AES3_CON_FS_192000;
+-		break;
+-	default:
++	memset(cs, 0, len);
++
++	cs[0] = IEC958_AES0_CON_NOT_COPYRIGHT | IEC958_AES0_CON_EMPHASIS_NONE;
++	cs[1] = IEC958_AES1_CON_GENERAL;
++	cs[2] = IEC958_AES2_CON_SOURCE_UNSPEC | IEC958_AES2_CON_CHANNEL_UNSPEC;
++	cs[3] = IEC958_AES3_CON_CLOCK_1000PPM | IEC958_AES3_CON_FS_NOTID;
++
++	if (len > 4)
++		cs[4] = IEC958_AES4_CON_WORDLEN_NOTID;
++
++	return len;
++}
++EXPORT_SYMBOL_GPL(snd_pcm_create_iec958_consumer_default);
++
++static int fill_iec958_consumer(uint rate, uint sample_width,
++				u8 *cs, size_t len)
++{
++	if (len < 4)
+ 		return -EINVAL;
++
++	if ((cs[3] & IEC958_AES3_CON_FS) == IEC958_AES3_CON_FS_NOTID) {
++		unsigned int fs;
++
++		switch (rate) {
++			case 32000:
++				fs = IEC958_AES3_CON_FS_32000;
++				break;
++			case 44100:
++				fs = IEC958_AES3_CON_FS_44100;
++				break;
++			case 48000:
++				fs = IEC958_AES3_CON_FS_48000;
++				break;
++			case 88200:
++				fs = IEC958_AES3_CON_FS_88200;
++				break;
++			case 96000:
++				fs = IEC958_AES3_CON_FS_96000;
++				break;
++			case 176400:
++				fs = IEC958_AES3_CON_FS_176400;
++				break;
++			case 192000:
++				fs = IEC958_AES3_CON_FS_192000;
++				break;
++			default:
++				return -EINVAL;
++		}
++
++		cs[3] &= ~IEC958_AES3_CON_FS;
++		cs[3] |= fs;
+ 	}
+ 
+-	if (len > 4) {
++	if (len > 4 &&
++	    (cs[4] & IEC958_AES4_CON_WORDLEN) == IEC958_AES4_CON_WORDLEN_NOTID) {
++		unsigned int ws;
++
+ 		switch (sample_width) {
+ 		case 16:
+ 			ws = IEC958_AES4_CON_WORDLEN_20_16;
+@@ -64,20 +108,57 @@ static int create_iec958_consumer(uint rate, uint sample_width,
+ 		default:
+ 			return -EINVAL;
+ 		}
+-	}
+ 
+-	memset(cs, 0, len);
++		cs[4] &= ~IEC958_AES4_CON_WORDLEN;
++		cs[4] |= ws;
++	}
+ 
+-	cs[0] = IEC958_AES0_CON_NOT_COPYRIGHT | IEC958_AES0_CON_EMPHASIS_NONE;
+-	cs[1] = IEC958_AES1_CON_GENERAL;
+-	cs[2] = IEC958_AES2_CON_SOURCE_UNSPEC | IEC958_AES2_CON_CHANNEL_UNSPEC;
+-	cs[3] = IEC958_AES3_CON_CLOCK_1000PPM | fs;
++	return len;
++}
+ 
+-	if (len > 4)
+-		cs[4] = ws;
++/**
++ * snd_pcm_fill_iec958_consumer - Fill consumer format IEC958 channel status
++ * @runtime: pcm runtime structure with ->rate filled in
++ * @cs: channel status buffer, at least four bytes
++ * @len: length of channel status buffer
++ *
++ * Fill the unspecified bits in an IEC958 status bits array using the
++ * parameters of the PCM runtime @runtime.
++ *
++ * Drivers may wish to tweak the contents of the buffer after its been
++ * filled.
++ *
++ * Returns: length of buffer, or negative error code if something failed.
++ */
++int snd_pcm_fill_iec958_consumer(struct snd_pcm_runtime *runtime,
++				 u8 *cs, size_t len)
++{
++	return fill_iec958_consumer(runtime->rate,
++				    snd_pcm_format_width(runtime->format),
++				    cs, len);
++}
++EXPORT_SYMBOL_GPL(snd_pcm_fill_iec958_consumer);
+ 
+-	return len;
++/**
++ * snd_pcm_fill_iec958_consumer_hw_params - Fill consumer format IEC958 channel status
++ * @params: the hw_params instance for extracting rate and sample format
++ * @cs: channel status buffer, at least four bytes
++ * @len: length of channel status buffer
++ *
++ * Fill the unspecified bits in an IEC958 status bits array using the
++ * parameters of the PCM hardware parameters @params.
++ *
++ * Drivers may wish to tweak the contents of the buffer after its been
++ * filled..
++ *
++ * Returns: length of buffer, or negative error code if something failed.
++ */
++int snd_pcm_fill_iec958_consumer_hw_params(struct snd_pcm_hw_params *params,
++					   u8 *cs, size_t len)
++{
++	return fill_iec958_consumer(params_rate(params), params_width(params), cs, len);
+ }
++EXPORT_SYMBOL_GPL(snd_pcm_fill_iec958_consumer_hw_params);
+ 
+ /**
+  * snd_pcm_create_iec958_consumer - create consumer format IEC958 channel status
+@@ -95,9 +176,13 @@ static int create_iec958_consumer(uint rate, uint sample_width,
+ int snd_pcm_create_iec958_consumer(struct snd_pcm_runtime *runtime, u8 *cs,
+ 	size_t len)
+ {
+-	return create_iec958_consumer(runtime->rate,
+-				      snd_pcm_format_width(runtime->format),
+-				      cs, len);
++	int ret;
++
++	ret = snd_pcm_create_iec958_consumer_default(cs, len);
++	if (ret < 0)
++		return ret;
++
++	return snd_pcm_fill_iec958_consumer(runtime, cs, len);
+ }
+ EXPORT_SYMBOL(snd_pcm_create_iec958_consumer);
+ 
+@@ -117,7 +202,12 @@ EXPORT_SYMBOL(snd_pcm_create_iec958_consumer);
+ int snd_pcm_create_iec958_consumer_hw_params(struct snd_pcm_hw_params *params,
+ 					     u8 *cs, size_t len)
+ {
+-	return create_iec958_consumer(params_rate(params), params_width(params),
+-				      cs, len);
++	int ret;
++
++	ret = snd_pcm_create_iec958_consumer_default(cs, len);
++	if (ret < 0)
++		return ret;
++
++	return fill_iec958_consumer(params_rate(params), params_width(params), cs, len);
+ }
+ EXPORT_SYMBOL(snd_pcm_create_iec958_consumer_hw_params);
+diff --git a/sound/soc/codecs/hdmi-codec.c b/sound/soc/codecs/hdmi-codec.c
+index 403d4c6a4..4d3725ba4 100644
+--- a/sound/soc/codecs/hdmi-codec.c
++++ b/sound/soc/codecs/hdmi-codec.c
+@@ -22,7 +22,6 @@
+ 
+ struct hdmi_codec_channel_map_table {
+ 	unsigned char map;	/* ALSA API channel map position */
+-	unsigned long spk_mask;		/* speaker position bit mask */
+ };
+ 
+ /*
+@@ -276,12 +275,16 @@ struct hdmi_codec_priv {
+ 	unsigned int chmap_idx;
+ 	struct mutex lock;
+ 	bool busy;
++	bool eld_bypass;
+ 	struct snd_soc_jack *jack;
+ 	unsigned int jack_status;
++	u8 iec_status[24];
++	struct snd_pcm_substream *substream;
+ };
+ 
+ static const struct snd_soc_dapm_widget hdmi_widgets[] = {
+ 	SND_SOC_DAPM_OUTPUT("TX"),
++	SND_SOC_DAPM_OUTPUT("RX"),
+ };
+ 
+ enum {
+@@ -349,6 +352,9 @@ static int hdmi_codec_get_ch_alloc_table_idx(struct hdmi_codec_priv *hcp,
+ 	unsigned long spk_mask;
+ 	const struct hdmi_codec_cea_spk_alloc *cap = hdmi_codec_channel_alloc;
+ 
++	if (hcp->eld_bypass)
++		return 0;
++
+ 	spk_alloc = drm_eld_get_spk_alloc(hcp->eld);
+ 	spk_mask = hdmi_codec_spk_mask_from_alloc(spk_alloc);
+ 
+@@ -385,10 +391,77 @@ static int hdmi_codec_chmap_ctl_get(struct snd_kcontrol *kcontrol,
+ 	return 0;
+ }
+ 
++static int hdmi_codec_iec958_info(struct snd_kcontrol *kcontrol,
++				  struct snd_ctl_elem_info *uinfo)
++{
++	uinfo->type = SNDRV_CTL_ELEM_TYPE_IEC958;
++	uinfo->count = 1;
++	return 0;
++}
++
++static int hdmi_codec_iec958_default_get(struct snd_kcontrol *kcontrol,
++					 struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct hdmi_codec_priv *hcp = snd_soc_component_get_drvdata(component);
++
++	memcpy(ucontrol->value.iec958.status, hcp->iec_status,
++	       sizeof(hcp->iec_status));
++
++	return 0;
++}
++
++static int hdmi_codec_iec958_default_put(struct snd_kcontrol *kcontrol,
++					 struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct hdmi_codec_priv *hcp = snd_soc_component_get_drvdata(component);
++
++	memcpy(hcp->iec_status, ucontrol->value.iec958.status,
++	       sizeof(hcp->iec_status));
++
++	return 0;
++}
++
++static int hdmi_codec_iec958_mask_get(struct snd_kcontrol *kcontrol,
++				      struct snd_ctl_elem_value *ucontrol)
++{
++	memset(ucontrol->value.iec958.status, 0xff,
++	       sizeof_field(struct hdmi_codec_priv, iec_status));
++
++	return 0;
++}
++
++static int hdmi_codec_eld_bypass_get(struct snd_kcontrol *kcontrol,
++				     struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct hdmi_codec_priv *hcp = snd_soc_component_get_drvdata(component);
++
++	ucontrol->value.integer.value[0] = hcp->eld_bypass;
++
++	return 0;
++}
++
++static int hdmi_codec_eld_bypass_put(struct snd_kcontrol *kcontrol,
++				     struct snd_ctl_elem_value *ucontrol)
++{
++	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
++	struct hdmi_codec_priv *hcp = snd_soc_component_get_drvdata(component);
++
++	if (hcp->eld_bypass == ucontrol->value.integer.value[0])
++		return 0;
++
++	hcp->eld_bypass = ucontrol->value.integer.value[0];
++
++	return 1;
++}
++
+ static int hdmi_codec_startup(struct snd_pcm_substream *substream,
+ 			      struct snd_soc_dai *dai)
+ {
+ 	struct hdmi_codec_priv *hcp = snd_soc_dai_get_drvdata(dai);
++	bool tx = substream->stream == SNDRV_PCM_STREAM_PLAYBACK;
+ 	int ret = 0;
+ 
+ 	mutex_lock(&hcp->lock);
+@@ -404,7 +477,7 @@ static int hdmi_codec_startup(struct snd_pcm_substream *substream,
+ 			goto err;
+ 	}
+ 
+-	if (hcp->hcd.ops->get_eld) {
++	if (tx && !hcp->eld_bypass && hcp->hcd.ops->get_eld) {
+ 		ret = hcp->hcd.ops->get_eld(dai->dev->parent, hcp->hcd.data,
+ 					    hcp->eld, sizeof(hcp->eld));
+ 		if (ret)
+@@ -419,6 +492,7 @@ static int hdmi_codec_startup(struct snd_pcm_substream *substream,
+ 	}
+ 
+ 	hcp->busy = true;
++	hcp->substream = substream;
+ 
+ err:
+ 	mutex_unlock(&hcp->lock);
+@@ -434,10 +508,47 @@ static void hdmi_codec_shutdown(struct snd_pcm_substream *substream,
+ 	hcp->hcd.ops->audio_shutdown(dai->dev->parent, hcp->hcd.data);
+ 
+ 	mutex_lock(&hcp->lock);
++	hcp->substream = NULL;
+ 	hcp->busy = false;
+ 	mutex_unlock(&hcp->lock);
+ }
+ 
++static int hdmi_codec_fill_codec_params(struct snd_soc_dai *dai,
++					unsigned int sample_width,
++					unsigned int sample_rate,
++					unsigned int channels,
++					struct hdmi_codec_params *hp)
++{
++	struct hdmi_codec_priv *hcp = snd_soc_dai_get_drvdata(dai);
++	int idx;
++
++	/* Select a channel allocation that matches with ELD and pcm channels */
++	idx = hdmi_codec_get_ch_alloc_table_idx(hcp, channels);
++	if (idx < 0) {
++		dev_err(dai->dev, "Not able to map channels to speakers (%d)\n",
++			idx);
++		hcp->chmap_idx = HDMI_CODEC_CHMAP_IDX_UNKNOWN;
++		return idx;
++	}
++
++	memset(hp, 0, sizeof(*hp));
++
++	hdmi_audio_infoframe_init(&hp->cea);
++	hp->cea.channels = channels;
++	hp->cea.coding_type = HDMI_AUDIO_CODING_TYPE_STREAM;
++	hp->cea.sample_size = HDMI_AUDIO_SAMPLE_SIZE_STREAM;
++	hp->cea.sample_frequency = HDMI_AUDIO_SAMPLE_FREQUENCY_STREAM;
++	hp->cea.channel_allocation = hdmi_codec_channel_alloc[idx].ca_id;
++
++	hp->sample_width = sample_width;
++	hp->sample_rate = sample_rate;
++	hp->channels = channels;
++
++	hcp->chmap_idx = hdmi_codec_channel_alloc[idx].ca_id;
++
++	return 0;
++}
++
+ static int hdmi_codec_hw_params(struct snd_pcm_substream *substream,
+ 				struct snd_pcm_hw_params *params,
+ 				struct snd_soc_dai *dai)
+@@ -452,43 +563,71 @@ static int hdmi_codec_hw_params(struct snd_pcm_substream *substream,
+ 			.dig_subframe = { 0 },
+ 		}
+ 	};
+-	int ret, idx;
++	int ret;
++
++	if (!hcp->hcd.ops->hw_params)
++		return 0;
+ 
+ 	dev_dbg(dai->dev, "%s() width %d rate %d channels %d\n", __func__,
+ 		params_width(params), params_rate(params),
+ 		params_channels(params));
+ 
+-	ret = snd_pcm_create_iec958_consumer_hw_params(params, hp.iec.status,
+-						       sizeof(hp.iec.status));
++	ret = hdmi_codec_fill_codec_params(dai,
++					   params_width(params),
++					   params_rate(params),
++					   params_channels(params),
++					   &hp);
++	if (ret < 0)
++		return ret;
++
++	memcpy(hp.iec.status, hcp->iec_status, sizeof(hp.iec.status));
++	ret = snd_pcm_fill_iec958_consumer_hw_params(params, hp.iec.status,
++						     sizeof(hp.iec.status));
+ 	if (ret < 0) {
+ 		dev_err(dai->dev, "Creating IEC958 channel status failed %d\n",
+ 			ret);
+ 		return ret;
+ 	}
+ 
+-	hdmi_audio_infoframe_init(&hp.cea);
+-	hp.cea.channels = params_channels(params);
+-	hp.cea.coding_type = HDMI_AUDIO_CODING_TYPE_STREAM;
+-	hp.cea.sample_size = HDMI_AUDIO_SAMPLE_SIZE_STREAM;
+-	hp.cea.sample_frequency = HDMI_AUDIO_SAMPLE_FREQUENCY_STREAM;
++	cf->bit_fmt = params_format(params);
++	return hcp->hcd.ops->hw_params(dai->dev->parent, hcp->hcd.data,
++				       cf, &hp);
++}
+ 
+-	/* Select a channel allocation that matches with ELD and pcm channels */
+-	idx = hdmi_codec_get_ch_alloc_table_idx(hcp, hp.cea.channels);
+-	if (idx < 0) {
+-		dev_err(dai->dev, "Not able to map channels to speakers (%d)\n",
+-			idx);
+-		hcp->chmap_idx = HDMI_CODEC_CHMAP_IDX_UNKNOWN;
+-		return idx;
+-	}
+-	hp.cea.channel_allocation = hdmi_codec_channel_alloc[idx].ca_id;
+-	hcp->chmap_idx = hdmi_codec_channel_alloc[idx].ca_id;
++static int hdmi_codec_prepare(struct snd_pcm_substream *substream,
++			      struct snd_soc_dai *dai)
++{
++	struct hdmi_codec_priv *hcp = snd_soc_dai_get_drvdata(dai);
++	struct hdmi_codec_daifmt *cf = dai->playback_dma_data;
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	unsigned int channels = runtime->channels;
++	unsigned int width = snd_pcm_format_width(runtime->format);
++	unsigned int rate = runtime->rate;
++	struct hdmi_codec_params hp;
++	int ret;
+ 
+-	hp.sample_width = params_width(params);
+-	hp.sample_rate = params_rate(params);
+-	hp.channels = params_channels(params);
++	if (!hcp->hcd.ops->prepare)
++		return 0;
+ 
+-	return hcp->hcd.ops->hw_params(dai->dev->parent, hcp->hcd.data,
+-				       cf, &hp);
++	dev_dbg(dai->dev, "%s() width %d rate %d channels %d\n", __func__,
++		width, rate, channels);
++
++	ret = hdmi_codec_fill_codec_params(dai, width, rate, channels, &hp);
++	if (ret < 0)
++		return ret;
++
++	memcpy(hp.iec.status, hcp->iec_status, sizeof(hp.iec.status));
++	ret = snd_pcm_fill_iec958_consumer(runtime, hp.iec.status,
++					   sizeof(hp.iec.status));
++	if (ret < 0) {
++		dev_err(dai->dev, "Creating IEC958 channel status failed %d\n",
++			ret);
++		return ret;
++	}
++
++	cf->bit_fmt = runtime->format;
++	return hcp->hcd.ops->prepare(dai->dev->parent, hcp->hcd.data,
++				     cf, &hp);
+ }
+ 
+ static int hdmi_codec_i2s_set_fmt(struct snd_soc_dai *dai,
+@@ -582,6 +721,7 @@ static const struct snd_soc_dai_ops hdmi_codec_i2s_dai_ops = {
+ 	.startup	= hdmi_codec_startup,
+ 	.shutdown	= hdmi_codec_shutdown,
+ 	.hw_params	= hdmi_codec_hw_params,
++	.prepare	= hdmi_codec_prepare,
+ 	.set_fmt	= hdmi_codec_i2s_set_fmt,
+ 	.mute_stream	= hdmi_codec_mute,
+ };
+@@ -615,23 +755,42 @@ static const struct snd_soc_dai_ops hdmi_codec_spdif_dai_ops = {
+ 			 SNDRV_PCM_FMTBIT_S20_3LE | SNDRV_PCM_FMTBIT_S20_3BE |\
+ 			 SNDRV_PCM_FMTBIT_S24_3LE | SNDRV_PCM_FMTBIT_S24_3BE |\
+ 			 SNDRV_PCM_FMTBIT_S24_LE | SNDRV_PCM_FMTBIT_S24_BE |\
+-			 SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE)
++			 SNDRV_PCM_FMTBIT_S32_LE | SNDRV_PCM_FMTBIT_S32_BE |\
++			 SNDRV_PCM_FMTBIT_IEC958_SUBFRAME_LE)
++
++static struct snd_kcontrol_new hdmi_codec_controls[] = {
++	{
++		.access = SNDRV_CTL_ELEM_ACCESS_READ,
++		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
++		.name = SNDRV_CTL_NAME_IEC958("", PLAYBACK, MASK),
++		.info = hdmi_codec_iec958_info,
++		.get = hdmi_codec_iec958_mask_get,
++	},
++	{
++		.iface = SNDRV_CTL_ELEM_IFACE_PCM,
++		.name = SNDRV_CTL_NAME_IEC958("", PLAYBACK, DEFAULT),
++		.info = hdmi_codec_iec958_info,
++		.get = hdmi_codec_iec958_default_get,
++		.put = hdmi_codec_iec958_default_put,
++	},
++	{
++		.access	= (SNDRV_CTL_ELEM_ACCESS_READ |
++			   SNDRV_CTL_ELEM_ACCESS_VOLATILE),
++		.iface	= SNDRV_CTL_ELEM_IFACE_PCM,
++		.name	= "ELD",
++		.info	= hdmi_eld_ctl_info,
++		.get	= hdmi_eld_ctl_get,
++	},
++	SOC_SINGLE_BOOL_EXT("ELD Bypass Switch", 0,
++			    hdmi_codec_eld_bypass_get, hdmi_codec_eld_bypass_put),
++};
+ 
+ static int hdmi_codec_pcm_new(struct snd_soc_pcm_runtime *rtd,
+ 			      struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_dai_driver *drv = dai->driver;
+ 	struct hdmi_codec_priv *hcp = snd_soc_dai_get_drvdata(dai);
+-	struct snd_kcontrol *kctl;
+-	struct snd_kcontrol_new hdmi_eld_ctl = {
+-		.access	= SNDRV_CTL_ELEM_ACCESS_READ |
+-			  SNDRV_CTL_ELEM_ACCESS_VOLATILE,
+-		.iface	= SNDRV_CTL_ELEM_IFACE_PCM,
+-		.name	= "ELD",
+-		.info	= hdmi_eld_ctl_info,
+-		.get	= hdmi_eld_ctl_get,
+-		.device	= rtd->pcm->device,
+-	};
++	unsigned int i;
+ 	int ret;
+ 
+ 	ret =  snd_pcm_add_chmap_ctls(rtd->pcm, SNDRV_PCM_STREAM_PLAYBACK,
+@@ -648,26 +807,41 @@ static int hdmi_codec_pcm_new(struct snd_soc_pcm_runtime *rtd,
+ 	hcp->chmap_info->chmap = hdmi_codec_stereo_chmaps;
+ 	hcp->chmap_idx = HDMI_CODEC_CHMAP_IDX_UNKNOWN;
+ 
+-	/* add ELD ctl with the device number corresponding to the PCM stream */
+-	kctl = snd_ctl_new1(&hdmi_eld_ctl, dai->component);
+-	if (!kctl)
+-		return -ENOMEM;
++	for (i = 0; i < ARRAY_SIZE(hdmi_codec_controls); i++) {
++		struct snd_kcontrol *kctl;
+ 
+-	return snd_ctl_add(rtd->card->snd_card, kctl);
++		/* add ELD ctl with the device number corresponding to the PCM stream */
++		kctl = snd_ctl_new1(&hdmi_codec_controls[i], dai->component);
++		if (!kctl)
++			return -ENOMEM;
++
++		kctl->id.device = rtd->pcm->device;
++		ret = snd_ctl_add(rtd->card->snd_card, kctl);
++		if (ret < 0)
++			return ret;
++	}
++
++	return 0;
+ }
+ 
+ static int hdmi_dai_probe(struct snd_soc_dai *dai)
+ {
+ 	struct snd_soc_dapm_context *dapm;
+ 	struct hdmi_codec_daifmt *daifmt;
+-	struct snd_soc_dapm_route route = {
+-		.sink = "TX",
+-		.source = dai->driver->playback.stream_name,
++	struct snd_soc_dapm_route route[] = {
++		{
++			.sink = "TX",
++			.source = dai->driver->playback.stream_name,
++		},
++		{
++			.sink = dai->driver->capture.stream_name,
++			.source = "RX",
++		},
+ 	};
+ 	int ret;
+ 
+ 	dapm = snd_soc_component_get_dapm(dai->component);
+-	ret = snd_soc_dapm_add_routes(dapm, &route, 1);
++	ret = snd_soc_dapm_add_routes(dapm, route, 2);
+ 	if (ret)
+ 		return ret;
+ 
+@@ -692,10 +866,49 @@ static void plugged_cb(struct device *dev, bool plugged)
+ {
+ 	struct hdmi_codec_priv *hcp = dev_get_drvdata(dev);
+ 
+-	if (plugged)
++	if (plugged) {
++		if (!hcp->eld_bypass && hcp->hcd.ops->get_eld) {
++			hcp->hcd.ops->get_eld(dev->parent, hcp->hcd.data,
++					    hcp->eld, sizeof(hcp->eld));
++		}
+ 		hdmi_codec_jack_report(hcp, SND_JACK_LINEOUT);
+-	else
++	} else {
+ 		hdmi_codec_jack_report(hcp, 0);
++		memset(hcp->eld, 0, sizeof(hcp->eld));
++	}
++
++	mutex_lock(&hcp->lock);
++	if (hcp->substream) {
++		/*
++		 * Workaround for HDMIIN and HDMIOUT plug-{in,out} when streaming.
++		 *
++		 * Actually, we should do stop stream both for HDMI_{OUT,IN} on
++		 * plug-{out,in} event. but for better experience and depop stream,
++		 * we optimize as follows:
++		 *
++		 * a) Do stop stream for HDMIIN on plug-out when streaming.
++		 * because HDMIIN work as SLAVE mode, CLK lost after HDMI cable
++		 * plugged out which will make stream stuck until ALSA timeout(10s).
++		 * so, for better experience, we should stop stream at the moment.
++		 *
++		 * b) Do stop stream for HDMIOUT on plug-in when streaming.
++		 * because HDMIOUT work as MASTER mode, there is no clk-issue like
++		 * HDMIIN, but, on HDR situation, HDMI will be reconfigured which
++		 * make HDMI audio configure lost, especially for NLPCM/HBR bitstream
++		 * which require IEC937 packet alignment, so, for this situation,
++		 * we stop stream to notify user to re-open and configure sound card
++		 * and then go on streaming.
++		 */
++		int stream = hcp->substream->stream;
++
++		if (stream == SNDRV_PCM_STREAM_PLAYBACK && plugged)
++			snd_pcm_stop(hcp->substream, SNDRV_PCM_STATE_SETUP);
++		else if (stream == SNDRV_PCM_STREAM_CAPTURE && !plugged)
++			snd_pcm_stop(hcp->substream, SNDRV_PCM_STATE_DISCONNECTED);
++
++		dev_dbg(dev, "stream[%d]: %s\n", stream, plugged ? "plug in" : "plug out");
++	}
++	mutex_unlock(&hcp->lock);
+ }
+ 
+ static int hdmi_codec_set_jack(struct snd_soc_component *component,
+@@ -703,7 +916,7 @@ static int hdmi_codec_set_jack(struct snd_soc_component *component,
+ 			       void *data)
+ {
+ 	struct hdmi_codec_priv *hcp = snd_soc_component_get_drvdata(component);
+-	int ret = -EOPNOTSUPP;
++	int ret = -ENOTSUPP;
+ 
+ 	if (hcp->hcd.ops->hook_plugged_cb) {
+ 		hcp->jack = jack;
+@@ -719,7 +932,7 @@ static int hdmi_codec_set_jack(struct snd_soc_component *component,
+ 
+ static int hdmi_dai_spdif_probe(struct snd_soc_dai *dai)
+ {
+-	struct hdmi_codec_daifmt *cf = dai->playback_dma_data;
++	struct hdmi_codec_daifmt *cf;
+ 	int ret;
+ 
+ 	ret = hdmi_dai_probe(dai);
+@@ -751,6 +964,14 @@ static const struct snd_soc_dai_driver hdmi_i2s_dai = {
+ 		.formats = I2S_FORMATS,
+ 		.sig_bits = 24,
+ 	},
++	.capture = {
++		.stream_name = "Capture",
++		.channels_min = 2,
++		.channels_max = 8,
++		.rates = HDMI_RATES,
++		.formats = I2S_FORMATS,
++		.sig_bits = 24,
++	},
+ 	.ops = &hdmi_codec_i2s_dai_ops,
+ 	.pcm_new = hdmi_codec_pcm_new,
+ };
+@@ -767,6 +988,13 @@ static const struct snd_soc_dai_driver hdmi_spdif_dai = {
+ 		.rates = HDMI_RATES,
+ 		.formats = SPDIF_FORMATS,
+ 	},
++	.capture = {
++		.stream_name = "Capture",
++		.channels_min = 2,
++		.channels_max = 2,
++		.rates = HDMI_RATES,
++		.formats = SPDIF_FORMATS,
++	},
+ 	.ops = &hdmi_codec_spdif_dai_ops,
+ 	.pcm_new = hdmi_codec_pcm_new,
+ };
+@@ -819,7 +1047,8 @@ static int hdmi_codec_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	dai_count = hcd->i2s + hcd->spdif;
+-	if (dai_count < 1 || !hcd->ops || !hcd->ops->hw_params ||
++	if (dai_count < 1 || !hcd->ops ||
++	    (!hcd->ops->hw_params && !hcd->ops->prepare) ||
+ 	    !hcd->ops->audio_shutdown) {
+ 		dev_err(dev, "%s: Invalid parameters\n", __func__);
+ 		return -EINVAL;
+@@ -832,6 +1061,11 @@ static int hdmi_codec_probe(struct platform_device *pdev)
+ 	hcp->hcd = *hcd;
+ 	mutex_init(&hcp->lock);
+ 
++	ret = snd_pcm_create_iec958_consumer_default(hcp->iec_status,
++						     sizeof(hcp->iec_status));
++	if (ret < 0)
++		return ret;
++
+ 	daidrv = devm_kcalloc(dev, dai_count, sizeof(*daidrv), GFP_KERNEL);
+ 	if (!daidrv)
+ 		return -ENOMEM;
+-- 
+2.31.0
+
