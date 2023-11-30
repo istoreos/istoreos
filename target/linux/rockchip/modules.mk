@@ -1,12 +1,14 @@
 
 define KernelPackage/drm-rockchip-rk35xx
   SUBMENU:=$(VIDEO_MENU)
-  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-drm
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-drm +kmod-drm-kms-helper
   TITLE:=DRM for rockchip RK35xx
   KCONFIG:=\
 	CONFIG_DRM_ROCKCHIP \
 	CONFIG_DRM_DW_HDMI \
 	CONFIG_DRM_DW_HDMI_CEC \
+	CONFIG_DRM_FBDEV_EMULATION=y \
+	CONFIG_DRM_FBDEV_OVERALLOC=100 \
 	CONFIG_ROCKCHIP_VOP2=y
   FILES:=\
 	$(LINUX_DIR)/drivers/gpu/drm/rockchip/rockchipdrm.ko \
