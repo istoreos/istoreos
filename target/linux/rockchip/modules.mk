@@ -66,3 +66,23 @@ define KernelPackage/drm-rockchip-rk35xx-vvop/description
 endef
 
 $(eval $(call KernelPackage,drm-rockchip-rk35xx-vvop))
+
+
+define KernelPackage/rknpu
+  SUBMENU:=$(OTHER_MENU)
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-drm
+  TITLE:=Rockchip RKNPU driver
+  KCONFIG:=\
+	CONFIG_ROCKCHIP_RKNPU \
+	CONFIG_ROCKCHIP_RKNPU_DEBUG_FS=y \
+	CONFIG_ROCKCHIP_RKNPU_DRM_GEM=y \
+	CONFIG_ROCKCHIP_RKNPU_FENCE=y
+  FILES:=$(LINUX_DIR)/drivers/rknpu/rknpu.ko
+  AUTOLOAD:=$(call AutoProbe,rknpu)
+endef
+
+define KernelPackage/rknpu/description
+  Support Rockchip RKNPU
+endef
+
+$(eval $(call KernelPackage,rknpu))
