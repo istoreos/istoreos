@@ -261,24 +261,26 @@
 };
 
 &gmac {
+	phy-handle = <&rtl8201f>;
+	phy-mode = "rmii";
 	phy-supply = <&vcc_phy>;
 	clock_in_out = "input";
 	assigned-clocks = <&cru SCLK_MAC>;
 	assigned-clock-parents = <&ext_gmac>;
 	status = "okay";
 
+	snps,reset-gpio = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 50000 50000>;
+
 	mdio {
 		compatible = "snps,dwmac-mdio";
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		rtl8211e: ethernet-phy@1 {
+		rtl8201f: ethernet-phy@1 {
+			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
-			pinctrl-0 = <&eth_phy_reset_pin>;
-			pinctrl-names = "default";
-			reset-assert-us = <10000>;
-			reset-deassert-us = <50000>;
-			reset-gpios = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
 		};
 	};
 };
