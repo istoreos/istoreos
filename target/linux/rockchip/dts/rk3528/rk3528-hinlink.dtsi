@@ -416,6 +416,10 @@
 	status = "okay";
 };
 
+&display_subsystem {
+	status = "okay";
+};
+
 &pinctrl {
 	leds {
 		led_work_en: led-work-en {
