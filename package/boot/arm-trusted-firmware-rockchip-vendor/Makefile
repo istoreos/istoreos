@@ -27,6 +27,7 @@ define Trusted-Firmware-A/rk3308
   BUILD_SUBTARGET:=armv8
   ATF:=rk33/$(RK3308_ATF)
   DDR:=rk33/$(RK3308_DDR)
+  DDR1:=rk33/$(RK3308_DDR_UART2)
 endef
 
 define Trusted-Firmware-A/rk3528
@@ -79,6 +80,9 @@ ifneq ($(LOADER),)
 	$(CP) $(PKG_BUILD_DIR)/$(BUILD_VARIANT)-trust.bin $(STAGING_DIR_IMAGE)/
 else
 	$(CP) $(PKG_BUILD_DIR)/bin/$(DDR) $(STAGING_DIR_IMAGE)/
+ifneq ($(DDR1),)
+	$(CP) $(PKG_BUILD_DIR)/bin/$(DDR1) $(STAGING_DIR_IMAGE)/
+endif
 endif
 endef
 

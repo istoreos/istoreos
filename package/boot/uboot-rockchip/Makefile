@@ -33,6 +33,7 @@ define U-Boot/evb-rk3308
   DEPENDS:=+PACKAGE_u-boot-evb-rk3308:trusted-firmware-a-rk3308
   PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
   ATF:=$(RK3308_ATF)
+  DDR:=$(RK3308_DDR)
 endef
 
 define U-Boot/armsom-rk3308
@@ -43,6 +44,7 @@ define U-Boot/armsom-rk3308
   DEPENDS:=+PACKAGE_u-boot-armsom-rk3308:trusted-firmware-a-rk3308
   PKG_BUILD_DEPENDS:=arm-trusted-firmware-rockchip-vendor
   ATF:=$(RK3308_ATF)
+  DDR:=$(RK3308_DDR_UART2)
 endef
 
 
@@ -115,6 +117,9 @@ UBOOT_CONFIGURE_VARS += USE_PRIVATE_LIBGCC=yes
 
 UBOOT_MAKE_FLAGS += \
   BL31=$(STAGING_DIR_IMAGE)/$(ATF)
+
+UBOOT_MAKE_FLAGS += \
+  $(if $(DDR),TPL_BIN=$(STAGING_DIR_IMAGE)/$(DDR))
 
 define Build/Configure
 	$(call Build/Configure/U-Boot)

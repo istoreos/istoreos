@@ -1,0 +1,16 @@
+--- a/Makefile	2023-11-30 15:27:20.153151383 +0800
++++ b/Makefile	2023-11-30 15:21:51.540845924 +0800
+@@ -1468,6 +1468,13 @@
+ 	$(call if_changed,mkimage)
+ idbloader.img: tpl/u-boot-tpl-rockchip.bin spl/u-boot-spl.bin FORCE
+ 	$(call if_changed,cat)
++else ifneq (${TPL_BIN},)
++MKIMAGEFLAGS_u-boot-tpl-rockchip.bin = -n $(CONFIG_SYS_SOC) -T rksd
++tpl/u-boot-tpl-rockchip.bin: ${TPL_BIN} spl/u-boot-spl.bin FORCE
++	$(Q)mkdir tpl
++	$(call if_changed,mkimage)
++idbloader.img: tpl/u-boot-tpl-rockchip.bin spl/u-boot-spl.bin FORCE
++	$(call if_changed,cat)
+ else
+ MKIMAGEFLAGS_idbloader.img = -n $(CONFIG_SYS_SOC) -T rksd
+ idbloader.img: spl/u-boot-spl.bin FORCE
