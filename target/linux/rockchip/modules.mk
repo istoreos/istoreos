@@ -19,7 +19,7 @@ define KernelPackage/drm-rockchip-rk35xx
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp-cec.ko \
 	$(LINUX_DIR)/drivers/media/cec/cec.ko@lt5.10 \
 	$(LINUX_DIR)/drivers/media/cec/core/cec.ko@ge5.10
-  AUTOLOAD:=$(call AutoProbe,dw-hdmi-cec dw-hdmi-hdcp dw-hdmi-qp-cec rockchipdrm)
+  AUTOLOAD:=$(call AutoLoad,80,dw-hdmi-cec dw-hdmi-hdcp dw-hdmi-qp-cec rockchipdrm)
 endef
 
 define KernelPackage/drm-rockchip-rk35xx/description
@@ -39,7 +39,7 @@ define KernelPackage/drm-rockchip-rk35xx-hdmitx
   FILES:=\
 	$(LINUX_DIR)/drivers/phy/rockchip/phy-rockchip-samsung-hdptx-hdmi.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/rockchip/dw_hdcp2.ko
-  AUTOLOAD:=$(call AutoProbe,dw_hdcp2 phy-rockchip-samsung-hdptx-hdmi)
+  AUTOLOAD:=$(call AutoLoad,70,dw_hdcp2 phy-rockchip-samsung-hdptx-hdmi)
 endef
 
 define KernelPackage/drm-rockchip-rk35xx-hdmitx/description
@@ -56,7 +56,7 @@ define KernelPackage/drm-rockchip-rk35xx-vvop
 	CONFIG_DRM_ROCKCHIP \
 	CONFIG_DRM_ROCKCHIP_VVOP=y
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/rockchip/rockchipdrm.ko
-  AUTOLOAD:=$(call AutoProbe,rockchipdrm)
+  AUTOLOAD:=$(call AutoLoad,80,rockchipdrm)
 endef
 
 define KernelPackage/drm-rockchip-rk35xx-vvop/description
@@ -78,7 +78,7 @@ define KernelPackage/rknpu
 	CONFIG_ROCKCHIP_RKNPU_DRM_GEM=y \
 	CONFIG_ROCKCHIP_RKNPU_FENCE=y
   FILES:=$(LINUX_DIR)/drivers/rknpu/rknpu.ko
-  AUTOLOAD:=$(call AutoProbe,rknpu)
+  AUTOLOAD:=$(call AutoLoad,90,rknpu)
 endef
 
 define KernelPackage/rknpu/description
