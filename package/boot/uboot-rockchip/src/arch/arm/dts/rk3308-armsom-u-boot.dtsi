@@ -1,0 +1,7 @@
+#include "rk3308-evb-u-boot.dtsi"
+
+&uart2 {
+	u-boot,dm-pre-reloc;
+	clock-frequency = <24000000>;
+	status = "okay";
+};
