@@ -125,6 +125,12 @@
 	test-power {
 		status = "okay";
 	};
+
+	reserved-memory {
+		cma {
+			size = <0x0 (16 * 0x100000)>;
+		};
+	};
 };
 
 &av1d_mmu {
