@@ -1,6 +1,7 @@
 /dts-v1/;
 
 #include "rk3568-linkease.dtsi"
+#include "../rockchip-drm-vvop.dtsi"
 
 / {
 	compatible = "idiskk,h1", "rockchip,rk3568";

@@ -13,6 +13,7 @@
 #include <dt-bindings/display/drm_mipi_dsi.h>
 #include <dt-bindings/sensor-dev.h>
 #include "rk3568.dtsi"
+#include "../rockchip-drm-vvop.dtsi"
 
 / {
 	compatible = "fastrhino,core", "rockchip,rk3568";
@@ -957,16 +958,6 @@
 };
 
 &vepu_mmu {
-	status = "okay";
-};
-
-&vop {
-	status = "okay";
-	assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
-	assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
-};
-
-&vop_mmu {
 	status = "okay";
 };
 

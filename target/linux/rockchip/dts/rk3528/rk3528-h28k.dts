@@ -1,20 +1,9 @@
 /dts-v1/;
 
 #include "rk3528-hinlink.dtsi"
+#include "../rockchip-drm-vvop.dtsi"
 
 / {
 	model = "Hlink H28K";
 	compatible = "hlink,h28k", "rockchip,rk3528";
-};
-
-&display_subsystem {
-	/delete-property/ ports;
-};
-
-&route_hdmi {
-	status = "disabled";
-};
-
-&route_tve {
-	status = "disabled";
 };
