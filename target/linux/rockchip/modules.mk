@@ -9,6 +9,7 @@ define KernelPackage/drm-rockchip-rk35xx
 	CONFIG_DRM_DW_HDMI_CEC \
 	CONFIG_DRM_FBDEV_EMULATION=y \
 	CONFIG_DRM_FBDEV_OVERALLOC=100 \
+	CONFIG_DRM_ROCKCHIP_VVOP=y \
 	CONFIG_ROCKCHIP_VOP2=y
   FILES:=\
 	$(LINUX_DIR)/drivers/gpu/drm/rockchip/rockchipdrm.ko \

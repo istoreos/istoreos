@@ -1,0 +1,138 @@
+From 24c199167f40132e82df115be0a90facb1ff309d Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Mon, 4 Dec 2023 17:31:47 +0800
+Subject: [PATCH] rockchip_drm: vvop coexist with real vop drivers
+
+vvop instance in device tree
+```
+vvop {
+	compatible = "rockchip,virtual-vop";
+	status = "okay";
+};
+```
+---
+ drivers/gpu/drm/rockchip/rockchip_drm_drv.c  | 23 +++++++++++++-------
+ drivers/gpu/drm/rockchip/rockchip_drm_vvop.c | 15 ++++++-------
+ 2 files changed, 22 insertions(+), 16 deletions(-)
+
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+index 6c8308101..42c6f8e77 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+@@ -45,11 +45,7 @@
+ #define DRIVER_MAJOR	3
+ #define DRIVER_MINOR	0
+ 
+-#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
+-static bool is_support_iommu = false;
+-#else
+ static bool is_support_iommu = true;
+-#endif
+ static bool iommu_reserve_map;
+ 
+ static struct drm_driver rockchip_drm_driver;
+@@ -1532,8 +1528,15 @@ static int rockchip_drm_bind(struct device *dev)
+ 	if (ret)
+ 		DRM_DEBUG_KMS("No reserved memory region assign to drm\n");
+ 
++#ifndef MODULE
+ 	rockchip_drm_show_logo(drm_dev);
++#endif
+ 
++#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
++	if (of_property_read_bool(dev->of_node, "vvop")) {
++		ret = 0;
++	} else
++#endif
+ 	ret = rockchip_drm_fbdev_init(drm_dev);
+ 	if (ret)
+ 		goto err_iommu_cleanup;
+@@ -1965,6 +1968,13 @@ static int rockchip_drm_platform_of_probe(struct device *dev)
+ 	if (!np)
+ 		return -ENODEV;
+ 
++#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
++	if (of_property_read_bool(np, "vvop")) {
++		is_support_iommu = false;
++		return 0;
++	}
++#endif
++
+ 	for (i = 0;; i++) {
+ 		struct device_node *iommu;
+ 
+@@ -2017,10 +2027,8 @@ static int rockchip_drm_platform_probe(struct platform_device *pdev)
+ 	int ret;
+ 
+ 	ret = rockchip_drm_platform_of_probe(dev);
+-#if !IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
+ 	if (ret)
+ 		return ret;
+-#endif
+ 
+ 	match = rockchip_drm_match_add(dev);
+ 	if (IS_ERR(match))
+@@ -2097,7 +2105,7 @@ static int __init rockchip_drm_init(void)
+ 	num_rockchip_sub_drivers = 0;
+ #if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
+ 	ADD_ROCKCHIP_SUB_DRIVER(vvop_platform_driver, CONFIG_DRM_ROCKCHIP_VVOP);
+-#else
++#endif
+ 	ADD_ROCKCHIP_SUB_DRIVER(vop_platform_driver, CONFIG_ROCKCHIP_VOP);
+ 	ADD_ROCKCHIP_SUB_DRIVER(vop2_platform_driver, CONFIG_ROCKCHIP_VOP2);
+ 	ADD_ROCKCHIP_SUB_DRIVER(vconn_platform_driver, CONFIG_ROCKCHIP_VCONN);
+@@ -2119,7 +2127,6 @@ static int __init rockchip_drm_init(void)
+ 	ADD_ROCKCHIP_SUB_DRIVER(rockchip_tve_driver, CONFIG_ROCKCHIP_DRM_TVE);
+ 	ADD_ROCKCHIP_SUB_DRIVER(dw_dp_driver, CONFIG_ROCKCHIP_DW_DP);
+ 
+-#endif
+ 	ret = platform_register_drivers(rockchip_sub_drivers,
+ 					num_rockchip_sub_drivers);
+ 	if (ret)
+diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c b/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
+index 635c7bc10..f5702e33c 100644
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
+@@ -6,6 +6,7 @@
+ 
+ #include <linux/module.h>
+ #include <linux/component.h>
++#include <linux/of.h>
+ #include <linux/platform_device.h>
+ #include <drm/drm_gem.h>
+ #include <drm/drm_atomic_helper.h>
+@@ -351,25 +352,23 @@ static int vvop_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++static const struct of_device_id vvop_dt_match[] = {
++	{ .compatible = "rockchip,virtual-vop" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, vvop_dt_match);
+ 
+ struct platform_driver vvop_platform_driver = {
+ 	.probe = vvop_probe,
+ 	.remove = vvop_remove,
+ 	.driver = {
+ 		.name = DRIVER_NAME,
++		.of_match_table = of_match_ptr(vvop_dt_match),
+ 	},
+ };
+ 
+ static int __init vvop_init(void)
+ {
+-	struct platform_device *pdev;
+-
+-	pdev = platform_device_register_simple(DRIVER_NAME, -1, NULL, 0);
+-	if (IS_ERR(pdev)) {
+-		DRM_ERROR("failed to register platform device %s\n", DRIVER_NAME);
+-		return PTR_ERR(pdev);
+-	}
+-
+ 	return 0;
+ }
+ 
+-- 
+2.31.0
+
