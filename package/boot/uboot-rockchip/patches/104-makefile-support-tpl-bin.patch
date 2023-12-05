@@ -7,7 +7,7 @@
 +else ifneq (${TPL_BIN},)
 +MKIMAGEFLAGS_u-boot-tpl-rockchip.bin = -n $(CONFIG_SYS_SOC) -T rksd
 +tpl/u-boot-tpl-rockchip.bin: ${TPL_BIN} spl/u-boot-spl.bin FORCE
-+	$(Q)mkdir tpl
++	$(Q)mkdir -p tpl
 +	$(call if_changed,mkimage)
 +idbloader.img: tpl/u-boot-tpl-rockchip.bin spl/u-boot-spl.bin FORCE
 +	$(call if_changed,cat)

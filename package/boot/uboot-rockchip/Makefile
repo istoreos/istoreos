@@ -105,8 +105,8 @@ define U-Boot/rockpro64-rk3399
 endef
 
 UBOOT_TARGETS := \
-  evb-rk3308 \
   armsom-rk3308 \
+  evb-rk3308 \
   nanopi-r4s-rk3399 \
   nanopi-r4se-rk3399 \
   rock-pi-4-rk3399 \
