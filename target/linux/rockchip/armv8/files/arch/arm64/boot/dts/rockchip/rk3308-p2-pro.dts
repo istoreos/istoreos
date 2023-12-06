@@ -19,6 +19,10 @@
 	};
 
 	aliases {
+		mmc0 = &emmc;
+		mmc1 = &sdmmc;
+		mmc2 = &sdio;
+
 		led-boot = &led_user;
 		led-failsafe = &led_user;
 		led-running = &led_user;
@@ -331,10 +335,11 @@
 };
 
 &sdio {
-	max-frequency = <110000000>;
+	max-frequency = <20000000>; // 1000000 - 20000000 working
 	bus-width = <4>;
 	cap-sd-highspeed;
 	supports-sdio;
+	cap-sdio-irq;
 	ignore-pm-notify;
 	keep-power-in-suspend;
 	non-removable;
