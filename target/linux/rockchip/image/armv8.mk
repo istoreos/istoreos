@@ -67,6 +67,7 @@ define Device/armsom_p2-pro
   DEVICE_VENDOR := ArmSoM
   DEVICE_MODEL := P2 Pro
   SOC := rk3308
+  SUPPORTED_DEVICES := armsom,p2pro armsom,p2-pro
   UBOOT_DEVICE_NAME := armsom-rk3308
   IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3308-uart2 | pine64-img | gzip | append-metadata
   DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
