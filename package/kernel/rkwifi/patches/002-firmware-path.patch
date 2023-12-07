@@ -1,0 +1,29 @@
+From cb5ee1ccf89f0cbd74ab8e43b90370095e540382 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 6 Dec 2023 17:46:44 +0800
+Subject: [PATCH] bcmdhd: use openwrt standard fireware path
+
+---
+ rkwifi/bcmdhd/Makefile | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/rkwifi/bcmdhd/Makefile b/rkwifi/bcmdhd/Makefile
+index f487648..6139d3a 100644
+--- a/rkwifi/bcmdhd/Makefile
++++ b/rkwifi/bcmdhd/Makefile
+@@ -371,9 +371,9 @@ ifeq ($(CONFIG_BCMDHD_REQUEST_FW),y)
+ else
+ 	DHDCFLAGS += -DDHD_SUPPORT_VFS_CALL
+ ifeq ($(CONFIG_BCMDHD_FW_PATH),)
+-	DHDCFLAGS += -DCONFIG_BCMDHD_FW_PATH="\"/system/etc/firmware/fw_bcmdhd.bin\""
+-	DHDCFLAGS += -DCONFIG_BCMDHD_NVRAM_PATH="\"/system/etc/firmware/nvram.txt\""
+-	DHDCFLAGS += -DCONFIG_BCMDHD_CLM_PATH="\"/system/etc/firmware/clm_bcmdhd.blob\""
++	DHDCFLAGS += -DCONFIG_BCMDHD_FW_PATH="\"/lib/firmware/rkwifi/fw_bcmdhd.bin\""
++	DHDCFLAGS += -DCONFIG_BCMDHD_NVRAM_PATH="\"/lib/firmware/rkwifi/nvram.txt\""
++	DHDCFLAGS += -DCONFIG_BCMDHD_CLM_PATH="\"/lib/firmware/rkwifi/clm_bcmdhd.blob\""
+ endif
+ endif
+ 
+-- 
+2.31.0
+

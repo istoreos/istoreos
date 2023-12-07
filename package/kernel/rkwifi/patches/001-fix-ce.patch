@@ -1,0 +1,85 @@
+From 165fafca5aa918319058cd86a46bc6df59dd1153 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 6 Dec 2023 17:42:33 +0800
+Subject: [PATCH] bcmdhd: fix CE
+
+---
+ rkwifi/bcmdhd/bcmsdh_sdmmc.c       | 2 +-
+ rkwifi/bcmdhd/bcmsdh_sdmmc_linux.c | 2 ++
+ rkwifi/bcmdhd/dhd.h                | 2 +-
+ rkwifi/bcmdhd/dhd_linux.c          | 2 +-
+ rkwifi/bcmdhd/wl_cfg80211.c        | 4 ++--
+ 5 files changed, 7 insertions(+), 5 deletions(-)
+
+diff --git a/rkwifi/bcmdhd/bcmsdh_sdmmc.c b/rkwifi/bcmdhd/bcmsdh_sdmmc.c
+index 1959282..3f71216 100644
+--- a/rkwifi/bcmdhd/bcmsdh_sdmmc.c
++++ b/rkwifi/bcmdhd/bcmsdh_sdmmc.c
+@@ -43,7 +43,7 @@
+ #include <dhd.h>
+ #include <dhd_dbg.h>
+ 
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined (CONFIG_PM_SLEEP)
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined (CONFIG_PM)
+ #include <linux/suspend.h>
+ extern volatile bool dhd_mmc_suspend;
+ #endif
+diff --git a/rkwifi/bcmdhd/bcmsdh_sdmmc_linux.c b/rkwifi/bcmdhd/bcmsdh_sdmmc_linux.c
+index 09307fd..a657e86 100644
+--- a/rkwifi/bcmdhd/bcmsdh_sdmmc_linux.c
++++ b/rkwifi/bcmdhd/bcmsdh_sdmmc_linux.c
+@@ -73,7 +73,9 @@ PBCMSDH_SDMMC_INSTANCE gInstance;
+ /* Maximum number of bcmsdh_sdmmc devices supported by driver */
+ #define BCMSDH_SDMMC_MAX_DEVICES 1
+ 
++#ifdef CONFIG_PM
+ extern volatile bool dhd_mmc_suspend;
++#endif
+ 
+ static int sdioh_probe(struct sdio_func *func)
+ {
+diff --git a/rkwifi/bcmdhd/dhd.h b/rkwifi/bcmdhd/dhd.h
+index 49f466b..29fe795 100644
+--- a/rkwifi/bcmdhd/dhd.h
++++ b/rkwifi/bcmdhd/dhd.h
+@@ -2054,7 +2054,7 @@ WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(dhd_workitem_context_t, dhd_get_dhd_workitem_
+ #endif /* (BCMWDF)  */
+ 
+ #if defined(LINUX) || defined(linux)
+-#if defined(CONFIG_PM_SLEEP)
++#if defined(CONFIG_PM)
+ 
+ 	#define DHD_PM_RESUME_WAIT_INIT(a) DECLARE_WAIT_QUEUE_HEAD(a);
+ 	#define _DHD_PM_RESUME_WAIT(a, b) do {\
+diff --git a/rkwifi/bcmdhd/dhd_linux.c b/rkwifi/bcmdhd/dhd_linux.c
+index 1dccb0e..091c059 100644
+--- a/rkwifi/bcmdhd/dhd_linux.c
++++ b/rkwifi/bcmdhd/dhd_linux.c
+@@ -353,7 +353,7 @@ static struct notifier_block dhd_inet6addr_notifier = {
+ static bool dhd_inet6addr_notifier_registered = FALSE;
+ #endif /* CONFIG_IPV6 && IPV6_NDO_SUPPORT */
+ 
+-#if defined (CONFIG_PM_SLEEP)
++#if defined (CONFIG_PM)
+ #include <linux/suspend.h>
+ volatile bool dhd_mmc_suspend = FALSE;
+ DECLARE_WAIT_QUEUE_HEAD(dhd_dpc_wait);
+diff --git a/rkwifi/bcmdhd/wl_cfg80211.c b/rkwifi/bcmdhd/wl_cfg80211.c
+index a1cb125..2f7f329 100644
+--- a/rkwifi/bcmdhd/wl_cfg80211.c
++++ b/rkwifi/bcmdhd/wl_cfg80211.c
+@@ -10571,9 +10571,9 @@ static void wl_notify_regd(struct wiphy *wiphy, char *country_code)
+ 		}
+ 	}
+ 
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)) || defined(BUILD_OPENWRT)
+ 	if (rtnl_is_locked()) {
+-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0)) || defined(BUILD_OPENWRT)
+ 		wiphy_lock(wiphy);
+ 		regulatory_set_wiphy_regd_sync(wiphy, regd_copy);
+ 		wiphy_unlock(wiphy);
+-- 
+2.31.0
+
