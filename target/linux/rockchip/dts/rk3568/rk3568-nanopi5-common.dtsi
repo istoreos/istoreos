@@ -931,12 +931,3 @@
 &vop_mmu {
 	status = "okay";
 };
-
-&vp0 {
-	rockchip,plane-mask = <(
-				1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0 |
-				1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1 |
-				1 << ROCKCHIP_VOP2_SMART0 )>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
-	cursor-win-id = <ROCKCHIP_VOP2_SMART0>;
-};
