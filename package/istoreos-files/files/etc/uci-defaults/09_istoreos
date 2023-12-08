@@ -21,12 +21,15 @@ if [ ! -f /proc/device-tree/chosen/default-firewall ] || grep -qFw nas /proc/dev
         commit ucitrack
 EOF
 
+if grep -qFw nas /proc/device-tree/chosen/default-firewall; then
     WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
     uci -q batch <<-EOF >/dev/null
         del_list dockerd.firewall.blocked_interfaces=wan
         set ${WAN_ZONE}.input=ACCEPT
         commit firewall
 EOF
+fi
+
     if [ -e /etc/config/minidlna ]; then
         uci -q batch <<-EOF >/dev/null
             set minidlna.@minidlna[0].interface='br-lan,eth0'
