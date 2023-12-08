@@ -213,6 +213,52 @@ endef
 $(eval $(call KernelPackage,sound-soc-ac97))
 
 
+define KernelPackage/sound-soc-es8316
+  TITLE:=Everest Semi ES8316 CODEC
+  KCONFIG:=CONFIG_SND_SOC_ES8316
+  FILES:=$(LINUX_DIR)/sound/soc/codecs/snd-soc-es8316.ko
+  AUTOLOAD:=$(call AutoLoad,56,snd-soc-es8316)
+  DEPENDS:=+kmod-sound-soc-core +kmod-i2c-core
+  $(call AddDepends/sound)
+endef
+
+define KernelPackage/sound-soc-es8316/description
+ Support for Everest Semi ES8316 CODEC
+endef
+
+$(eval $(call KernelPackage,sound-soc-es8316))
+
+define KernelPackage/sound-soc-es8328
+  TITLE:=Everest Semi ES8328 CODEC
+  KCONFIG:=CONFIG_SND_SOC_ES8328
+  FILES:=$(LINUX_DIR)/sound/soc/codecs/snd-soc-es8328.ko
+  DEPENDS:=+kmod-sound-soc-core
+  HIDDEN:=1
+  $(call AddDepends/sound)
+endef
+
+define KernelPackage/sound-soc-es8328/description
+ Support for Everest Semi ES8328 CODEC
+endef
+
+$(eval $(call KernelPackage,sound-soc-es8328))
+
+define KernelPackage/sound-soc-es8328-i2c
+  TITLE:=Everest Semi ES8328 CODEC (I2C)
+  KCONFIG:=CONFIG_SND_SOC_ES8328_I2C
+  FILES:=$(LINUX_DIR)/sound/soc/codecs/snd-soc-es8328-i2c.ko
+  AUTOLOAD:=$(call AutoLoad,56,snd-soc-es8328-i2c)
+  DEPENDS:=+kmod-sound-soc-es8328 +kmod-i2c-core
+  $(call AddDepends/sound)
+endef
+
+define KernelPackage/sound-soc-es8328-i2c/description
+ Support for Everest Semi ES8328 CODEC (I2C)
+endef
+
+$(eval $(call KernelPackage,sound-soc-es8328-i2c))
+
+
 define KernelPackage/sound-soc-imx
   TITLE:=IMX SoC support
   KCONFIG:=\
