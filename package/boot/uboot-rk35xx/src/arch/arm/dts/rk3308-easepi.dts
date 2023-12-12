@@ -1,0 +1,28 @@
+/dts-v1/;
+#include "rk3308-evb.dts"
+
+/{
+	model = "Easepi RK3308 Board";
+	compatible = "linkease,rk3308-demo", "rockchip,rk3308";
+
+	chosen {
+		stdout-path = &uart2;
+		u-boot,spl-boot-order = &sdmmc, &emmc;
+	};
+};
+
+&uart2 {
+	clock-frequency = <24000000>;
+	status = "okay";
+};
+
+&uart4 {
+	status = "disabled";
+};
+
+&mac {
+	snps,reset-gpio = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 50000 50000>;
+	status = "okay";
+};
