@@ -1,0 +1,14 @@
+--- a/arch/arm64/boot/dts/rockchip/rk3308.dtsi	2023-12-14 16:42:55.591840662 +0800
++++ b/arch/arm64/boot/dts/rockchip/rk3308.dtsi	2023-12-14 16:45:06.656771768 +0800
+@@ -166,6 +166,11 @@
+ 		compatible = "rockchip,rk3308-grf", "syscon", "simple-mfd";
+ 		reg = <0x0 0xff000000 0x0 0x08000>;
+ 
++		io_domains: io-domains {
++			compatible = "rockchip,rk3308-io-voltage-domain";
++			status = "disabled";
++		};
++
+ 		reboot-mode {
+ 			compatible = "syscon-reboot-mode";
+ 			offset = <0x500>;

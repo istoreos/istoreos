@@ -1,0 +1,188 @@
+From 992c442775dfaa90f2c292cc02254b838b5eee70 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 14 Dec 2023 13:31:22 +0800
+Subject: [PATCH] pinctrl-rockchip: rk3308bs
+
+---
+ drivers/pinctrl/pinctrl-rockchip.c | 88 +++++++++++++++++++++++++++++-
+ 1 file changed, 87 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/pinctrl/pinctrl-rockchip.c b/drivers/pinctrl/pinctrl-rockchip.c
+index 2a454098e..e9841cf72 100644
+--- a/drivers/pinctrl/pinctrl-rockchip.c
++++ b/drivers/pinctrl/pinctrl-rockchip.c
+@@ -103,6 +103,7 @@ enum rockchip_pin_drv_type {
+ 	DRV_TYPE_IO_1V8_ONLY,
+ 	DRV_TYPE_IO_1V8_3V0_AUTO,
+ 	DRV_TYPE_IO_3V3_ONLY,
++	DRV_TYPE_IO_SMIC,
+ 	DRV_TYPE_MAX
+ };
+ 
+@@ -309,6 +310,12 @@ struct rockchip_pin_bank {
+ 		.route_location	= FLAG,					\
+ 	}
+ 
++#define S_PIN_BANK_FLAGS(ID, PIN, LABEL, MTYPE, DTYPE)			\
++	PIN_BANK_IOMUX_DRV_FLAGS_OFFSET(ID, PIN, LABEL,			\
++					MTYPE, MTYPE, MTYPE, MTYPE,	\
++					DTYPE, DTYPE, DTYPE, DTYPE,	\
++					-1, -1, -1, -1)
++
+ #define RK_MUXROUTE_SAME(ID, PIN, FUNC, REG, VAL)	\
+ 	PIN_BANK_MUX_ROUTE_FLAGS(ID, PIN, FUNC, REG, VAL, ROCKCHIP_ROUTE_SAME)
+ 
+@@ -382,6 +389,9 @@ struct rockchip_pin_ctrl {
+ 	int	(*schmitt_calc_reg)(struct rockchip_pin_bank *bank,
+ 				    int pin_num, struct regmap **regmap,
+ 				    int *reg, u8 *bit);
++	int	(*slew_rate_calc_reg)(struct rockchip_pin_bank *bank,
++				      int pin_num, struct regmap **regmap,
++				      int *reg, u8 *bit);
+ };
+ 
+ struct rockchip_pin_config {
+@@ -1634,6 +1644,29 @@ static void rk3308_calc_drv_reg_and_bit(struct rockchip_pin_bank *bank,
+ 	*bit *= RK3288_DRV_BITS_PER_PIN;
+ }
+ 
++#define RK3308_SLEW_RATE_GRF_OFFSET		0x150
++#define RK3308_SLEW_RATE_BANK_STRIDE		16
++#define RK3308_SLEW_RATE_PINS_PER_GRF_REG	8
++
++static int rk3308_calc_slew_rate_reg_and_bit(struct rockchip_pin_bank *bank,
++					     int pin_num,
++					     struct regmap **regmap,
++					     int *reg, u8 *bit)
++{
++	struct rockchip_pinctrl *info = bank->drvdata;
++	int pins_per_reg;
++
++	*regmap = info->regmap_base;
++	*reg = RK3308_SLEW_RATE_GRF_OFFSET;
++	*reg += (bank->bank_num) * RK3308_SLEW_RATE_BANK_STRIDE;
++	pins_per_reg = RK3308_SLEW_RATE_PINS_PER_GRF_REG;
++
++	*reg += ((pin_num / pins_per_reg) * 4);
++	*bit = pin_num % pins_per_reg;
++
++	return 0;
++}
++
+ #define RK3368_PULL_GRF_OFFSET		0x100
+ #define RK3368_PULL_PMU_OFFSET		0x10
+ 
+@@ -1818,7 +1851,8 @@ static int rockchip_perpin_drv_list[DRV_TYPE_MAX][8] = {
+ 	{ 3, 6, 9, 12, -1, -1, -1, -1 },
+ 	{ 5, 10, 15, 20, -1, -1, -1, -1 },
+ 	{ 4, 6, 8, 10, 12, 14, 16, 18 },
+-	{ 4, 7, 10, 13, 16, 19, 22, 26 }
++	{ 4, 7, 10, 13, 16, 19, 22, 26 },
++	{ 0, 2, 4, 6, 6, 8, 10, 12 }
+ };
+ 
+ static int rockchip_get_drive_perpin(struct rockchip_pin_bank *bank,
+@@ -1880,6 +1914,7 @@ static int rockchip_get_drive_perpin(struct rockchip_pin_bank *bank,
+ 	case DRV_TYPE_IO_DEFAULT:
+ 	case DRV_TYPE_IO_1V8_OR_3V0:
+ 	case DRV_TYPE_IO_1V8_ONLY:
++	case DRV_TYPE_IO_SMIC:
+ 		rmask_bits = RK3288_DRV_BITS_PER_PIN;
+ 		break;
+ 	default:
+@@ -1895,6 +1930,20 @@ static int rockchip_get_drive_perpin(struct rockchip_pin_bank *bank,
+ 	data >>= bit;
+ 	data &= (1 << rmask_bits) - 1;
+ 
++	if (drv_type == DRV_TYPE_IO_SMIC) {
++		u32 tmp = 0;
++
++		ctrl->slew_rate_calc_reg(bank, pin_num, &regmap, &reg, &bit);
++		ret = regmap_read(regmap, reg, &tmp);
++		if (ret)
++			return ret;
++
++		tmp >>= bit;
++		tmp &= 0x1;
++
++		data |= tmp << 2;
++	}
++
+ 	return rockchip_perpin_drv_list[drv_type][data];
+ }
+ 
+@@ -1979,6 +2028,7 @@ static int rockchip_set_drive_perpin(struct rockchip_pin_bank *bank,
+ 	case DRV_TYPE_IO_DEFAULT:
+ 	case DRV_TYPE_IO_1V8_OR_3V0:
+ 	case DRV_TYPE_IO_1V8_ONLY:
++	case DRV_TYPE_IO_SMIC:
+ 		rmask_bits = RK3288_DRV_BITS_PER_PIN;
+ 		break;
+ 	default:
+@@ -1994,6 +2044,16 @@ static int rockchip_set_drive_perpin(struct rockchip_pin_bank *bank,
+ 	data |= (ret << bit);
+ 
+ 	ret = regmap_update_bits(regmap, reg, rmask, data);
++	if (ret)
++		return ret;
++
++	if (drv_type == DRV_TYPE_IO_SMIC) {
++		ctrl->slew_rate_calc_reg(bank, pin_num, &regmap, &reg, &bit);
++		data = BIT(bit + 16) | (((ret >> 2) & 0x1) << bit);
++		ret = regmap_write(regmap, reg, data);
++		if (ret)
++			return ret;
++	}
+ 
+ 	return ret;
+ }
+@@ -3840,6 +3900,14 @@ static struct rockchip_pin_ctrl rk3288_pin_ctrl = {
+ 		.drv_calc_reg		= rk3288_calc_drv_reg_and_bit,
+ };
+ 
++static struct rockchip_pin_bank rk3308bs_pin_banks[] = {
++	S_PIN_BANK_FLAGS(0, 32, "gpio0", IOMUX_WIDTH_2BIT, DRV_TYPE_IO_SMIC),
++	S_PIN_BANK_FLAGS(1, 32, "gpio1", IOMUX_WIDTH_2BIT, DRV_TYPE_IO_SMIC),
++	S_PIN_BANK_FLAGS(2, 32, "gpio2", IOMUX_WIDTH_2BIT, DRV_TYPE_IO_SMIC),
++	S_PIN_BANK_FLAGS(3, 32, "gpio3", IOMUX_WIDTH_2BIT, DRV_TYPE_IO_SMIC),
++	S_PIN_BANK_FLAGS(4, 32, "gpio4", IOMUX_WIDTH_2BIT, DRV_TYPE_IO_SMIC),
++};
++
+ static struct rockchip_pin_bank rk3308_pin_banks[] = {
+ 	PIN_BANK_IOMUX_FLAGS(0, 32, "gpio0", IOMUX_WIDTH_2BIT,
+ 					     IOMUX_WIDTH_2BIT,
+@@ -3863,6 +3931,22 @@ static struct rockchip_pin_bank rk3308_pin_banks[] = {
+ 					     IOMUX_WIDTH_2BIT),
+ };
+ 
++static struct rockchip_pin_ctrl rk3308bs_pin_ctrl = {
++		.pin_banks		= rk3308bs_pin_banks,
++		.nr_banks		= ARRAY_SIZE(rk3308bs_pin_banks),
++		.label			= "RK3308-GPIO",
++		.type			= RK3308,
++		.grf_mux_offset		= 0x0,
++		.iomux_recalced		= rk3308_mux_recalced_data,
++		.niomux_recalced	= ARRAY_SIZE(rk3308_mux_recalced_data),
++		.iomux_routes		= rk3308_mux_route_data,
++		.niomux_routes		= ARRAY_SIZE(rk3308_mux_route_data),
++		.pull_calc_reg		= rk3308_calc_pull_reg_and_bit,
++		.drv_calc_reg		= rk3308_calc_drv_reg_and_bit,
++		.schmitt_calc_reg	= rk3308_calc_schmitt_reg_and_bit,
++		.slew_rate_calc_reg	= rk3308_calc_slew_rate_reg_and_bit,
++};
++
+ static struct rockchip_pin_ctrl rk3308_pin_ctrl = {
+ 		.pin_banks		= rk3308_pin_banks,
+ 		.nr_banks		= ARRAY_SIZE(rk3308_pin_banks),
+@@ -4057,6 +4141,8 @@ static const struct of_device_id rockchip_pinctrl_dt_match[] = {
+ 		.data = &rk3228_pin_ctrl },
+ 	{ .compatible = "rockchip,rk3288-pinctrl",
+ 		.data = &rk3288_pin_ctrl },
++	{ .compatible = "rockchip,rk3308bs-pinctrl",
++		.data = &rk3308bs_pin_ctrl },
+ 	{ .compatible = "rockchip,rk3308-pinctrl",
+ 		.data = &rk3308_pin_ctrl },
+ 	{ .compatible = "rockchip,rk3328-pinctrl",
+-- 
+2.31.0
+

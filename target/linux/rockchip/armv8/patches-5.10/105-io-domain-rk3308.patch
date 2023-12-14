@@ -1,0 +1,84 @@
+From 508aa78bc94db60117266d40b42a4b65aaf6f190 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 14 Dec 2023 17:08:33 +0800
+Subject: [PATCH] rockchip/io-domain: support rk3308
+
+---
+ drivers/soc/rockchip/io-domain.c | 40 ++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+
+diff --git a/drivers/soc/rockchip/io-domain.c b/drivers/soc/rockchip/io-domain.c
+index b29e829e8..43c667fbe 100644
+--- a/drivers/soc/rockchip/io-domain.c
++++ b/drivers/soc/rockchip/io-domain.c
+@@ -39,6 +39,10 @@
+ #define RK3288_SOC_CON2_FLASH0		BIT(7)
+ #define RK3288_SOC_FLASH_SUPPLY_NUM	2
+ 
++#define RK3308_SOC_CON0			0x300
++#define RK3308_SOC_CON0_VCCIO3		BIT(8)
++#define RK3308_SOC_VCCIO3_SUPPLY_NUM	3
++
+ #define RK3328_SOC_CON4			0x410
+ #define RK3328_SOC_CON4_VCCIO2		BIT(7)
+ #define RK3328_SOC_VCCIO2_SUPPLY_NUM	1
+@@ -185,6 +189,25 @@ static void rk3288_iodomain_init(struct rockchip_iodomain *iod)
+ 		dev_warn(iod->dev, "couldn't update flash0 ctrl\n");
+ }
+ 
++static void rk3308_iodomain_init(struct rockchip_iodomain *iod)
++{
++	int ret;
++	u32 val;
++
++	/* if no vccio3 supply we should leave things alone */
++	if (!iod->supplies[RK3308_SOC_VCCIO3_SUPPLY_NUM].reg)
++		return;
++
++	/*
++	 * set vccio3 iodomain to also use this framework
++	 * instead of a special gpio.
++	 */
++	val = RK3308_SOC_CON0_VCCIO3 | (RK3308_SOC_CON0_VCCIO3 << 16);
++	ret = regmap_write(iod->grf, RK3308_SOC_CON0, val);
++	if (ret < 0)
++		dev_warn(iod->dev, "couldn't update vccio3 vsel ctrl\n");
++}
++
+ static void rk3328_iodomain_init(struct rockchip_iodomain *iod)
+ {
+ 	int ret;
+@@ -332,6 +355,19 @@ static const struct rockchip_iodomain_soc_data soc_data_rk3288 = {
+ 	.init = rk3288_iodomain_init,
+ };
+ 
++static const struct rockchip_iodomain_soc_data soc_data_rk3308 = {
++	.grf_offset = 0x300,
++	.supply_names = {
++		"vccio0",
++		"vccio1",
++		"vccio2",
++		"vccio3",
++		"vccio4",
++		"vccio5",
++	},
++	.init = rk3308_iodomain_init,
++};
++
+ static const struct rockchip_iodomain_soc_data soc_data_rk3328 = {
+ 	.grf_offset = 0x410,
+ 	.supply_names = {
+@@ -452,6 +488,10 @@ static const struct of_device_id rockchip_iodomain_match[] = {
+ 		.compatible = "rockchip,rk3288-io-voltage-domain",
+ 		.data = &soc_data_rk3288
+ 	},
++	{
++		.compatible = "rockchip,rk3308-io-voltage-domain",
++		.data = &soc_data_rk3308
++	},
+ 	{
+ 		.compatible = "rockchip,rk3328-io-voltage-domain",
+ 		.data = &soc_data_rk3328
+-- 
+2.31.0
+
