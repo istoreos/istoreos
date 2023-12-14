@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2017 Fuzhou Rockchip Electronics Co., Ltd
+ */
+
+#include <dt-bindings/input/input.h>
+#include "rk3308.dtsi"
+
+/ {
+	uboot-wide-temperature {
+		status = "okay";
+		compatible = "rockchip,uboot-wide-temperature";
+	};
+};
+
+&cpu0_opp_table {
+	rockchip,high-temp = <55000>;
+	rockchip,high-temp-max-freq = <1008000>;
+};
+
+&rk3308bs_cpu0_opp_table {
+	rockchip,high-temp = <55000>;
+	rockchip,high-temp-max-freq = <1008000>;
+};
+
+#if 0
+&rockchip_suspend {
+	rockchip,sleep-mode-config = <
+		(0
+		| RKPM_PMU_HW_PLLS_PD
+		| RKPM_PWM_VOLTAGE_DEFAULT
+		)
+	>;
+};
+#endif
+
+&thermal_zones {
+	soc-thermal {
+		sustainable-power = <422>;
+		rk3308bs-sustainable-power = <363>;
+		k_pu = <6>;
+		k_po = <1024>;
+		k_i = <0>;
+
+		trips {
+			trip-point@0 {
+				temperature = <55000>;
+			};
+			trip-point@1 {
+				temperature = <90000>;
+			};
+		};
+	};
+};

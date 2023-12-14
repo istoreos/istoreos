@@ -40,7 +40,7 @@ define U-Boot/easepi-rk3308
   ATF:=$(RK3308_ATF)
   DDR:=$(RK3308_DDR_UART2)
   SOC:=rk3308
-  BUILD_SUBTARGET:=armv8
+  BUILD_SUBTARGET:=
 endef
 
 # RK3528 boards

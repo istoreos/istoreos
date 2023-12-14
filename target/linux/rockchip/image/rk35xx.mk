@@ -254,3 +254,21 @@ $(call Device/rk3568_combined_nlnet)
   DEVICE_DTS := rk3568-xgp rk3568-xgp-v3
 endef
 TARGET_DEVICES += nlnet_xgp
+
+
+define Device/rk3308
+  SOC := rk3308
+  DEVICE_DTS_DIR := ../dts/rk3308
+  DEVICE_DTS = $$(SOC)-$$(lastword $$(subst _, ,$$(DEVICE_NAME)))
+  UBOOT_DEVICE_NAME := easepi-rk3308
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3308-uart2 | pine64-img | gzip | append-metadata
+endef
+
+define Device/armsom_p2-pro
+$(call Device/rk3308)
+  DEVICE_VENDOR := ArmSoM
+  DEVICE_MODEL := P2 Pro
+  SUPPORTED_DEVICES := armsom,p2pro armsom,p2-pro
+  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
+endef
+# TARGET_DEVICES += armsom_p2-pro
