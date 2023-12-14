@@ -1,0 +1,32 @@
+From d53d50dd1500d71f94ce5551606956f9373f3e52 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 14 Dec 2023 13:08:11 +0800
+Subject: [PATCH] rk3308: tftp speed
+
+---
+ include/configs/evb_rk3308.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/include/configs/evb_rk3308.h b/include/configs/evb_rk3308.h
+index 5e87e59..a58db31 100644
+--- a/include/configs/evb_rk3308.h
++++ b/include/configs/evb_rk3308.h
+@@ -22,4 +22,15 @@
+ #define CONFIG_BOOTCOMMAND RKIMG_BOOTCOMMAND
+ #endif
+ 
++/*
++ * TFTP speed up, by enable ip fragment, and set default blksize to MTU.
++ * Use `env set tftpblocksize 16384` to override blksize, max CONFIG_NET_MAXDEFRAG.
++ * MUST: CONFIG_TFTP_BLOCKSIZE <= CONFIG_NET_MAXDEFRAG
++ */
++#define CONFIG_IP_DEFRAG
++/* ip fragment, CONFIG_NET_MAXDEFRAG , default 16384, max 65536 */
++/* #define CONFIG_NET_MAXDEFRAG		16384 */
++#define CONFIG_UDP_CHECKSUM
++#define CONFIG_TFTP_BLOCKSIZE		1468
++
+ #endif
+-- 
+2.31.0
+
