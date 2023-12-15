@@ -248,7 +248,7 @@ define KernelPackage/sound-soc-es8328-i2c
   KCONFIG:=CONFIG_SND_SOC_ES8328_I2C
   FILES:=$(LINUX_DIR)/sound/soc/codecs/snd-soc-es8328-i2c.ko
   AUTOLOAD:=$(call AutoLoad,56,snd-soc-es8328-i2c)
-  DEPENDS:=+kmod-sound-soc-es8328 +kmod-i2c-core
+  DEPENDS:=+kmod-sound-soc-es8328 +kmod-regmap-i2c
   $(call AddDepends/sound)
 endef
 
