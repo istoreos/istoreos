@@ -2,11 +2,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rkwifi-firmware
-PKG_VERSION:=2023-12-06
+PKG_VERSION:=2023-12-07
 PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=9bd1a056ba1e4e97bb2f5a0d39df7c9f35bd618a
-PKG_HASH:=dba5047b33fe4b740d184148a27ed8ab3b7e9692f2dcd35aed5a6da2d29a193f
+PKG_SOURCE_VERSION:=453ad7237b3bf11d384eeeebd7dd002e8ebc388e
+PKG_HASH:=2a74b51d33f4516f7f6a7e36cf0f1c7da8f6bc7315242701660e2804e454b72a
 PKG_SOURCE_URL_FILE:=$(PKG_SOURCE_VERSION).tar.gz
 PKG_SOURCE:=rkwifi-firmware-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://github.com/jjm2473/rockchip_wlan/archive/
@@ -39,8 +39,14 @@ define Package/rkwifi-firmware/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/fw_bcm43456c5_ag.bin $(1)/lib/firmware/rkwifi/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/nvram_ap6256.txt $(1)/lib/firmware/rkwifi/
 
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/fw_bcm43752a2_ag.bin $(1)/lib/firmware/rkwifi/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/nvram_ap6275s.txt $(1)/lib/firmware/rkwifi/
+
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/fw_bcm4356a2_ag.bin $(1)/lib/firmware/rkwifi/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/nvram_ap6356.txt $(1)/lib/firmware/rkwifi/
+
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/fw_bcm4359c0_ag.bin $(1)/lib/firmware/rkwifi/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/firmware/rkwifi/nvram_ap6398s.txt $(1)/lib/firmware/rkwifi/
 endef
 
 $(eval $(call BuildPackage,rkwifi-firmware))
