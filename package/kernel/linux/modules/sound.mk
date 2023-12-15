@@ -218,7 +218,7 @@ define KernelPackage/sound-soc-es8316
   KCONFIG:=CONFIG_SND_SOC_ES8316
   FILES:=$(LINUX_DIR)/sound/soc/codecs/snd-soc-es8316.ko
   AUTOLOAD:=$(call AutoLoad,56,snd-soc-es8316)
-  DEPENDS:=+kmod-sound-soc-core +kmod-i2c-core
+  DEPENDS:=+kmod-sound-soc-core +kmod-regmap-i2c
   $(call AddDepends/sound)
 endef
 
