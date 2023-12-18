@@ -1,0 +1,31 @@
+#include "rk3308.dtsi"
+
+&cpu0_opp_table {
+	opp-1200000000 {
+		opp-hz = /bits/ 64 <1200000000>;
+		opp-microvolt = <1250000 1250000 1325000>;
+		clock-latency-ns = <40000>;
+	};
+	opp-1296000000 {
+		opp-hz = /bits/ 64 <1296000000>;
+		opp-microvolt = <1300000 1300000 1325000>;
+		clock-latency-ns = <40000>;
+	};
+};
+
+&soc_thermal {
+	sustainable-power = <422>;
+	rk3308bs-sustainable-power = <363>;
+	k_pu = <6>;
+	k_po = <1024>;
+	k_i = <0>;
+
+	trips {
+		trip-point@0 {
+			temperature = <55000>;
+		};
+		trip-point@1 {
+			temperature = <90000>;
+		};
+	};
+};

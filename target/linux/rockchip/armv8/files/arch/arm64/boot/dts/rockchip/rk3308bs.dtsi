@@ -1,0 +1,9 @@
+#include "rk3308bs-pinctrl.dtsi"
+
+&pinctrl {
+	compatible = "rockchip,rk3308bs-pinctrl", "rockchip,rk3308-pinctrl";
+};
+
+&tsadc {
+	compatible = "rockchip,rk3308bs-tsadc";
+};

@@ -6,9 +6,9 @@
 /dts-v1/;
 
 #include <dt-bindings/input/input.h>
-#include "rk3308.dtsi"
-// #include "rk3308k.dtsi"
-#include "rk3308bs-pinctrl.dtsi"
+// #include "rk3308.dtsi"
+#include "rk3308k.dtsi"
+#include "rk3308bs.dtsi"
 
 / {
 	model = "ArmSOM P2Pro";
@@ -302,7 +302,6 @@
 };
 
 &pinctrl {
-	compatible = "rockchip,rk3308bs-pinctrl", "rockchip,rk3308-pinctrl";
 	pinctrl-names = "default";
 	pinctrl-0 = <&rtc_32k>;
 
@@ -400,4 +399,8 @@
 &saradc {
 	status = "okay";
 	vref-supply = <&vcc_1v8>;
+};
+
+&tsadc {
+	status = "okay";
 };
