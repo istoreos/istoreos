@@ -26,3 +26,7 @@
 	snps,reset-delays-us = <0 50000 50000>;
 	status = "okay";
 };
+
+&sdmmc {
+	status = "okay";
+};
