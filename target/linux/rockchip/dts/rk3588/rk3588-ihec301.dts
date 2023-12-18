@@ -1,0 +1,8 @@
+/dts-v1/;
+
+#include "rk3588-inspur.dtsi"
+
+/ {
+	model = "Inspur IHEC301";
+	compatible = "inspur,ihec301", "rockchip,rk3588";
+};
