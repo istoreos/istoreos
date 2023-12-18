@@ -1,0 +1,224 @@
+From 699fded84e0859b6bc4f3b6c7d4980ed4ac82056 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Mon, 18 Dec 2023 15:12:23 +0800
+Subject: [PATCH] rockchip_thermal: add rk3308 thermal support
+
+---
+ drivers/thermal/rockchip_thermal.c | 111 +++++++++++++++++++++++++++++
+ 1 file changed, 111 insertions(+)
+
+diff --git a/drivers/thermal/rockchip_thermal.c b/drivers/thermal/rockchip_thermal.c
+index aa9e0e31e..7945c7073 100644
+--- a/drivers/thermal/rockchip_thermal.c
++++ b/drivers/thermal/rockchip_thermal.c
+@@ -71,12 +71,17 @@ enum adc_sort_mode {
+  * @id: conversion table
+  * @length: size of conversion table
+  * @data_mask: mask to apply on data inputs
++ * @kNum: linear parameter k
++ * @bNum: linear parameter b
+  * @mode: sort mode of this adc variant (incrementing or decrementing)
+  */
+ struct chip_tsadc_table {
+ 	const struct tsadc_table *id;
+ 	unsigned int length;
+ 	u32 data_mask;
++	/* Tsadc is linear, using linear parameters */
++	int kNum;
++	int bNum;
+ 	enum adc_sort_mode mode;
+ };
+ 
+@@ -84,6 +89,7 @@ struct chip_tsadc_table {
+  * struct rockchip_tsadc_chip - hold the private data of tsadc chip
+  * @chn_id: array of sensor ids of chip corresponding to the channel
+  * @chn_num: the channel number of tsadc chip
++ * @conversion_time: the conversion time of tsadc
+  * @tshut_temp: the hardware-controlled shutdown temperature value
+  * @tshut_mode: the hardware-controlled shutdown mode (0:CRU 1:GPIO)
+  * @tshut_polarity: the hardware-controlled active polarity (0:LOW 1:HIGH)
+@@ -94,6 +100,7 @@ struct chip_tsadc_table {
+  * @set_alarm_temp: set the high temperature interrupt
+  * @set_tshut_temp: set the hardware-controlled shutdown temperature
+  * @set_tshut_mode: set the hardware-controlled shutdown mode
++ * @set_clk_rate: set clock rate
+  * @table: the chip-specific conversion table
+  */
+ struct rockchip_tsadc_chip {
+@@ -101,6 +108,9 @@ struct rockchip_tsadc_chip {
+ 	int chn_id[SOC_MAX_SENSORS];
+ 	int chn_num;
+ 
++	/* The sensor electrical characteristics */
++	int conversion_time;
++
+ 	/* The hardware-controlled tshut property */
+ 	int tshut_temp;
+ 	enum tshut_mode tshut_mode;
+@@ -120,6 +130,7 @@ struct rockchip_tsadc_chip {
+ 	int (*set_tshut_temp)(const struct chip_tsadc_table *table,
+ 			      int chn, void __iomem *reg, int temp);
+ 	void (*set_tshut_mode)(int chn, void __iomem *reg, enum tshut_mode m);
++	int (*set_clk_rate)(struct platform_device *pdev);
+ 
+ 	/* Per-table methods */
+ 	struct chip_tsadc_table table;
+@@ -482,6 +493,9 @@ static u32 rk_tsadcv2_temp_to_code(const struct chip_tsadc_table *table,
+ 	unsigned int denom;
+ 	u32 error = table->data_mask;
+ 
++	if (table->kNum)
++		return (((temp / 1000) * table->kNum) / 1000 + table->bNum);
++
+ 	low = 0;
+ 	high = (table->length - 1) - 1; /* ignore the last check for table */
+ 	mid = (high + low) / 2;
+@@ -535,6 +549,13 @@ static int rk_tsadcv2_code_to_temp(const struct chip_tsadc_table *table,
+ 	unsigned int num;
+ 	unsigned long denom;
+ 
++	if (table->kNum) {
++		*temp = (((int)code - table->bNum) * 10000 / table->kNum) * 100;
++		// if (*temp < MIN_TEMP || *temp > MAX_TEMP)
++		// 	return -EAGAIN;
++		return 0;
++	}
++
+ 	WARN_ON(table->length < 2);
+ 
+ 	switch (table->mode) {
+@@ -832,6 +853,29 @@ static void rk_tsadcv2_tshut_mode(int chn, void __iomem *regs,
+ 	writel_relaxed(val, regs + TSADCV2_INT_EN);
+ }
+ 
++static int rk_tsadcv1_set_clk_rate(struct platform_device *pdev)
++{
++	struct clk *clk;
++	int error;
++
++	clk = devm_clk_get(&pdev->dev, "tsadc");
++	if (IS_ERR(clk)) {
++		error = PTR_ERR(clk);
++		dev_err(&pdev->dev, "failed to get tsadc clock\n");
++		return error;
++	}
++	error = clk_set_rate(clk, 4000000);
++	if (error < 0) {
++		devm_clk_put(&pdev->dev, clk);
++		dev_err(&pdev->dev,
++			"failed to set tsadc clk rate to 4000000Hz\n");
++		return error;
++	}
++	devm_clk_put(&pdev->dev, clk);
++
++	return 0;
++}
++
+ static const struct rockchip_tsadc_chip px30_tsadc_data = {
+ 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
+ 	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
+@@ -929,6 +973,56 @@ static const struct rockchip_tsadc_chip rk3288_tsadc_data = {
+ 	},
+ };
+ 
++static const struct rockchip_tsadc_chip rk3308_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
++	.chn_num = 2, /* 2 channels for tsadc */
++
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv2_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv3_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++
++	.table = {
++		.id = rk3328_code_table,
++		.length = ARRAY_SIZE(rk3328_code_table),
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
++static const struct rockchip_tsadc_chip rk3308bs_tsadc_data = {
++	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
++	.chn_num = 1, /* 1 channels for tsadc */
++
++	.conversion_time = 2100, /* us */
++
++	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
++	.tshut_temp = 95000,
++
++	.initialize = rk_tsadcv2_initialize,
++	.irq_ack = rk_tsadcv3_irq_ack,
++	.control = rk_tsadcv2_control,
++	.get_temp = rk_tsadcv2_get_temp,
++	.set_alarm_temp = rk_tsadcv2_alarm_temp,
++	.set_tshut_temp = rk_tsadcv2_tshut_temp,
++	.set_tshut_mode = rk_tsadcv2_tshut_mode,
++	.set_clk_rate = rk_tsadcv1_set_clk_rate,
++
++	.table = {
++		.kNum = 2699,
++		.bNum = 2796,
++		.data_mask = TSADCV2_DATA_MASK,
++		.mode = ADC_INCREMENT,
++	},
++};
++
+ static const struct rockchip_tsadc_chip rk3328_tsadc_data = {
+ 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
+ 	.chn_num = 1, /* one channels for tsadc */
+@@ -1043,6 +1137,14 @@ static const struct of_device_id of_rockchip_thermal_match[] = {
+ 		.compatible = "rockchip,rk3288-tsadc",
+ 		.data = (void *)&rk3288_tsadc_data,
+ 	},
++	{
++		.compatible = "rockchip,rk3308-tsadc",
++		.data = (void *)&rk3308_tsadc_data,
++	},
++	{
++		.compatible = "rockchip,rk3308bs-tsadc",
++		.data = (void *)&rk3308bs_tsadc_data,
++	},
+ 	{
+ 		.compatible = "rockchip,rk3328-tsadc",
+ 		.data = (void *)&rk3328_tsadc_data,
+@@ -1297,6 +1399,9 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 		goto err_disable_clk;
+ 	}
+ 
++	if (thermal->chip->set_clk_rate)
++		thermal->chip->set_clk_rate(pdev);
++
+ 	rockchip_thermal_reset_controller(thermal->reset);
+ 
+ 	error = rockchip_configure_from_dt(&pdev->dev, np, thermal);
+@@ -1332,6 +1437,9 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	thermal->chip->control(thermal->regs, true);
++	if (thermal->chip->conversion_time)
++		usleep_range(thermal->chip->conversion_time,
++			     thermal->chip->conversion_time + 50);
+ 
+ 	for (i = 0; i < thermal->chip->chn_num; i++) {
+ 		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
+@@ -1429,6 +1537,9 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+ 	}
+ 
+ 	thermal->chip->control(thermal->regs, true);
++	if (thermal->chip->conversion_time)
++		usleep_range(thermal->chip->conversion_time,
++			     thermal->chip->conversion_time + 50);
+ 
+ 	for (i = 0; i < thermal->chip->chn_num; i++)
+ 		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
+-- 
+2.31.0
+
