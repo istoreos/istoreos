@@ -70,6 +70,6 @@ define Device/armsom_p2-pro
   SUPPORTED_DEVICES := armsom,p2pro armsom,p2-pro
   UBOOT_DEVICE_NAME := easepi-rk3308
   IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3308-uart2 | pine64-img | gzip | append-metadata
-  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
+  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool kmod-rkwifi-bcmdhd rkwifi-firmware-ap6256
 endef
 TARGET_DEVICES += armsom_p2-pro
