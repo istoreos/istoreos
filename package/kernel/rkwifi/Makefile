@@ -26,7 +26,7 @@ TAR_CMD=$(HOST_TAR) -C $(1) $(TAR_OPTIONS)
 define KernelPackage/rkwifi-bcmdhd
   SUBMENU:=Wireless Drivers
   TITLE:=RK Wifi AP6xxx wireless cards support
-  DEPENDS:=@TARGET_rockchip +rkwifi-firmware +kmod-mmc +kmod-mac80211 \
+  DEPENDS:=@TARGET_rockchip +kmod-mmc +kmod-mac80211 \
 	+@DRIVER_11N_SUPPORT +@DRIVER_11AC_SUPPORT
   KCONFIG:=\
 	CONFIG_RFKILL_RK=y
