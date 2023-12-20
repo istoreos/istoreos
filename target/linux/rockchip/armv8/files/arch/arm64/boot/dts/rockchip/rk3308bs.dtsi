@@ -7,3 +7,22 @@
 &tsadc {
 	compatible = "rockchip,rk3308bs-tsadc";
 };
+
+&cpu0_opp_table {
+	opp-1104000000 {
+		opp-hz = /bits/ 64 <1104000000>;
+		opp-microvolt = <1200000 1200000 1200000>;
+		clock-latency-ns = <40000>;
+		status = "okay";
+	};
+	opp-1200000000 {
+		status = "disabled";
+	};
+	opp-1296000000 {
+		status = "disabled";
+	};
+};
+
+&soc_thermal {
+	sustainable-power = <363>;
+};

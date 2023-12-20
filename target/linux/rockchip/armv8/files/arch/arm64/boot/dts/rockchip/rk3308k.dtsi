@@ -1,6 +1,9 @@
 #include "rk3308.dtsi"
 
 &cpu0_opp_table {
+	opp-1104000000 {
+		status = "disabled";
+	};
 	opp-1200000000 {
 		opp-hz = /bits/ 64 <1200000000>;
 		opp-microvolt = <1250000 1250000 1325000>;
@@ -15,7 +18,6 @@
 
 &soc_thermal {
 	sustainable-power = <422>;
-	rk3308bs-sustainable-power = <363>;
 	k_pu = <6>;
 	k_po = <1024>;
 	k_i = <0>;

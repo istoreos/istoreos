@@ -11,7 +11,7 @@
 #include "rk3308bs.dtsi"
 
 / {
-	model = "ArmSOM P2Pro";
+	model = "ArmSoM P2 Pro";
 	compatible = "armsom,p2pro", "rockchip,rk3308";
 
 	chosen {
@@ -24,10 +24,10 @@
 		mmc1 = &sdmmc;
 		mmc2 = &sdio;
 
-		led-boot = &led_user;
-		led-failsafe = &led_user;
-		led-running = &led_user;
-		led-upgrade = &led_user;
+		led-boot = &led_sys;
+		led-failsafe = &led_sys;
+		led-running = &led_sys;
+		led-upgrade = &led_sys;
 	};
 
 	sdio_pwrseq: sdio-pwrseq {
@@ -193,28 +193,19 @@
 		compatible = "gpio-leds";
 		status = "okay";
 
-		green-led {
-			label = "blue:power";
-			gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "default-on";
-			default-state = "on";
-		};
-
-		led_user: blue-led {
-			label = "green:user";
+		led_sys: green-led {
+			label = "green:power";
 			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "on";
 		};
-	};
 
-	breathing_light {
-		compatible = "lhd,breathing_light_test";
-		backlight {
-			pwms = <&pwm3 0 25000 0>;
-			pwm-names = "breathing_light"; 
+		blue-led {
+			label = "blue:user";
+			gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
 		};
 	};
+
 };
 
 &pwm3 {
@@ -310,21 +301,9 @@
 			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
-	ethernet-phy {
-		eth_phy_reset_pin: eth-phy-reset-pin {
-			rockchip,pins = <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_down>;
-		};
-	};
 	usb {
 		otg_vbus_drv: otg-vbus-drv {
 			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-	rotary {
-		rotary_gpio: rotary-gpio {
-			rockchip,pins =
-				<2 RK_PB3 RK_FUNC_GPIO &pcfg_pull_none>,
-				<2 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 	sdio-pwrseq {
