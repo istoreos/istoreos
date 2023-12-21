@@ -103,3 +103,19 @@ define KernelPackage/rkgpu-bifrost/description
 endef
 
 $(eval $(call KernelPackage,rkgpu-bifrost))
+
+define KernelPackage/rkgpu-mali400
+  SUBMENU:=$(OTHER_MENU)
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-dma-buf
+  TITLE:=Rockchip GPU Mali 400 driver
+  KCONFIG:=\
+	CONFIG_MALI400
+  FILES:=$(LINUX_DIR)/drivers/gpu/arm/mali400/mali/mali.ko
+  AUTOLOAD:=$(call AutoLoad,85,mali)
+endef
+
+define KernelPackage/rkgpu-mali400/description
+  Support Rockchip GPU Mali 400 (450/470) (RK3528, etc.)
+endef
+
+$(eval $(call KernelPackage,rkgpu-mali400))
