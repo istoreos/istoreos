@@ -1,0 +1,63 @@
+From 86b6dd09445b9526652eda6a315495a75588353b Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 21 Dec 2023 17:41:59 +0800
+Subject: [PATCH] drivers/gpu/arm/mali400: fix stack overflow on reading
+ state_dump
+
+```
+root@iStoreOS:/sys/kernel/debug/mali# cat state_dump
+[  637.582018] Insufficient stack space to handle exception!
+[  637.582026] ESR: 0x96000047 -- DABT (current EL)
+[  637.582031] FAR: 0xffffffc01817ffe0
+[  637.582037] Task stack:     [0xffffffc018180000..0xffffffc018184000]
+[  637.582043] IRQ stack:      [0xffffffc011408000..0xffffffc01140c000]
+[  637.582049] Overflow stack: [0xffffff807db89090..0xffffff807db8a090]
+[  637.582055] CPU: 2 PID: 12939 Comm: cat Not tainted 5.10.176 #0
+[  637.582060] Hardware name: RK3528 Demo (DT)
+[  637.582065] pstate: 60400085 (nZCv daIf +PAN -UAO -TCO BTYPE=--)
+[  637.582069] pc : number+0x4/0x374
+[  637.582074] lr : ptr_to_id+0x84/0x1f0
+[  637.582078] sp : ffffffc018180060
+[  637.582082] x29: ffffffc018180060 x28: 0000000000000001
+[  637.582096] x27: 00000000ffffffe0 x26: ffffffc010c03590
+[  637.582108] x25: ffffffc018180210 x24: ffffff8008c41fff
+[  637.582119] x23: ffffff8008c42000 x22: 0000000000000010
+[  637.582131] x21: ffffff8008c42000 x20: ffff0a00ffffff05
+[  637.582143] x19: ffffff8008c4200f x18: 0000000000000020
+[  637.582154] x17: 0000000000000000 x16: 0000000000000000
+[  637.582166] x15: ffffff8008c42000 x14: ffffffffffffffff
+[  637.582178] x13: ffffff8008c42029 x12: 0000000000000000
+[  637.582191] x11: 0000000000000000 x10: ffffffc018180210
+[  637.582202] x9 : 00000000ffffffd8 x8 : 6c7967656e657261
+[  637.582214] x7 : 646f72616e646f6d x6 : 7465646279746573
+[  637.582225] x5 : ffffff8002385f00 x4 : 0000000000000030
+[  637.582237] x3 : ffff103000001005 x2 : 00000000facdb0e3
+[  637.582249] x1 : ffffff8008c42000 x0 : ffffff8008c4200f
+[  637.582262] Kernel panic - not syncing: kernel stack overflow
+```
+---
+ drivers/gpu/arm/mali400/mali/common/mali_group.c | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/arm/mali400/mali/common/mali_group.c b/drivers/gpu/arm/mali400/mali/common/mali_group.c
+index 47979a2f1..9f7b6d1fa 100755
+--- a/drivers/gpu/arm/mali400/mali/common/mali_group.c
++++ b/drivers/gpu/arm/mali400/mali/common/mali_group.c
+@@ -1451,9 +1451,11 @@ u32 mali_group_dump_state(struct mali_group *group, char *buf, u32 size)
+ 					group->pp_running_sub_job);
+ 	}
+ 
+-	_MALI_OSK_LIST_FOREACHENTRY(child, temp, &group->group_list,
+-				    struct mali_group, group_list) {
+-		n += mali_group_dump_state(child, buf + n, size - n);
++	if (mali_group_is_virtual(group)) {
++		_MALI_OSK_LIST_FOREACHENTRY(child, temp, &group->group_list,
++					    struct mali_group, group_list) {
++			n += mali_group_dump_state(child, buf + n, size - n);
++		}
+ 	}
+ 
+ 	return n;
+-- 
+2.31.0
+
