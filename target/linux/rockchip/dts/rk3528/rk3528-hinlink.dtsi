@@ -61,7 +61,7 @@
 		regulator-ramp-delay = <6001>;
 		regulator-settling-time-up-us = <250>;
 		pwm-supply = <&vcc5v0_sys>;
-		status = "disabled";
+		status = "okay";
 	};
 
 	vdd_cpu: vdd-cpu {
@@ -321,6 +321,16 @@
 	status = "disabled";
 };
 
+&gpu {
+	mali-supply = <&vdd_logic>;
+	status = "okay";
+};
+
+&gpu_bus {
+	bus-supply = <&vdd_logic>;
+	status = "okay";
+};
+
 &iep {
 	status = "okay";
 };
@@ -346,7 +356,7 @@
 };
 
 &pwm2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &rga2 {
