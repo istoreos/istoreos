@@ -15,7 +15,7 @@ include $(INCLUDE_DIR)/package.mk
 define KernelPackage/rkgpu-bifrost-csf
   SUBMENU:=Other modules
   TITLE:=Rockchip RK3588 GPU driver
-  DEPENDS:=@TARGET_rockchip_rk35xx +mali-csf-firmware
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-dma-buf +mali-csf-firmware
   CONFLICTS:=kmod-rkgpu-bifrost
   FILES:= \
 	$(PKG_BUILD_DIR)/bifrost/bifrost_kbase.ko
@@ -23,18 +23,18 @@ define KernelPackage/rkgpu-bifrost-csf
 endef
 
 define KernelPackage/rkgpu-bifrost-csf/description
-  Support Rockchip GPU Mali bifrost (CSF, RK3588)
+  Support Rockchip GPU Mali bifrost (CSF, RK3588 only)
 endef
 
 define KernelPackage/rkgpu-bifrost-csf-coex
   $(call KernelPackage/rkgpu-bifrost-csf)
-  TITLE:=Rockchip RK3588 GPU driver (coexist)
+  TITLE:=Rockchip RK3588/RK356x GPU driver (coexist)
   DEPENDS+=+kmod-rkgpu-bifrost
   CONFLICTS:=
 endef
 
 define KernelPackage/rkgpu-bifrost-csf-coex/description
-  Support Rockchip RK3588 GPU (coexist with rkgpu-bifrost)
+  Support Rockchip RK3588/RK356x GPU (coexist with rkgpu-bifrost)
 endef
 
 define KernelPackage/rkgpu-bifrost-csf-coex/install

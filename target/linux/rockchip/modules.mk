@@ -90,7 +90,7 @@ $(eval $(call KernelPackage,rknpu))
 
 define KernelPackage/rkgpu-bifrost
   SUBMENU:=$(OTHER_MENU)
-  DEPENDS:=@TARGET_rockchip_rk35xx
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-dma-buf
   TITLE:=Rockchip GPU Mali bifrost driver
   KCONFIG:=\
 	CONFIG_MALI_BIFROST
@@ -99,7 +99,7 @@ define KernelPackage/rkgpu-bifrost
 endef
 
 define KernelPackage/rkgpu-bifrost/description
-  Support Rockchip GPU Mali bifrost
+  Support Rockchip GPU Mali bifrost (RK356x, etc.)
 endef
 
 $(eval $(call KernelPackage,rkgpu-bifrost))
