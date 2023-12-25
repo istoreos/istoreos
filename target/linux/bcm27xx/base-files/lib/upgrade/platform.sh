@@ -61,6 +61,11 @@ platform_do_upgrade() {
 	fi
 
 	if [ -n "$diff" ]; then
+		grep /overlay /proc/mounts > /dev/null && {
+			/bin/mount -o noatime,remount,ro /overlay
+			/usr/bin/umount -R -d -l /overlay 2>/dev/null || /bin/umount -l /overlay
+		}
+
 		get_image "$@" | dd of="/dev/$diskdev" bs=2M conv=fsync
 
 		# Separate removal and addtion is necessary; otherwise, partition 1

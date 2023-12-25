@@ -152,6 +152,25 @@ istoreos_pre_upgrade() {
 	fi
 }
 
+istoreos_show_new_firmware_version() {
+	local dist version revision
+	json_load "$(cat /tmp/sysupgrade.meta)" || {
+		return 1
+	}
+	json_select "version"
+	json_get_var dist "dist"
+	json_get_var version "version"
+	json_get_var revision "revision"
+
+	v "Flashing Version: '$dist $version $revision'"
+}
+
+date '+%Y-%m-%d %H:%M:%S' >/overlay/upgrade.log
+v "Running Version: $(grep DISTRIB_DESCRIPTION= /etc/openwrt_release | cut -d= -f2)"
+if [ -s /tmp/sysupgrade.meta ]; then
+	(istoreos_show_new_firmware_version)
+fi
+
 indicate_upgrade
 
 while read -r a b c; do
@@ -202,10 +221,12 @@ grep /ext_overlay /proc/mounts > /dev/null && {
 	/usr/bin/umount -R -d -l /ext_overlay 2>/dev/null || /bin/umount -l /ext_overlay
 }
 
+if [ -z "$UPGRADE_BACKUP" ]; then
 grep /overlay /proc/mounts > /dev/null && {
 	/bin/mount -o noatime,remount,ro /overlay
 	/usr/bin/umount -R -d -l /overlay 2>/dev/null || /bin/umount -l /overlay
 }
+fi
 
 # Exec new shell from ramfs
 exec /bin/busybox ash -c "$COMMAND"
