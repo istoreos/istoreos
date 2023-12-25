@@ -1,0 +1,85 @@
+From 4198270768b18e30505423af14b6c2c075873e22 Mon Sep 17 00:00:00 2001
+From: Serge Vasilugin <vasilugin@yandex.ru>
+Date: Thu, 15 Aug 2019 15:27:08 +0700
+Subject: [PATCH] kernel: rtl8366_smi: explicitly set phy addr for switch
+
+By default rtl8366_smi use phy addr 0 at mii-bus to access switch registers.
+This patch allow to set it explicitly in dts-file:
+
+	rtl8367 {
+		compatible = "realtek,rtl8367b";
+		phy-id = <29>; /* switch address at mii-bus */
+		realtek,extif2 = <1 0 1 1 1 1 1 1 2>;
+		mii-bus = <&mdio>;
+		cpu_port = <7>;
+	}
+
+Use default 0 address if not set.
+Backward compatibility tested on tplink archer c2 v1 (rtl8367rb switch)
+
+Signed-off-by: Serge Vasilugin <vasilugin@yandex.ru>
+[code style fixes, add explicit phy_id assignment in probe_plat, use
+phy-id instead of phy_id for of property name]
+Signed-off-by: Chuanhong Guo <gch981213@gmail.com>
+[rebase]
+Signed-off-by: Gaspare Bruno <gaspare@anlix.io>
+---
+ drivers/net/phy/rtl8366_smi.c | 8 ++++++--
+ drivers/net/phy/rtl8366_smi.h | 1 +
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/net/phy/rtl8366_smi.c b/drivers/net/phy/rtl8366_smi.c
+index 4fda16a4f..66d98b499 100644
+--- a/drivers/net/phy/rtl8366_smi.c
++++ b/drivers/net/phy/rtl8366_smi.c
+@@ -256,7 +256,7 @@ static int __rtl8366_smi_read_reg(struct rtl8366_smi *smi, u32 addr, u32 *data)
+ 
+ int __rtl8366_mdio_read_reg(struct rtl8366_smi *smi, u32 addr, u32 *data)
+ {
+-	u32 phy_id = MDC_REALTEK_PHY_ADDR;
++	u32 phy_id = smi->phy_id;
+ 	struct mii_bus *mbus = smi->ext_mbus;
+ 
+ 	BUG_ON(in_interrupt());
+@@ -293,7 +293,7 @@ int __rtl8366_mdio_read_reg(struct rtl8366_smi *smi, u32 addr, u32 *data)
+ 
+ static int __rtl8366_mdio_write_reg(struct rtl8366_smi *smi, u32 addr, u32 data)
+ {
+-	u32 phy_id = MDC_REALTEK_PHY_ADDR;
++	u32 phy_id = smi->phy_id;
+ 	struct mii_bus *mbus = smi->ext_mbus;
+ 
+ 	BUG_ON(in_interrupt());
+@@ -1540,6 +1540,9 @@ int rtl8366_smi_probe_of(struct platform_device *pdev, struct rtl8366_smi *smi)
+ 		goto try_gpio;
+ 	}
+ 
++	if (of_property_read_u32(np, "phy-id", &smi->phy_id))
++		smi->phy_id = MDC_REALTEK_PHY_ADDR;
++
+ 	return 0;
+ 
+ try_gpio:
+@@ -1579,6 +1582,7 @@ int rtl8366_smi_probe_plat(struct platform_device *pdev, struct rtl8366_smi *smi
+ 	smi->gpio_sda = pdata->gpio_sda;
+ 	smi->gpio_sck = pdata->gpio_sck;
+ 	smi->hw_reset = pdata->hw_reset;
++	smi->phy_id = MDC_REALTEK_PHY_ADDR;
+ 
+ 	return 0;
+ }
+diff --git a/drivers/net/phy/rtl8366_smi.h b/drivers/net/phy/rtl8366_smi.h
+index fb57d8ba6..92b40414d 100644
+--- a/drivers/net/phy/rtl8366_smi.h
++++ b/drivers/net/phy/rtl8366_smi.h
+@@ -64,6 +64,7 @@ struct rtl8366_smi {
+ 	u8			dbg_vlan_4k_page;
+ #endif
+ 	struct mii_bus		*ext_mbus;
++	u32			phy_id;
+ 	u32			flags;
+ };
+ 
+-- 
+2.31.0
+
