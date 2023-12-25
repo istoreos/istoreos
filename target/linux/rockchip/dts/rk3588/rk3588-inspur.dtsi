@@ -141,6 +141,33 @@
 		vin-supply = <&vcc3v3>;
 	};
 
+	rtl8367s {
+		compatible = "realtek,rtl8367s", "realtek,rtl8367c", "realtek,rtl8367b";
+		cpu_port = <7>;
+		cpu-port = <7>;
+		realtek,extif2 = <1 0 1 1 1 1 1 1 2>;
+#ifndef INSPUR_RTL8367S_MDIO_GPIO
+		mii-bus = <&mdio1>;
+		phy_id = <29>;
+		phy-id = <29>;
+#else
+		pinctrl-names = "default";
+		pinctrl-0 = <&gmac1_mdio_gpio>;
+		gpio-sck = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
+		gpio-sda = <&gpio3 RK_PC3 GPIO_ACTIVE_HIGH>;
+
+		mdio-bus {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			rtl8367s_phy: ethernet-phy@29 {
+				reg = <29>;
+				phy-mode = "rgmii";
+			};
+		};
+#endif
+	};
 };
 
 //=============================================================
@@ -168,7 +195,10 @@
 	snps,reset-delays-us = <0 20000 100000>;
 
 	pinctrl-names = "default";
-	pinctrl-0 = <&gmac1_miim
+	pinctrl-0 = <
+#ifndef INSPUR_RTL8367S_MDIO_GPIO
+			&gmac1_miim
+#endif
 			&gmac1_tx_bus2
 			&gmac1_rx_bus2
 			&gmac1_rgmii_clk
@@ -177,16 +207,28 @@
 	tx_delay = <0x42>;
 	/* rx_delay = <0x4f>; */
 
-	phy-handle = <&rgmii_phy1>;
 	status = "okay";
+#ifdef INSPUR_RTL8367S_M2P
+	phy-handle = <&rtl8367s_phy>;
+#else
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+		pause;
+	};
+#endif
 };
 
+#ifndef INSPUR_RTL8367S_MDIO_GPIO
+#ifdef INSPUR_RTL8367S_M2P
 &mdio1 {
-	rgmii_phy1: phy@1 {
-		compatible = "ethernet-phy-ieee802.3-c22";
-		reg = <0x1>;
+	rtl8367s_phy: phy@29 {
+		reg = <29>;
+		phy-mode = "rgmii";
 	};
 };
+#endif
+#endif
 
 &mipi_dcphy0 {
 	status = "okay";
@@ -635,6 +677,16 @@
 };
 
 &pinctrl {
+	rtl8367s {
+		/omit-if-no-ref/
+		gmac1_mdio_gpio: gmac1-mdio-gpio {
+			rockchip,pins =
+				/* gmac1_mdc */
+				<3 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>,
+				/* gmac1_mdio */
+				<3 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 	hym8563 {
 		rtc_int: rtc-int {
 			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_up>;

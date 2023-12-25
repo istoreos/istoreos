@@ -198,7 +198,7 @@ define Device/inspur_ihec301
 $(call Device/rk3588)
   DEVICE_VENDOR := Inspur
   DEVICE_MODEL := IHEC301
-  DEVICE_PACKAGES := kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
+  DEVICE_PACKAGES := kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
 endef
 TARGET_DEVICES += inspur_ihec301
 
