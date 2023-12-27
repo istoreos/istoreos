@@ -1,0 +1,70 @@
+From eddb9eaa758b2bb52a7973a4311701db72129404 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 27 Dec 2023 17:37:47 +0800
+Subject: [PATCH] rk3308 codec patch
+
+(cherry picked from commit b7ee1ca558238a9610b582cf76253ce0ddff7abb)
+---
+ sound/soc/codecs/Kconfig        | 5 +++++
+ sound/soc/codecs/Makefile       | 2 ++
+ sound/soc/codecs/rk3308_codec.c | 1 -
+ 3 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
+index f1c9e5639..85f1418f8 100644
+--- a/sound/soc/codecs/Kconfig
++++ b/sound/soc/codecs/Kconfig
+@@ -150,6 +150,7 @@ config SND_SOC_ALL_CODECS
+ 	imply SND_SOC_PCM5102A
+ 	imply SND_SOC_PCM512x_I2C
+ 	imply SND_SOC_PCM512x_SPI
++	imply SND_SOC_RK3308
+ 	imply SND_SOC_RK3328
+ 	imply SND_SOC_RT274
+ 	imply SND_SOC_RT286
+@@ -1024,6 +1025,10 @@ config SND_SOC_PCM512x_SPI
+ 	select SND_SOC_PCM512x
+ 	select REGMAP_SPI
+ 
++config SND_SOC_RK3308
++	select REGMAP_MMIO
++	tristate "Rockchip RK3308 CODEC"
++
+ config SND_SOC_RK3328
+ 	tristate "Rockchip RK3328 audio CODEC"
+ 	select REGMAP_MMIO
+diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
+index 11ce98c25..3b57a9fcd 100644
+--- a/sound/soc/codecs/Makefile
++++ b/sound/soc/codecs/Makefile
+@@ -155,6 +155,7 @@ snd-soc-pcm5102a-objs := pcm5102a.o
+ snd-soc-pcm512x-objs := pcm512x.o
+ snd-soc-pcm512x-i2c-objs := pcm512x-i2c.o
+ snd-soc-pcm512x-spi-objs := pcm512x-spi.o
++snd-soc-rk3308-objs := rk3308_codec.o
+ snd-soc-rk3328-objs := rk3328_codec.o
+ snd-soc-rl6231-objs := rl6231.o
+ snd-soc-rl6347a-objs := rl6347a.o
+@@ -464,6 +465,7 @@ obj-$(CONFIG_SND_SOC_PCM5102A)	+= snd-soc-pcm5102a.o
+ obj-$(CONFIG_SND_SOC_PCM512x)	+= snd-soc-pcm512x.o
+ obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd-soc-pcm512x-i2c.o
+ obj-$(CONFIG_SND_SOC_PCM512x_SPI)	+= snd-soc-pcm512x-spi.o
++obj-$(CONFIG_SND_SOC_RK3308)	+= snd-soc-rk3308.o
+ obj-$(CONFIG_SND_SOC_RK3328)	+= snd-soc-rk3328.o
+ obj-$(CONFIG_SND_SOC_RL6231)	+= snd-soc-rl6231.o
+ obj-$(CONFIG_SND_SOC_RL6347A)	+= snd-soc-rl6347a.o
+diff --git a/sound/soc/codecs/rk3308_codec.c b/sound/soc/codecs/rk3308_codec.c
+index c78752d5f..510c0066c 100644
+--- a/sound/soc/codecs/rk3308_codec.c
++++ b/sound/soc/codecs/rk3308_codec.c
+@@ -31,7 +31,6 @@
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
+ #include <linux/reset.h>
+-#include <linux/rockchip/grf.h>
+ #include <linux/version.h>
+ #include <sound/core.h>
+ #include <sound/dmaengine_pcm.h>
+-- 
+2.31.0
+
