@@ -1,0 +1,92 @@
+From fc8d960f95775d2a6501220d6a1bbb4e58470ed7 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 27 Dec 2023 16:16:38 +0800
+Subject: [PATCH] rockchip sound patch
+
+---
+ sound/soc/rockchip/Kconfig  | 24 ++++++++++++++++++++++++
+ sound/soc/rockchip/Makefile |  6 ++++++
+ 2 files changed, 30 insertions(+)
+
+diff --git a/sound/soc/rockchip/Kconfig b/sound/soc/rockchip/Kconfig
+index d610b553e..68f936055 100644
+--- a/sound/soc/rockchip/Kconfig
++++ b/sound/soc/rockchip/Kconfig
+@@ -16,6 +16,15 @@ config SND_SOC_ROCKCHIP_I2S
+ 	  Rockchip I2S device. The device supports upto maximum of
+ 	  8 channels each for play and record.
+ 
++config SND_SOC_ROCKCHIP_I2S_TDM
++	tristate "Rockchip I2S/TDM Device Driver"
++	depends on CLKDEV_LOOKUP && SND_SOC_ROCKCHIP
++	select SND_SOC_GENERIC_DMAENGINE_PCM
++	help
++	  Say Y or M if you want to add support for I2S/TDM driver for
++	  Rockchip I2S/TDM device. The device supports up to maximum of
++	  8 channels each for play and record.
++
+ config SND_SOC_ROCKCHIP_PDM
+ 	tristate "Rockchip PDM Controller Driver"
+ 	depends on CLKDEV_LOOKUP && SND_SOC_ROCKCHIP
+@@ -45,6 +54,13 @@ config SND_SOC_ROCKCHIP_MAX98090
+ 	  Say Y or M here if you want to add support for SoC audio on Rockchip
+ 	  boards using the MAX98090 codec and HDMI codec, such as Veyron.
+ 
++config SND_SOC_ROCKCHIP_MULTICODECS
++	tristate "ASoC support for Rockchip multicodecs"
++	depends on SND_SOC_ROCKCHIP && CLKDEV_LOOKUP
++	help
++	  Say Y or M here if you want to add support for SoC audio on Rockchip
++	  boards using multicodecs, such as RK3308 boards.
++
+ config SND_SOC_ROCKCHIP_RT5645
+ 	tristate "ASoC support for Rockchip boards using a RT5645/RT5650 codec"
+ 	depends on SND_SOC_ROCKCHIP && I2C && GPIOLIB && CLKDEV_LOOKUP
+@@ -54,6 +70,14 @@ config SND_SOC_ROCKCHIP_RT5645
+ 	  Say Y or M here if you want to add support for SoC audio on Rockchip
+ 	  boards using the RT5645/RT5650 codec, such as Veyron.
+ 
++config SND_SOC_ROCKCHIP_HDMI
++	tristate "ASoC support for Rockchip HDMI audio"
++	depends on SND_SOC_ROCKCHIP && CLKDEV_LOOKUP
++	select SND_SOC_HDMI_CODEC
++	help
++	  Say Y or M here if you want to add support for SoC audio on Rockchip
++	  boards using built-in HDMI or external HDMI.
++
+ config SND_SOC_RK3288_HDMI_ANALOG
+ 	tristate "ASoC support multiple codecs for Rockchip RK3288 boards"
+ 	depends on SND_SOC_ROCKCHIP && I2C && GPIOLIB && CLKDEV_LOOKUP
+diff --git a/sound/soc/rockchip/Makefile b/sound/soc/rockchip/Makefile
+index 65e814d46..c2318fcef 100644
+--- a/sound/soc/rockchip/Makefile
++++ b/sound/soc/rockchip/Makefile
+@@ -2,19 +2,25 @@
+ # ROCKCHIP Platform Support
+ snd-soc-rockchip-i2s-objs := rockchip_i2s.o
+ snd-soc-rockchip-pcm-objs := rockchip_pcm.o
++snd-soc-rockchip-i2s-tdm-objs := rockchip_i2s_tdm.o
+ snd-soc-rockchip-pdm-objs := rockchip_pdm.o
+ snd-soc-rockchip-spdif-objs := rockchip_spdif.o
+ 
+ obj-$(CONFIG_SND_SOC_ROCKCHIP_I2S) += snd-soc-rockchip-i2s.o snd-soc-rockchip-pcm.o
++obj-$(CONFIG_SND_SOC_ROCKCHIP_I2S_TDM) += snd-soc-rockchip-i2s-tdm.o
+ obj-$(CONFIG_SND_SOC_ROCKCHIP_PDM) += snd-soc-rockchip-pdm.o
+ obj-$(CONFIG_SND_SOC_ROCKCHIP_SPDIF) += snd-soc-rockchip-spdif.o
+ 
++snd-soc-rockchip-hdmi-objs := rockchip_hdmi.o
+ snd-soc-rockchip-max98090-objs := rockchip_max98090.o
++snd-soc-rockchip-multicodecs-objs := rockchip_multicodecs.o
+ snd-soc-rockchip-rt5645-objs := rockchip_rt5645.o
+ snd-soc-rk3288-hdmi-analog-objs := rk3288_hdmi_analog.o
+ snd-soc-rk3399-gru-sound-objs := rk3399_gru_sound.o
+ 
++obj-$(CONFIG_SND_SOC_ROCKCHIP_HDMI) += snd-soc-rockchip-hdmi.o
+ obj-$(CONFIG_SND_SOC_ROCKCHIP_MAX98090) += snd-soc-rockchip-max98090.o
++obj-$(CONFIG_SND_SOC_ROCKCHIP_MULTICODECS) += snd-soc-rockchip-multicodecs.o
+ obj-$(CONFIG_SND_SOC_ROCKCHIP_RT5645) += snd-soc-rockchip-rt5645.o
+ obj-$(CONFIG_SND_SOC_RK3288_HDMI_ANALOG) += snd-soc-rk3288-hdmi-analog.o
+ obj-$(CONFIG_SND_SOC_RK3399_GRU_SOUND) += snd-soc-rk3399-gru-sound.o
+-- 
+2.31.0
+
