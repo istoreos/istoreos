@@ -13,8 +13,8 @@ index f1c9e5639..511c1806c 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
 @@ -151,6 +151,7 @@ config SND_SOC_ALL_CODECS
- 	imply SND_SOC_PCM512x_I2C
  	imply SND_SOC_PCM512x_SPI
+ 	imply SND_SOC_RK3308
  	imply SND_SOC_RK3328
 +	imply SND_SOC_RK817
  	imply SND_SOC_RT274
@@ -39,18 +39,18 @@ diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
 index 11ce98c25..fa8e928c8 100644
 --- a/sound/soc/codecs/Makefile
 +++ b/sound/soc/codecs/Makefile
-@@ -156,6 +156,8 @@ snd-soc-pcm512x-objs := pcm512x.o
- snd-soc-pcm512x-i2c-objs := pcm512x-i2c.o
+@@ -156,6 +156,8 @@ snd-soc-pcm512x-i2c-objs := pcm512x-i2c.o
  snd-soc-pcm512x-spi-objs := pcm512x-spi.o
+ snd-soc-rk3308-objs := rk3308_codec.o
  snd-soc-rk3328-objs := rk3328_codec.o
 +snd-soc-rk817-objs := rk817_codec.o
 +snd-soc-rk-codec-digital-objs := rk_codec_digital.o
  snd-soc-rl6231-objs := rl6231.o
  snd-soc-rl6347a-objs := rl6347a.o
  snd-soc-rt1011-objs := rt1011.o
-@@ -465,6 +467,8 @@ obj-$(CONFIG_SND_SOC_PCM512x)	+= snd-soc-pcm512x.o
- obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd-soc-pcm512x-i2c.o
+@@ -465,6 +467,8 @@ obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd-soc-pcm512x-i2c.o
  obj-$(CONFIG_SND_SOC_PCM512x_SPI)	+= snd-soc-pcm512x-spi.o
+ obj-$(CONFIG_SND_SOC_RK3308)	+= snd-soc-rk3308.o
  obj-$(CONFIG_SND_SOC_RK3328)	+= snd-soc-rk3328.o
 +obj-$(CONFIG_SND_SOC_RK817)	+= snd-soc-rk817.o
 +obj-$(CONFIG_SND_SOC_RK_CODEC_DIGITAL)	+= snd-soc-rk-codec-digital.o
