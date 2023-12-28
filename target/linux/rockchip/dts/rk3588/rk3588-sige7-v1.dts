@@ -114,6 +114,9 @@
 
 	leds: leds {
 		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_red_pin>, <&led_green_pin>;
+
 		work_led: work {
 			label = "red";
 			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
@@ -947,6 +950,14 @@
 		};
 	};
 
+	leds {
+		led_red_pin: led-red-pin {
+			rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_green_pin: led-green-pin {
+			rockchip,pins = <0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &pwm1 {
