@@ -818,14 +818,6 @@
 	status = "okay";
 };
 
-&i2s6_8ch {
-	status = "okay";
-};
-
-&i2s7_8ch {
-	status = "okay";
-};
-
 &mdio1 {
 	rgmii_phy: phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
