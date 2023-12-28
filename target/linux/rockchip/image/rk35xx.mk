@@ -277,6 +277,6 @@ $(call Device/rk3308)
   DEVICE_VENDOR := ArmSoM
   DEVICE_MODEL := P2 Pro
   SUPPORTED_DEVICES := armsom,p2pro armsom,p2-pro
-  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
+  DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool kmod-rkwifi-bcmdhd rkwifi-firmware-ap6256 kmod-sound-soc-rk3308
 endef
 # TARGET_DEVICES += armsom_p2-pro

@@ -22,10 +22,10 @@
 		mmc1 = &sdmmc;
 		mmc2 = &sdio;
 
-		led-boot = &led_user;
-		led-failsafe = &led_user;
-		led-running = &led_user;
-		led-upgrade = &led_user;
+		led-boot = &led_sys;
+		led-failsafe = &led_sys;
+		led-running = &led_sys;
+		led-upgrade = &led_sys;
 	};
 
 	sdio_pwrseq: sdio-pwrseq {
@@ -191,18 +191,16 @@
 		compatible = "gpio-leds";
 		status = "okay";
 
-		green-led {
-			label = "blue:power";
-			gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "default-on";
-			default-state = "on";
-		};
-
-		led_user: blue-led {
-			label = "green:user";
+		led_sys: green-led {
+			label = "green:power";
 			gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 			default-state = "on";
+		};
+
+		blue-led {
+			label = "blue:user";
+			gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
@@ -213,6 +211,15 @@
 			pwm-names = "breathing_light"; 
 		};
 	};
+
+	acodec_sound: acodec-sound {
+		compatible = "rockchip,multicodecs-card";
+		rockchip,card-name = "rockchip,rk3308-acodec";
+		rockchip,codec-hp-det;
+		rockchip,mclk-fs = <256>;
+		rockchip,cpu = <&i2s_8ch_2>;
+		rockchip,codec = <&acodec>;
+     };
 };
 
 &pwm3 {
@@ -299,6 +306,11 @@
 	vccio5-supply = <&vcc_io>;
 };
 
+&i2s_8ch_2 {
+	status = "okay";
+	#sound-dai-cells = <0>;
+};
+
 &pinctrl {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rtc_32k>;
@@ -357,6 +369,12 @@
 	status = "okay";
 };
 
+&tsadc {
+	rockchip,hw-tshut-mode = <0>;		/* 0:CRU */
+	rockchip,hw-tshut-polarity = <1>;	/* 1:HIGH */
+	status = "okay";
+};
+
 &u2phy {
 	status = "okay";
 
@@ -387,6 +405,11 @@
 };
 
 &usb_host0_ohci {
+	status = "okay";
+};
+
+&acodec {
+	hp-ctl-gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
