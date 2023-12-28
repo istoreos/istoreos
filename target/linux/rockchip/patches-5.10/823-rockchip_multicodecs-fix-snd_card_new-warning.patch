@@ -1,0 +1,73 @@
+From 38ee0ad6fc8602189ac4b0da9d5b9e7b3ebb4fb4 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 28 Dec 2023 12:17:44 +0800
+Subject: [PATCH] sound/rockchip_multicodecs: fix snd_card_new warning
+
+```
+[   15.256015] ------------[ cut here ]------------
+[   15.256571] WARNING: CPU: 2 PID: 108 at sound/core/init.c:208 snd_card_new+0x480/0x4c0 [snd]
+[   15.257318] Modules linked in: snd_soc_rk3308 snd_soc_rockchip_multicodecs snd_soc_rockchip_i2s_tdm fuse sch_teql sch_sfq sch_multiq sch_gred sch_fq sch_dsmark sch_codel em_text em_nbyte em_meta em_cmp act_simple act_pedit act_csum em_ipset cls_bpf act_bpf act_ctinfo act_connmark sch_tbf sch_ingress sch_htb sch_hfsc em_u32 cls_u32 cls_route cls_matchall cls_fw cls_flow cls_basic act_skbedit act_mirred act_gact configs videobuf2_vmalloc videobuf2_memops sg videodev pwm_fan drivetemp snd_soc_core industrialio i2c_algo_bit usb_f_acm u_serial usb_f_mass_storage usb_f_hid usb_f_ecm u_ether libcomposite ledtrig_usbport trelay ledtrig_activity xt_set ip_set_list_set ip_set_hash_netportnet ip_set_hash_netport ip_set_hash_netnet ip_set_hash_netiface ip_set_hash_net ip_set_hash_mac ip_set_hash_ipportnet ip_set_hash_ipportip ip_set_hash_ipport ip_set_hash_ipmark ip_set_hash_ipmac ip_set_hash_ip ip_set_bitmap_port ip_set_bitmap_ipmac ip_set_bitmap_ip ip_set nfnetlink net2280 st sr_mod ip6table_nat
+[   15.257656]  nf_nat nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 ip6t_NPT ip6table_mangle ip6table_filter ip6_tables ip6t_REJECT x_tables nf_reject_ipv6 nfsv4 nfsv3 nfsd nfs nfs_ssc msdos bonding ip6_gre ip_gre gre r8169 r8168 snd_ac97_codec ac97_bus ifb dummy nat46 l2tp_ip6 l2tp_ip l2tp_eth sit sctp l2tp_netlink l2tp_core ipcomp6 xfrm6_tunnel esp6 ah6 xfrm4_tunnel ipcomp esp4 ah4 ipip ip6_tunnel tunnel6 tunnel4 ip_tunnel udp_diag tcp_diag raw_diag inet_diag rpcsec_gss_krb5 auth_rpcgss oid_registry dm_raid veth tun snd_rawmidi snd_seq_device snd_pcm_oss snd_pcm_dmaengine snd_mixer_oss snd_hwdep snd_compress snd_pcm snd_timer snd soundcore nbd mISDN_dsp l1oip mISDN_core xfrm_user xfrm_ipcomp af_key xfrm_algo vfat fat udf crc_itu_t lockd sunrpc grace isofs hfsplus hfs cdrom cramfs cifs binfmt_misc autofs4 dns_resolver br2684 atm aoe multipath fscache raid456 async_raid6_recov async_pq async_xor async_memcpy async_tx raid10 raid1 raid0 linear md_mod nls_utf8 nls_cp936 nls_cp437 zram zsmalloc
+[   15.265684]  vxlan udp_tunnel ip6_udp_tunnel sha512_generic sha1_generic seqiv jitterentropy_rng drbg md5 md4 kpp hmac echainiv ecb des_generic libdes deflate cts cmac authenc arc4 crypto_acompress sysimgblt sysfillrect syscopyarea fb_sys_fops fb font uas dwc2 ohci_pci uhci_hcd ahci libahci libata fsl_mph_dr_of ehci_fsl gpio_button_hotplug exfat btrfs xor zstd_decompress zstd_compress xor_neon raid6_pq lzo_decompress lzo_compress dm_mirror dm_region_hash dm_log dm_crypt button_hotplug udc_core ptp pps_core cbc sha256_generic libsha256 encrypted_keys trusted tpm
+[   15.277816] CPU: 2 PID: 108 Comm: kworker/2:3 Not tainted 5.10.176 #0
+[   15.278384] Hardware name: RK3308 EVB (DT)
+[   15.278790] Workqueue: events deferred_probe_work_func
+[   15.279260] pstate: 60000005 (nZCv daif -PAN -UAO -TCO BTYPE=--)
+[   15.279891] pc : snd_card_new+0x480/0x4c0 [snd]
+[   15.280351] lr : snd_card_new+0xfc/0x4c0 [snd]
+[   15.280746] sp : ffff80001153b9f0
+[   15.281043] x29: ffff80001153b9f0 x28: ffff000007c048d8
+[   15.281526] x27: ffff000007c04ab8 x26: ffff800008f39000
+[   15.282006] x25: 0000000000000000 x24: ffff800008f39088
+[   15.282485] x23: ffff0000016f4410 x22: ffff000007c048c8
+[   15.282961] x21: ffff800008f39c88 x20: 0000000000000000
+[   15.283439] x19: ffff000007c09000 x18: 0000000000000001
+[   15.283917] x17: 0000000000000001 x16: 0000000000000001
+[   15.284393] x15: 0000000000000000 x14: 0000000000000002
+[   15.284872] x13: 0000000000017b5b x12: 0000000000000018
+[   15.285347] x11: 0000000000000018 x10: 0101010101010101
+[   15.285825] x9 : ffff800008f39ce0 x8 : ffff000007c0a000
+[   15.286303] x7 : 0000000000000000 x6 : 0000000000000019
+[   15.286782] x5 : ffff800008f39cd8 x4 : 0000000000000000
+[   15.287258] x3 : ffff000001565400 x2 : 0000000000000000
+[   15.287736] x1 : ffff000001565400 x0 : ffff800008f39088
+[   15.288216] Call trace:
+[   15.288516]  snd_card_new+0x480/0x4c0 [snd]
+[   15.288924]  snd_soc_of_get_dai_link_codecs+0x7f8/0xdf0 [snd_soc_core]
+[   15.289518]  snd_soc_register_card+0xf4/0x110 [snd_soc_core]
+[   15.290032]  devm_snd_soc_register_card+0x44/0xc0 [snd_soc_core]
+[   15.290571]  0xffff800009536ef4
+[   15.290864]  platform_drv_probe+0x54/0xac
+[   15.291228]  really_probe+0xf0/0x4b0
+[   15.291550]  driver_probe_device+0x58/0xbc
+[   15.291917]  __device_attach_driver+0xb8/0x120
+[   15.292313]  bus_for_each_drv+0x68/0xb0
+[   15.292659]  __device_attach+0xac/0x1b4
+[   15.293003]  device_initial_probe+0x14/0x20
+[   15.293379]  bus_probe_device+0x9c/0xa4
+[   15.293724]  deferred_probe_work_func+0x88/0xc0
+[   15.294134]  process_one_work+0x1cc/0x330
+[   15.294494]  worker_thread+0x154/0x460
+[   15.294837]  kthread+0x158/0x160
+[   15.295132]  ret_from_fork+0x10/0x30
+[   15.295455] ---[ end trace 44c2a1b014a5c716 ]---
+```
+---
+ sound/soc/rockchip/rockchip_multicodecs.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/sound/soc/rockchip/rockchip_multicodecs.c b/sound/soc/rockchip/rockchip_multicodecs.c
+index f7982ad10..4ba2fd4a1 100644
+--- a/sound/soc/rockchip/rockchip_multicodecs.c
++++ b/sound/soc/rockchip/rockchip_multicodecs.c
+@@ -614,6 +614,7 @@ static int rk_multicodecs_probe(struct platform_device *pdev)
+ 
+ 	card = &mc_data->snd_card;
+ 	card->dev = &pdev->dev;
++	card->owner = THIS_MODULE;
+ 
+ 	/* Parse the card name from DT */
+ 	ret = snd_soc_of_parse_card_name(card, "rockchip,card-name");
+-- 
+2.31.0
+

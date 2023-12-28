@@ -1,0 +1,35 @@
+From a639519c9e8b0b81056d0a1e803b08f23aca9a9e Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 28 Dec 2023 12:14:01 +0800
+Subject: [PATCH] sound/rockchip_i2s_tdm: fix condition compile on upstream
+ kernel
+
+---
+ sound/soc/rockchip/rockchip_i2s_tdm.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/sound/soc/rockchip/rockchip_i2s_tdm.c b/sound/soc/rockchip/rockchip_i2s_tdm.c
+index f1043607e..e6179ed69 100644
+--- a/sound/soc/rockchip/rockchip_i2s_tdm.c
++++ b/sound/soc/rockchip/rockchip_i2s_tdm.c
+@@ -31,7 +31,7 @@
+ 
+ #define DRV_NAME "rockchip-i2s-tdm"
+ 
+-#if IS_ENABLED(CONFIG_CPU_PX30) || IS_ENABLED(CONFIG_CPU_RK1808) || IS_ENABLED(CONFIG_CPU_RK3308)
++#if IS_ENABLED(CONFIG_CPU_PX30) || IS_ENABLED(CONFIG_CPU_RK1808) || IS_ENABLED(CONFIG_CPU_RK3308) || IS_ENABLED(CONFIG_SND_SOC_RK3308)
+ #define HAVE_SYNC_RESET
+ #endif
+ 
+@@ -1797,7 +1797,7 @@ static const struct of_device_id rockchip_i2s_tdm_match[] = {
+ #ifdef CONFIG_CPU_RK1808
+ 	{ .compatible = "rockchip,rk1808-i2s-tdm", .data = &rk1808_i2s_soc_data },
+ #endif
+-#ifdef CONFIG_CPU_RK3308
++#if IS_ENABLED(CONFIG_CPU_RK3308) || IS_ENABLED(CONFIG_SND_SOC_RK3308)
+ 	{ .compatible = "rockchip,rk3308-i2s-tdm", .data = &rk3308_i2s_soc_data },
+ #endif
+ #ifdef CONFIG_CPU_RK3568
+-- 
+2.31.0
+
