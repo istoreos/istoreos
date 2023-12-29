@@ -8,7 +8,7 @@ include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=opkg
 PKG_RELEASE:=$(AUTORELEASE)
-PKG_FLAGS:=essential
+PKG_FLAGS:=essential hold
 
 PKG_SOURCE_PROTO:=git
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/opkg-lede.git

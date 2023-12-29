@@ -5,6 +5,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=firewall4
+PKG_FLAGS:=hold
 PKG_RELEASE:=$(AUTORELEASE)
 
 PKG_SOURCE_PROTO:=git
