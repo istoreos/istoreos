@@ -13,11 +13,9 @@ Signed-off-by: David S. Miller <davem@davemloft.net>
  .../net/ethernet/stmicro/stmmac/dwmac-rk.c    | 49 +++++++++++++++++++
  1 file changed, 49 insertions(+)
 
-diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-index 8d28a536e1bb99..584db4ce6e3975 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-@@ -482,6 +482,54 @@ static const struct rk_gmac_ops rk3288_ops = {
+@@ -482,6 +482,54 @@ static const struct rk_gmac_ops rk3288_o
  	.set_rmii_speed = rk3288_set_rmii_speed,
  };
  
@@ -72,7 +70,7 @@ index 8d28a536e1bb99..584db4ce6e3975 100644
  #define RK3328_GRF_MAC_CON0	0x0900
  #define RK3328_GRF_MAC_CON1	0x0904
  #define RK3328_GRF_MAC_CON2	0x0908
-@@ -1513,6 +1561,7 @@ static const struct of_device_id rk_gmac_dwmac_match[] = {
+@@ -1507,6 +1555,7 @@ static const struct of_device_id rk_gmac
  	{ .compatible = "rockchip,rk3128-gmac", .data = &rk3128_ops },
  	{ .compatible = "rockchip,rk3228-gmac", .data = &rk3228_ops },
  	{ .compatible = "rockchip,rk3288-gmac", .data = &rk3288_ops },

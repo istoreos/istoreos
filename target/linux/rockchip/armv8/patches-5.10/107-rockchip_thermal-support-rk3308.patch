@@ -7,8 +7,6 @@ Subject: [PATCH] rockchip_thermal: add rk3308 thermal support
  drivers/thermal/rockchip_thermal.c | 111 +++++++++++++++++++++++++++++
  1 file changed, 111 insertions(+)
 
-diff --git a/drivers/thermal/rockchip_thermal.c b/drivers/thermal/rockchip_thermal.c
-index aa9e0e31e..7945c7073 100644
 --- a/drivers/thermal/rockchip_thermal.c
 +++ b/drivers/thermal/rockchip_thermal.c
 @@ -71,12 +71,17 @@ enum adc_sort_mode {
@@ -63,7 +61,7 @@ index aa9e0e31e..7945c7073 100644
  
  	/* Per-table methods */
  	struct chip_tsadc_table table;
-@@ -482,6 +493,9 @@ static u32 rk_tsadcv2_temp_to_code(const struct chip_tsadc_table *table,
+@@ -482,6 +493,9 @@ static u32 rk_tsadcv2_temp_to_code(const
  	unsigned int denom;
  	u32 error = table->data_mask;
  
@@ -73,7 +71,7 @@ index aa9e0e31e..7945c7073 100644
  	low = 0;
  	high = (table->length - 1) - 1; /* ignore the last check for table */
  	mid = (high + low) / 2;
-@@ -535,6 +549,13 @@ static int rk_tsadcv2_code_to_temp(const struct chip_tsadc_table *table,
+@@ -535,6 +549,13 @@ static int rk_tsadcv2_code_to_temp(const
  	unsigned int num;
  	unsigned long denom;
  
@@ -87,7 +85,7 @@ index aa9e0e31e..7945c7073 100644
  	WARN_ON(table->length < 2);
  
  	switch (table->mode) {
-@@ -832,6 +853,29 @@ static void rk_tsadcv2_tshut_mode(int chn, void __iomem *regs,
+@@ -832,6 +853,29 @@ static void rk_tsadcv2_tshut_mode(int ch
  	writel_relaxed(val, regs + TSADCV2_INT_EN);
  }
  
@@ -117,7 +115,7 @@ index aa9e0e31e..7945c7073 100644
  static const struct rockchip_tsadc_chip px30_tsadc_data = {
  	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
  	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
-@@ -929,6 +973,56 @@ static const struct rockchip_tsadc_chip rk3288_tsadc_data = {
+@@ -929,6 +973,56 @@ static const struct rockchip_tsadc_chip
  	},
  };
  
@@ -174,11 +172,10 @@ index aa9e0e31e..7945c7073 100644
  static const struct rockchip_tsadc_chip rk3328_tsadc_data = {
  	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
  	.chn_num = 1, /* one channels for tsadc */
-@@ -1043,6 +1137,14 @@ static const struct of_device_id of_rockchip_thermal_match[] = {
- 		.compatible = "rockchip,rk3288-tsadc",
+@@ -1044,6 +1138,14 @@ static const struct of_device_id of_rock
  		.data = (void *)&rk3288_tsadc_data,
  	},
-+	{
+ 	{
 +		.compatible = "rockchip,rk3308-tsadc",
 +		.data = (void *)&rk3308_tsadc_data,
 +	},
@@ -186,10 +183,11 @@ index aa9e0e31e..7945c7073 100644
 +		.compatible = "rockchip,rk3308bs-tsadc",
 +		.data = (void *)&rk3308bs_tsadc_data,
 +	},
- 	{
++	{
  		.compatible = "rockchip,rk3328-tsadc",
  		.data = (void *)&rk3328_tsadc_data,
-@@ -1297,6 +1399,9 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+ 	},
+@@ -1297,6 +1399,9 @@ static int rockchip_thermal_probe(struct
  		goto err_disable_clk;
  	}
  
@@ -199,7 +197,7 @@ index aa9e0e31e..7945c7073 100644
  	rockchip_thermal_reset_controller(thermal->reset);
  
  	error = rockchip_configure_from_dt(&pdev->dev, np, thermal);
-@@ -1332,6 +1437,9 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
+@@ -1332,6 +1437,9 @@ static int rockchip_thermal_probe(struct
  	}
  
  	thermal->chip->control(thermal->regs, true);
@@ -209,7 +207,7 @@ index aa9e0e31e..7945c7073 100644
  
  	for (i = 0; i < thermal->chip->chn_num; i++) {
  		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
-@@ -1429,6 +1537,9 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+@@ -1429,6 +1537,9 @@ static int __maybe_unused rockchip_therm
  	}
  
  	thermal->chip->control(thermal->regs, true);
@@ -219,6 +217,3 @@ index aa9e0e31e..7945c7073 100644
  
  	for (i = 0; i < thermal->chip->chn_num; i++)
  		rockchip_thermal_toggle_sensor(&thermal->sensors[i], true);
--- 
-2.31.0
-
