@@ -10,7 +10,8 @@ board_config_update
 
 case "$(board_name)" in
 innotek-gmbh-virtualbox)
-	ucidef_set_interface "lan" ipaddr "192.168.56.2"
+	ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
+	[ $ETHNUM -gt 1 ] && ucidef_set_interface "lan" ipaddr "192.168.56.2"
 	;;
 esac
 

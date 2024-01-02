@@ -10,8 +10,10 @@ board_config_update
 json_is_a network object && exit 0
 
 ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
+[ $ETHNUM == 0 ] && exit 0
+
 if [ $ETHNUM == 1 ]; then
-    ucidef_set_interface_lan 'eth0'
+    ucidef_set_interface_lan 'eth0' 'dhcp'
 else
     [ -d /sys/class/net/eth0 ] && ucidef_set_interface_wan 'eth0'
     interface=""
