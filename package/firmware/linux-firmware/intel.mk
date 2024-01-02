@@ -179,7 +179,7 @@ Package/iwlwifi-firmware-ax201 = $(call Package/firmware-default,Intel AX201 fir
 define Package/iwlwifi-firmware-ax201/install
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-QuZ-a0-hr-b0-66.ucode $(1)/lib/firmware
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-hr-b0-64.ucode $(1)/lib/firmware
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-hr-b0-72.ucode $(1)/lib/firmware
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-ax201))
 
@@ -194,7 +194,7 @@ $(eval $(call BuildPackage,iwlwifi-firmware-ax210))
 Package/iwlwifi-firmware-ax211 = $(call Package/firmware-default,Intel AX211 firmware)
 define Package/iwlwifi-firmware-ax211/install
 	$(INSTALL_DIR) $(1)/lib/firmware
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-gf-a0-64.ucode $(1)/lib/firmware
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-gf-a0-72.ucode $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-gf-a0.pnvm $(1)/lib/firmware
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-ax211))
@@ -211,6 +211,7 @@ $(eval $(call BuildPackage,e100-firmware))
 Package/i915-firmware = $(call Package/firmware-default,Intel GPU firmware)
 define Package/i915-firmware/install
 	$(INSTALL_DIR) $(1)/lib/firmware/i915
+	# drivers/gpu/drm/i915/display/intel_csr.c
 	# ROCKETLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/rkl_dmc_ver2_02.bin $(1)/lib/firmware/i915/
 	# DISPLAY_VER >= 12
@@ -228,6 +229,7 @@ define Package/i915-firmware/install
 	# BROXTON
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_dmc_ver1_07.bin $(1)/lib/firmware/i915/
 
+	# drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c:INTEL_UC_FIRMWARE_DEFS
 	# ROCKETLAKE | TIGERLAKE
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_35.2.0.bin $(1)/lib/firmware/i915/
 	# ELKHARTLAKE
