@@ -1066,6 +1066,17 @@ define Device/sitecom_wlr-4100-v1-002
 endef
 TARGET_DEVICES += sitecom_wlr-4100-v1-002
 
+define Device/snr_cpe-w4n-mt
+  $(Device/uimage-lzma-loader)
+  SOC := mt7620n
+  IMAGE_SIZE := 7360k
+  DEVICE_VENDOR := SNR
+  DEVICE_MODEL := CPE-W4N
+  DEVICE_VARIANT := MT
+  UIMAGE_NAME := SNR-CPE-W4N-MT
+endef
+TARGET_DEVICES += snr_cpe-w4n-mt
+
 define Device/tplink_archer-c20i
   $(Device/tplink-v2)
   SOC := mt7620a
@@ -1394,6 +1405,18 @@ define Device/zte_q7
   SUPPORTED_DEVICES += zte-q7
 endef
 TARGET_DEVICES += zte_q7
+
+define Device/zyxel_keenetic-lite-iii-a
+  SOC := mt7620n
+  IMAGE_SIZE := 7872k
+  DEVICE_VENDOR := ZyXEL
+  DEVICE_MODEL := Keenetic Lite III
+  DEVICE_VARIANT := A
+  IMAGES += factory.bin
+  IMAGE/factory.bin := $$(sysupgrade_bin) | pad-to 64k | check-size | \
+		zyimage -d 2102018 -v "ZyXEL Keenetic Lite III"
+endef
+TARGET_DEVICES += zyxel_keenetic-lite-iii-a
 
 define Device/zyxel_keenetic-omni
   SOC := mt7620n

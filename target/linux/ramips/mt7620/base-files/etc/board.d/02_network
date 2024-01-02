@@ -28,6 +28,7 @@ ramips_setup_interfaces()
 	zbtlink,zbt-we826-32m|\
 	zbtlink,zbt-we826-e|\
 	zbtlink,zbt-wr8305rt|\
+	zyxel,keenetic-lite-iii-a|\
 	zyxel,keenetic-omni)
 		ucidef_add_switch "switch0" \
 			"0:lan" "1:lan" "2:lan" "3:lan" "4:wan" "6@eth0"
@@ -85,6 +86,7 @@ ramips_setup_interfaces()
 	glinet,gl-mt300n|\
 	glinet,gl-mt750|\
 	hiwifi,hc5661|\
+	snr,cpe-w4n-mt|\
 	wrtnode,wrtnode|\
 	zbtlink,zbt-wa05|\
 	zyxel,keenetic-omni-ii)
@@ -373,6 +375,11 @@ ramips_setup_macs()
 	linksys,e1700)
 		wan_mac=$(mtd_get_mac_ascii config WAN_MAC_ADDR)
 		;;
+	snr,cpe-w4n-mt)
+		lan_mac=$(mtd_get_mac_binary Factory 0x28)
+		wan_mac=$(mtd_get_mac_binary Factory 0x2e)
+		label_mac=$wan_mac
+		;;
 	tplink,archer-c2-v1|\
 	tplink,archer-c20-v1|\
 	tplink,archer-c20i|\
@@ -386,6 +393,11 @@ ramips_setup_macs()
 		;;
 	zbtlink,zbt-we1026-5g-16m)
 		label_mac=$(mtd_get_mac_binary factory 0x4)
+		;;
+	zyxel,keenetic-lite-iii-a)
+		lan_mac=$(mtd_get_mac_binary RF-EEPROM 0x4)		
+		wan_mac=$(mtd_get_mac_binary RF-EEPROM 0x28)
+		label_mac=$wan_mac
 		;;
 	zyxel,keenetic-omni|\
 	zyxel,keenetic-omni-ii|\

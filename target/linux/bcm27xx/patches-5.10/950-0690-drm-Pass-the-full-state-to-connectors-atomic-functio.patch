@@ -190,7 +190,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/20201118094758.506730-1-maxi
  #include <drm/drm_atomic_helper.h>
  #include <drm/drm_dp_mst_helper.h>
  #include <drm/drm_dp_helper.h>
-@@ -264,8 +265,10 @@ static int dm_dp_mst_get_modes(struct dr
+@@ -283,8 +284,10 @@ static int dm_dp_mst_get_modes(struct dr
  
  static struct drm_encoder *
  dm_mst_atomic_best_encoder(struct drm_connector *connector,
@@ -224,7 +224,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/20201118094758.506730-1-maxi
  	else if (funcs->best_encoder)
  		new_encoder = funcs->best_encoder(connector);
  	else
-@@ -1328,7 +1328,7 @@ static void drm_atomic_helper_commit_wri
+@@ -1337,7 +1337,7 @@ static void drm_atomic_helper_commit_wri
  
  		if (new_conn_state->writeback_job && new_conn_state->writeback_job->fb) {
  			WARN_ON(connector->connector_type != DRM_MODE_CONNECTOR_WRITEBACK);
@@ -269,7 +269,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/20201118094758.506730-1-maxi
  #include <drm/drm_atomic_helper.h>
  #include <drm/drm_dp_helper.h>
  #include <drm/drm_edid.h>
-@@ -1161,8 +1162,10 @@ nv50_msto_new(struct drm_device *dev, st
+@@ -1193,8 +1194,10 @@ nv50_msto_new(struct drm_device *dev, st
  
  static struct drm_encoder *
  nv50_mstc_atomic_best_encoder(struct drm_connector *connector,
