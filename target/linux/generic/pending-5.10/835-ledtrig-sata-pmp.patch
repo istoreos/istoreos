@@ -11,8 +11,6 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  include/linux/libata.h    |  7 +++++-
  5 files changed, 124 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/ata/Kconfig b/drivers/ata/Kconfig
-index 52bbc559f..aa8972fda 100644
 --- a/drivers/ata/Kconfig
 +++ b/drivers/ata/Kconfig
 @@ -83,6 +83,14 @@ config ATA_LEDS
@@ -47,11 +45,9 @@ index 52bbc559f..aa8972fda 100644
  if HAS_DMA
  
  comment "Controllers with non-SFF native interface"
-diff --git a/drivers/ata/libata-core.c b/drivers/ata/libata-core.c
-index bc69bf8a2..96b6af4fc 100644
 --- a/drivers/ata/libata-core.c
 +++ b/drivers/ata/libata-core.c
-@@ -663,6 +663,41 @@ static inline void ata_led_act(struct ata_port *ap)
+@@ -663,6 +663,41 @@ static inline void ata_led_act(struct at
  }
  #endif
  
@@ -93,7 +89,7 @@ index bc69bf8a2..96b6af4fc 100644
  /**
   *	ata_build_rw_tf - Build ATA taskfile for given read/write request
   *	@tf: Target ATA taskfile
-@@ -2984,9 +3019,15 @@ static void sata_print_link_status(struct ata_link *link)
+@@ -2984,9 +3019,15 @@ static void sata_print_link_status(struc
  		tmp = (sstatus >> 4) & 0xf;
  		ata_link_info(link, "SATA link up %s (SStatus %X SControl %X)\n",
  			      sata_spd_string(tmp), sstatus, scontrol);
@@ -109,7 +105,7 @@ index bc69bf8a2..96b6af4fc 100644
  	}
  }
  
-@@ -4572,6 +4613,10 @@ struct ata_queued_cmd *ata_qc_new_init(struct ata_device *dev, int tag)
+@@ -4572,6 +4613,10 @@ struct ata_queued_cmd *ata_qc_new_init(s
  	ata_led_act(ap);
  #endif
  
@@ -120,7 +116,7 @@ index bc69bf8a2..96b6af4fc 100644
  	qc = __ata_qc_from_tag(ap, tag);
  	qc->tag = qc->hw_tag = tag;
  	qc->scsicmd = NULL;
-@@ -5248,6 +5293,11 @@ void ata_link_init(struct ata_port *ap, struct ata_link *link, int pmp)
+@@ -5248,6 +5293,11 @@ void ata_link_init(struct ata_port *ap,
  	link->active_tag = ATA_TAG_POISON;
  	link->hw_sata_spd_limit = UINT_MAX;
  
@@ -132,11 +128,9 @@ index bc69bf8a2..96b6af4fc 100644
  	/* can't use iterator, ap isn't initialized yet */
  	for (i = 0; i < ATA_MAX_DEVICES; i++) {
  		struct ata_device *dev = &link->device[i];
-diff --git a/drivers/ata/libata-pmp.c b/drivers/ata/libata-pmp.c
-index 79f2aeeb4..a0f62c609 100644
 --- a/drivers/ata/libata-pmp.c
 +++ b/drivers/ata/libata-pmp.c
-@@ -355,6 +355,16 @@ static int sata_pmp_init_links (struct ata_port *ap, int nr_ports)
+@@ -355,6 +355,16 @@ static int sata_pmp_init_links (struct a
  				goto err_tlink;
  			}
  		}
@@ -153,7 +147,7 @@ index 79f2aeeb4..a0f62c609 100644
  	}
  
  	for (i = 0; i < nr_ports; i++) {
-@@ -366,6 +376,23 @@ static int sata_pmp_init_links (struct ata_port *ap, int nr_ports)
+@@ -366,6 +376,23 @@ static int sata_pmp_init_links (struct a
  		ehc->i.action |= ATA_EH_RESET;
  	}
  
@@ -177,7 +171,7 @@ index 79f2aeeb4..a0f62c609 100644
  	return 0;
    err_tlink:
  	while (--i >= 0)
-@@ -562,6 +589,10 @@ static void sata_pmp_detach(struct ata_device *dev)
+@@ -562,6 +589,10 @@ static void sata_pmp_detach(struct ata_d
  	struct ata_port *ap = link->ap;
  	struct ata_link *tlink;
  	unsigned long flags;
@@ -188,7 +182,7 @@ index 79f2aeeb4..a0f62c609 100644
  
  	ata_dev_info(dev, "Port Multiplier detaching\n");
  
-@@ -578,6 +609,17 @@ static void sata_pmp_detach(struct ata_device *dev)
+@@ -578,6 +609,17 @@ static void sata_pmp_detach(struct ata_d
  	ap->nr_pmp_links = 0;
  	link->pmp = 0;
  	spin_unlock_irqrestore(ap->lock, flags);
@@ -206,8 +200,6 @@ index 79f2aeeb4..a0f62c609 100644
  }
  
  /**
-diff --git a/drivers/ata/libata.h b/drivers/ata/libata.h
-index 68cdd81d7..535ad49fd 100644
 --- a/drivers/ata/libata.h
 +++ b/drivers/ata/libata.h
 @@ -12,6 +12,10 @@
@@ -221,7 +213,7 @@ index 68cdd81d7..535ad49fd 100644
  #define DRV_NAME	"libata"
  #define DRV_VERSION	"3.00"	/* must be exactly four chars */
  
-@@ -255,4 +259,8 @@ static inline void zpodd_disable_run_wake(struct ata_device *dev) {}
+@@ -257,4 +261,8 @@ static inline void zpodd_disable_run_wak
  static inline void zpodd_post_poweron(struct ata_device *dev) {}
  #endif /* CONFIG_SATA_ZPODD */
  
@@ -230,8 +222,6 @@ index 68cdd81d7..535ad49fd 100644
 +#endif
 +
  #endif /* __LIBATA_H__ */
-diff --git a/include/linux/libata.h b/include/linux/libata.h
-index 2b8a5c96e..6ca774968 100644
 --- a/include/linux/libata.h
 +++ b/include/linux/libata.h
 @@ -23,7 +23,7 @@
@@ -243,7 +233,7 @@ index 2b8a5c96e..6ca774968 100644
  #include <linux/leds.h>
  #endif
  
-@@ -808,6 +808,11 @@ struct ata_link {
+@@ -812,6 +812,11 @@ struct ata_link {
  	struct ata_device	device[ATA_MAX_DEVICES];
  
  	unsigned long		last_lpm_change; /* when last LPM change happened */
@@ -255,6 +245,3 @@ index 2b8a5c96e..6ca774968 100644
  };
  #define ATA_LINK_CLEAR_BEGIN		offsetof(struct ata_link, active_tag)
  #define ATA_LINK_CLEAR_END		offsetof(struct ata_link, device[0])
--- 
-2.31.0
-

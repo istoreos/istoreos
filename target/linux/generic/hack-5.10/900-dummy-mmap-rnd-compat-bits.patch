@@ -9,8 +9,6 @@ Subject: [PATCH] mm/mmap: add mmap_rnd_compat_bits api for not compat kernel
  mm/mmap.c          | 7 +++++--
  3 files changed, 6 insertions(+), 6 deletions(-)
 
-diff --git a/include/linux/mm.h b/include/linux/mm.h
-index a27a6b5..596c791 100644
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
 @@ -90,8 +90,7 @@ extern int sysctl_legacy_va_layout;
@@ -23,11 +21,9 @@ index a27a6b5..596c791 100644
  extern const int mmap_rnd_compat_bits_min;
  extern const int mmap_rnd_compat_bits_max;
  extern int mmap_rnd_compat_bits __read_mostly;
-diff --git a/kernel/sysctl.c b/kernel/sysctl.c
-index 928798f..ccbc0c0 100644
 --- a/kernel/sysctl.c
 +++ b/kernel/sysctl.c
-@@ -3126,8 +3126,6 @@ static struct ctl_table vm_table[] = {
+@@ -3185,8 +3185,6 @@ static struct ctl_table vm_table[] = {
  		.extra1		= (void *)&mmap_rnd_bits_min,
  		.extra2		= (void *)&mmap_rnd_bits_max,
  	},
@@ -36,8 +32,6 @@ index 928798f..ccbc0c0 100644
  	{
  		.procname	= "mmap_rnd_compat_bits",
  		.data		= &mmap_rnd_compat_bits,
-diff --git a/mm/mmap.c b/mm/mmap.c
-index a0a4ead..d36d9e7 100644
 --- a/mm/mmap.c
 +++ b/mm/mmap.c
 @@ -66,11 +66,14 @@
@@ -57,6 +51,3 @@ index a0a4ead..d36d9e7 100644
  #endif
  
  static bool ignore_rlimit_data;
--- 
-2.31.0
-

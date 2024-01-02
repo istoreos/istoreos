@@ -7,11 +7,9 @@ Subject: [PATCH] drivers/usb/serial: supports fibocom fm650
  drivers/usb/serial/option.c | 8 ++++++++
  1 file changed, 8 insertions(+)
 
-diff --git a/drivers/usb/serial/option.c b/drivers/usb/serial/option.c
-index 1d1392511..9bb73475a 100644
 --- a/drivers/usb/serial/option.c
 +++ b/drivers/usb/serial/option.c
-@@ -2215,6 +2215,14 @@ static const struct usb_device_id option_ids[] = {
+@@ -2269,6 +2269,14 @@ static const struct usb_device_id option
  	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x01a2, 0xff) },			/* Fibocom FM101-GL (laptop MBIM) */
  	{ USB_DEVICE_INTERFACE_CLASS(0x2cb7, 0x01a4, 0xff),			/* Fibocom FM101-GL (laptop MBIM) */
  	  .driver_info = RSVD(4) },
@@ -26,6 +24,3 @@ index 1d1392511..9bb73475a 100644
  	{ USB_DEVICE_INTERFACE_CLASS(0x2df3, 0x9d03, 0xff) },			/* LongSung M5710 */
  	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1404, 0xff) },			/* GosunCn GM500 RNDIS */
  	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1405, 0xff) },			/* GosunCn GM500 MBIM */
--- 
-2.31.0
-

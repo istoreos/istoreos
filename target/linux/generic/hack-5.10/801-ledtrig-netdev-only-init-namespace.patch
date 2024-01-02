@@ -9,25 +9,21 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
  drivers/leds/trigger/ledtrig-netdev.c | 13 ++++++++-----
  1 file changed, 8 insertions(+), 5 deletions(-)
 
-diff --git a/drivers/leds/trigger/ledtrig-netdev.c b/drivers/leds/trigger/ledtrig-netdev.c
-index d5e774d83..32c2b65ce 100644
 --- a/drivers/leds/trigger/ledtrig-netdev.c
 +++ b/drivers/leds/trigger/ledtrig-netdev.c
-@@ -306,9 +306,10 @@ static int netdev_trig_notify(struct notifier_block *nb,
- 	    && evt != NETDEV_CHANGENAME)
+@@ -307,8 +307,9 @@ static int netdev_trig_notify(struct not
  		return NOTIFY_DONE;
  
--	if (!(dev == trigger_data->net_dev ||
+ 	if (!(dev == trigger_data->net_dev ||
 -	      (evt == NETDEV_CHANGENAME && !strcmp(dev->name, trigger_data->device_name)) ||
 -	      (evt == NETDEV_REGISTER && !strcmp(dev->name, trigger_data->device_name))))
-+	if (!(dev == trigger_data->net_dev || 
 +		((evt == NETDEV_CHANGENAME || evt == NETDEV_REGISTER)
 +			&& net_eq(dev_net(dev), &init_net)
 +			&& !strcmp(dev->name, trigger_data->device_name))))
  		return NOTIFY_DONE;
  
  	cancel_delayed_work_sync(&trigger_data->work);
-@@ -325,8 +326,10 @@ static int netdev_trig_notify(struct notifier_block *nb,
+@@ -328,8 +329,10 @@ static int netdev_trig_notify(struct not
  		trigger_data->net_dev = dev;
  		break;
  	case NETDEV_UNREGISTER:
@@ -40,6 +36,3 @@ index d5e774d83..32c2b65ce 100644
  		break;
  	case NETDEV_UP:
  	case NETDEV_CHANGE:
--- 
-2.31.0
-
