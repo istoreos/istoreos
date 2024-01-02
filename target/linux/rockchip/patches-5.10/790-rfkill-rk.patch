@@ -11,11 +11,9 @@ Subject: [PATCH] rfkill-rk patches
  net/rfkill/rfkill-wlan.c | 22 +++++++++++++++++-----
  5 files changed, 41 insertions(+), 10 deletions(-)
 
-diff --git a/net/Makefile b/net/Makefile
-index c7d662974..71575440d 100644
 --- a/net/Makefile
 +++ b/net/Makefile
-@@ -53,7 +53,7 @@ obj-$(CONFIG_TIPC)		+= tipc/
+@@ -52,7 +52,7 @@ obj-$(CONFIG_TIPC)		+= tipc/
  obj-$(CONFIG_NETLABEL)		+= netlabel/
  obj-$(CONFIG_IUCV)		+= iucv/
  obj-$(CONFIG_SMC)		+= smc/
@@ -24,8 +22,6 @@ index c7d662974..71575440d 100644
  obj-$(CONFIG_NET_9P)		+= 9p/
  obj-$(CONFIG_CAIF)		+= caif/
  ifneq ($(CONFIG_DCB),)
-diff --git a/net/rfkill/Kconfig b/net/rfkill/Kconfig
-index d05d6ae15..00c23369c 100644
 --- a/net/rfkill/Kconfig
 +++ b/net/rfkill/Kconfig
 @@ -36,3 +36,12 @@ config RFKILL_GPIO
@@ -41,8 +37,6 @@ index d05d6ae15..00c23369c 100644
 +	default n
 +	help
 +	  Rockchip rfkill driver for rk29/rk3X
-diff --git a/net/rfkill/Makefile b/net/rfkill/Makefile
-index be58b4119..6ca150b0f 100644
 --- a/net/rfkill/Makefile
 +++ b/net/rfkill/Makefile
 @@ -7,3 +7,5 @@ rfkill-y			+= core.o
@@ -51,8 +45,6 @@ index be58b4119..6ca150b0f 100644
  obj-$(CONFIG_RFKILL_GPIO)	+= rfkill-gpio.o
 +rfkill-rk-y			+= rfkill-wlan.o rfkill-bt.o
 +obj-$(CONFIG_RFKILL_RK)		+= rfkill-rk.o
-diff --git a/net/rfkill/rfkill-bt.c b/net/rfkill/rfkill-bt.c
-index bb9e41b57..31a315535 100644
 --- a/net/rfkill/rfkill-bt.c
 +++ b/net/rfkill/rfkill-bt.c
 @@ -24,7 +24,9 @@
@@ -75,7 +67,7 @@ index bb9e41b57..31a315535 100644
  	struct delayed_work bt_sleep_delay_work;
  	int irq_req;
  };
-@@ -120,10 +124,10 @@ static irqreturn_t rfkill_rk_wake_host_irq(int irq, void *dev)
+@@ -120,10 +124,10 @@ static irqreturn_t rfkill_rk_wake_host_i
  	LOG("BT_WAKE_HOST IRQ fired\n");
  
  	DBG("BT IRQ wakeup, request %dms wakelock\n", BT_IRQ_WAKELOCK_TIMEOUT);
@@ -88,7 +80,7 @@ index bb9e41b57..31a315535 100644
  	return IRQ_HANDLED;
  }
  
-@@ -788,10 +792,10 @@ static int rfkill_rk_probe(struct platform_device *pdev)
+@@ -788,10 +792,10 @@ static int rfkill_rk_probe(struct platfo
  				   "rts");
  	if (ret)
  		goto fail_gpio;
@@ -101,7 +93,7 @@ index bb9e41b57..31a315535 100644
  	ret = rfkill_rk_setup_wake_irq(rfkill, 0);
  	if (ret)
  		goto fail_setup_wake_irq;
-@@ -836,7 +840,9 @@ static int rfkill_rk_probe(struct platform_device *pdev)
+@@ -836,7 +840,9 @@ fail_alloc:
  	remove_proc_entry("btwrite", sleep_dir);
  	remove_proc_entry("lpm", sleep_dir);
  fail_setup_wake_irq:
@@ -111,7 +103,7 @@ index bb9e41b57..31a315535 100644
  fail_gpio:
  
  	g_rfkill = NULL;
-@@ -876,7 +882,9 @@ static int rfkill_rk_remove(struct platform_device *pdev)
+@@ -876,7 +882,9 @@ static int rfkill_rk_remove(struct platf
  	if (gpio_is_valid(rfkill->pdata->poweron_gpio.io))
  		gpio_free(rfkill->pdata->poweron_gpio.io);
  	clk_disable_unprepare(rfkill->pdata->ext_clk);
@@ -121,8 +113,6 @@ index bb9e41b57..31a315535 100644
  	g_rfkill = NULL;
  
  	return 0;
-diff --git a/net/rfkill/rfkill-wlan.c b/net/rfkill/rfkill-wlan.c
-index 89d9787b9..3d449da3a 100644
 --- a/net/rfkill/rfkill-wlan.c
 +++ b/net/rfkill/rfkill-wlan.c
 @@ -24,7 +24,9 @@
@@ -171,7 +161,7 @@ index 89d9787b9..3d449da3a 100644
  //#define RANDOM_ADDRESS_SAVE
  static int get_wifi_addr_vendor(unsigned char *addr)
  {
-@@ -452,6 +458,12 @@ static int get_wifi_addr_vendor(unsigned char *addr)
+@@ -452,6 +458,12 @@ static int get_wifi_addr_vendor(unsigned
  	}
  	return 0;
  }
@@ -184,7 +174,7 @@ index 89d9787b9..3d449da3a 100644
  
  int rockchip_wifi_mac_addr(unsigned char *buf)
  {
-@@ -863,10 +875,10 @@ static int rfkill_wlan_probe(struct platform_device *pdev)
+@@ -863,10 +875,10 @@ static int rfkill_wlan_probe(struct plat
  		if (ret)
  			goto fail_alloc;
  	}
@@ -197,7 +187,7 @@ index 89d9787b9..3d449da3a 100644
  	rfkill_set_wifi_bt_power(1);
  
  #ifdef CONFIG_SDIO_KEEPALIVE
-@@ -907,9 +919,9 @@ static int rfkill_wlan_remove(struct platform_device *pdev)
+@@ -907,9 +919,9 @@ static int rfkill_wlan_remove(struct pla
  	struct rfkill_wlan_data *rfkill = platform_get_drvdata(pdev);
  
  	LOG("Enter %s\n", __func__);
@@ -209,6 +199,3 @@ index 89d9787b9..3d449da3a 100644
  	fb_unregister_client(&rfkill_wlan_fb_notifier);
  
  	if (gpio_is_valid(rfkill->pdata->power_n.io))
--- 
-2.31.0
-

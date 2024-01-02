@@ -9,7 +9,7 @@ Subject: [PATCH] drivers/net/stmmac: dwmac-rk set mac delay on phy attached
 
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-@@ -1210,6 +1210,43 @@ static int phy_power_on(struct rk_priv_d
+@@ -1207,6 +1207,43 @@ static int phy_power_on(struct rk_priv_d
  	return 0;
  }
  
@@ -53,7 +53,7 @@ Subject: [PATCH] drivers/net/stmmac: dwmac-rk set mac delay on phy attached
  static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
  					  struct plat_stmmacenet_data *plat,
  					  const struct rk_gmac_ops *ops)
-@@ -1272,6 +1309,9 @@ static struct rk_priv_data *rk_gmac_setu
+@@ -1266,6 +1303,9 @@ static struct rk_priv_data *rk_gmac_setu
  		bsp_priv->rx_delay = value;
  	}
  
