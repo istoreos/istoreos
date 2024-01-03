@@ -7,8 +7,6 @@ Subject: [PATCH 40/42] drivers: add rockchip drm
  include/uapi/linux/media-bus-format.h       |    6 +-
  1 files changed, 5 insertions(+), 1 deletions(-)
 
-diff --git a/include/uapi/linux/media-bus-format.h b/include/uapi/linux/media-bus-format.h
-index 84fa53ffb..096f891d4 100644
 --- a/include/uapi/linux/media-bus-format.h
 +++ b/include/uapi/linux/media-bus-format.h
 @@ -34,7 +34,7 @@
@@ -31,6 +29,3 @@ index 84fa53ffb..096f891d4 100644
  
  /* YUV (including grey) - next is	0x202e */
  #define MEDIA_BUS_FMT_Y8_1X8			0x2001
--- 
-2.37.1 (Apple Git-137.1)
-

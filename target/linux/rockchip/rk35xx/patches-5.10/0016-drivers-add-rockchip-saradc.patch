@@ -8,8 +8,6 @@ Subject: [PATCH 16/42] drivers: add rockchip saradc
  drivers/iio/adc/rockchip_saradc.c | 329 ++++++++++++++++++++++++++++--
  2 files changed, 316 insertions(+), 20 deletions(-)
 
-diff --git a/drivers/iio/adc/Kconfig b/drivers/iio/adc/Kconfig
-index e39b67912..2760f1e52 100644
 --- a/drivers/iio/adc/Kconfig
 +++ b/drivers/iio/adc/Kconfig
 @@ -876,6 +876,13 @@ config ROCKCHIP_SARADC
@@ -26,8 +24,6 @@ index e39b67912..2760f1e52 100644
  config SC27XX_ADC
  	tristate "Spreadtrum SC27xx series PMICs ADC"
  	depends on MFD_SC27XX_PMIC || COMPILE_TEST
-diff --git a/drivers/iio/adc/rockchip_saradc.c b/drivers/iio/adc/rockchip_saradc.c
-index 12584f163..23a9f5df8 100644
 --- a/drivers/iio/adc/rockchip_saradc.c
 +++ b/drivers/iio/adc/rockchip_saradc.c
 @@ -35,12 +35,31 @@
@@ -181,7 +177,7 @@ index 12584f163..23a9f5df8 100644
  
  	if (!wait_for_completion_timeout(&info->completion, SARADC_TIMEOUT))
  		return -ETIMEDOUT;
-@@ -90,10 +182,19 @@ static int rockchip_saradc_read_raw(struct iio_dev *indio_dev,
+@@ -90,10 +182,19 @@ static int rockchip_saradc_read_raw(stru
  	struct rockchip_saradc *info = iio_priv(indio_dev);
  	int ret;
  
@@ -201,7 +197,7 @@ index 12584f163..23a9f5df8 100644
  		ret = rockchip_saradc_conversion(info, chan);
  		if (ret) {
  			rockchip_saradc_power_down(info);
-@@ -105,13 +206,11 @@ static int rockchip_saradc_read_raw(struct iio_dev *indio_dev,
+@@ -105,13 +206,11 @@ static int rockchip_saradc_read_raw(stru
  		mutex_unlock(&indio_dev->mlock);
  		return IIO_VAL_INT;
  	case IIO_CHAN_INFO_SCALE:
@@ -219,7 +215,7 @@ index 12584f163..23a9f5df8 100644
  		*val2 = chan->scan_type.realbits;
  		return IIO_VAL_FRACTIONAL_LOG2;
  	default:
-@@ -122,15 +221,27 @@ static int rockchip_saradc_read_raw(struct iio_dev *indio_dev,
+@@ -122,15 +221,27 @@ static int rockchip_saradc_read_raw(stru
  static irqreturn_t rockchip_saradc_isr(int irq, void *dev_id)
  {
  	struct rockchip_saradc *info = dev_id;
@@ -249,7 +245,7 @@ index 12584f163..23a9f5df8 100644
  	return IRQ_HANDLED;
  }
  
-@@ -164,6 +275,9 @@ static const struct rockchip_saradc_data saradc_data = {
+@@ -164,6 +275,9 @@ static const struct rockchip_saradc_data
  	.channels = rockchip_saradc_iio_channels,
  	.num_channels = ARRAY_SIZE(rockchip_saradc_iio_channels),
  	.clk_rate = 1000000,
@@ -259,7 +255,7 @@ index 12584f163..23a9f5df8 100644
  };
  
  static const struct iio_chan_spec rockchip_rk3066_tsadc_iio_channels[] = {
-@@ -175,6 +289,9 @@ static const struct rockchip_saradc_data rk3066_tsadc_data = {
+@@ -175,6 +289,9 @@ static const struct rockchip_saradc_data
  	.channels = rockchip_rk3066_tsadc_iio_channels,
  	.num_channels = ARRAY_SIZE(rockchip_rk3066_tsadc_iio_channels),
  	.clk_rate = 50000,
@@ -269,7 +265,7 @@ index 12584f163..23a9f5df8 100644
  };
  
  static const struct iio_chan_spec rockchip_rk3399_saradc_iio_channels[] = {
-@@ -190,6 +307,61 @@ static const struct rockchip_saradc_data rk3399_saradc_data = {
+@@ -190,6 +307,61 @@ static const struct rockchip_saradc_data
  	.channels = rockchip_rk3399_saradc_iio_channels,
  	.num_channels = ARRAY_SIZE(rockchip_rk3399_saradc_iio_channels),
  	.clk_rate = 1000000,
@@ -331,7 +327,7 @@ index 12584f163..23a9f5df8 100644
  };
  
  static const struct of_device_id rockchip_saradc_match[] = {
-@@ -202,6 +374,15 @@ static const struct of_device_id rockchip_saradc_match[] = {
+@@ -202,6 +374,15 @@ static const struct of_device_id rockchi
  	}, {
  		.compatible = "rockchip,rk3399-saradc",
  		.data = &rk3399_saradc_data,
@@ -347,7 +343,7 @@ index 12584f163..23a9f5df8 100644
  	},
  	{},
  };
-@@ -278,6 +459,75 @@ static irqreturn_t rockchip_saradc_trigger_handler(int irq, void *p)
+@@ -278,6 +459,75 @@ out:
  	return IRQ_HANDLED;
  }
  
@@ -423,7 +419,7 @@ index 12584f163..23a9f5df8 100644
  static int rockchip_saradc_probe(struct platform_device *pdev)
  {
  	struct rockchip_saradc *info = NULL;
-@@ -390,6 +640,13 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
+@@ -390,6 +640,13 @@ static int rockchip_saradc_probe(struct
  		return ret;
  	}
  
@@ -437,7 +433,7 @@ index 12584f163..23a9f5df8 100644
  	ret = clk_prepare_enable(info->pclk);
  	if (ret < 0) {
  		dev_err(&pdev->dev, "failed to enable pclk\n");
-@@ -430,6 +687,30 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
+@@ -430,6 +687,30 @@ static int rockchip_saradc_probe(struct
  	if (ret)
  		return ret;
  
@@ -468,7 +464,7 @@ index 12584f163..23a9f5df8 100644
  	return devm_iio_device_register(&pdev->dev, indio_dev);
  }
  
-@@ -439,10 +720,16 @@ static int rockchip_saradc_suspend(struct device *dev)
+@@ -439,10 +720,16 @@ static int rockchip_saradc_suspend(struc
  	struct iio_dev *indio_dev = dev_get_drvdata(dev);
  	struct rockchip_saradc *info = iio_priv(indio_dev);
  
@@ -485,7 +481,7 @@ index 12584f163..23a9f5df8 100644
  	return 0;
  }
  
-@@ -464,6 +751,8 @@ static int rockchip_saradc_resume(struct device *dev)
+@@ -464,6 +751,8 @@ static int rockchip_saradc_resume(struct
  	if (ret)
  		clk_disable_unprepare(info->pclk);
  
@@ -494,6 +490,3 @@ index 12584f163..23a9f5df8 100644
  	return ret;
  }
  #endif
--- 
-2.37.1 (Apple Git-137.1)
-

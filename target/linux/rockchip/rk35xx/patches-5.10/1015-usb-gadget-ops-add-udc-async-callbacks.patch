@@ -35,15 +35,12 @@ Signed-off-by: Jack Pham <jackp@codeaurora.org>
  include/linux/usb/gadget.h    |  1 +
  2 files changed, 50 insertions(+)
 
-diff --git a/drivers/usb/gadget/udc/core.c b/drivers/usb/gadget/udc/core.c
-index 347fab20f..715fda0be 100644
 --- a/drivers/usb/gadget/udc/core.c
 +++ b/drivers/usb/gadget/udc/core.c
-@@ -1131,6 +1131,53 @@ static inline void usb_gadget_udc_set_speed(struct usb_udc *udc,
- 		gadget->ops->udc_set_speed(gadget, s);
+@@ -1151,6 +1151,53 @@ static inline void usb_gadget_udc_set_sp
  }
  
-+/**
+ /**
 + * usb_gadget_enable_async_callbacks - tell usb device controller to enable asynchronous callbacks
 + * @udc: The UDC which should enable async callbacks
 + *
@@ -90,10 +87,11 @@ index 347fab20f..715fda0be 100644
 +		gadget->ops->udc_async_callbacks(gadget, false);
 +}
 +
- /**
++/**
   * usb_udc_release - release the usb_udc struct
   * @dev: the dev member within usb_udc
-@@ -1343,6 +1390,7 @@ static void usb_gadget_remove_driver(struct usb_udc *udc)
+  *
+@@ -1362,6 +1409,7 @@ static void usb_gadget_remove_driver(str
  	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
  
  	usb_gadget_disconnect(udc->gadget);
@@ -101,7 +99,7 @@ index 347fab20f..715fda0be 100644
  	if (udc->gadget->irq)
  		synchronize_irq(udc->gadget->irq);
  	udc->driver->unbind(udc->gadget);
-@@ -1422,6 +1470,7 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
+@@ -1441,6 +1489,7 @@ static int udc_bind_to_driver(struct usb
  		driver->unbind(udc->gadget);
  		goto err1;
  	}
@@ -109,8 +107,6 @@ index 347fab20f..715fda0be 100644
  	usb_udc_connect_control(udc);
  
  	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
-diff --git a/include/linux/usb/gadget.h b/include/linux/usb/gadget.h
-index ee04ef214..171b24372 100644
 --- a/include/linux/usb/gadget.h
 +++ b/include/linux/usb/gadget.h
 @@ -325,6 +325,7 @@ struct usb_gadget_ops {
@@ -121,6 +117,3 @@ index ee04ef214..171b24372 100644
  	struct usb_ep *(*match_ep)(struct usb_gadget *,
  			struct usb_endpoint_descriptor *,
  			struct usb_ss_ep_comp_descriptor *);
--- 
-2.31.0
-

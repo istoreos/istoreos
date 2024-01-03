@@ -8,11 +8,9 @@ Subject: [PATCH] rockchip_drm: fix vvop ce when build as module
  drivers/gpu/drm/rockchip/rockchip_drm_vvop.c |  9 +++++++++
  2 files changed, 23 insertions(+)
 
-diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
-index d5b93d57f..6c8308101 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
-@@ -2081,10 +2081,19 @@ static struct platform_driver rockchip_drm_platform_driver = {
+@@ -2081,10 +2081,19 @@ static struct platform_driver rockchip_d
  		rockchip_sub_drivers[num_rockchip_sub_drivers++] = &drv; \
  }
  
@@ -32,7 +30,7 @@ index d5b93d57f..6c8308101 100644
  	num_rockchip_sub_drivers = 0;
  #if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
  	ADD_ROCKCHIP_SUB_DRIVER(vvop_platform_driver, CONFIG_DRM_ROCKCHIP_VVOP);
-@@ -2132,10 +2141,15 @@ static int __init rockchip_drm_init(void)
+@@ -2132,10 +2141,15 @@ err_unreg_drivers:
  
  static void __exit rockchip_drm_fini(void)
  {
@@ -48,8 +46,6 @@ index d5b93d57f..6c8308101 100644
  }
  
  #ifdef CONFIG_VIDEO_REVERSE_IMAGE
-diff --git a/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c b/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
-index 2b0dbdbe7..635c7bc10 100644
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vvop.c
 @@ -377,8 +377,17 @@ static void __exit vvop_exit(void)
@@ -70,6 +66,3 @@ index 2b0dbdbe7..635c7bc10 100644
  
  MODULE_AUTHOR("Andy Yan <rock-chips@.com>");
  MODULE_LICENSE("GPL");
--- 
-2.31.0
-

@@ -8,8 +8,6 @@ Subject: [PATCH 22/42] drivers: add rockchip timer
  drivers/clocksource/timer-rockchip.c | 33 ++++++++++++++++++++++++++++
  2 files changed, 36 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/clocksource/Kconfig b/drivers/clocksource/Kconfig
-index a0c6e88be..9d9cb5757 100644
 --- a/drivers/clocksource/Kconfig
 +++ b/drivers/clocksource/Kconfig
 @@ -85,7 +85,9 @@ config IXP4XX_TIMER
@@ -23,8 +21,6 @@ index a0c6e88be..9d9cb5757 100644
  	depends on ARM || ARM64
  	select TIMER_OF
  	select CLKSRC_MMIO
-diff --git a/drivers/clocksource/timer-rockchip.c b/drivers/clocksource/timer-rockchip.c
-index 1f95d0aca..2f4e970d7 100644
 --- a/drivers/clocksource/timer-rockchip.c
 +++ b/drivers/clocksource/timer-rockchip.c
 @@ -8,11 +8,13 @@
@@ -51,7 +47,7 @@ index 1f95d0aca..2f4e970d7 100644
  
  static inline struct rk_timer *rk_timer(struct clock_event_device *ce)
  {
-@@ -119,10 +123,12 @@ static irqreturn_t rk_timer_interrupt(int irq, void *dev_id)
+@@ -119,10 +123,12 @@ static irqreturn_t rk_timer_interrupt(in
  	return IRQ_HANDLED;
  }
  
@@ -64,7 +60,7 @@ index 1f95d0aca..2f4e970d7 100644
  
  static int __init
  rk_timer_probe(struct rk_timer *timer, struct device_node *np)
-@@ -250,6 +256,7 @@ static int __init rk_clkevt_init(struct device_node *np)
+@@ -250,6 +256,7 @@ out:
  	return ret;
  }
  
@@ -72,7 +68,7 @@ index 1f95d0aca..2f4e970d7 100644
  static int __init rk_clksrc_init(struct device_node *np)
  {
  	int ret = -EINVAL;
-@@ -287,14 +294,17 @@ static int __init rk_clksrc_init(struct device_node *np)
+@@ -287,14 +294,17 @@ out:
  	rk_clksrc = ERR_PTR(ret);
  	return ret;
  }
@@ -90,7 +86,7 @@ index 1f95d0aca..2f4e970d7 100644
  
  	pr_err("Too many timer definitions for '%s'\n", TIMER_NAME);
  	return -EINVAL;
-@@ -302,3 +312,26 @@ static int __init rk_timer_init(struct device_node *np)
+@@ -302,3 +312,26 @@ static int __init rk_timer_init(struct d
  
  TIMER_OF_DECLARE(rk3288_timer, "rockchip,rk3288-timer", rk_timer_init);
  TIMER_OF_DECLARE(rk3399_timer, "rockchip,rk3399-timer", rk_timer_init);
@@ -117,6 +113,3 @@ index 1f95d0aca..2f4e970d7 100644
 +
 +MODULE_LICENSE("GPL");
 +#endif
--- 
-2.37.1 (Apple Git-137.1)
-

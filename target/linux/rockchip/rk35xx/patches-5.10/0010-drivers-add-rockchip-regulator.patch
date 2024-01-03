@@ -11,8 +11,6 @@ Subject: [PATCH 10/42] drivers: add rockchip regulator
  include/linux/regulator/fan53555.h  |   2 +
  5 files changed, 794 insertions(+), 156 deletions(-)
 
-diff --git a/drivers/regulator/Kconfig b/drivers/regulator/Kconfig
-index 020a00d66..06ef20fd2 100644
 --- a/drivers/regulator/Kconfig
 +++ b/drivers/regulator/Kconfig
 @@ -903,16 +903,35 @@ config REGULATOR_RC5T583
@@ -53,11 +51,9 @@ index 020a00d66..06ef20fd2 100644
  config REGULATOR_RN5T618
  	tristate "Ricoh RN5T567/618 voltage regulators"
  	depends on MFD_RN5T618
-diff --git a/drivers/regulator/Makefile b/drivers/regulator/Makefile
-index 6ebae5162..58740dbf7 100644
 --- a/drivers/regulator/Makefile
 +++ b/drivers/regulator/Makefile
-@@ -111,7 +111,9 @@ obj-$(CONFIG_REGULATOR_PCAP) += pcap-regulator.o
+@@ -111,7 +111,9 @@ obj-$(CONFIG_REGULATOR_PCAP) += pcap-reg
  obj-$(CONFIG_REGULATOR_PCF50633) += pcf50633-regulator.o
  obj-$(CONFIG_REGULATOR_RASPBERRYPI_TOUCHSCREEN_ATTINY)  += rpi-panel-attiny-regulator.o
  obj-$(CONFIG_REGULATOR_RC5T583)  += rc5t583-regulator.o
@@ -67,16 +63,15 @@ index 6ebae5162..58740dbf7 100644
  obj-$(CONFIG_REGULATOR_RN5T618) += rn5t618-regulator.o
  obj-$(CONFIG_REGULATOR_ROHM)	+= rohm-regulator.o
  obj-$(CONFIG_REGULATOR_RT4801)	+= rt4801-regulator.o
-diff --git a/drivers/regulator/fan53555.c b/drivers/regulator/fan53555.c
-index aa426183b..c672754ce 100644
 --- a/drivers/regulator/fan53555.c
 +++ b/drivers/regulator/fan53555.c
-@@ -20,10 +20,23 @@
+@@ -21,10 +21,24 @@
+ #include <linux/regulator/machine.h>
+ #include <linux/regulator/of_regulator.h>
  #include <linux/slab.h>
- #include <linux/regmap.h>
- #include <linux/regulator/fan53555.h>
 +#include <linux/gpio.h>
 +#include <linux/of_gpio.h>
++
  
  /* Voltage setting */
  #define FAN53555_VSEL0		0x00
@@ -95,7 +90,7 @@ index aa426183b..c672754ce 100644
  /* Control register */
  #define FAN53555_CONTROL	0x02
  /* IC Type */
-@@ -36,6 +49,7 @@
+@@ -37,6 +51,7 @@
  /* VSEL bit definitions */
  #define VSEL_BUCK_EN	(1 << 7)
  #define VSEL_MODE		(1 << 6)
@@ -103,7 +98,7 @@ index aa426183b..c672754ce 100644
  /* Chip ID and Verison */
  #define DIE_ID		0x0F	/* ID1 */
  #define DIE_REV		0x0F	/* ID2 */
-@@ -47,13 +61,25 @@
+@@ -48,13 +63,25 @@
  #define CTL_MODE_VSEL0_MODE	BIT(0)
  #define CTL_MODE_VSEL1_MODE	BIT(1)
  
@@ -131,7 +126,7 @@ index aa426183b..c672754ce 100644
  };
  
  enum {
-@@ -88,8 +114,10 @@ enum {
+@@ -89,8 +116,10 @@ enum {
  
  struct fan53555_device_info {
  	enum fan53555_vendor vendor;
@@ -142,7 +137,7 @@ index aa426183b..c672754ce 100644
  	struct regulator_init_data *regulator;
  	/* IC Type and Rev */
  	int chip_id;
-@@ -97,17 +125,52 @@ struct fan53555_device_info {
+@@ -98,17 +127,52 @@ struct fan53555_device_info {
  	/* Voltage setting register */
  	unsigned int vol_reg;
  	unsigned int sleep_reg;
@@ -199,7 +194,7 @@ index aa426183b..c672754ce 100644
  static int fan53555_set_suspend_voltage(struct regulator_dev *rdev, int uV)
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
-@@ -118,8 +181,8 @@ static int fan53555_set_suspend_voltage(struct regulator_dev *rdev, int uV)
+@@ -119,8 +183,8 @@ static int fan53555_set_suspend_voltage(
  	ret = regulator_map_voltage_linear(rdev, uV, uV);
  	if (ret < 0)
  		return ret;
@@ -210,7 +205,7 @@ index aa426183b..c672754ce 100644
  	if (ret < 0)
  		return ret;
  	/* Cache the sleep voltage setting.
-@@ -133,7 +196,7 @@ static int fan53555_set_suspend_enable(struct regulator_dev *rdev)
+@@ -134,7 +198,7 @@ static int fan53555_set_suspend_enable(s
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
  
@@ -219,7 +214,7 @@ index aa426183b..c672754ce 100644
  				  VSEL_BUCK_EN, VSEL_BUCK_EN);
  }
  
-@@ -141,21 +204,69 @@ static int fan53555_set_suspend_disable(struct regulator_dev *rdev)
+@@ -142,21 +206,69 @@ static int fan53555_set_suspend_disable(
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
  
@@ -292,7 +287,7 @@ index aa426183b..c672754ce 100644
  		break;
  	default:
  		return -EINVAL;
-@@ -169,7 +280,7 @@ static unsigned int fan53555_get_mode(struct regulator_dev *rdev)
+@@ -170,7 +282,7 @@ static unsigned int fan53555_get_mode(st
  	unsigned int val;
  	int ret = 0;
  
@@ -301,7 +296,7 @@ index aa426183b..c672754ce 100644
  	if (ret < 0)
  		return ret;
  	if (val & di->mode_mask)
-@@ -189,13 +300,37 @@ static const int slew_rates[] = {
+@@ -190,13 +302,37 @@ static const int slew_rates[] = {
  	  500,
  };
  
@@ -318,7 +313,9 @@ index aa426183b..c672754ce 100644
  	int regval = -1, i;
 +	const int *slew_rate_t;
 +	int slew_rate_n;
-+
+ 
+-	for (i = 0; i < ARRAY_SIZE(slew_rates); i++) {
+-		if (ramp <= slew_rates[i])
 +	switch (di->vendor) {
 +	case FAN53555_VENDOR_FAIRCHILD:
 +	case FAN53555_VENDOR_RK:
@@ -333,15 +330,13 @@ index aa426183b..c672754ce 100644
 +	default:
 +		return -EINVAL;
 +	}
- 
--	for (i = 0; i < ARRAY_SIZE(slew_rates); i++) {
--		if (ramp <= slew_rates[i])
++
 +	for (i = 0; i < slew_rate_n; i++) {
 +		if (ramp <= slew_rate_t[i])
  			regval = i;
  		else
  			break;
-@@ -206,20 +341,20 @@ static int fan53555_set_ramp(struct regulator_dev *rdev, int ramp)
+@@ -207,20 +343,20 @@ static int fan53555_set_ramp(struct regu
  		return -EINVAL;
  	}
  
@@ -368,7 +363,7 @@ index aa426183b..c672754ce 100644
  	.set_mode = fan53555_set_mode,
  	.get_mode = fan53555_get_mode,
  	.set_ramp_delay = fan53555_set_ramp,
-@@ -250,7 +385,7 @@ static int fan53526_voltages_setup_fairchild(struct fan53555_device_info *di)
+@@ -251,7 +387,7 @@ static int fan53526_voltages_setup_fairc
  		return -EINVAL;
  	}
  
@@ -377,7 +372,7 @@ index aa426183b..c672754ce 100644
  
  	return 0;
  }
-@@ -292,8 +427,58 @@ static int fan53555_voltages_setup_fairchild(struct fan53555_device_info *di)
+@@ -293,8 +429,58 @@ static int fan53555_voltages_setup_fairc
  			"Chip ID %d not supported!\n", di->chip_id);
  		return -EINVAL;
  	}
@@ -437,7 +432,7 @@ index aa426183b..c672754ce 100644
  
  	return 0;
  }
-@@ -312,8 +497,43 @@ static int fan53555_voltages_setup_silergy(struct fan53555_device_info *di)
+@@ -313,8 +499,43 @@ static int fan53555_voltages_setup_siler
  			"Chip ID %d not supported!\n", di->chip_id);
  		return -EINVAL;
  	}
@@ -464,14 +459,14 @@ index aa426183b..c672754ce 100644
 +		di->vol_reg = TCS452X_VSEL1;
 +		di->mode_mask = TCS_VSEL1_MODE;
 +	}
-+
+ 
+-	di->vsel_count = FAN53555_NVOLTAGES;
 +	di->mode_reg = TCS452X_COMMAND;
 +	di->vol_mask = TCS_VSEL_NSEL_MASK;
 +	di->slew_reg = TCS452X_TIME;
 +	di->slew_mask = TCS_SLEW_MASK;
 +	di->slew_shift = TCS_SLEW_MASK;
- 
--	di->vsel_count = FAN53555_NVOLTAGES;
++
 +	/* Init voltage range and step */
 +	di->vsel_min = 600000;
 +	di->vsel_step = 6250;
@@ -482,7 +477,7 @@ index aa426183b..c672754ce 100644
  
  	return 0;
  }
-@@ -343,7 +563,10 @@ static int fan53555_device_setup(struct fan53555_device_info *di,
+@@ -344,7 +565,10 @@ static int fan53555_device_setup(struct
  		return -EINVAL;
  	}
  
@@ -494,7 +489,7 @@ index aa426183b..c672754ce 100644
  	switch (di->vendor) {
  	case FAN53526_VENDOR_FAIRCHILD:
  		di->mode_reg = FAN53555_CONTROL;
-@@ -356,28 +579,20 @@ static int fan53555_device_setup(struct fan53555_device_info *di,
+@@ -357,28 +581,20 @@ static int fan53555_device_setup(struct
  			di->mode_mask = CTL_MODE_VSEL0_MODE;
  			break;
  		}
@@ -529,7 +524,7 @@ index aa426183b..c672754ce 100644
  	default:
  		dev_err(di->dev, "vendor %d not supported!\n", di->vendor);
  		return -EINVAL;
-@@ -390,23 +605,23 @@ static int fan53555_regulator_register(struct fan53555_device_info *di,
+@@ -391,23 +607,23 @@ static int fan53555_regulator_register(s
  			struct regulator_config *config)
  {
  	struct regulator_desc *rdesc = &di->desc;
@@ -559,7 +554,7 @@ index aa426183b..c672754ce 100644
  }
  
  static const struct regmap_config fan53555_regmap_config = {
-@@ -419,7 +634,7 @@ static struct fan53555_platform_data *fan53555_parse_dt(struct device *dev,
+@@ -420,7 +636,7 @@ static struct fan53555_platform_data *fa
  					      const struct regulator_desc *desc)
  {
  	struct fan53555_platform_data *pdata;
@@ -568,7 +563,7 @@ index aa426183b..c672754ce 100644
  	u32 tmp;
  
  	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
-@@ -427,12 +642,30 @@ static struct fan53555_platform_data *fan53555_parse_dt(struct device *dev,
+@@ -428,12 +644,30 @@ static struct fan53555_platform_data *fa
  		return NULL;
  
  	pdata->regulator = of_get_regulator_init_data(dev, np, desc);
@@ -599,7 +594,7 @@ index aa426183b..c672754ce 100644
  	return pdata;
  }
  
-@@ -443,12 +676,15 @@ static const struct of_device_id __maybe_unused fan53555_dt_ids[] = {
+@@ -444,12 +678,15 @@ static const struct of_device_id __maybe
  	}, {
  		.compatible = "fcs,fan53555",
  		.data = (void *)FAN53555_VENDOR_FAIRCHILD
@@ -616,7 +611,7 @@ index aa426183b..c672754ce 100644
  	},
  	{ }
  };
-@@ -461,7 +697,6 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -462,7 +699,6 @@ static int fan53555_regulator_probe(stru
  	struct fan53555_device_info *di;
  	struct fan53555_platform_data *pdata;
  	struct regulator_config config = { };
@@ -624,7 +619,7 @@ index aa426183b..c672754ce 100644
  	unsigned int val;
  	int ret;
  
-@@ -470,6 +705,8 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -471,6 +707,8 @@ static int fan53555_regulator_probe(stru
  	if (!di)
  		return -ENOMEM;
  
@@ -633,7 +628,7 @@ index aa426183b..c672754ce 100644
  	pdata = dev_get_platdata(&client->dev);
  	if (!pdata)
  		pdata = fan53555_parse_dt(&client->dev, np, &di->desc);
-@@ -479,6 +716,9 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -480,6 +718,9 @@ static int fan53555_regulator_probe(stru
  		return -ENODEV;
  	}
  
@@ -643,7 +638,7 @@ index aa426183b..c672754ce 100644
  	di->regulator = pdata->regulator;
  	if (client->dev.of_node) {
  		di->vendor =
-@@ -498,22 +738,22 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -499,22 +740,22 @@ static int fan53555_regulator_probe(stru
  		di->vendor = id->driver_data;
  	}
  
@@ -671,7 +666,7 @@ index aa426183b..c672754ce 100644
  	if (ret < 0) {
  		dev_err(&client->dev, "Failed to get chip Rev!\n");
  		return ret;
-@@ -530,15 +770,52 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -531,15 +772,52 @@ static int fan53555_regulator_probe(stru
  	/* Register regulator */
  	config.dev = di->dev;
  	config.init_data = di->regulator;
@@ -725,7 +720,7 @@ index aa426183b..c672754ce 100644
  }
  
  static const struct i2c_device_id fan53555_id[] = {
-@@ -554,6 +831,9 @@ static const struct i2c_device_id fan53555_id[] = {
+@@ -555,6 +833,9 @@ static const struct i2c_device_id fan535
  	}, {
  		.name = "syr828",
  		.driver_data = FAN53555_VENDOR_SILERGY
@@ -735,7 +730,7 @@ index aa426183b..c672754ce 100644
  	},
  	{ },
  };
-@@ -565,6 +845,7 @@ static struct i2c_driver fan53555_regulator_driver = {
+@@ -566,6 +847,7 @@ static struct i2c_driver fan53555_regula
  		.of_match_table = of_match_ptr(fan53555_dt_ids),
  	},
  	.probe = fan53555_regulator_probe,
@@ -743,8 +738,6 @@ index aa426183b..c672754ce 100644
  	.id_table = fan53555_id,
  };
  
-diff --git a/drivers/regulator/rk808-regulator.c b/drivers/regulator/rk808-regulator.c
-index e926c1a85..bb8b2f604 100644
 --- a/drivers/regulator/rk808-regulator.c
 +++ b/drivers/regulator/rk808-regulator.c
 @@ -34,6 +34,11 @@
@@ -813,7 +806,7 @@ index e926c1a85..bb8b2f604 100644
  
  #define RK8XX_DESC_SWITCH(_id, _match, _supply, _ereg, _emask)		\
  	RKXX_DESC_SWITCH_COM(_id, _match, _supply, _ereg, _emask,	\
-@@ -165,11 +175,33 @@ static const int rk808_buck_config_regs[] = {
+@@ -165,11 +175,33 @@ static const int rk808_buck_config_regs[
  	RK808_BUCK4_CONFIG_REG,
  };
  
@@ -847,7 +840,7 @@ index e926c1a85..bb8b2f604 100644
  #define RK809_BUCK5_SEL_CNT		(8)
  
  static const struct linear_range rk809_buck5_voltage_ranges[] = {
-@@ -287,6 +319,58 @@ static int rk808_buck1_2_i2c_set_voltage_sel(struct regulator_dev *rdev,
+@@ -287,6 +319,58 @@ static int rk808_buck1_2_i2c_set_voltage
  	return ret;
  }
  
@@ -906,7 +899,7 @@ index e926c1a85..bb8b2f604 100644
  static int rk808_buck1_2_set_voltage_sel(struct regulator_dev *rdev,
  					 unsigned sel)
  {
-@@ -340,6 +424,33 @@ static int rk808_buck1_2_set_voltage_time_sel(struct regulator_dev *rdev,
+@@ -340,6 +424,33 @@ static int rk808_buck1_2_set_voltage_tim
  	return regulator_set_voltage_time_sel(rdev, old_selector, new_selector);
  }
  
@@ -940,7 +933,7 @@ index e926c1a85..bb8b2f604 100644
  static int rk808_set_ramp_delay(struct regulator_dev *rdev, int ramp_delay)
  {
  	unsigned int ramp_value = RK808_RAMP_RATE_10MV_PER_US;
-@@ -366,6 +477,16 @@ static int rk808_set_ramp_delay(struct regulator_dev *rdev, int ramp_delay)
+@@ -366,6 +477,16 @@ static int rk808_set_ramp_delay(struct r
  				  RK808_RAMP_RATE_MASK, ramp_value);
  }
  
@@ -957,7 +950,7 @@ index e926c1a85..bb8b2f604 100644
  /*
   * RK817 RK809
   */
-@@ -428,9 +549,14 @@ static int rk808_set_suspend_voltage_range(struct regulator_dev *rdev, int uv)
+@@ -428,9 +549,14 @@ static int rk808_set_suspend_voltage_ran
  
  static int rk805_set_suspend_enable(struct regulator_dev *rdev)
  {
@@ -974,7 +967,7 @@ index e926c1a85..bb8b2f604 100644
  
  	return regmap_update_bits(rdev->regmap, reg,
  				  rdev->desc->enable_mask,
-@@ -439,18 +565,77 @@ static int rk805_set_suspend_enable(struct regulator_dev *rdev)
+@@ -439,18 +565,77 @@ static int rk805_set_suspend_enable(stru
  
  static int rk805_set_suspend_disable(struct regulator_dev *rdev)
  {
@@ -1054,7 +1047,7 @@ index e926c1a85..bb8b2f604 100644
  
  	reg = rdev->desc->enable_reg + RK808_SLP_SET_OFF_REG_OFFSET;
  
-@@ -462,6 +647,12 @@ static int rk808_set_suspend_enable(struct regulator_dev *rdev)
+@@ -462,6 +647,12 @@ static int rk808_set_suspend_enable(stru
  static int rk808_set_suspend_disable(struct regulator_dev *rdev)
  {
  	unsigned int reg;
@@ -1067,7 +1060,7 @@ index e926c1a85..bb8b2f604 100644
  
  	reg = rdev->desc->enable_reg + RK808_SLP_SET_OFF_REG_OFFSET;
  
-@@ -560,6 +751,22 @@ static unsigned int rk8xx_get_mode(struct regulator_dev *rdev)
+@@ -560,6 +751,22 @@ static unsigned int rk8xx_get_mode(struc
  		return REGULATOR_MODE_NORMAL;
  }
  
@@ -1090,7 +1083,7 @@ index e926c1a85..bb8b2f604 100644
  static int rk8xx_is_enabled_wmsk_regmap(struct regulator_dev *rdev)
  {
  	unsigned int val;
-@@ -569,17 +776,7 @@ static int rk8xx_is_enabled_wmsk_regmap(struct regulator_dev *rdev)
+@@ -569,17 +776,7 @@ static int rk8xx_is_enabled_wmsk_regmap(
  	if (ret != 0)
  		return ret;
  
@@ -1109,7 +1102,7 @@ index e926c1a85..bb8b2f604 100644
  	return val != 0;
  }
  
-@@ -595,27 +792,6 @@ static unsigned int rk8xx_regulator_of_map_mode(unsigned int mode)
+@@ -595,27 +792,6 @@ static unsigned int rk8xx_regulator_of_m
  	}
  }
  
@@ -1137,7 +1130,7 @@ index e926c1a85..bb8b2f604 100644
  static const struct regulator_ops rk808_buck1_2_ops = {
  	.list_voltage		= regulator_list_voltage_linear,
  	.map_voltage		= regulator_map_voltage_linear,
-@@ -625,12 +801,33 @@ static const struct regulator_ops rk808_buck1_2_ops = {
+@@ -625,12 +801,33 @@ static const struct regulator_ops rk808_
  	.enable			= regulator_enable_regmap,
  	.disable		= regulator_disable_regmap,
  	.is_enabled		= regulator_is_enabled_regmap,
@@ -1172,7 +1165,7 @@ index e926c1a85..bb8b2f604 100644
  static const struct regulator_ops rk808_reg_ops = {
  	.list_voltage		= regulator_list_voltage_linear,
  	.map_voltage		= regulator_map_voltage_linear,
-@@ -652,6 +849,10 @@ static const struct regulator_ops rk808_reg_ops_ranges = {
+@@ -652,6 +849,10 @@ static const struct regulator_ops rk808_
  	.enable			= regulator_enable_regmap,
  	.disable		= regulator_disable_regmap,
  	.is_enabled		= regulator_is_enabled_regmap,
@@ -1183,7 +1176,7 @@ index e926c1a85..bb8b2f604 100644
  	.set_suspend_voltage	= rk808_set_suspend_voltage_range,
  	.set_suspend_enable	= rk808_set_suspend_enable,
  	.set_suspend_disable	= rk808_set_suspend_disable,
-@@ -661,24 +862,20 @@ static const struct regulator_ops rk808_switch_ops = {
+@@ -661,24 +862,20 @@ static const struct regulator_ops rk808_
  	.enable			= regulator_enable_regmap,
  	.disable		= regulator_disable_regmap,
  	.is_enabled		= regulator_is_enabled_regmap,
@@ -1212,7 +1205,7 @@ index e926c1a85..bb8b2f604 100644
  	.is_enabled		= rk8xx_is_enabled_wmsk_regmap,
  	.set_suspend_voltage	= rk808_set_suspend_voltage_range,
  	.set_suspend_enable	= rk817_set_suspend_enable,
-@@ -690,8 +887,8 @@ static const struct regulator_ops rk817_reg_ops = {
+@@ -690,8 +887,8 @@ static const struct regulator_ops rk817_
  	.map_voltage		= regulator_map_voltage_linear,
  	.get_voltage_sel	= regulator_get_voltage_sel_regmap,
  	.set_voltage_sel	= regulator_set_voltage_sel_regmap,
@@ -1223,7 +1216,7 @@ index e926c1a85..bb8b2f604 100644
  	.is_enabled		= rk8xx_is_enabled_wmsk_regmap,
  	.set_suspend_voltage	= rk808_set_suspend_voltage,
  	.set_suspend_enable	= rk817_set_suspend_enable,
-@@ -703,8 +900,8 @@ static const struct regulator_ops rk817_boost_ops = {
+@@ -703,8 +900,8 @@ static const struct regulator_ops rk817_
  	.map_voltage		= regulator_map_voltage_linear,
  	.get_voltage_sel	= regulator_get_voltage_sel_regmap,
  	.set_voltage_sel	= regulator_set_voltage_sel_regmap,
@@ -1234,7 +1227,7 @@ index e926c1a85..bb8b2f604 100644
  	.is_enabled		= rk8xx_is_enabled_wmsk_regmap,
  	.set_suspend_enable	= rk817_set_suspend_enable,
  	.set_suspend_disable	= rk817_set_suspend_disable,
-@@ -716,8 +913,8 @@ static const struct regulator_ops rk817_buck_ops_range = {
+@@ -716,8 +913,8 @@ static const struct regulator_ops rk817_
  	.get_voltage_sel	= regulator_get_voltage_sel_regmap,
  	.set_voltage_sel	= regulator_set_voltage_sel_regmap,
  	.set_voltage_time_sel	= regulator_set_voltage_time_sel,
@@ -1245,7 +1238,7 @@ index e926c1a85..bb8b2f604 100644
  	.is_enabled		= rk8xx_is_enabled_wmsk_regmap,
  	.set_mode		= rk8xx_set_mode,
  	.get_mode		= rk8xx_get_mode,
-@@ -729,8 +926,8 @@ static const struct regulator_ops rk817_buck_ops_range = {
+@@ -729,8 +926,8 @@ static const struct regulator_ops rk817_
  };
  
  static const struct regulator_ops rk817_switch_ops = {
@@ -1256,7 +1249,7 @@ index e926c1a85..bb8b2f604 100644
  	.is_enabled		= rk8xx_is_enabled_wmsk_regmap,
  	.set_suspend_enable	= rk817_set_suspend_enable,
  	.set_suspend_disable	= rk817_set_suspend_disable,
-@@ -751,7 +948,10 @@ static const struct regulator_desc rk805_reg[] = {
+@@ -751,7 +948,10 @@ static const struct regulator_desc rk805
  		.vsel_reg = RK805_BUCK1_ON_VSEL_REG,
  		.vsel_mask = RK818_BUCK_VSEL_MASK,
  		.enable_reg = RK805_DCDC_EN_REG,
@@ -1268,7 +1261,7 @@ index e926c1a85..bb8b2f604 100644
  		.owner = THIS_MODULE,
  	}, {
  		.name = "DCDC_REG2",
-@@ -767,7 +967,10 @@ static const struct regulator_desc rk805_reg[] = {
+@@ -767,7 +967,10 @@ static const struct regulator_desc rk805
  		.vsel_reg = RK805_BUCK2_ON_VSEL_REG,
  		.vsel_mask = RK818_BUCK_VSEL_MASK,
  		.enable_reg = RK805_DCDC_EN_REG,
@@ -1280,7 +1273,7 @@ index e926c1a85..bb8b2f604 100644
  		.owner = THIS_MODULE,
  	}, {
  		.name = "DCDC_REG3",
-@@ -775,27 +978,45 @@ static const struct regulator_desc rk805_reg[] = {
+@@ -775,27 +978,45 @@ static const struct regulator_desc rk805
  		.of_match = of_match_ptr("DCDC_REG3"),
  		.regulators_node = of_match_ptr("regulators"),
  		.id = RK805_ID_DCDC3,
@@ -1335,7 +1328,7 @@ index e926c1a85..bb8b2f604 100644
  };
  
  static const struct regulator_desc rk808_reg[] = {
-@@ -892,6 +1113,101 @@ static const struct regulator_desc rk808_reg[] = {
+@@ -892,6 +1113,101 @@ static const struct regulator_desc rk808
  		RK808_DCDC_EN_REG, BIT(6)),
  };
  
@@ -1437,7 +1430,7 @@ index e926c1a85..bb8b2f604 100644
  static const struct regulator_desc rk809_reg[] = {
  	{
  		.name = "DCDC_REG1",
-@@ -908,7 +1224,7 @@ static const struct regulator_desc rk809_reg[] = {
+@@ -908,7 +1224,7 @@ static const struct regulator_desc rk809
  		.vsel_mask = RK817_BUCK_VSEL_MASK,
  		.enable_reg = RK817_POWER_EN_REG(0),
  		.enable_mask = ENABLE_MASK(RK817_ID_DCDC1),
@@ -1446,7 +1439,7 @@ index e926c1a85..bb8b2f604 100644
  		.disable_val = DISABLE_VAL(RK817_ID_DCDC1),
  		.of_map_mode = rk8xx_regulator_of_map_mode,
  		.owner = THIS_MODULE,
-@@ -927,7 +1243,7 @@ static const struct regulator_desc rk809_reg[] = {
+@@ -927,7 +1243,7 @@ static const struct regulator_desc rk809
  		.vsel_mask = RK817_BUCK_VSEL_MASK,
  		.enable_reg = RK817_POWER_EN_REG(0),
  		.enable_mask = ENABLE_MASK(RK817_ID_DCDC2),
@@ -1455,7 +1448,7 @@ index e926c1a85..bb8b2f604 100644
  		.disable_val = DISABLE_VAL(RK817_ID_DCDC2),
  		.of_map_mode = rk8xx_regulator_of_map_mode,
  		.owner = THIS_MODULE,
-@@ -946,7 +1262,7 @@ static const struct regulator_desc rk809_reg[] = {
+@@ -946,7 +1262,7 @@ static const struct regulator_desc rk809
  		.vsel_mask = RK817_BUCK_VSEL_MASK,
  		.enable_reg = RK817_POWER_EN_REG(0),
  		.enable_mask = ENABLE_MASK(RK817_ID_DCDC3),
@@ -1464,7 +1457,7 @@ index e926c1a85..bb8b2f604 100644
  		.disable_val = DISABLE_VAL(RK817_ID_DCDC3),
  		.of_map_mode = rk8xx_regulator_of_map_mode,
  		.owner = THIS_MODULE,
-@@ -965,7 +1281,7 @@ static const struct regulator_desc rk809_reg[] = {
+@@ -965,7 +1281,7 @@ static const struct regulator_desc rk809
  		.vsel_mask = RK817_BUCK_VSEL_MASK,
  		.enable_reg = RK817_POWER_EN_REG(0),
  		.enable_mask = ENABLE_MASK(RK817_ID_DCDC4),
@@ -1473,7 +1466,7 @@ index e926c1a85..bb8b2f604 100644
  		.disable_val = DISABLE_VAL(RK817_ID_DCDC4),
  		.of_map_mode = rk8xx_regulator_of_map_mode,
  		.owner = THIS_MODULE,
-@@ -985,52 +1301,52 @@ static const struct regulator_desc rk809_reg[] = {
+@@ -985,52 +1301,52 @@ static const struct regulator_desc rk809
  		.vsel_mask = RK809_BUCK5_VSEL_MASK,
  		.enable_reg = RK817_POWER_EN_REG(3),
  		.enable_mask = ENABLE_MASK(1),
@@ -1538,7 +1531,7 @@ index e926c1a85..bb8b2f604 100644
  			  DISABLE_VAL(3)),
  };
  
-@@ -1114,46 +1430,46 @@ static const struct regulator_desc rk817_reg[] = {
+@@ -1114,46 +1430,46 @@ static const struct regulator_desc rk817
  	},
  	RK817_DESC(RK817_ID_LDO1, "LDO_REG1", "vcc5", 600, 3400, 25,
  		   RK817_LDO_ON_VSEL_REG(0), RK817_LDO_VSEL_MASK,
@@ -1596,7 +1589,7 @@ index e926c1a85..bb8b2f604 100644
  			  DISABLE_VAL(2)),
  };
  
-@@ -1331,6 +1647,10 @@ static int rk808_regulator_probe(struct platform_device *pdev)
+@@ -1331,6 +1647,10 @@ static int rk808_regulator_probe(struct
  		regulators = rk809_reg;
  		nregulators = RK809_NUM_REGULATORS;
  		break;
@@ -1607,7 +1600,7 @@ index e926c1a85..bb8b2f604 100644
  	case RK817_ID:
  		regulators = rk817_reg;
  		nregulators = RK817_NUM_REGULATORS;
-@@ -1370,9 +1690,23 @@ static struct platform_driver rk808_regulator_driver = {
+@@ -1370,9 +1690,23 @@ static struct platform_driver rk808_regu
  	},
  };
  
@@ -1632,8 +1625,6 @@ index e926c1a85..bb8b2f604 100644
  MODULE_AUTHOR("Tony xie <tony.xie@rock-chips.com>");
  MODULE_AUTHOR("Chris Zhong <zyw@rock-chips.com>");
  MODULE_AUTHOR("Zhang Qing <zhangqing@rock-chips.com>");
-diff --git a/include/linux/regulator/fan53555.h b/include/linux/regulator/fan53555.h
-index ce8df2186..e8703b6fc 100644
 --- a/include/linux/regulator/fan53555.h
 +++ b/include/linux/regulator/fan53555.h
 @@ -52,6 +52,8 @@ struct fan53555_platform_data {
@@ -1645,6 +1636,3 @@ index ce8df2186..e8703b6fc 100644
  };
  
  #endif /* __FAN53555_H__ */
--- 
-2.37.1 (Apple Git-137.1)
-

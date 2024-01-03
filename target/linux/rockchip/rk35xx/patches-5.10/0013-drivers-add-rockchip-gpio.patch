@@ -8,8 +8,6 @@ Subject: [PATCH 13/42] drivers: add rockchip gpio
  drivers/gpio/Makefile | 1 +
  2 files changed, 9 insertions(+)
 
-diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
-index 7f57bb8aa..8cc84411b 100644
 --- a/drivers/gpio/Kconfig
 +++ b/drivers/gpio/Kconfig
 @@ -495,6 +495,14 @@ config GPIO_REG
@@ -27,8 +25,6 @@ index 7f57bb8aa..8cc84411b 100644
  config GPIO_SAMA5D2_PIOBU
  	tristate "SAMA5D2 PIOBU GPIO support"
  	depends on MFD_SYSCON
-diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index 411f285ab..d7d5b5ea2 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
 @@ -126,6 +126,7 @@ obj-$(CONFIG_GPIO_RCAR)			+= gpio-rcar.o
@@ -39,6 +35,3 @@ index 411f285ab..d7d5b5ea2 100644
  obj-$(CONFIG_ARCH_SA1100)		+= gpio-sa1100.o
  obj-$(CONFIG_GPIO_SAMA5D2_PIOBU)	+= gpio-sama5d2-piobu.o
  obj-$(CONFIG_GPIO_SCH311X)		+= gpio-sch311x.o
--- 
-2.37.1 (Apple Git-137.1)
-

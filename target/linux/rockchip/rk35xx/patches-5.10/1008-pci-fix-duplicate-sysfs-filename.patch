@@ -68,11 +68,9 @@ Change-Id: Ib0a54bc2204afa7d9136e8d3156b00ec6aa4d8b3
  include/linux/pci.h     |  3 +++
  2 files changed, 13 insertions(+)
 
-diff --git a/drivers/pci/pci-sysfs.c b/drivers/pci/pci-sysfs.c
-index d15c881e2e7e7..8f845b8ad2c74 100644
 --- a/drivers/pci/pci-sysfs.c
 +++ b/drivers/pci/pci-sysfs.c
-@@ -1343,6 +1343,11 @@ int __must_check pci_create_sysfs_dev_files(struct pci_dev *pdev)
+@@ -1343,6 +1343,11 @@ int __must_check pci_create_sysfs_dev_fi
  	if (!sysfs_initialized)
  		return -EACCES;
  
@@ -84,7 +82,7 @@ index d15c881e2e7e7..8f845b8ad2c74 100644
  	if (pdev->cfg_size > PCI_CFG_SPACE_SIZE)
  		retval = sysfs_create_bin_file(&pdev->dev.kobj, &pcie_config_attr);
  	else
-@@ -1422,6 +1427,11 @@ void pci_remove_sysfs_dev_files(struct pci_dev *pdev)
+@@ -1422,6 +1427,11 @@ void pci_remove_sysfs_dev_files(struct p
  	if (!sysfs_initialized)
  		return;
  
@@ -96,8 +94,6 @@ index d15c881e2e7e7..8f845b8ad2c74 100644
  	pci_remove_capabilities_sysfs(pdev);
  
  	if (pdev->cfg_size > PCI_CFG_SPACE_SIZE)
-diff --git a/include/linux/pci.h b/include/linux/pci.h
-index 9d9c198be7d0c..95fd50c28e185 100644
 --- a/include/linux/pci.h
 +++ b/include/linux/pci.h
 @@ -452,6 +452,9 @@ struct pci_dev {

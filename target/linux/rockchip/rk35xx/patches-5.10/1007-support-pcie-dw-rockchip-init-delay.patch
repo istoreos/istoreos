@@ -7,8 +7,6 @@ Subject: [PATCH] PCI: rockchip: dw: Add optional rockchip,init-delay-ms
  drivers/pci/controller/dwc/pcie-dw-rockchip.c | 5 +++++
  1 file changed, 5 insertions(+)
 
-diff --git a/drivers/pci/controller/dwc/pcie-dw-rockchip.c b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-index 730a3f92f..2b19ada9f 100644
 --- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 @@ -1966,6 +1966,11 @@ static int rk_pcie_really_probe(void *p)
@@ -23,6 +21,3 @@ index 730a3f92f..2b19ada9f 100644
  	if (!IS_ERR_OR_NULL(rk_pcie->prsnt_gpio)) {
  		if (!gpiod_get_value(rk_pcie->prsnt_gpio)) {
  			ret = -ENODEV;
--- 
-2.31.0
-

@@ -39,11 +39,9 @@ root@iStoreOS:/sys/kernel/debug/mali# cat state_dump
  drivers/gpu/arm/mali400/mali/common/mali_group.c | 8 +++++---
  1 file changed, 5 insertions(+), 3 deletions(-)
 
-diff --git a/drivers/gpu/arm/mali400/mali/common/mali_group.c b/drivers/gpu/arm/mali400/mali/common/mali_group.c
-index 47979a2f1..9f7b6d1fa 100755
 --- a/drivers/gpu/arm/mali400/mali/common/mali_group.c
 +++ b/drivers/gpu/arm/mali400/mali/common/mali_group.c
-@@ -1451,9 +1451,11 @@ u32 mali_group_dump_state(struct mali_group *group, char *buf, u32 size)
+@@ -1451,9 +1451,11 @@ u32 mali_group_dump_state(struct mali_gr
  					group->pp_running_sub_job);
  	}
  
@@ -58,6 +56,3 @@ index 47979a2f1..9f7b6d1fa 100755
  	}
  
  	return n;
--- 
-2.31.0
-

@@ -20,11 +20,9 @@ Change-Id: Ibc9885669f25d2aeea18a9d22d49a204eb346ea1
  drivers/usb/host/xhci-plat.c | 3 +++
  1 file changed, 3 insertions(+)
 
-diff --git a/drivers/usb/host/xhci-plat.c b/drivers/usb/host/xhci-plat.c
-index 68dad7a81..19dccfa48 100644
 --- a/drivers/usb/host/xhci-plat.c
 +++ b/drivers/usb/host/xhci-plat.c
-@@ -312,6 +312,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
+@@ -312,6 +312,9 @@ static int xhci_plat_probe(struct platfo
  		if (device_property_read_bool(tmpdev, "quirk-broken-port-ped"))
  			xhci->quirks |= XHCI_BROKEN_PORT_PED;
  
@@ -34,6 +32,3 @@ index 68dad7a81..19dccfa48 100644
  		if (device_property_read_bool(tmpdev, "xhci-trb-ent-quirk"))
  			xhci->quirks |= XHCI_TRB_ENT_QUIRK;
  
--- 
-2.31.0
-

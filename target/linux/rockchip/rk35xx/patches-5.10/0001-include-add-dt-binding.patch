@@ -8,8 +8,6 @@ Subject: [PATCH 01/42] include: add dt-binding
  include/dt-bindings/soc/rockchip,boot-mode.h | 10 +++++++++-
  2 files changed, 27 insertions(+), 1 deletion(-)
 
-diff --git a/include/dt-bindings/pinctrl/rockchip.h b/include/dt-bindings/pinctrl/rockchip.h
-index 5f291045e..985da15aa 100644
 --- a/include/dt-bindings/pinctrl/rockchip.h
 +++ b/include/dt-bindings/pinctrl/rockchip.h
 @@ -44,4 +44,22 @@
@@ -35,8 +33,6 @@ index 5f291045e..985da15aa 100644
 +#define PCA_IO1_7          15
 +
  #endif
-diff --git a/include/dt-bindings/soc/rockchip,boot-mode.h b/include/dt-bindings/soc/rockchip,boot-mode.h
-index 4b0914c09..1436e1d32 100644
 --- a/include/dt-bindings/soc/rockchip,boot-mode.h
 +++ b/include/dt-bindings/soc/rockchip,boot-mode.h
 @@ -10,7 +10,15 @@
@@ -56,6 +52,3 @@ index 4b0914c09..1436e1d32 100644
 +#define BOOT_UMS		(REBOOT_FLAG + 12)
  
  #endif
--- 
-2.37.1 (Apple Git-137.1)
-

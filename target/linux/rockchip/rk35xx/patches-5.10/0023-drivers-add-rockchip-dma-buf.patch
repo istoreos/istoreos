@@ -22,8 +22,6 @@ Subject: [PATCH 23/42] drivers: add rockchip dma-buf
  include/uapi/linux/dma-heap.h       |   8 +
  18 files changed, 1754 insertions(+), 228 deletions(-)
 
-diff --git a/drivers/dma-buf/Kconfig b/drivers/dma-buf/Kconfig
-index 3ca7de37d..5dc97ec09 100644
 --- a/drivers/dma-buf/Kconfig
 +++ b/drivers/dma-buf/Kconfig
 @@ -1,6 +1,29 @@
@@ -101,8 +99,6 @@ index 3ca7de37d..5dc97ec09 100644
 +source "drivers/dma-buf/rk_heaps/Kconfig"
  
  endmenu
-diff --git a/drivers/dma-buf/Makefile b/drivers/dma-buf/Makefile
-index 839935670..66c2dc4b6 100644
 --- a/drivers/dma-buf/Makefile
 +++ b/drivers/dma-buf/Makefile
 @@ -1,19 +1,19 @@
@@ -136,8 +132,6 @@ index 839935670..66c2dc4b6 100644
 -
 -dma-shared-buffer-objs :=  $(dma-buf-objs-y)
 +obj-$(CONFIG_DMABUF_SELFTESTS)	+= dmabuf_selftests.o
-diff --git a/drivers/dma-buf/dma-buf.c b/drivers/dma-buf/dma-buf.c
-index 026cf98dc..0891d5994 100644
 --- a/drivers/dma-buf/dma-buf.c
 +++ b/drivers/dma-buf/dma-buf.c
 @@ -25,11 +25,12 @@
@@ -222,7 +216,7 @@ index 026cf98dc..0891d5994 100644
  static char *dmabuffs_dname(struct dentry *dentry, char *buffer, int buflen)
  {
  	struct dma_buf *dmabuf;
-@@ -57,6 +119,9 @@ static char *dmabuffs_dname(struct dentry *dentry, char *buffer, int buflen)
+@@ -57,6 +119,9 @@ static char *dmabuffs_dname(struct dentr
  static void dma_buf_release(struct dentry *dentry)
  {
  	struct dma_buf *dmabuf;
@@ -232,7 +226,7 @@ index 026cf98dc..0891d5994 100644
  
  	dmabuf = dentry->d_fsdata;
  	if (unlikely(!dmabuf))
-@@ -74,7 +139,14 @@ static void dma_buf_release(struct dentry *dentry)
+@@ -74,7 +139,14 @@ static void dma_buf_release(struct dentr
  	 */
  	BUG_ON(dmabuf->cb_shared.active || dmabuf->cb_excl.active);
  
@@ -248,7 +242,7 @@ index 026cf98dc..0891d5994 100644
  
  	if (dmabuf->resv == (struct dma_resv *)&dmabuf[1])
  		dma_resv_fini(dmabuf->resv);
-@@ -95,6 +167,9 @@ static int dma_buf_file_release(struct inode *inode, struct file *file)
+@@ -95,6 +167,9 @@ static int dma_buf_file_release(struct i
  	dmabuf = file->private_data;
  
  	mutex_lock(&db_list.lock);
@@ -258,7 +252,7 @@ index 026cf98dc..0891d5994 100644
  	list_del(&dmabuf->list_node);
  	mutex_unlock(&db_list.lock);
  
-@@ -324,12 +399,20 @@ static __poll_t dma_buf_poll(struct file *file, poll_table *poll)
+@@ -324,12 +399,20 @@ out:
  	return events;
  }
  
@@ -283,7 +277,7 @@ index 026cf98dc..0891d5994 100644
   *
   * @dmabuf: [in]     dmabuf buffer that will be renamed.
   * @buf:    [in]     A piece of userspace memory that contains the name of
-@@ -339,7 +422,23 @@ static __poll_t dma_buf_poll(struct file *file, poll_table *poll)
+@@ -339,7 +422,23 @@ out:
   * devices, return -EBUSY.
   *
   */
@@ -308,7 +302,7 @@ index 026cf98dc..0891d5994 100644
  {
  	char *name = strndup_user(buf, DMA_BUF_NAME_LEN);
  	long ret = 0;
-@@ -347,19 +446,10 @@ static long dma_buf_set_name(struct dma_buf *dmabuf, const char __user *buf)
+@@ -347,19 +446,10 @@ static long dma_buf_set_name(struct dma_
  	if (IS_ERR(name))
  		return PTR_ERR(name);
  
@@ -330,7 +324,7 @@ index 026cf98dc..0891d5994 100644
  	return ret;
  }
  
-@@ -368,6 +458,7 @@ static long dma_buf_ioctl(struct file *file,
+@@ -368,6 +458,7 @@ static long dma_buf_ioctl(struct file *f
  {
  	struct dma_buf *dmabuf;
  	struct dma_buf_sync sync;
@@ -338,7 +332,7 @@ index 026cf98dc..0891d5994 100644
  	enum dma_data_direction direction;
  	int ret;
  
-@@ -404,7 +495,45 @@ static long dma_buf_ioctl(struct file *file,
+@@ -404,7 +495,45 @@ static long dma_buf_ioctl(struct file *f
  
  	case DMA_BUF_SET_NAME_A:
  	case DMA_BUF_SET_NAME_B:
@@ -385,7 +379,7 @@ index 026cf98dc..0891d5994 100644
  
  	default:
  		return -ENOTTY;
-@@ -438,10 +567,11 @@ static const struct file_operations dma_buf_fops = {
+@@ -438,10 +567,11 @@ static const struct file_operations dma_
  /*
   * is_dma_buf_file - Check if struct file* is associated with dma_buf
   */
@@ -398,7 +392,7 @@ index 026cf98dc..0891d5994 100644
  
  static struct file *dma_buf_getfile(struct dma_buf *dmabuf, int flags)
  {
-@@ -469,6 +599,17 @@ static struct file *dma_buf_getfile(struct dma_buf *dmabuf, int flags)
+@@ -469,6 +599,17 @@ err_alloc_file:
  	return file;
  }
  
@@ -416,7 +410,7 @@ index 026cf98dc..0891d5994 100644
  /**
   * DOC: dma buf device access
   *
-@@ -585,10 +726,29 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
+@@ -585,10 +726,29 @@ struct dma_buf *dma_buf_export(const str
  
  	mutex_lock(&db_list.lock);
  	list_add(&dmabuf->list_node, &db_list.head);
@@ -446,7 +440,7 @@ index 026cf98dc..0891d5994 100644
  err_dmabuf:
  	kfree(dmabuf);
  err_module:
-@@ -1115,6 +1275,30 @@ int dma_buf_begin_cpu_access(struct dma_buf *dmabuf,
+@@ -1115,6 +1275,30 @@ int dma_buf_begin_cpu_access(struct dma_
  }
  EXPORT_SYMBOL_GPL(dma_buf_begin_cpu_access);
  
@@ -477,7 +471,7 @@ index 026cf98dc..0891d5994 100644
  /**
   * dma_buf_end_cpu_access - Must be called after accessing a dma_buf from the
   * cpu in the kernel context. Calls end_cpu_access to allow exporter-specific
-@@ -1141,6 +1325,21 @@ int dma_buf_end_cpu_access(struct dma_buf *dmabuf,
+@@ -1141,6 +1325,21 @@ int dma_buf_end_cpu_access(struct dma_bu
  }
  EXPORT_SYMBOL_GPL(dma_buf_end_cpu_access);
  
@@ -499,7 +493,7 @@ index 026cf98dc..0891d5994 100644
  
  /**
   * dma_buf_mmap - Setup up a userspace mmap with the given vma
-@@ -1269,6 +1468,32 @@ void dma_buf_vunmap(struct dma_buf *dmabuf, void *vaddr)
+@@ -1269,6 +1468,32 @@ void dma_buf_vunmap(struct dma_buf *dmab
  }
  EXPORT_SYMBOL_GPL(dma_buf_vunmap);
  
@@ -532,7 +526,7 @@ index 026cf98dc..0891d5994 100644
  #ifdef CONFIG_DEBUG_FS
  static int dma_buf_debug_show(struct seq_file *s, void *unused)
  {
-@@ -1297,6 +1522,7 @@ static int dma_buf_debug_show(struct seq_file *s, void *unused)
+@@ -1297,6 +1522,7 @@ static int dma_buf_debug_show(struct seq
  		if (ret)
  			goto error_unlock;
  
@@ -540,7 +534,7 @@ index 026cf98dc..0891d5994 100644
  		seq_printf(s, "%08zu\t%08x\t%08x\t%08ld\t%s\t%08lu\t%s\n",
  				buf_obj->size,
  				buf_obj->file->f_flags, buf_obj->file->f_mode,
-@@ -1304,6 +1530,7 @@ static int dma_buf_debug_show(struct seq_file *s, void *unused)
+@@ -1304,6 +1530,7 @@ static int dma_buf_debug_show(struct seq
  				buf_obj->exp_name,
  				file_inode(buf_obj->file)->i_ino,
  				buf_obj->name ?: "");
@@ -548,7 +542,7 @@ index 026cf98dc..0891d5994 100644
  
  		robj = buf_obj->resv;
  		while (true) {
-@@ -1403,6 +1630,12 @@ static inline void dma_buf_uninit_debugfs(void)
+@@ -1403,6 +1630,12 @@ static inline void dma_buf_uninit_debugf
  
  static int __init dma_buf_init(void)
  {
@@ -570,8 +564,6 @@ index 026cf98dc..0891d5994 100644
 -module_exit(dma_buf_deinit);
 -MODULE_LICENSE("GPL");
 +__exitcall(dma_buf_deinit);
-diff --git a/drivers/dma-buf/dma-fence.c b/drivers/dma-buf/dma-fence.c
-index 7475e09b0..d64fc0392 100644
 --- a/drivers/dma-buf/dma-fence.c
 +++ b/drivers/dma-buf/dma-fence.c
 @@ -312,22 +312,25 @@ void __dma_fence_might_wait(void)
@@ -605,7 +597,7 @@ index 7475e09b0..d64fc0392 100644
  {
  	struct dma_fence_cb *cur, *tmp;
  	struct list_head cb_list;
-@@ -341,7 +344,7 @@ int dma_fence_signal_locked(struct dma_fence *fence)
+@@ -341,7 +344,7 @@ int dma_fence_signal_locked(struct dma_f
  	/* Stash the cb_list before replacing it with the timestamp */
  	list_replace(&fence->cb_list, &cb_list);
  
@@ -614,7 +606,7 @@ index 7475e09b0..d64fc0392 100644
  	set_bit(DMA_FENCE_FLAG_TIMESTAMP_BIT, &fence->flags);
  	trace_dma_fence_signaled(fence);
  
-@@ -352,6 +355,59 @@ int dma_fence_signal_locked(struct dma_fence *fence)
+@@ -352,6 +355,59 @@ int dma_fence_signal_locked(struct dma_f
  
  	return 0;
  }
@@ -674,7 +666,7 @@ index 7475e09b0..d64fc0392 100644
  EXPORT_SYMBOL(dma_fence_signal_locked);
  
  /**
-@@ -379,7 +435,7 @@ int dma_fence_signal(struct dma_fence *fence)
+@@ -379,7 +435,7 @@ int dma_fence_signal(struct dma_fence *f
  	tmp = dma_fence_begin_signalling();
  
  	spin_lock_irqsave(fence->lock, flags);
@@ -683,8 +675,6 @@ index 7475e09b0..d64fc0392 100644
  	spin_unlock_irqrestore(fence->lock, flags);
  
  	dma_fence_end_signalling(tmp);
-diff --git a/drivers/dma-buf/dma-heap.c b/drivers/dma-buf/dma-heap.c
-index dcbb023ac..85aae0a01 100644
 --- a/drivers/dma-buf/dma-heap.c
 +++ b/drivers/dma-buf/dma-heap.c
 @@ -31,6 +31,7 @@
@@ -781,7 +771,7 @@ index dcbb023ac..85aae0a01 100644
  
  static int dma_heap_open(struct inode *inode, struct file *file)
  {
-@@ -90,15 +145,9 @@ static long dma_heap_ioctl_allocate(struct file *file, void *data)
+@@ -90,15 +145,9 @@ static long dma_heap_ioctl_allocate(stru
  	if (heap_allocation->fd)
  		return -EINVAL;
  
@@ -800,7 +790,7 @@ index dcbb023ac..85aae0a01 100644
  	if (fd < 0)
  		return fd;
  
-@@ -107,8 +156,22 @@ static long dma_heap_ioctl_allocate(struct file *file, void *data)
+@@ -107,8 +156,22 @@ static long dma_heap_ioctl_allocate(stru
  	return 0;
  }
  
@@ -823,7 +813,7 @@ index dcbb023ac..85aae0a01 100644
  };
  
  static long dma_heap_ioctl(struct file *file, unsigned int ucmd,
-@@ -158,6 +221,9 @@ static long dma_heap_ioctl(struct file *file, unsigned int ucmd,
+@@ -158,6 +221,9 @@ static long dma_heap_ioctl(struct file *
  	case DMA_HEAP_IOCTL_ALLOC:
  		ret = dma_heap_ioctl_allocate(file, kdata);
  		break;
@@ -833,7 +823,7 @@ index dcbb023ac..85aae0a01 100644
  	default:
  		ret = -ENOTTY;
  		goto err;
-@@ -191,11 +257,64 @@ void *dma_heap_get_drvdata(struct dma_heap *heap)
+@@ -191,11 +257,64 @@ void *dma_heap_get_drvdata(struct dma_he
  {
  	return heap->priv;
  }
@@ -900,7 +890,7 @@ index dcbb023ac..85aae0a01 100644
  	unsigned int minor;
  	int ret;
  
-@@ -209,10 +328,20 @@ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+@@ -209,10 +328,20 @@ struct dma_heap *dma_heap_add(const stru
  		return ERR_PTR(-EINVAL);
  	}
  
@@ -921,7 +911,7 @@ index dcbb023ac..85aae0a01 100644
  	heap->name = exp_info->name;
  	heap->ops = exp_info->ops;
  	heap->priv = exp_info->priv;
-@@ -237,37 +366,27 @@ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+@@ -237,37 +366,27 @@ struct dma_heap *dma_heap_add(const stru
  		goto err1;
  	}
  
@@ -969,7 +959,7 @@ index dcbb023ac..85aae0a01 100644
  err2:
  	cdev_del(&heap->heap_cdev);
  err1:
-@@ -276,27 +395,88 @@ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+@@ -276,27 +395,88 @@ err0:
  	kfree(heap);
  	return err_ret;
  }
@@ -1061,8 +1051,6 @@ index dcbb023ac..85aae0a01 100644
 +	return ret;
  }
  subsys_initcall(dma_heap_init);
-diff --git a/drivers/dma-buf/heaps/Kconfig b/drivers/dma-buf/heaps/Kconfig
-index a5eef06c4..75f4e3e34 100644
 --- a/drivers/dma-buf/heaps/Kconfig
 +++ b/drivers/dma-buf/heaps/Kconfig
 @@ -1,14 +1,31 @@
@@ -1100,8 +1088,6 @@ index a5eef06c4..75f4e3e34 100644
 +	help
 +	  This driver allows the export of on-chip SRAM marked as exportable
 +	  to userspace using the DMA-Heaps interface.
-diff --git a/drivers/dma-buf/heaps/Makefile b/drivers/dma-buf/heaps/Makefile
-index aa761b835..07ba63081 100644
 --- a/drivers/dma-buf/heaps/Makefile
 +++ b/drivers/dma-buf/heaps/Makefile
 @@ -1,4 +1,6 @@
@@ -1114,8 +1100,6 @@ index aa761b835..07ba63081 100644
 +obj-$(CONFIG_DMABUF_HEAPS_SYSTEM)	+= rk_system_heap.o
 +obj-$(CONFIG_DMABUF_HEAPS_CMA)		+= rk_cma_heap.o
 +obj-$(CONFIG_DMABUF_HEAPS_SRAM)	+= sram_heap.o
-diff --git a/drivers/dma-buf/sw_sync.c b/drivers/dma-buf/sw_sync.c
-index 348b3a917..3daa6c76b 100644
 --- a/drivers/dma-buf/sw_sync.c
 +++ b/drivers/dma-buf/sw_sync.c
 @@ -7,6 +7,8 @@
@@ -1127,7 +1111,7 @@ index 348b3a917..3daa6c76b 100644
  #include <linux/uaccess.h>
  #include <linux/slab.h>
  #include <linux/sync_file.h>
-@@ -410,3 +412,13 @@ const struct file_operations sw_sync_debugfs_fops = {
+@@ -410,3 +412,13 @@ const struct file_operations sw_sync_deb
  	.unlocked_ioctl = sw_sync_ioctl,
  	.compat_ioctl	= compat_ptr_ioctl,
  };
@@ -1141,8 +1125,6 @@ index 348b3a917..3daa6c76b 100644
 +module_misc_device(sw_sync_dev);
 +
 +MODULE_LICENSE("GPL v2");
-diff --git a/drivers/dma-buf/sync_debug.h b/drivers/dma-buf/sync_debug.h
-index 6176e52ba..fb676da19 100644
 --- a/drivers/dma-buf/sync_debug.h
 +++ b/drivers/dma-buf/sync_debug.h
 @@ -64,9 +64,16 @@ struct sync_pt {
@@ -1162,11 +1144,9 @@ index 6176e52ba..fb676da19 100644
 +#endif
  
  #endif /* _LINUX_SYNC_H */
-diff --git a/drivers/dma-buf/udmabuf.c b/drivers/dma-buf/udmabuf.c
-index e359c5c6c..cfbf10128 100644
 --- a/drivers/dma-buf/udmabuf.c
 +++ b/drivers/dma-buf/udmabuf.c
-@@ -26,11 +26,8 @@ static vm_fault_t udmabuf_vm_fault(struct vm_fault *vmf)
+@@ -26,11 +26,8 @@ static vm_fault_t udmabuf_vm_fault(struc
  {
  	struct vm_area_struct *vma = vmf->vma;
  	struct udmabuf *ubuf = vma->vm_private_data;
@@ -1179,7 +1159,7 @@ index e359c5c6c..cfbf10128 100644
  	get_page(vmf->page);
  	return 0;
  }
-@@ -118,20 +115,17 @@ static int begin_cpu_udmabuf(struct dma_buf *buf,
+@@ -118,20 +115,17 @@ static int begin_cpu_udmabuf(struct dma_
  {
  	struct udmabuf *ubuf = buf->priv;
  	struct device *dev = ubuf->device->this_device;
@@ -1203,7 +1183,7 @@ index e359c5c6c..cfbf10128 100644
  }
  
  static int end_cpu_udmabuf(struct dma_buf *buf,
-@@ -330,23 +324,7 @@ static struct miscdevice udmabuf_misc = {
+@@ -330,23 +324,7 @@ static struct miscdevice udmabuf_misc =
  
  static int __init udmabuf_dev_init(void)
  {
@@ -1228,15 +1208,12 @@ index e359c5c6c..cfbf10128 100644
  }
  
  static void __exit udmabuf_dev_exit(void)
-diff --git a/include/linux/dma-buf.h b/include/linux/dma-buf.h
-index 957b398d3..b30f97c46 100644
 --- a/include/linux/dma-buf.h
 +++ b/include/linux/dma-buf.h
-@@ -209,6 +209,41 @@ struct dma_buf_ops {
- 	 */
+@@ -210,6 +210,41 @@ struct dma_buf_ops {
  	int (*begin_cpu_access)(struct dma_buf *, enum dma_data_direction);
  
-+	/**
+ 	/**
 +	 * @begin_cpu_access_partial:
 +	 *
 +	 * This is called from dma_buf_begin_cpu_access_partial() and allows the
@@ -1271,14 +1248,14 @@ index 957b398d3..b30f97c46 100644
 +					enum dma_data_direction,
 +					unsigned int offset, unsigned int len);
 +
- 	/**
++	/**
  	 * @end_cpu_access:
  	 *
-@@ -228,6 +263,28 @@ struct dma_buf_ops {
- 	 */
+ 	 * This is called from dma_buf_end_cpu_access() when the importer is
+@@ -229,6 +264,28 @@ struct dma_buf_ops {
  	int (*end_cpu_access)(struct dma_buf *, enum dma_data_direction);
  
-+	/**
+ 	/**
 +	 * @end_cpu_access_partial:
 +	 *
 +	 * This is called from dma_buf_end_cpu_access_partial() when the
@@ -1300,9 +1277,10 @@ index 957b398d3..b30f97c46 100644
 +				      enum dma_data_direction,
 +				      unsigned int offset, unsigned int len);
 +
- 	/**
++	/**
  	 * @mmap:
  	 *
+ 	 * This callback is used by the dma_buf_mmap() function
 @@ -267,8 +324,51 @@ struct dma_buf_ops {
  
  	void *(*vmap)(struct dma_buf *);
@@ -1398,7 +1376,7 @@ index 957b398d3..b30f97c46 100644
  };
  
  /**
-@@ -473,6 +588,9 @@ dma_buf_attachment_is_dynamic(struct dma_buf_attachment *attach)
+@@ -473,6 +588,9 @@ dma_buf_attachment_is_dynamic(struct dma
  	return !!attach->importer_ops;
  }
  
@@ -1408,7 +1386,7 @@ index 957b398d3..b30f97c46 100644
  struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
  					  struct device *dev);
  struct dma_buf_attachment *
-@@ -497,11 +615,47 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *, struct sg_table *,
+@@ -497,11 +615,47 @@ void dma_buf_unmap_attachment(struct dma
  void dma_buf_move_notify(struct dma_buf *dma_buf);
  int dma_buf_begin_cpu_access(struct dma_buf *dma_buf,
  			     enum dma_data_direction dir);
@@ -1456,8 +1434,6 @@ index 957b398d3..b30f97c46 100644
 +#endif
 +
  #endif /* __DMA_BUF_H__ */
-diff --git a/include/linux/dma-heap.h b/include/linux/dma-heap.h
-index 454e354d1..04a9667ad 100644
 --- a/include/linux/dma-heap.h
 +++ b/include/linux/dma-heap.h
 @@ -11,20 +11,26 @@
@@ -1490,11 +1466,10 @@ index 454e354d1..04a9667ad 100644
  };
  
  /**
-@@ -50,10 +56,73 @@ struct dma_heap_export_info {
-  */
+@@ -51,9 +57,72 @@ struct dma_heap_export_info {
  void *dma_heap_get_drvdata(struct dma_heap *heap);
  
-+/**
+ /**
 + * dma_heap_get_dev() - get device struct for the heap
 + * @heap: DMA-Heap to retrieve device struct from
 + *
@@ -1512,7 +1487,7 @@ index 454e354d1..04a9667ad 100644
 + */
 +const char *dma_heap_get_name(struct dma_heap *heap);
 +
- /**
++/**
   * dma_heap_add - adds a heap to dmabuf heaps
   * @exp_info:		information needed to register this heap
   */
@@ -1564,11 +1539,9 @@ index 454e354d1..04a9667ad 100644
 +			    unsigned int fd_flags,
 +			    unsigned int heap_flags);
  #endif /* _DMA_HEAPS_H */
-diff --git a/include/linux/dma-iommu.h b/include/linux/dma-iommu.h
-index 2112f21f7..f51561eda 100644
 --- a/include/linux/dma-iommu.h
 +++ b/include/linux/dma-iommu.h
-@@ -37,6 +37,9 @@ void iommu_dma_compose_msi_msg(struct msi_desc *desc,
+@@ -37,6 +37,9 @@ void iommu_dma_compose_msi_msg(struct ms
  
  void iommu_dma_get_resv_regions(struct device *dev, struct list_head *list);
  
@@ -1578,7 +1551,7 @@ index 2112f21f7..f51561eda 100644
  #else /* CONFIG_IOMMU_DMA */
  
  struct iommu_domain;
-@@ -78,5 +81,11 @@ static inline void iommu_dma_get_resv_regions(struct device *dev, struct list_he
+@@ -78,5 +81,11 @@ static inline void iommu_dma_get_resv_re
  {
  }
  
@@ -1590,15 +1563,12 @@ index 2112f21f7..f51561eda 100644
 +
  #endif	/* CONFIG_IOMMU_DMA */
  #endif	/* __DMA_IOMMU_H */
-diff --git a/include/linux/dma-mapping.h b/include/linux/dma-mapping.h
-index a7d70cdee..03befff63 100644
 --- a/include/linux/dma-mapping.h
 +++ b/include/linux/dma-mapping.h
-@@ -61,6 +61,31 @@
-  */
+@@ -62,6 +62,31 @@
  #define DMA_ATTR_PRIVILEGED		(1UL << 9)
  
-+/*
+ /*
 + * This is a hint to the DMA-mapping subsystem that the device is expected
 + * to overwrite the entire mapped size, thus the caller does not require any
 + * of the previous buffer contents to be preserved. This allows
@@ -1623,11 +1593,10 @@ index a7d70cdee..03befff63 100644
 + */
 +#define DMA_ATTR_SYS_CACHE_ONLY_NWA	(1UL << 15)
 +
- /*
++/*
   * A dma_addr_t can hold any valid DMA or bus address for the platform.  It can
   * be given to a device to use as a DMA source or target.  It is specific to a
-diff --git a/include/uapi/linux/dma-buf.h b/include/uapi/linux/dma-buf.h
-index f76d11725..37aeab6d1 100644
+  * given device and there may be a translation between the CPU physical address
 --- a/include/uapi/linux/dma-buf.h
 +++ b/include/uapi/linux/dma-buf.h
 @@ -47,4 +47,12 @@ struct dma_buf_sync {
@@ -1643,8 +1612,6 @@ index f76d11725..37aeab6d1 100644
 +#define DMA_BUF_IOCTL_SYNC_PARTIAL	_IOW(DMA_BUF_BASE, 2, struct dma_buf_sync_partial)
 +
  #endif
-diff --git a/include/uapi/linux/dma-heap.h b/include/uapi/linux/dma-heap.h
-index 6f84fa08e..a69bdf05d 100644
 --- a/include/uapi/linux/dma-heap.h
 +++ b/include/uapi/linux/dma-heap.h
 @@ -39,6 +39,11 @@ struct dma_heap_allocation_data {
@@ -1667,6 +1634,3 @@ index 6f84fa08e..a69bdf05d 100644
 +				      struct dma_heap_phys_data)
 +
  #endif /* _UAPI_LINUX_DMABUF_POOL_H */
--- 
-2.37.1 (Apple Git-137.1)
-

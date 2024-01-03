@@ -11,8 +11,6 @@ Subject: [PATCH 27/42] drivers: add rockchip cpufreq
  drivers/cpufreq/cpufreq-dt.c         | 168 +++++++++++++--------------
  5 files changed, 118 insertions(+), 105 deletions(-)
 
-diff --git a/drivers/cpufreq/Kconfig b/drivers/cpufreq/Kconfig
-index 85de313dd..bb3eeec6e 100644
 --- a/drivers/cpufreq/Kconfig
 +++ b/drivers/cpufreq/Kconfig
 @@ -208,7 +208,7 @@ comment "CPU frequency scaling drivers"
@@ -24,8 +22,6 @@ index 85de313dd..bb3eeec6e 100644
  	select PM_OPP
  	help
  	  This adds a generic DT based cpufreq driver for frequency management.
-diff --git a/drivers/cpufreq/Kconfig.arm b/drivers/cpufreq/Kconfig.arm
-index 1f73fa75b..0faef5fc6 100644
 --- a/drivers/cpufreq/Kconfig.arm
 +++ b/drivers/cpufreq/Kconfig.arm
 @@ -158,6 +158,16 @@ config ARM_RASPBERRYPI_CPUFREQ
@@ -45,11 +41,9 @@ index 1f73fa75b..0faef5fc6 100644
  config ARM_S3C_CPUFREQ
  	bool
  	help
-diff --git a/drivers/cpufreq/Makefile b/drivers/cpufreq/Makefile
-index f1b7e3dd6..2e0e827af 100644
 --- a/drivers/cpufreq/Makefile
 +++ b/drivers/cpufreq/Makefile
-@@ -64,6 +64,7 @@ obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq.o
+@@ -64,6 +64,7 @@ obj-$(CONFIG_PXA3xx)			+= pxa3xx-cpufreq
  obj-$(CONFIG_ARM_QCOM_CPUFREQ_HW)	+= qcom-cpufreq-hw.o
  obj-$(CONFIG_ARM_QCOM_CPUFREQ_NVMEM)	+= qcom-cpufreq-nvmem.o
  obj-$(CONFIG_ARM_RASPBERRYPI_CPUFREQ) 	+= raspberrypi-cpufreq.o
@@ -57,11 +51,9 @@ index f1b7e3dd6..2e0e827af 100644
  obj-$(CONFIG_ARM_S3C2410_CPUFREQ)	+= s3c2410-cpufreq.o
  obj-$(CONFIG_ARM_S3C2412_CPUFREQ)	+= s3c2412-cpufreq.o
  obj-$(CONFIG_ARM_S3C2416_CPUFREQ)	+= s3c2416-cpufreq.o
-diff --git a/drivers/cpufreq/cpufreq-dt-platdev.c b/drivers/cpufreq/cpufreq-dt-platdev.c
-index aea285651..d21698e8d 100644
 --- a/drivers/cpufreq/cpufreq-dt-platdev.c
 +++ b/drivers/cpufreq/cpufreq-dt-platdev.c
-@@ -66,21 +66,6 @@ static const struct of_device_id whitelist[] __initconst = {
+@@ -66,21 +66,6 @@ static const struct of_device_id whiteli
  	{ .compatible = "renesas,r8a7794", },
  	{ .compatible = "renesas,sh73a0", },
  
@@ -83,7 +75,7 @@ index aea285651..d21698e8d 100644
  	{ .compatible = "st-ericsson,u8500", },
  	{ .compatible = "st-ericsson,u8540", },
  	{ .compatible = "st-ericsson,u9500", },
-@@ -139,6 +124,33 @@ static const struct of_device_id blacklist[] __initconst = {
+@@ -139,6 +124,33 @@ static const struct of_device_id blackli
  	{ .compatible = "qcom,sdm845", },
  	{ .compatible = "qcom,sm8150", },
  
@@ -117,8 +109,6 @@ index aea285651..d21698e8d 100644
  	{ .compatible = "st,stih407", },
  	{ .compatible = "st,stih410", },
  	{ .compatible = "st,stih418", },
-diff --git a/drivers/cpufreq/cpufreq-dt.c b/drivers/cpufreq/cpufreq-dt.c
-index e363ae04a..f1327e7fe 100644
 --- a/drivers/cpufreq/cpufreq-dt.c
 +++ b/drivers/cpufreq/cpufreq-dt.c
 @@ -23,6 +23,9 @@
@@ -140,7 +130,7 @@ index e363ae04a..f1327e7fe 100644
  	bool have_static_opps;
  };
  
-@@ -59,7 +62,11 @@ static int set_target(struct cpufreq_policy *policy, unsigned int index)
+@@ -59,7 +62,11 @@ static int set_target(struct cpufreq_pol
  	struct private_data *priv = policy->driver_data;
  	unsigned long freq = policy->freq_table[index].frequency;
  
@@ -152,7 +142,7 @@ index e363ae04a..f1327e7fe 100644
  }
  
  /*
-@@ -102,7 +109,6 @@ static const char *find_supply_name(struct device *dev)
+@@ -102,7 +109,6 @@ node_put:
  
  static int cpufreq_init(struct cpufreq_policy *policy)
  {
@@ -160,7 +150,7 @@ index e363ae04a..f1327e7fe 100644
  	struct private_data *priv;
  	struct device *cpu_dev;
  	struct clk *cpu_clk;
-@@ -114,9 +120,7 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+@@ -114,9 +120,7 @@ static int cpufreq_init(struct cpufreq_p
  		pr_err("failed to find data for cpu%d\n", policy->cpu);
  		return -ENODEV;
  	}
@@ -170,7 +160,7 @@ index e363ae04a..f1327e7fe 100644
  
  	cpu_clk = clk_get(cpu_dev, NULL);
  	if (IS_ERR(cpu_clk)) {
-@@ -125,67 +129,32 @@ static int cpufreq_init(struct cpufreq_policy *policy)
+@@ -125,67 +129,32 @@ static int cpufreq_init(struct cpufreq_p
  		return ret;
  	}
  
@@ -247,7 +237,7 @@ index e363ae04a..f1327e7fe 100644
  	clk_put(cpu_clk);
  
  	return ret;
-@@ -208,11 +177,6 @@ static int cpufreq_offline(struct cpufreq_policy *policy)
+@@ -208,11 +177,6 @@ static int cpufreq_offline(struct cpufre
  
  static int cpufreq_exit(struct cpufreq_policy *policy)
  {
@@ -259,7 +249,7 @@ index e363ae04a..f1327e7fe 100644
  	clk_put(policy->clk);
  	return 0;
  }
-@@ -236,6 +200,7 @@ static int dt_cpufreq_early_init(struct device *dev, int cpu)
+@@ -236,6 +200,7 @@ static int dt_cpufreq_early_init(struct
  {
  	struct private_data *priv;
  	struct device *cpu_dev;
@@ -267,7 +257,7 @@ index e363ae04a..f1327e7fe 100644
  	const char *reg_name;
  	int ret;
  
-@@ -254,68 +219,91 @@ static int dt_cpufreq_early_init(struct device *dev, int cpu)
+@@ -254,68 +219,91 @@ static int dt_cpufreq_early_init(struct
  	if (!alloc_cpumask_var(&priv->cpus, GFP_KERNEL))
  		return -ENOMEM;
  
@@ -320,7 +310,10 @@ index e363ae04a..f1327e7fe 100644
  		 */
 -		if (dev_pm_opp_get_sharing_cpus(cpu_dev, priv->cpus)) {
 -			cpumask_setall(priv->cpus);
--
++		if (dev_pm_opp_get_sharing_cpus(cpu_dev, priv->cpus))
++			fallback = true;
++	}
+ 
 -			/*
 -			 * OPP tables are initialized only for cpu, do it for
 -			 * others as well.
@@ -330,10 +323,6 @@ index e363ae04a..f1327e7fe 100644
 -				dev_err(cpu_dev, "%s: failed to mark OPPs as shared: %d\n",
 -					__func__, ret);
 -		}
-+		if (dev_pm_opp_get_sharing_cpus(cpu_dev, priv->cpus))
-+			fallback = true;
-+	}
-+
 +	/*
 +	 * Initialize OPP tables for all priv->cpus. They will be shared by
 +	 * all CPUs which have marked their CPUs shared with OPP bindings.
@@ -407,6 +396,3 @@ index e363ae04a..f1327e7fe 100644
  		free_cpumask_var(priv->cpus);
  		list_del(&priv->node);
  	}
--- 
-2.37.1 (Apple Git-137.1)
-

@@ -13,11 +13,9 @@ Change-Id: I6912f72aff09f7db6d696f4a5b15ccc06f68ba04
  drivers/devfreq/rockchip_dmc.c | 12 ++++++++++--
  1 file changed, 10 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/devfreq/rockchip_dmc.c b/drivers/devfreq/rockchip_dmc.c
-index f3e50607e..99bdd0374 100644
 --- a/drivers/devfreq/rockchip_dmc.c
 +++ b/drivers/devfreq/rockchip_dmc.c
-@@ -598,12 +598,17 @@ static int rockchip_dmcfreq_get_dev_status(struct device *dev,
+@@ -598,12 +598,17 @@ static int rockchip_dmcfreq_get_dev_stat
  	if (!dmcfreq->info.auto_freq_en)
  		return -EINVAL;
  
@@ -36,7 +34,7 @@ index f3e50607e..99bdd0374 100644
  		}
  		if (i == dmcfreq->dfi_id) {
  			stat->busy_time = edata.load_count;
-@@ -613,7 +618,10 @@ static int rockchip_dmcfreq_get_dev_status(struct device *dev,
+@@ -613,7 +618,10 @@ static int rockchip_dmcfreq_get_dev_stat
  		}
  	}
  
@@ -48,6 +46,3 @@ index f3e50607e..99bdd0374 100644
  }
  
  static int rockchip_dmcfreq_get_cur_freq(struct device *dev,
--- 
-2.31.0
-

@@ -7,8 +7,6 @@ Subject: [PATCH 33/42] drivers: update rockchip otp
  drivers/nvmem/rockchip-otp.c | 724 ++++++++++++++++++++++++++++++++++-
  1 file changed, 703 insertions(+), 21 deletions(-)
 
-diff --git a/drivers/nvmem/rockchip-otp.c b/drivers/nvmem/rockchip-otp.c
-index 9f53bcce2..409793f0e 100644
 --- a/drivers/nvmem/rockchip-otp.c
 +++ b/drivers/nvmem/rockchip-otp.c
 @@ -14,6 +14,7 @@
@@ -161,7 +159,7 @@ index 9f53bcce2..409793f0e 100644
  };
  
  static int rockchip_otp_reset(struct rockchip_otp *otp)
-@@ -92,7 +195,7 @@ static int rockchip_otp_reset(struct rockchip_otp *otp)
+@@ -92,7 +195,7 @@ static int rockchip_otp_reset(struct roc
  	return 0;
  }
  
@@ -170,7 +168,7 @@ index 9f53bcce2..409793f0e 100644
  {
  	u32 status = 0;
  	int ret;
-@@ -108,7 +211,7 @@ static int rockchip_otp_wait_status(struct rockchip_otp *otp, u32 flag)
+@@ -108,7 +211,7 @@ static int rockchip_otp_wait_status(stru
  	return 0;
  }
  
@@ -179,7 +177,7 @@ index 9f53bcce2..409793f0e 100644
  {
  	int ret = 0;
  
-@@ -125,15 +228,15 @@ static int rockchip_otp_ecc_enable(struct rockchip_otp *otp, bool enable)
+@@ -125,15 +228,15 @@ static int rockchip_otp_ecc_enable(struc
  
  	writel(SBPI_ENABLE_MASK | SBPI_ENABLE, otp->base + OTPC_SBPI_CTRL);
  
@@ -198,7 +196,7 @@ index 9f53bcce2..409793f0e 100644
  {
  	struct rockchip_otp *otp = context;
  	u8 *buf = val;
-@@ -151,7 +254,7 @@ static int rockchip_otp_read(void *context, unsigned int offset,
+@@ -151,7 +254,7 @@ static int rockchip_otp_read(void *conte
  		goto disable_clks;
  	}
  
@@ -207,7 +205,7 @@ index 9f53bcce2..409793f0e 100644
  	if (ret < 0) {
  		dev_err(otp->dev, "rockchip_otp_ecc_enable err\n");
  		goto disable_clks;
-@@ -164,7 +267,7 @@ static int rockchip_otp_read(void *context, unsigned int offset,
+@@ -164,7 +267,7 @@ static int rockchip_otp_read(void *conte
  		       otp->base + OTPC_USER_ADDR);
  		writel(OTPC_USER_FSM_ENABLE | OTPC_USER_FSM_ENABLE_MASK,
  		       otp->base + OTPC_USER_ENABLE);
@@ -216,7 +214,7 @@ index 9f53bcce2..409793f0e 100644
  		if (ret < 0) {
  			dev_err(otp->dev, "timeout during read setup\n");
  			goto read_end;
-@@ -180,28 +283,575 @@ static int rockchip_otp_read(void *context, unsigned int offset,
+@@ -180,28 +283,575 @@ disable_clks:
  	return ret;
  }
  
@@ -751,13 +749,13 @@ index 9f53bcce2..409793f0e 100644
  		.compatible = "rockchip,px30-otp",
  		.data = (void *)&px30_data,
  	},
-+	{
+ 	{
 +		.compatible = "rockchip,px30s-otp",
 +		.data = (void *)&px30s_data,
 +	},
 +#endif
 +#ifdef CONFIG_CPU_RK3308
- 	{
++	{
  		.compatible = "rockchip,rk3308-otp",
  		.data = (void *)&px30_data,
  	},
@@ -793,7 +791,7 @@ index 9f53bcce2..409793f0e 100644
  	{ /* sentinel */ },
  };
  MODULE_DEVICE_TABLE(of, rockchip_otp_match);
-@@ -219,38 +869,50 @@ static int rockchip_otp_probe(struct platform_device *pdev)
+@@ -219,38 +869,50 @@ static int rockchip_otp_probe(struct pla
  		dev_err(dev, "failed to get match data\n");
  		return -EINVAL;
  	}
@@ -851,7 +849,7 @@ index 9f53bcce2..409793f0e 100644
  
  	return PTR_ERR_OR_ZERO(nvmem);
  }
-@@ -263,6 +925,26 @@ static struct platform_driver rockchip_otp_driver = {
+@@ -263,6 +925,26 @@ static struct platform_driver rockchip_o
  	},
  };
  
@@ -879,6 +877,3 @@ index 9f53bcce2..409793f0e 100644
 +
  MODULE_DESCRIPTION("Rockchip OTP driver");
  MODULE_LICENSE("GPL v2");
--- 
-2.37.1 (Apple Git-137.1)
-

@@ -7,11 +7,9 @@ Subject: [PATCH 36/42] drivers/rockchip/rga2: fix procfs
  drivers/video/rockchip/rga2/rga2_debugger.c | 13 ++++++-------
  1 file changed, 6 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/video/rockchip/rga2/rga2_debugger.c b/drivers/video/rockchip/rga2/rga2_debugger.c
-index 589241322..8a605746f 100644
 --- a/drivers/video/rockchip/rga2/rga2_debugger.c
 +++ b/drivers/video/rockchip/rga2/rga2_debugger.c
-@@ -278,13 +278,12 @@ static int rga_procfs_open(struct inode *inode, struct file *file)
+@@ -278,13 +278,12 @@ static int rga_procfs_open(struct inode
  	return single_open(file, node->info_ent->show, node);
  }
  
@@ -31,6 +29,3 @@ index 589241322..8a605746f 100644
  };
  
  static int rga_procfs_remove_files(struct rga_debugger *debugger)
--- 
-2.37.1 (Apple Git-137.1)
-

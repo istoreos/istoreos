@@ -8,8 +8,6 @@ Subject: [PATCH 29/42] drivers: add rockchip crypto
  drivers/crypto/rockchip/Makefile | 31 ++++++++++++++++++++++++++++---
  2 files changed, 41 insertions(+), 7 deletions(-)
 
-diff --git a/drivers/crypto/Kconfig b/drivers/crypto/Kconfig
-index 0a3dd0793..4aed2f445 100644
 --- a/drivers/crypto/Kconfig
 +++ b/drivers/crypto/Kconfig
 @@ -749,23 +749,32 @@ config CRYPTO_DEV_IMGTEC_HASH
@@ -49,8 +47,6 @@ index 0a3dd0793..4aed2f445 100644
  config CRYPTO_DEV_ZYNQMP_AES
  	tristate "Support for Xilinx ZynqMP AES hw accelerator"
  	depends on ZYNQMP_FIRMWARE || COMPILE_TEST
-diff --git a/drivers/crypto/rockchip/Makefile b/drivers/crypto/rockchip/Makefile
-index 785277aca..53e34aa47 100644
 --- a/drivers/crypto/rockchip/Makefile
 +++ b/drivers/crypto/rockchip/Makefile
 @@ -1,5 +1,30 @@
@@ -87,6 +83,3 @@ index 785277aca..53e34aa47 100644
 +		rk_crypto_bignum.o
 +
 +obj-$(CONFIG_CRYPTO_DEV_ROCKCHIP_DEV) += cryptodev_linux/
--- 
-2.37.1 (Apple Git-137.1)
-

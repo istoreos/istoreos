@@ -73,8 +73,6 @@ Subject: [PATCH] rkr4 patches
  sound/soc/codecs/Makefile                     |   2 +
  67 files changed, 4068 insertions(+), 1715 deletions(-)
 
-diff --git a/drivers/clk/rockchip/Kconfig b/drivers/clk/rockchip/Kconfig
-index c8c6d8909..9c9087096 100644
 --- a/drivers/clk/rockchip/Kconfig
 +++ b/drivers/clk/rockchip/Kconfig
 @@ -76,6 +76,20 @@ config CLK_RK3399
@@ -120,11 +118,9 @@ index c8c6d8909..9c9087096 100644
  config ROCKCHIP_CLK_PVTM
  	bool "Rockchip Clk Pvtm"
  	default y if !CPU_RV1126 && !CPU_RV1106
-diff --git a/drivers/clk/rockchip/Makefile b/drivers/clk/rockchip/Makefile
-index ccdb4b1b7..db3934d3d 100644
 --- a/drivers/clk/rockchip/Makefile
 +++ b/drivers/clk/rockchip/Makefile
-@@ -17,6 +17,7 @@ clk-rockchip-$(CONFIG_ROCKCHIP_CLK_PVTM) += clk-pvtm.o
+@@ -17,6 +17,7 @@ clk-rockchip-$(CONFIG_ROCKCHIP_CLK_PVTM)
  clk-rockchip-$(CONFIG_RESET_CONTROLLER) += softrst.o
  
  obj-$(CONFIG_ROCKCHIP_CLK_LINK)	+= clk-link.o
@@ -132,7 +128,7 @@ index ccdb4b1b7..db3934d3d 100644
  
  obj-$(CONFIG_CLK_PX30)          += clk-px30.o
  obj-$(CONFIG_CLK_RV110X)        += clk-rv1108.o
-@@ -29,5 +30,7 @@ obj-$(CONFIG_CLK_RK3308)        += clk-rk3308.o
+@@ -29,5 +30,7 @@ obj-$(CONFIG_CLK_RK3308)        += clk-r
  obj-$(CONFIG_CLK_RK3328)        += clk-rk3328.o
  obj-$(CONFIG_CLK_RK3368)        += clk-rk3368.o
  obj-$(CONFIG_CLK_RK3399)        += clk-rk3399.o
@@ -140,11 +136,9 @@ index ccdb4b1b7..db3934d3d 100644
 +obj-$(CONFIG_CLK_RK3562)        += clk-rk3562.o
  obj-$(CONFIG_CLK_RK3568)        += clk-rk3568.o
  obj-$(CONFIG_CLK_RK3588)	+= clk-rk3588.o
-diff --git a/drivers/clk/rockchip/clk.c b/drivers/clk/rockchip/clk.c
-index 3cea6b7eb..1e1f65694 100644
 --- a/drivers/clk/rockchip/clk.c
 +++ b/drivers/clk/rockchip/clk.c
-@@ -707,3 +707,56 @@ rockchip_register_restart_notifier(struct rockchip_clk_provider *ctx,
+@@ -707,3 +707,56 @@ rockchip_register_restart_notifier(struc
  				       &rk_clk_panic_block);
  }
  EXPORT_SYMBOL_GPL(rockchip_register_restart_notifier);
@@ -201,8 +195,6 @@ index 3cea6b7eb..1e1f65694 100644
 +}
 +EXPORT_SYMBOL_GPL(rockchip_clk_unprotect);
 +#endif /* MODULE */
-diff --git a/drivers/clk/rockchip/clk.h b/drivers/clk/rockchip/clk.h
-index 370c943e6..0d49ad61d 100644
 --- a/drivers/clk/rockchip/clk.h
 +++ b/drivers/clk/rockchip/clk.h
 @@ -201,6 +201,73 @@ struct clk;
@@ -293,7 +285,7 @@ index 370c943e6..0d49ad61d 100644
  
  #define PLL(_type, _id, _name, _pnames, _flags, _con, _mode, _mshift,	\
  		_lshift, _pflags, _rtable)				\
-@@ -1120,4 +1193,20 @@ static inline void rockchip_register_softrst(struct device_node *np,
+@@ -1120,4 +1193,20 @@ static inline void rockchip_register_sof
  #endif
  extern void (*rk_dump_cru)(void);
  
@@ -314,11 +306,9 @@ index 370c943e6..0d49ad61d 100644
 +}
 +#endif
  #endif
-diff --git a/drivers/cpufreq/cpufreq-dt-platdev.c b/drivers/cpufreq/cpufreq-dt-platdev.c
-index d21698e8d..c15218fad 100644
 --- a/drivers/cpufreq/cpufreq-dt-platdev.c
 +++ b/drivers/cpufreq/cpufreq-dt-platdev.c
-@@ -143,6 +143,8 @@ static const struct of_device_id blacklist[] __initconst = {
+@@ -143,6 +143,8 @@ static const struct of_device_id blackli
  	{ .compatible = "rockchip,rk3368", },
  	{ .compatible = "rockchip,rk3399", },
  	{ .compatible = "rockchip,rk3399pro", },
@@ -327,11 +317,9 @@ index d21698e8d..c15218fad 100644
  	{ .compatible = "rockchip,rk3566", },
  	{ .compatible = "rockchip,rk3568", },
  	{ .compatible = "rockchip,rk3588", },
-diff --git a/drivers/devfreq/event/rockchip-dfi.c b/drivers/devfreq/event/rockchip-dfi.c
-index 0708535bd..4aa090e78 100644
 --- a/drivers/devfreq/event/rockchip-dfi.c
 +++ b/drivers/devfreq/event/rockchip-dfi.c
-@@ -745,6 +745,9 @@ static const struct of_device_id rockchip_dfi_id_match[] = {
+@@ -745,6 +745,9 @@ static const struct of_device_id rockchi
  #ifdef CONFIG_CPU_RK3399
  	{ .compatible = "rockchip,rk3399-dfi", .data = rockchip_dfi_init },
  #endif
@@ -341,8 +329,6 @@ index 0708535bd..4aa090e78 100644
  #ifdef CONFIG_CPU_RK3568
  	{ .compatible = "rockchip,rk3568-dfi", .data = px30_dfi_init },
  #endif
-diff --git a/drivers/dma-buf/Kconfig b/drivers/dma-buf/Kconfig
-index 5dc97ec09..b984d93e0 100644
 --- a/drivers/dma-buf/Kconfig
 +++ b/drivers/dma-buf/Kconfig
 @@ -24,6 +24,17 @@ config DMABUF_DEBUG_ADVANCED
@@ -372,11 +358,9 @@ index 5dc97ec09..b984d93e0 100644
  	help
  	   Choose this option to enable DMA-BUF sysfs statistics
  	   in location /sys/kernel/dmabuf/buffers.
-diff --git a/drivers/dma-buf/dma-buf.c b/drivers/dma-buf/dma-buf.c
-index 0891d5994..a13533faa 100644
 --- a/drivers/dma-buf/dma-buf.c
 +++ b/drivers/dma-buf/dma-buf.c
-@@ -119,7 +119,7 @@ static char *dmabuffs_dname(struct dentry *dentry, char *buffer, int buflen)
+@@ -119,7 +119,7 @@ static char *dmabuffs_dname(struct dentr
  static void dma_buf_release(struct dentry *dentry)
  {
  	struct dma_buf *dmabuf;
@@ -385,7 +369,7 @@ index 0891d5994..a13533faa 100644
  	int dtor_ret = 0;
  #endif
  
-@@ -140,7 +140,7 @@ static void dma_buf_release(struct dentry *dentry)
+@@ -140,7 +140,7 @@ static void dma_buf_release(struct dentr
  	BUG_ON(dmabuf->cb_shared.active || dmabuf->cb_excl.active);
  
  	dma_buf_stats_teardown(dmabuf);
@@ -402,7 +386,7 @@ index 0891d5994..a13533faa 100644
  	struct file *file;
  	struct inode *inode = alloc_anon_inode(dma_buf_mnt->mnt_sb);
  
-@@ -584,6 +585,13 @@ static struct file *dma_buf_getfile(struct dma_buf *dmabuf, int flags)
+@@ -584,6 +585,13 @@ static struct file *dma_buf_getfile(stru
  	inode->i_size = dmabuf->size;
  	inode_set_bytes(inode, dmabuf->size);
  
@@ -416,7 +400,7 @@ index 0891d5994..a13533faa 100644
  	file = alloc_file_pseudo(inode, dma_buf_mnt, "dmabuf",
  				 flags, &dma_buf_fops);
  	if (IS_ERR(file))
-@@ -702,6 +710,9 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
+@@ -702,6 +710,9 @@ struct dma_buf *dma_buf_export(const str
  	dmabuf->exp_name = exp_info->exp_name;
  	dmabuf->owner = exp_info->owner;
  	spin_lock_init(&dmabuf->name_lock);
@@ -426,8 +410,6 @@ index 0891d5994..a13533faa 100644
  	init_waitqueue_head(&dmabuf->poll);
  	dmabuf->cb_excl.poll = dmabuf->cb_shared.poll = &dmabuf->poll;
  	dmabuf->cb_excl.active = dmabuf->cb_shared.active = 0;
-diff --git a/drivers/dma-buf/dma-heap.c b/drivers/dma-buf/dma-heap.c
-index 85aae0a01..004f9609c 100644
 --- a/drivers/dma-buf/dma-heap.c
 +++ b/drivers/dma-buf/dma-heap.c
 @@ -314,7 +314,7 @@ EXPORT_SYMBOL_GPL(dma_heap_get_name);
@@ -439,7 +421,7 @@ index 85aae0a01..004f9609c 100644
  	unsigned int minor;
  	int ret;
  
-@@ -328,15 +328,6 @@ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+@@ -328,15 +328,6 @@ struct dma_heap *dma_heap_add(const stru
  		return ERR_PTR(-EINVAL);
  	}
  
@@ -455,7 +437,7 @@ index 85aae0a01..004f9609c 100644
  	heap = kzalloc(sizeof(*heap), GFP_KERNEL);
  	if (!heap)
  		return ERR_PTR(-ENOMEM);
-@@ -380,13 +371,27 @@ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
+@@ -380,13 +371,27 @@ struct dma_heap *dma_heap_add(const stru
  	/* Make sure it doesn't disappear on us */
  	heap->heap_dev = get_device(heap->heap_dev);
  
@@ -484,11 +466,9 @@ index 85aae0a01..004f9609c 100644
  err2:
  	cdev_del(&heap->heap_cdev);
  err1:
-diff --git a/drivers/dma-buf/udmabuf.c b/drivers/dma-buf/udmabuf.c
-index cfbf10128..e359c5c6c 100644
 --- a/drivers/dma-buf/udmabuf.c
 +++ b/drivers/dma-buf/udmabuf.c
-@@ -26,8 +26,11 @@ static vm_fault_t udmabuf_vm_fault(struct vm_fault *vmf)
+@@ -26,8 +26,11 @@ static vm_fault_t udmabuf_vm_fault(struc
  {
  	struct vm_area_struct *vma = vmf->vma;
  	struct udmabuf *ubuf = vma->vm_private_data;
@@ -501,7 +481,7 @@ index cfbf10128..e359c5c6c 100644
  	get_page(vmf->page);
  	return 0;
  }
-@@ -115,17 +118,20 @@ static int begin_cpu_udmabuf(struct dma_buf *buf,
+@@ -115,17 +118,20 @@ static int begin_cpu_udmabuf(struct dma_
  {
  	struct udmabuf *ubuf = buf->priv;
  	struct device *dev = ubuf->device->this_device;
@@ -525,7 +505,7 @@ index cfbf10128..e359c5c6c 100644
  }
  
  static int end_cpu_udmabuf(struct dma_buf *buf,
-@@ -324,7 +330,23 @@ static struct miscdevice udmabuf_misc = {
+@@ -324,7 +330,23 @@ static struct miscdevice udmabuf_misc =
  
  static int __init udmabuf_dev_init(void)
  {
@@ -550,8 +530,6 @@ index cfbf10128..e359c5c6c 100644
  }
  
  static void __exit udmabuf_dev_exit(void)
-diff --git a/drivers/iio/adc/rockchip_saradc.c b/drivers/iio/adc/rockchip_saradc.c
-index 23a9f5df8..4fb68c114 100644
 --- a/drivers/iio/adc/rockchip_saradc.c
 +++ b/drivers/iio/adc/rockchip_saradc.c
 @@ -73,6 +73,7 @@ struct rockchip_saradc {
@@ -562,7 +540,7 @@ index 23a9f5df8..4fb68c114 100644
  	bool			suspended;
  #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
  	bool			test;
-@@ -312,6 +313,40 @@ static const struct rockchip_saradc_data rk3399_saradc_data = {
+@@ -312,6 +313,40 @@ static const struct rockchip_saradc_data
  	.power_down = rockchip_saradc_power_down_v1,
  };
  
@@ -603,20 +581,20 @@ index 23a9f5df8..4fb68c114 100644
  static const struct iio_chan_spec rockchip_rk3568_saradc_iio_channels[] = {
  	SARADC_CHANNEL(0, "adc0", 10),
  	SARADC_CHANNEL(1, "adc1", 10),
-@@ -374,6 +409,12 @@ static const struct of_device_id rockchip_saradc_match[] = {
- 	}, {
+@@ -375,6 +410,12 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3399-saradc",
  		.data = &rk3399_saradc_data,
-+	}, {
+ 	}, {
 +		.compatible = "rockchip,rk3528-saradc",
 +		.data = &rk3528_saradc_data,
 +	}, {
 +		.compatible = "rockchip,rk3562-saradc",
 +		.data = &rk3562_saradc_data,
- 	}, {
++	}, {
  		.compatible = "rockchip,rk3568-saradc",
  		.data = &rk3568_saradc_data,
-@@ -459,6 +500,26 @@ static irqreturn_t rockchip_saradc_trigger_handler(int irq, void *p)
+ 	}, {
+@@ -459,6 +500,26 @@ out:
  	return IRQ_HANDLED;
  }
  
@@ -643,7 +621,7 @@ index 23a9f5df8..4fb68c114 100644
  #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
  static ssize_t saradc_test_chn_store(struct device *dev,
  			struct device_attribute *attr,
-@@ -483,7 +544,7 @@ static ssize_t saradc_test_chn_store(struct device *dev,
+@@ -483,7 +544,7 @@ static ssize_t saradc_test_chn_store(str
  		return size;
  	}
  
@@ -652,7 +630,7 @@ index 23a9f5df8..4fb68c114 100644
  		info->test = true;
  		info->chn = val;
  		mod_delayed_work(info->wq, &info->work, msecs_to_jiffies(100));
-@@ -640,13 +701,14 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
+@@ -640,13 +701,14 @@ static int rockchip_saradc_probe(struct
  		return ret;
  	}
  
@@ -670,7 +648,7 @@ index 23a9f5df8..4fb68c114 100644
  	ret = clk_prepare_enable(info->pclk);
  	if (ret < 0) {
  		dev_err(&pdev->dev, "failed to enable pclk\n");
-@@ -687,6 +749,17 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
+@@ -687,6 +749,17 @@ static int rockchip_saradc_probe(struct
  	if (ret)
  		return ret;
  
@@ -688,8 +666,6 @@ index 23a9f5df8..4fb68c114 100644
  #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
  	info->wq = create_singlethread_workqueue("adc_wq");
  	INIT_DELAYED_WORK(&info->work, rockchip_saradc_test_work);
-diff --git a/drivers/input/misc/rk805-pwrkey.c b/drivers/input/misc/rk805-pwrkey.c
-index 76873aa00..769821763 100644
 --- a/drivers/input/misc/rk805-pwrkey.c
 +++ b/drivers/input/misc/rk805-pwrkey.c
 @@ -13,6 +13,7 @@
@@ -700,7 +676,7 @@ index 76873aa00..769821763 100644
  #include <linux/platform_device.h>
  
  static irqreturn_t pwrkey_fall_irq(int irq, void *_pwr)
-@@ -39,8 +40,15 @@ static int rk805_pwrkey_probe(struct platform_device *pdev)
+@@ -39,8 +40,15 @@ static int rk805_pwrkey_probe(struct pla
  {
  	struct input_dev *pwr;
  	int fall_irq, rise_irq;
@@ -716,8 +692,6 @@ index 76873aa00..769821763 100644
  	pwr = devm_input_allocate_device(&pdev->dev);
  	if (!pwr) {
  		dev_err(&pdev->dev, "Can't allocate power button\n");
-diff --git a/drivers/iommu/Kconfig b/drivers/iommu/Kconfig
-index fe1256b01..09431b9cc 100644
 --- a/drivers/iommu/Kconfig
 +++ b/drivers/iommu/Kconfig
 @@ -11,6 +11,36 @@ config IOASID
@@ -757,8 +731,6 @@ index fe1256b01..09431b9cc 100644
  menuconfig IOMMU_SUPPORT
  	bool "IOMMU Hardware Support"
  	depends on MMU
-diff --git a/drivers/iommu/dma-iommu.c b/drivers/iommu/dma-iommu.c
-index 383ae9631..d9ad5359b 100644
 --- a/drivers/iommu/dma-iommu.c
 +++ b/drivers/iommu/dma-iommu.c
 @@ -49,6 +49,11 @@ struct iommu_dma_cookie {
@@ -773,7 +745,7 @@ index 383ae9631..d9ad5359b 100644
  static inline size_t cookie_msi_granule(struct iommu_dma_cookie *cookie)
  {
  	if (cookie->type == IOMMU_DMA_IOVA_COOKIE)
-@@ -58,14 +63,15 @@ static inline size_t cookie_msi_granule(struct iommu_dma_cookie *cookie)
+@@ -58,14 +63,15 @@ static inline size_t cookie_msi_granule(
  
  static struct iommu_dma_cookie *cookie_alloc(enum iommu_dma_cookie_type type)
  {
@@ -793,7 +765,7 @@ index 383ae9631..d9ad5359b 100644
  }
  
  /**
-@@ -304,9 +310,11 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
+@@ -304,9 +310,11 @@ static int iommu_dma_init_domain(struct
  		u64 size, struct device *dev)
  {
  	struct iommu_dma_cookie *cookie = domain->iova_cookie;
@@ -805,7 +777,7 @@ index 383ae9631..d9ad5359b 100644
  
  	if (!cookie || cookie->type != IOMMU_DMA_IOVA_COOKIE)
  		return -EINVAL;
-@@ -330,14 +338,18 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
+@@ -330,14 +338,18 @@ static int iommu_dma_init_domain(struct
  	}
  
  	/* start_pfn is always nonzero for an already-initialised domain */
@@ -826,7 +798,7 @@ index 383ae9631..d9ad5359b 100644
  	}
  
  	init_iova_domain(iovad, 1UL << order, base_pfn);
-@@ -351,10 +363,16 @@ static int iommu_dma_init_domain(struct iommu_domain *domain, dma_addr_t base,
+@@ -351,10 +363,16 @@ static int iommu_dma_init_domain(struct
  			cookie->fq_domain = domain;
  	}
  
@@ -846,7 +818,7 @@ index 383ae9631..d9ad5359b 100644
  }
  
  static int iommu_dma_deferred_attach(struct device *dev,
-@@ -1242,13 +1260,6 @@ void iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size)
+@@ -1220,13 +1238,6 @@ void iommu_setup_dma_ops(struct device *
  		dev->dma_ops = &iommu_dma_ops;
  	}
  
@@ -860,8 +832,6 @@ index 383ae9631..d9ad5359b 100644
  	return;
  out_err:
  	 pr_warn("Failed to set up IOMMU for device %s; retaining platform DMA ops\n",
-diff --git a/drivers/iommu/iova.c b/drivers/iommu/iova.c
-index c710cb413..95c9f79b8 100644
 --- a/drivers/iommu/iova.c
 +++ b/drivers/iommu/iova.c
 @@ -11,8 +11,6 @@
@@ -873,7 +843,7 @@ index c710cb413..95c9f79b8 100644
  
  /* The anchor node sits above the top of the usable address space */
  #define IOVA_ANCHOR	~0UL
-@@ -27,66 +25,6 @@ static void init_iova_rcaches(struct iova_domain *iovad);
+@@ -27,66 +25,6 @@ static void init_iova_rcaches(struct iov
  static void free_iova_rcaches(struct iova_domain *iovad);
  static void fq_destroy_all_entries(struct iova_domain *iovad);
  static void fq_flush_timeout(struct timer_list *t);
@@ -940,7 +910,7 @@ index c710cb413..95c9f79b8 100644
  
  void
  init_iova_domain(struct iova_domain *iovad, unsigned long granule,
-@@ -280,7 +218,7 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -279,7 +217,7 @@ static int __alloc_and_insert_iova_range
  
  	curr = __get_cached_rbnode(iovad, limit_pfn);
  	curr_iova = rb_entry(curr, struct iova, node);
@@ -949,7 +919,7 @@ index c710cb413..95c9f79b8 100644
  
  retry:
  	do {
-@@ -294,7 +232,7 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -293,7 +231,7 @@ retry:
  	if (high_pfn < size || new_pfn < low_pfn) {
  		if (low_pfn == iovad->start_pfn && low_pfn_new < limit_pfn) {
  			high_pfn = limit_pfn;
@@ -958,7 +928,7 @@ index c710cb413..95c9f79b8 100644
  			curr = &iovad->anchor.node;
  			curr_iova = rb_entry(curr, struct iova, node);
  			goto retry;
-@@ -585,10 +523,8 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
+@@ -515,10 +453,8 @@ retry:
  	if (!new_iova) {
  		unsigned int cpu;
  
@@ -970,7 +940,7 @@ index c710cb413..95c9f79b8 100644
  
  		/* Try replenishing IOVAs by flushing rcache. */
  		flush_rcache = false;
-@@ -951,32 +887,6 @@ struct iova_cpu_rcache {
+@@ -881,32 +817,6 @@ struct iova_cpu_rcache {
  	struct iova_magazine *prev;
  };
  
@@ -1003,8 +973,6 @@ index c710cb413..95c9f79b8 100644
  static struct iova_magazine *iova_magazine_alloc(gfp_t flags)
  {
  	return kzalloc(sizeof(struct iova_magazine), flags);
-diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
-index cf4f03f33..f6720d0c4 100644
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
 @@ -87,30 +87,6 @@
@@ -1070,7 +1038,7 @@ index cf4f03f33..f6720d0c4 100644
  static struct rk_iommu *rk_iommu_from_dev(struct device *dev);
  static char reserve_range[PAGE_SIZE] __aligned(PAGE_SIZE);
  static phys_addr_t res_page;
-@@ -216,6 +197,11 @@ static struct rk_iommu_domain *to_rk_domain(struct iommu_domain *dom)
+@@ -216,6 +197,11 @@ static struct rk_iommu_domain *to_rk_dom
  #define RK_DTE_PT_ADDRESS_MASK    0xfffff000
  #define RK_DTE_PT_VALID           BIT(0)
  
@@ -1082,7 +1050,7 @@ index cf4f03f33..f6720d0c4 100644
  /*
   * In v2:
   * 31:12 - PT address bit 31:0
-@@ -224,20 +210,21 @@ static struct rk_iommu_domain *to_rk_domain(struct iommu_domain *dom)
+@@ -224,20 +210,21 @@ static struct rk_iommu_domain *to_rk_dom
   *  3: 1 - Reserved
   *     0 - 1 if PT @ PT address is valid
   */
@@ -1113,7 +1081,7 @@ index cf4f03f33..f6720d0c4 100644
  
  	return (phys_addr_t)dte_v2;
  }
-@@ -254,9 +241,9 @@ static inline u32 rk_mk_dte(dma_addr_t pt_dma)
+@@ -254,9 +241,9 @@ static inline u32 rk_mk_dte(dma_addr_t p
  
  static inline u32 rk_mk_dte_v2(dma_addr_t pt_dma)
  {
@@ -1126,7 +1094,7 @@ index cf4f03f33..f6720d0c4 100644
  
  	return (pt_dma & RK_DTE_PT_ADDRESS_MASK_V2) | RK_DTE_PT_VALID;
  }
-@@ -287,44 +274,13 @@ static inline u32 rk_mk_dte_v2(dma_addr_t pt_dma)
+@@ -287,44 +274,13 @@ static inline u32 rk_mk_dte_v2(dma_addr_
  #define RK_PTE_PAGE_READABLE      BIT(1)
  #define RK_PTE_PAGE_VALID         BIT(0)
  
@@ -1173,7 +1141,7 @@ index cf4f03f33..f6720d0c4 100644
  static inline bool rk_pte_is_page_represent(u32 pte)
  {
  	return pte & RK_PTE_PAGE_REPRESENT;
-@@ -337,7 +293,6 @@ static u32 rk_mk_pte(phys_addr_t page, int prot)
+@@ -337,7 +293,6 @@ static u32 rk_mk_pte(phys_addr_t page, i
  	flags |= (prot & IOMMU_READ) ? RK_PTE_PAGE_READABLE : 0;
  	flags |= (prot & IOMMU_WRITE) ? RK_PTE_PAGE_WRITABLE : 0;
  	flags |= (prot & IOMMU_PRIV) ? RK_PTE_PAGE_REPRESENT : 0;
@@ -1181,7 +1149,7 @@ index cf4f03f33..f6720d0c4 100644
  	page &= RK_PTE_PAGE_ADDRESS_MASK;
  	return page | flags | RK_PTE_PAGE_VALID;
  }
-@@ -346,20 +301,16 @@ static u32 rk_mk_pte_v2(phys_addr_t page, int prot)
+@@ -346,20 +301,16 @@ static u32 rk_mk_pte_v2(phys_addr_t page
  {
  	u32 flags = 0;
  
@@ -1205,7 +1173,7 @@ index cf4f03f33..f6720d0c4 100644
  }
  
  static u32 rk_mk_pte_invalid(u32 pte)
-@@ -615,7 +566,7 @@ static int rk_iommu_force_reset(struct rk_iommu *iommu)
+@@ -615,7 +566,7 @@ static int rk_iommu_force_reset(struct r
  	int ret, i;
  	u32 dte_addr;
  	bool val;
@@ -1214,7 +1182,7 @@ index cf4f03f33..f6720d0c4 100644
  
  	if (iommu->reset_disabled)
  		return 0;
-@@ -632,14 +583,11 @@ static int rk_iommu_force_reset(struct rk_iommu *iommu)
+@@ -632,14 +583,11 @@ static int rk_iommu_force_reset(struct r
  	 * In v2: upper 7 nybbles are read back.
  	 */
  	for (i = 0; i < iommu->num_mmu; i++) {
@@ -1232,7 +1200,7 @@ index cf4f03f33..f6720d0c4 100644
  					 RK_MMU_POLL_PERIOD_US, RK_MMU_POLL_TIMEOUT_US);
  		if (ret) {
  			dev_err(iommu->dev, "Error during raw reset. MMU_DTE_ADDR is not functioning\n");
-@@ -663,6 +611,33 @@ static int rk_iommu_force_reset(struct rk_iommu *iommu)
+@@ -663,6 +611,33 @@ read_wa:
  	return 0;
  }
  
@@ -1266,7 +1234,7 @@ index cf4f03f33..f6720d0c4 100644
  static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
  {
  	void __iomem *base = iommu->bases[index];
-@@ -682,11 +657,7 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+@@ -682,11 +657,7 @@ static void log_iova(struct rk_iommu *io
  	page_offset = rk_iova_page_offset(iova);
  
  	mmu_dte_addr = rk_iommu_read(base, RK_MMU_DTE_ADDR);
@@ -1279,7 +1247,7 @@ index cf4f03f33..f6720d0c4 100644
  
  	dte_addr_phys = mmu_dte_addr_phys + (4 * dte_index);
  	dte_addr = phys_to_virt(dte_addr_phys);
-@@ -695,20 +666,14 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+@@ -695,20 +666,14 @@ static void log_iova(struct rk_iommu *io
  	if (!rk_dte_is_pt_valid(dte))
  		goto print_it;
  
@@ -1302,7 +1270,7 @@ index cf4f03f33..f6720d0c4 100644
  	page_flags = pte & RK_PTE_PAGE_FLAGS_MASK;
  
  print_it:
-@@ -847,41 +812,13 @@ static phys_addr_t rk_iommu_iova_to_phys(struct iommu_domain *domain,
+@@ -847,41 +812,13 @@ static phys_addr_t rk_iommu_iova_to_phys
  	if (!rk_dte_is_pt_valid(dte))
  		goto out;
  
@@ -1346,7 +1314,7 @@ index cf4f03f33..f6720d0c4 100644
  out:
  	spin_unlock_irqrestore(&rk_domain->dt_lock, flags);
  
-@@ -957,52 +894,13 @@ static u32 *rk_dte_get_page_table(struct rk_iommu_domain *rk_domain,
+@@ -957,52 +894,13 @@ static u32 *rk_dte_get_page_table(struct
  		return ERR_PTR(-ENOMEM);
  	}
  
@@ -1401,7 +1369,7 @@ index cf4f03f33..f6720d0c4 100644
  	return (u32 *)phys_to_virt(pt_phys);
  }
  
-@@ -1021,15 +919,11 @@ static size_t rk_iommu_unmap_iova(struct rk_iommu_domain *rk_domain,
+@@ -1021,15 +919,11 @@ static size_t rk_iommu_unmap_iova(struct
  		if (!rk_pte_is_page_valid(pte))
  			break;
  
@@ -1420,7 +1388,7 @@ index cf4f03f33..f6720d0c4 100644
  	}
  
  	rk_table_flush(rk_domain, pte_dma, pte_count);
-@@ -1071,57 +965,10 @@ static int rk_iommu_map_iova(struct rk_iommu_domain *rk_domain, u32 *pte_addr,
+@@ -1071,57 +965,10 @@ static int rk_iommu_map_iova(struct rk_i
  			goto unwind;
  
  		if (prot & IOMMU_PRIV) {
@@ -1431,10 +1399,10 @@ index cf4f03f33..f6720d0c4 100644
 -			paddr += SPAGE_SIZE;
 -		}
 -	}
+-
+-	rk_table_flush(rk_domain, pte_dma, pte_total);
 +			pte_addr[pte_count] = rk_ops->mk_ptentries(paddr, prot);
  
--	rk_table_flush(rk_domain, pte_dma, pte_total);
--
 -	/*
 -	 * Zap the first and last iova to evict from iotlb any previously
 -	 * mapped cachelines holding stale values for its dte and pte.
@@ -1480,7 +1448,7 @@ index cf4f03f33..f6720d0c4 100644
  			paddr += SPAGE_SIZE;
  		}
  	}
-@@ -1143,7 +990,7 @@ static int rk_iommu_map_iova_v2(struct rk_iommu_domain *rk_domain, u32 *pte_addr
+@@ -1143,7 +990,7 @@ unwind:
  			    pte_count * SPAGE_SIZE, NULL);
  
  	iova += pte_count * SPAGE_SIZE;
@@ -1489,7 +1457,7 @@ index cf4f03f33..f6720d0c4 100644
  	pr_err("iova: %pad already mapped to %pa cannot remap to phys: %pa prot: %#x\n",
  	       &iova, &page_phys, &paddr, prot);
  
-@@ -1178,7 +1025,7 @@ static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
+@@ -1178,7 +1025,7 @@ static int rk_iommu_map(struct iommu_dom
  	dte = rk_domain->dt[rk_iova_dte_index(iova)];
  	pte_index = rk_iova_pte_index(iova);
  	pte_addr = &page_table[pte_index];
@@ -1498,7 +1466,7 @@ index cf4f03f33..f6720d0c4 100644
  	ret = rk_iommu_map_iova(rk_domain, pte_addr, pte_dma, iova,
  				paddr, size, prot);
  
-@@ -1187,43 +1034,6 @@ static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
+@@ -1187,43 +1034,6 @@ static int rk_iommu_map(struct iommu_dom
  	return ret;
  }
  
@@ -1542,7 +1510,7 @@ index cf4f03f33..f6720d0c4 100644
  static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
  			     size_t size, struct iommu_iotlb_gather *gather)
  {
-@@ -1252,49 +1062,7 @@ static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
+@@ -1252,49 +1062,7 @@ static size_t rk_iommu_unmap(struct iomm
  		return 0;
  	}
  
@@ -1593,7 +1561,7 @@ index cf4f03f33..f6720d0c4 100644
  	pte_addr = (u32 *)phys_to_virt(pt_phys) + rk_iova_pte_index(iova);
  	pte_dma = pt_phys + rk_iova_pte_index(iova) * sizeof(u32);
  	unmap_size = rk_iommu_unmap_iova(rk_domain, pte_addr, pte_dma, size,
-@@ -1383,7 +1151,6 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+@@ -1383,7 +1151,6 @@ static int rk_iommu_enable(struct rk_iom
  	struct iommu_domain *domain = iommu->domain;
  	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
  	int ret, i;
@@ -1601,7 +1569,7 @@ index cf4f03f33..f6720d0c4 100644
  	u32 auto_gate;
  
  	ret = clk_bulk_enable(iommu->num_clocks, iommu->clocks);
-@@ -1399,14 +1166,8 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+@@ -1399,14 +1166,8 @@ static int rk_iommu_enable(struct rk_iom
  		goto out_disable_stall;
  
  	for (i = 0; i < iommu->num_mmu; i++) {
@@ -1618,7 +1586,7 @@ index cf4f03f33..f6720d0c4 100644
  		rk_iommu_base_command(iommu->bases[i], RK_MMU_CMD_ZAP_CACHE);
  		rk_iommu_write(iommu->bases[i], RK_MMU_INT_MASK, RK_MMU_IRQ_MASK);
  
-@@ -1453,6 +1214,28 @@ bool rockchip_iommu_is_enabled(struct device *dev)
+@@ -1453,6 +1214,28 @@ bool rockchip_iommu_is_enabled(struct de
  }
  EXPORT_SYMBOL(rockchip_iommu_is_enabled);
  
@@ -1647,7 +1615,7 @@ index cf4f03f33..f6720d0c4 100644
  static void rk_iommu_detach_device(struct iommu_domain *domain,
  				   struct device *dev)
  {
-@@ -1564,8 +1347,6 @@ static struct iommu_domain *rk_iommu_domain_alloc(unsigned type)
+@@ -1564,8 +1347,6 @@ static struct iommu_domain *rk_iommu_dom
  		goto err_free_dt;
  	}
  
@@ -1656,19 +1624,22 @@ index cf4f03f33..f6720d0c4 100644
  	spin_lock_init(&rk_domain->iommus_lock);
  	spin_lock_init(&rk_domain->dt_lock);
  	INIT_LIST_HEAD(&rk_domain->iommus);
-@@ -1597,7 +1378,7 @@ static void rk_iommu_domain_free(struct iommu_domain *domain)
+@@ -1597,37 +1378,8 @@ static void rk_iommu_domain_free(struct
  	for (i = 0; i < NUM_DT_ENTRIES; i++) {
  		u32 dte = rk_domain->dt[i];
  		if (rk_dte_is_pt_valid(dte)) {
 -			phys_addr_t pt_phys = rk_dte_pt_address(dte);
-+			phys_addr_t pt_phys = rk_ops->pt_address(dte);
- 			u32 *page_table = phys_to_virt(pt_phys);
- 			dma_unmap_single(dma_dev, pt_phys,
- 					 SPAGE_SIZE, DMA_TO_DEVICE);
-@@ -1609,37 +1390,6 @@ static void rk_iommu_domain_free(struct iommu_domain *domain)
- 			 SPAGE_SIZE, DMA_TO_DEVICE);
- 	free_page((unsigned long)rk_domain->dt);
- 
+-			u32 *page_table = phys_to_virt(pt_phys);
+-			dma_unmap_single(dma_dev, pt_phys,
+-					 SPAGE_SIZE, DMA_TO_DEVICE);
+-			free_page((unsigned long)page_table);
+-		}
+-	}
+-
+-	dma_unmap_single(dma_dev, rk_domain->dt_dma,
+-			 SPAGE_SIZE, DMA_TO_DEVICE);
+-	free_page((unsigned long)rk_domain->dt);
+-
 -	if (domain->type == IOMMU_DOMAIN_DMA)
 -		iommu_put_dma_cookie(&rk_domain->domain);
 -	kfree(rk_domain);
@@ -1686,24 +1657,22 @@ index cf4f03f33..f6720d0c4 100644
 -
 -		if (rk_dte_is_pt_valid(dte)) {
 -			phys_addr_t pt_phys = rk_dte_pt_address_v2(dte);
--			u32 *page_table = phys_to_virt(pt_phys);
++			phys_addr_t pt_phys = rk_ops->pt_address(dte);
+ 			u32 *page_table = phys_to_virt(pt_phys);
 -
--			dma_unmap_single(dma_dev, pt_phys,
--					 SPAGE_SIZE, DMA_TO_DEVICE);
--			free_page((unsigned long)page_table);
--		}
--	}
--
--	dma_unmap_single(dma_dev, rk_domain->dt_dma,
--			 SPAGE_SIZE, DMA_TO_DEVICE);
--	free_page((unsigned long)rk_domain->dt);
--
+ 			dma_unmap_single(dma_dev, pt_phys,
+ 					 SPAGE_SIZE, DMA_TO_DEVICE);
+ 			free_page((unsigned long)page_table);
+@@ -1638,8 +1390,6 @@ static void rk_iommu_domain_free_v2(stru
+ 			 SPAGE_SIZE, DMA_TO_DEVICE);
+ 	free_page((unsigned long)rk_domain->dt);
+ 
 -	if (domain->type == IOMMU_DOMAIN_DMA)
 -		iommu_put_dma_cookie(&rk_domain->domain);
  	kfree(rk_domain);
  }
  
-@@ -1749,7 +1499,7 @@ void rockchip_iommu_unmask_irq(struct device *dev)
+@@ -1749,7 +1499,7 @@ void rockchip_iommu_unmask_irq(struct de
  }
  EXPORT_SYMBOL(rockchip_iommu_unmask_irq);
  
@@ -1793,7 +1762,7 @@ index cf4f03f33..f6720d0c4 100644
  	iommu->bases = devm_kcalloc(dev, num_res, sizeof(*iommu->bases),
  				    GFP_KERNEL);
  	if (!iommu->bases)
-@@ -1894,10 +1610,8 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1894,10 +1610,8 @@ static int rk_iommu_probe(struct platfor
  	if (err)
  		goto err_put_group;
  
@@ -1806,7 +1775,7 @@ index cf4f03f33..f6720d0c4 100644
  	iommu_device_set_fwnode(&iommu->iommu, &dev->of_node->fwnode);
  
  	err = iommu_device_register(&iommu->iommu);
-@@ -1912,10 +1626,7 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1912,10 +1626,7 @@ static int rk_iommu_probe(struct platfor
  	if (!dma_dev)
  		dma_dev = &pdev->dev;
  
@@ -1818,16 +1787,16 @@ index cf4f03f33..f6720d0c4 100644
  
  	pm_runtime_enable(dev);
  
-@@ -1943,6 +1654,8 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1943,6 +1654,8 @@ skip_request_irq:
  		pr_info("%s,%d, res_page = 0x%pa\n", __func__, __LINE__, &res_page);
  	}
  
 +	dma_set_mask_and_coherent(dev, rk_ops->dma_bit_mask);
 +
  	return 0;
- err_remove_sysfs:
- 	iommu_device_sysfs_remove(&iommu->iommu);
-@@ -1968,7 +1681,8 @@ static void rk_iommu_shutdown(struct platform_device *pdev)
+ err_pm_disable:
+ 	pm_runtime_disable(dev);
+@@ -1970,7 +1683,8 @@ static void rk_iommu_shutdown(struct pla
  	}
  
  skip_free_irq:
@@ -1837,7 +1806,7 @@ index cf4f03f33..f6720d0c4 100644
  }
  
  static int __maybe_unused rk_iommu_suspend(struct device *dev)
-@@ -2004,6 +1718,37 @@ static const struct dev_pm_ops rk_iommu_pm_ops = {
+@@ -2006,6 +1720,37 @@ static const struct dev_pm_ops rk_iommu_
  				pm_runtime_force_resume)
  };
  
@@ -1875,11 +1844,9 @@ index cf4f03f33..f6720d0c4 100644
  static struct platform_driver rk_iommu_driver = {
  	.probe = rk_iommu_probe,
  	.shutdown = rk_iommu_shutdown,
-diff --git a/drivers/irqchip/irq-gic-v3-its.c b/drivers/irqchip/irq-gic-v3-its.c
-index 11e75aee5..738ef7e29 100644
 --- a/drivers/irqchip/irq-gic-v3-its.c
 +++ b/drivers/irqchip/irq-gic-v3-its.c
-@@ -3021,18 +3021,12 @@ static int __init allocate_lpi_tables(void)
+@@ -3046,18 +3046,12 @@ static int __init allocate_lpi_tables(vo
  	return 0;
  }
  
@@ -1899,7 +1866,7 @@ index 11e75aee5..738ef7e29 100644
  	do {
  		val = gicr_read_vpendbaser(vlpi_base + GICR_VPENDBASER);
  		clean = !(val & GICR_VPENDBASER_Dirty);
-@@ -3043,10 +3037,26 @@ static u64 its_clear_vpend_valid(void __iomem *vlpi_base, u64 clr, u64 set)
+@@ -3068,10 +3062,26 @@ static u64 its_clear_vpend_valid(void __
  		}
  	} while (!clean && count);
  
@@ -1928,7 +1895,7 @@ index 11e75aee5..738ef7e29 100644
  
  	return val;
  }
-@@ -3897,8 +3907,6 @@ static void its_vpe_schedule(struct its_vpe *vpe)
+@@ -3922,8 +3932,6 @@ static void its_vpe_schedule(struct its_
  	val |= vpe->idai ? GICR_VPENDBASER_IDAI : 0;
  	val |= GICR_VPENDBASER_Valid;
  	gicr_write_vpendbaser(val, vlpi_base + GICR_VPENDBASER);
@@ -1937,7 +1904,7 @@ index 11e75aee5..738ef7e29 100644
  }
  
  static void its_vpe_deschedule(struct its_vpe *vpe)
-@@ -3946,6 +3954,10 @@ static int its_vpe_set_vcpu_affinity(struct irq_data *d, void *vcpu_info)
+@@ -3971,6 +3979,10 @@ static int its_vpe_set_vcpu_affinity(str
  		its_vpe_deschedule(vpe);
  		return 0;
  
@@ -1948,7 +1915,7 @@ index 11e75aee5..738ef7e29 100644
  	case INVALL_VPE:
  		its_vpe_invall(vpe);
  		return 0;
-@@ -4107,8 +4119,6 @@ static void its_vpe_4_1_schedule(struct its_vpe *vpe,
+@@ -4124,8 +4136,6 @@ static void its_vpe_4_1_schedule(struct
  	val |= FIELD_PREP(GICR_VPENDBASER_4_1_VPEID, vpe->vpe_id);
  
  	gicr_write_vpendbaser(val, vlpi_base + GICR_VPENDBASER);
@@ -1957,7 +1924,7 @@ index 11e75aee5..738ef7e29 100644
  }
  
  static void its_vpe_4_1_deschedule(struct its_vpe *vpe,
-@@ -4183,6 +4193,10 @@ static int its_vpe_4_1_set_vcpu_affinity(struct irq_data *d, void *vcpu_info)
+@@ -4200,6 +4210,10 @@ static int its_vpe_4_1_set_vcpu_affinity
  		its_vpe_4_1_deschedule(vpe, info);
  		return 0;
  
@@ -1968,11 +1935,9 @@ index 11e75aee5..738ef7e29 100644
  	case INVALL_VPE:
  		its_vpe_4_1_invall(vpe);
  		return 0;
-diff --git a/drivers/irqchip/irq-gic-v4.c b/drivers/irqchip/irq-gic-v4.c
-index 0c18714ae..5d1dc9915 100644
 --- a/drivers/irqchip/irq-gic-v4.c
 +++ b/drivers/irqchip/irq-gic-v4.c
-@@ -232,6 +232,8 @@ int its_make_vpe_non_resident(struct its_vpe *vpe, bool db)
+@@ -232,6 +232,8 @@ int its_make_vpe_non_resident(struct its
  	if (!ret)
  		vpe->resident = false;
  
@@ -1981,7 +1946,7 @@ index 0c18714ae..5d1dc9915 100644
  	return ret;
  }
  
-@@ -258,6 +260,23 @@ int its_make_vpe_resident(struct its_vpe *vpe, bool g0en, bool g1en)
+@@ -258,6 +260,23 @@ int its_make_vpe_resident(struct its_vpe
  	return ret;
  }
  
@@ -2005,8 +1970,6 @@ index 0c18714ae..5d1dc9915 100644
  int its_invall_vpe(struct its_vpe *vpe)
  {
  	struct its_cmd_info info = {
-diff --git a/drivers/mailbox/rockchip-mailbox.c b/drivers/mailbox/rockchip-mailbox.c
-index ca50f7f17..03985b45c 100644
 --- a/drivers/mailbox/rockchip-mailbox.c
 +++ b/drivers/mailbox/rockchip-mailbox.c
 @@ -11,6 +11,8 @@
@@ -2050,7 +2013,7 @@ index ca50f7f17..03985b45c 100644
  
  	struct rockchip_mbox_chan *chans;
  };
-@@ -53,24 +47,23 @@ static int rockchip_mbox_send_data(struct mbox_chan *chan, void *data)
+@@ -53,24 +47,23 @@ static int rockchip_mbox_send_data(struc
  {
  	struct rockchip_mbox *mb = dev_get_drvdata(chan->mbox->dev);
  	struct rockchip_mbox_msg *msg = data;
@@ -2084,7 +2047,7 @@ index ca50f7f17..03985b45c 100644
  		       MAILBOX_A2B_DAT(chans->idx));
  
  	return 0;
-@@ -79,10 +72,15 @@ static int rockchip_mbox_send_data(struct mbox_chan *chan, void *data)
+@@ -79,10 +72,15 @@ static int rockchip_mbox_send_data(struc
  static int rockchip_mbox_startup(struct mbox_chan *chan)
  {
  	struct rockchip_mbox *mb = dev_get_drvdata(chan->mbox->dev);
@@ -2103,7 +2066,7 @@ index ca50f7f17..03985b45c 100644
  
  	return 0;
  }
-@@ -90,12 +88,15 @@ static int rockchip_mbox_startup(struct mbox_chan *chan)
+@@ -90,12 +88,15 @@ static int rockchip_mbox_startup(struct
  static void rockchip_mbox_shutdown(struct mbox_chan *chan)
  {
  	struct rockchip_mbox *mb = dev_get_drvdata(chan->mbox->dev);
@@ -2111,11 +2074,10 @@ index ca50f7f17..03985b45c 100644
 -
 -	/* Disable all B2A interrupts */
 -	writel_relaxed(0, mb->mbox_base + MAILBOX_B2A_INTEN);
--
--	mb->chans[chans->idx].msg = NULL;
 +	struct rockchip_mbox_chan *chans = chan->con_priv;
 +	u32 val = 0U;
-+
+ 
+-	mb->chans[chans->idx].msg = NULL;
 +	/* Disable the corresponding B2A interrupt */
 +	spin_lock(&mb->cfg_lock);
 +	val = readl_relaxed(mb->mbox_base + MAILBOX_B2A_INTEN) &
@@ -2125,7 +2087,7 @@ index ca50f7f17..03985b45c 100644
  }
  
  static const struct mbox_chan_ops rockchip_mbox_chan_ops = {
-@@ -104,48 +105,51 @@ static const struct mbox_chan_ops rockchip_mbox_chan_ops = {
+@@ -104,48 +105,51 @@ static const struct mbox_chan_ops rockch
  	.shutdown	= rockchip_mbox_shutdown,
  };
  
@@ -2149,11 +2111,11 @@ index ca50f7f17..03985b45c 100644
 -	}
 +	if (!chan || !msg)
 +		return -EINVAL;
- 
--	return IRQ_NONE;
++
 +	mb = dev_get_drvdata(chan->mbox->dev);
 +	chans = chan->con_priv;
-+
+ 
+-	return IRQ_NONE;
 +	msg->cmd  = mb->msg[chans->idx].cmd;
 +	msg->data = mb->msg[chans->idx].data;
 +
@@ -2206,7 +2168,7 @@ index ca50f7f17..03985b45c 100644
  	}
  
  	return IRQ_HANDLED;
-@@ -179,6 +183,11 @@ static int rockchip_mbox_probe(struct platform_device *pdev)
+@@ -179,6 +183,11 @@ static int rockchip_mbox_probe(struct pl
  	if (!mb)
  		return -ENOMEM;
  
@@ -2218,7 +2180,7 @@ index ca50f7f17..03985b45c 100644
  	mb->chans = devm_kcalloc(&pdev->dev, drv_data->num_chans,
  				 sizeof(*mb->chans), GFP_KERNEL);
  	if (!mb->chans)
-@@ -195,6 +204,7 @@ static int rockchip_mbox_probe(struct platform_device *pdev)
+@@ -195,6 +204,7 @@ static int rockchip_mbox_probe(struct pl
  	mb->mbox.num_chans = drv_data->num_chans;
  	mb->mbox.ops = &rockchip_mbox_chan_ops;
  	mb->mbox.txdone_irq = true;
@@ -2226,7 +2188,7 @@ index ca50f7f17..03985b45c 100644
  
  	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
  	if (!res)
-@@ -204,9 +214,6 @@ static int rockchip_mbox_probe(struct platform_device *pdev)
+@@ -204,9 +214,6 @@ static int rockchip_mbox_probe(struct pl
  	if (IS_ERR(mb->mbox_base))
  		return PTR_ERR(mb->mbox_base);
  
@@ -2236,7 +2198,7 @@ index ca50f7f17..03985b45c 100644
  	mb->pclk = devm_clk_get(&pdev->dev, "pclk_mailbox");
  	if (IS_ERR(mb->pclk)) {
  		ret = PTR_ERR(mb->pclk);
-@@ -223,26 +230,50 @@ static int rockchip_mbox_probe(struct platform_device *pdev)
+@@ -223,26 +230,50 @@ static int rockchip_mbox_probe(struct pl
  
  	for (i = 0; i < mb->mbox.num_chans; i++) {
  		irq = platform_get_irq(pdev, i);
@@ -2300,11 +2262,9 @@ index ca50f7f17..03985b45c 100644
  	return ret;
  }
  
-diff --git a/drivers/media/common/videobuf2/videobuf2-v4l2.c b/drivers/media/common/videobuf2/videobuf2-v4l2.c
-index 3f61f5863..cb4685c9c 100644
 --- a/drivers/media/common/videobuf2/videobuf2-v4l2.c
 +++ b/drivers/media/common/videobuf2/videobuf2-v4l2.c
-@@ -295,6 +295,12 @@ static int vb2_fill_vb2_v4l2_buffer(struct vb2_buffer *vb, struct v4l2_buffer *b
+@@ -295,6 +295,12 @@ static int vb2_fill_vb2_v4l2_buffer(stru
  		}
  
  		planes[0].data_offset = 0;
@@ -2317,8 +2277,6 @@ index 3f61f5863..cb4685c9c 100644
  		if (V4L2_TYPE_IS_OUTPUT(b->type)) {
  			if (b->bytesused == 0)
  				vb2_warn_zero_bytesused(vb);
-diff --git a/drivers/mmc/host/sdhci-of-dwcmshc.c b/drivers/mmc/host/sdhci-of-dwcmshc.c
-index 54275df73..44e18f623 100644
 --- a/drivers/mmc/host/sdhci-of-dwcmshc.c
 +++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
 @@ -27,11 +27,15 @@
@@ -2447,7 +2405,7 @@ index 54275df73..44e18f623 100644
  };
  
  /*
-@@ -122,6 +143,16 @@ static void dwcmshc_adma_write_desc(struct sdhci_host *host, void **desc,
+@@ -122,6 +143,16 @@ static void dwcmshc_adma_write_desc(stru
  	sdhci_adma_write_desc(host, desc, addr, len, cmd);
  }
  
@@ -2464,7 +2422,7 @@ index 54275df73..44e18f623 100644
  static void dwcmshc_check_auto_cmd23(struct mmc_host *mmc,
  				     struct mmc_request *mrq)
  {
-@@ -148,7 +179,9 @@ static void dwcmshc_request(struct mmc_host *mmc, struct mmc_request *mrq)
+@@ -148,7 +179,9 @@ static void dwcmshc_request(struct mmc_h
  static void dwcmshc_set_uhs_signaling(struct sdhci_host *host,
  				      unsigned int timing)
  {
@@ -2475,7 +2433,7 @@ index 54275df73..44e18f623 100644
  
  	ctrl_2 = sdhci_readw(host, SDHCI_HOST_CONTROL2);
  	/* Select Bus Speed Mode for host */
-@@ -168,9 +201,9 @@ static void dwcmshc_set_uhs_signaling(struct sdhci_host *host,
+@@ -168,9 +201,9 @@ static void dwcmshc_set_uhs_signaling(st
  		ctrl_2 |= SDHCI_CTRL_UHS_DDR50;
  	else if (timing == MMC_TIMING_MMC_HS400) {
  		/* set CARD_IS_EMMC bit to enable Data Strobe for HS400 */
@@ -2487,7 +2445,7 @@ index 54275df73..44e18f623 100644
  
  		ctrl_2 |= DWCMSHC_CTRL_HS400;
  	}
-@@ -183,21 +216,27 @@ static void dwcmshc_hs400_enhanced_strobe(struct mmc_host *mmc,
+@@ -183,21 +216,27 @@ static void dwcmshc_hs400_enhanced_strob
  {
  	u32 vendor;
  	struct sdhci_host *host = mmc_priv(mmc);
@@ -2520,7 +2478,7 @@ index 54275df73..44e18f623 100644
  	int err;
  
  	host->mmc->actual_clock = 0;
-@@ -230,17 +269,23 @@ static void dwcmshc_rk_set_clock(struct sdhci_host *host, unsigned int clock)
+@@ -230,17 +269,23 @@ static void dwcmshc_rk_set_clock(struct
  	sdhci_set_clock(host, clock);
  
  	/* Disable cmd conflict check */
@@ -2548,7 +2506,7 @@ index 54275df73..44e18f623 100644
  		sdhci_writel(host, 0, DWCMSHC_EMMC_DLL_TXCLK);
  		sdhci_writel(host, 0, DECMSHC_EMMC_DLL_CMDOUT);
  		/*
-@@ -250,9 +295,9 @@ static void dwcmshc_rk_set_clock(struct sdhci_host *host, unsigned int clock)
+@@ -250,9 +295,9 @@ static void dwcmshc_rk_set_clock(struct
  		 */
  		extra = DWCMSHC_EMMC_DLL_DLYENA |
  			DLL_STRBIN_DELAY_NUM_SEL |
@@ -2560,7 +2518,7 @@ index 54275df73..44e18f623 100644
  	}
  
  	/* Reset DLL */
-@@ -260,17 +305,9 @@ static void dwcmshc_rk_set_clock(struct sdhci_host *host, unsigned int clock)
+@@ -260,17 +305,9 @@ static void dwcmshc_rk_set_clock(struct
  	udelay(1);
  	sdhci_writel(host, 0x0, DWCMSHC_EMMC_DLL_CTRL);
  
@@ -2579,7 +2537,7 @@ index 54275df73..44e18f623 100644
  	extra = 0x5 << DWCMSHC_EMMC_DLL_START_POINT |
  		0x2 << DWCMSHC_EMMC_DLL_INC |
  		DWCMSHC_EMMC_DLL_START;
-@@ -280,53 +317,66 @@ static void dwcmshc_rk_set_clock(struct sdhci_host *host, unsigned int clock)
+@@ -280,53 +317,66 @@ static void dwcmshc_rk_set_clock(struct
  				 500 * USEC_PER_MSEC);
  	if (err) {
  		dev_err(mmc_dev(host->mmc), "DLL lock timeout!\n");
@@ -2669,7 +2627,7 @@ index 54275df73..44e18f623 100644
  	}
  
  	sdhci_reset(host, mask);
-@@ -344,17 +394,17 @@ static const struct sdhci_ops sdhci_dwcmshc_ops = {
+@@ -344,17 +394,17 @@ static const struct sdhci_ops sdhci_dwcm
  	.set_clock		= sdhci_set_clock,
  	.set_bus_width		= sdhci_set_bus_width,
  	.set_uhs_signaling	= dwcmshc_set_uhs_signaling,
@@ -2691,7 +2649,7 @@ index 54275df73..44e18f623 100644
  	.adma_write_desc	= dwcmshc_adma_write_desc,
  	.request_done		= sdhci_dwcmshc_request_done,
  };
-@@ -365,91 +415,165 @@ static const struct sdhci_pltfm_data sdhci_dwcmshc_pdata = {
+@@ -365,91 +415,165 @@ static const struct sdhci_pltfm_data sdh
  	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
  };
  
@@ -2887,7 +2845,7 @@ index 54275df73..44e18f623 100644
  	const struct dwcmshc_driver_data *drv_data;
  	struct mmc_hsq *hsq;
  	int err;
-@@ -460,8 +584,9 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -460,8 +584,9 @@ static int dwcmshc_probe(struct platform
  		dev_err(&pdev->dev, "Error: No device match data found\n");
  		return -ENODEV;
  	}
@@ -2898,7 +2856,7 @@ index 54275df73..44e18f623 100644
  				sizeof(struct dwcmshc_priv));
  	if (IS_ERR(host))
  		return PTR_ERR(host);
-@@ -469,7 +594,7 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -469,7 +594,7 @@ static int dwcmshc_probe(struct platform
  	/*
  	 * extra adma table cnt for cross 128M boundary handling.
  	 */
@@ -2907,7 +2865,7 @@ index 54275df73..44e18f623 100644
  	if (extra > SDHCI_MAX_SEGS)
  		extra = SDHCI_MAX_SEGS;
  	host->adma_table_cnt += extra;
-@@ -477,21 +602,18 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -477,21 +602,18 @@ static int dwcmshc_probe(struct platform
  	pltfm_host = sdhci_priv(host);
  	priv = sdhci_pltfm_priv(pltfm_host);
  
@@ -2933,7 +2891,7 @@ index 54275df73..44e18f623 100644
  		if (!IS_ERR(priv->bus_clk))
  			clk_prepare_enable(priv->bus_clk);
  	}
-@@ -502,6 +624,9 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -502,6 +624,9 @@ static int dwcmshc_probe(struct platform
  
  	sdhci_get_of_property(pdev);
  
@@ -2943,7 +2901,7 @@ index 54275df73..44e18f623 100644
  	host->mmc_host_ops.request = dwcmshc_request;
  	host->mmc_host_ops.hs400_enhanced_strobe = dwcmshc_hs400_enhanced_strobe;
  
-@@ -515,18 +640,42 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -515,18 +640,42 @@ static int dwcmshc_probe(struct platform
  	if (err)
  		goto err_clk;
  
@@ -2993,7 +2951,7 @@ index 54275df73..44e18f623 100644
  		pm_runtime_get_noresume(&pdev->dev);
  		pm_runtime_set_active(&pdev->dev);
  		pm_runtime_enable(&pdev->dev);
-@@ -537,10 +686,14 @@ static int dwcmshc_probe(struct platform_device *pdev)
+@@ -537,10 +686,14 @@ static int dwcmshc_probe(struct platform
  
  	return 0;
  
@@ -3009,7 +2967,7 @@ index 54275df73..44e18f623 100644
  free_pltfm:
  	sdhci_pltfm_free(pdev);
  	return err;
-@@ -551,13 +704,15 @@ static int dwcmshc_remove(struct platform_device *pdev)
+@@ -551,13 +704,15 @@ static int dwcmshc_remove(struct platfor
  	struct sdhci_host *host = platform_get_drvdata(pdev);
  	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
  	struct dwcmshc_priv *priv = sdhci_pltfm_priv(pltfm_host);
@@ -3027,7 +2985,7 @@ index 54275df73..44e18f623 100644
  	sdhci_pltfm_free(pdev);
  
  	return 0;
-@@ -569,6 +724,7 @@ static int dwcmshc_suspend(struct device *dev)
+@@ -569,6 +724,7 @@ static int dwcmshc_suspend(struct device
  	struct sdhci_host *host = dev_get_drvdata(dev);
  	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
  	struct dwcmshc_priv *priv = sdhci_pltfm_priv(pltfm_host);
@@ -3035,7 +2993,7 @@ index 54275df73..44e18f623 100644
  	int ret;
  
  	mmc_hsq_suspend(host->mmc);
-@@ -581,7 +737,10 @@ static int dwcmshc_suspend(struct device *dev)
+@@ -581,7 +737,10 @@ static int dwcmshc_suspend(struct device
  	if (!IS_ERR(priv->bus_clk))
  		clk_disable_unprepare(priv->bus_clk);
  
@@ -3047,7 +3005,7 @@ index 54275df73..44e18f623 100644
  	return ret;
  }
  
-@@ -590,6 +749,7 @@ static int dwcmshc_resume(struct device *dev)
+@@ -590,6 +749,7 @@ static int dwcmshc_resume(struct device
  	struct sdhci_host *host = dev_get_drvdata(dev);
  	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
  	struct dwcmshc_priv *priv = sdhci_pltfm_priv(pltfm_host);
@@ -3055,7 +3013,7 @@ index 54275df73..44e18f623 100644
  	int ret;
  
  	ret = clk_prepare_enable(pltfm_host->clk);
-@@ -602,9 +762,12 @@ static int dwcmshc_resume(struct device *dev)
+@@ -602,9 +762,12 @@ static int dwcmshc_resume(struct device
  			return ret;
  	}
  
@@ -3071,7 +3029,7 @@ index 54275df73..44e18f623 100644
  
  	ret = sdhci_resume_host(host);
  	if (ret)
-@@ -612,6 +775,7 @@ static int dwcmshc_resume(struct device *dev)
+@@ -612,6 +775,7 @@ static int dwcmshc_resume(struct device
  
  	return mmc_hsq_resume(host->mmc);
  }
@@ -3079,7 +3037,7 @@ index 54275df73..44e18f623 100644
  
  static int dwcmshc_runtime_suspend(struct device *dev)
  {
-@@ -641,17 +805,14 @@ static const struct dev_pm_ops dwcmshc_pmops = {
+@@ -641,17 +805,14 @@ static const struct dev_pm_ops dwcmshc_p
  	SET_SYSTEM_SLEEP_PM_OPS(dwcmshc_suspend, dwcmshc_resume)
  	SET_RUNTIME_PM_OPS(dwcmshc_runtime_suspend, dwcmshc_runtime_resume, NULL)
  };
@@ -3098,8 +3056,6 @@ index 54275df73..44e18f623 100644
  	},
  	.probe	= dwcmshc_probe,
  	.remove	= dwcmshc_remove,
-diff --git a/drivers/net/ethernet/stmicro/stmmac/Kconfig b/drivers/net/ethernet/stmicro/stmmac/Kconfig
-index 38039c9c1..d6cbbac56 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/Kconfig
 +++ b/drivers/net/ethernet/stmicro/stmmac/Kconfig
 @@ -25,6 +25,13 @@ config STMMAC_SELFTESTS
@@ -3116,11 +3072,9 @@ index 38039c9c1..d6cbbac56 100644
  config STMMAC_ETHTOOL
  	bool "Ethtool feature for STMMAC"
  	default STMMAC_ETH if !ROCKCHIP_MINI_KERNEL
-diff --git a/drivers/net/ethernet/stmicro/stmmac/Makefile b/drivers/net/ethernet/stmicro/stmmac/Makefile
-index 05c792eb4..d017cbca2 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/Makefile
 +++ b/drivers/net/ethernet/stmicro/stmmac/Makefile
-@@ -27,6 +27,7 @@ obj-$(CONFIG_DWMAC_QCOM_ETHQOS)	+= dwmac-qcom-ethqos.o
+@@ -27,6 +27,7 @@ obj-$(CONFIG_DWMAC_QCOM_ETHQOS)	+= dwmac
  obj-$(CONFIG_DWMAC_ROCKCHIP)	+= dwmac-rockchip.o
  dwmac-rockchip-objs := dwmac-rk.o
  dwmac-rockchip-$(CONFIG_DWMAC_ROCKCHIP_TOOL) += dwmac-rk-tool.o
@@ -3128,8 +3082,6 @@ index 05c792eb4..d017cbca2 100644
  obj-$(CONFIG_DWMAC_SOCFPGA)	+= dwmac-altr-socfpga.o
  obj-$(CONFIG_DWMAC_STI)		+= dwmac-sti.o
  obj-$(CONFIG_DWMAC_STM32)	+= dwmac-stm32.o
-diff --git a/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.c b/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.c
-index cd478d2cd..00f6d347e 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.c
 @@ -57,10 +57,6 @@
@@ -3143,7 +3095,7 @@ index cd478d2cd..00f6d347e 100644
  #define AUTONEGO_LINK_TIMER				20
  
  static int tse_pcs_reset(void __iomem *base, struct tse_pcs *pcs)
-@@ -202,12 +198,8 @@ void tse_pcs_fix_mac_speed(struct tse_pcs *pcs, struct phy_device *phy_dev,
+@@ -202,12 +198,8 @@ void tse_pcs_fix_mac_speed(struct tse_pc
  			   unsigned int speed)
  {
  	void __iomem *tse_pcs_base = pcs->tse_pcs_base;
@@ -3156,8 +3108,6 @@ index cd478d2cd..00f6d347e 100644
  	pcs->autoneg = phy_dev->autoneg;
  
  	if (phy_dev->autoneg == AUTONEG_ENABLE) {
-diff --git a/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.h b/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.h
-index 442812c0a..694ac25ef 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.h
 +++ b/drivers/net/ethernet/stmicro/stmmac/altr_tse_pcs.h
 @@ -10,6 +10,10 @@
@@ -3171,8 +3121,6 @@ index 442812c0a..694ac25ef 100644
  struct tse_pcs {
  	struct device *dev;
  	void __iomem *tse_pcs_base;
-diff --git a/drivers/net/ethernet/stmicro/stmmac/common.h b/drivers/net/ethernet/stmicro/stmmac/common.h
-index df7de5049..37658d7bc 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/common.h
 +++ b/drivers/net/ethernet/stmicro/stmmac/common.h
 @@ -48,10 +48,18 @@
@@ -3194,8 +3142,6 @@ index df7de5049..37658d7bc 100644
  #define STMMAC_GET_ENTRY(x, size)	((x + 1) & (size - 1))
  
  #undef FRAME_FILTER_DEBUG
-diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-index f3ada3c2c..8ca28c82c 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 @@ -78,7 +78,7 @@ struct rk_priv_data {
@@ -3207,7 +3153,7 @@ index f3ada3c2c..8ca28c82c 100644
  };
  
  /* XPCS */
-@@ -221,6 +221,12 @@ static int xpcs_setup(struct rk_priv_data *bsp_priv, int mode)
+@@ -221,6 +221,12 @@ static int xpcs_setup(struct rk_priv_dat
  	((((tx) >= 0) ? soc##_GMAC_CLK_TX_DL_CFG(tx) : 0) | \
  	 (((rx) >= 0) ? soc##_GMAC_CLK_RX_DL_CFG(rx) : 0))
  
@@ -3220,7 +3166,7 @@ index f3ada3c2c..8ca28c82c 100644
  /* Integrated EPHY */
  
  #define RK_GRF_MACPHY_CON0		0xb00
-@@ -264,6 +270,52 @@ static void rk_gmac_integrated_ephy_powerdown(struct rk_priv_data *priv)
+@@ -264,6 +270,52 @@ static void rk_gmac_integrated_ephy_powe
  		reset_control_assert(priv->phy_reset);
  }
  
@@ -3273,7 +3219,7 @@ index f3ada3c2c..8ca28c82c 100644
  #define PX30_GRF_GMAC_CON1		0x0904
  
  /* PX30_GRF_GMAC_CON1 */
-@@ -1320,6 +1372,360 @@ static const struct rk_gmac_ops rk3399_ops = {
+@@ -1320,6 +1372,360 @@ static const struct rk_gmac_ops rk3399_o
  	.set_rmii_speed = rk3399_set_rmii_speed,
  };
  
@@ -3634,7 +3580,7 @@ index f3ada3c2c..8ca28c82c 100644
  #define RK3568_GRF_GMAC0_CON0		0X0380
  #define RK3568_GRF_GMAC0_CON1		0X0384
  #define RK3568_GRF_GMAC1_CON0		0X0388
-@@ -1604,17 +2010,8 @@ static const struct rk_gmac_ops rk3588_ops = {
+@@ -1604,17 +2010,8 @@ static const struct rk_gmac_ops rk3588_o
  #define RV1106_VOGRF_GMAC_CLK_RMII_DIV20	GRF_CLR_BIT(2)
  
  #define RV1106_VOGRF_MACPHY_CON0		0X60028
@@ -3652,7 +3598,7 @@ index f3ada3c2c..8ca28c82c 100644
  static void rv1106_set_to_rmii(struct rk_priv_data *bsp_priv)
  {
  	struct device *dev = &bsp_priv->pdev->dev;
-@@ -1652,36 +2049,8 @@ static void rv1106_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
+@@ -1652,36 +2049,8 @@ static void rv1106_set_rmii_speed(struct
  
  static void rv1106_integrated_sphy_power(struct rk_priv_data *priv, bool up)
  {
@@ -3691,7 +3637,7 @@ index f3ada3c2c..8ca28c82c 100644
  }
  
  static const struct rk_gmac_ops rv1106_ops = {
-@@ -2192,14 +2561,17 @@ static struct rk_priv_data *rk_gmac_setup(struct platform_device *pdev,
+@@ -2186,14 +2555,17 @@ static struct rk_priv_data *rk_gmac_setu
  			/* Read bgs from OTP if it exists */
  			cell = nvmem_cell_get(dev, "bgs");
  			if (IS_ERR(cell)) {
@@ -3712,7 +3658,7 @@ index f3ada3c2c..8ca28c82c 100644
  					kfree(efuse_buf);
  				} else {
  					dev_err(dev, "failed to get efuse buf, use default\n");
-@@ -2532,6 +2904,12 @@ static const struct of_device_id rk_gmac_dwmac_match[] = {
+@@ -2526,6 +2898,12 @@ static const struct of_device_id rk_gmac
  #ifdef CONFIG_CPU_RK3399
  	{ .compatible = "rockchip,rk3399-gmac", .data = &rk3399_ops },
  #endif
@@ -3725,11 +3671,9 @@ index f3ada3c2c..8ca28c82c 100644
  #ifdef CONFIG_CPU_RK3568
  	{ .compatible = "rockchip,rk3568-gmac", .data = &rk3568_ops },
  #endif
-diff --git a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
-index 640644dd0..825cc008b 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
-@@ -215,6 +215,9 @@ static void dwmac4_map_mtl_dma(struct mac_device_info *hw, u32 queue, u32 chan)
+@@ -215,6 +215,9 @@ static void dwmac4_map_mtl_dma(struct ma
  	if (queue == 0 || queue == 4) {
  		value &= ~MTL_RXQ_DMA_Q04MDMACH_MASK;
  		value |= MTL_RXQ_DMA_Q04MDMACH(chan);
@@ -3739,7 +3683,7 @@ index 640644dd0..825cc008b 100644
  	} else {
  		value &= ~MTL_RXQ_DMA_QXMDMACH_MASK(queue);
  		value |= MTL_RXQ_DMA_QXMDMACH(chan, queue);
-@@ -716,6 +719,8 @@ static void dwmac4_flow_ctrl(struct mac_device_info *hw, unsigned int duplex,
+@@ -662,6 +665,8 @@ static void dwmac4_flow_ctrl(struct mac_
  	if (fc & FLOW_RX) {
  		pr_debug("\tReceive Flow-Control ON\n");
  		flow |= GMAC_RX_FLOW_CTRL_RFE;
@@ -3748,11 +3692,9 @@ index 640644dd0..825cc008b 100644
  	}
  	writel(flow, ioaddr + GMAC_RX_FLOW_CTRL);
  
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_hwtstamp.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_hwtstamp.c
-index 07b1b8374..53efcc9c4 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_hwtstamp.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_hwtstamp.c
-@@ -68,9 +68,9 @@ static int init_systime(void __iomem *ioaddr, u32 sec, u32 nsec)
+@@ -68,9 +68,9 @@ static int init_systime(void __iomem *io
  	writel(value, ioaddr + PTP_TCR);
  
  	/* wait for present system time initialize to complete */
@@ -3764,11 +3706,9 @@ index 07b1b8374..53efcc9c4 100644
  }
  
  static int config_addend(void __iomem *ioaddr, u32 addend)
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
-index 1e4c37e70..2380c7c32 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
-@@ -738,19 +738,10 @@ int stmmac_init_tstamp_counter(struct stmmac_priv *priv, u32 systime_flags)
+@@ -738,19 +738,10 @@ int stmmac_init_tstamp_counter(struct st
  	struct timespec64 now;
  	u32 sec_inc = 0;
  	u64 temp = 0;
@@ -3788,7 +3728,7 @@ index 1e4c37e70..2380c7c32 100644
  	stmmac_config_hw_tstamping(priv, priv->ptpaddr, systime_flags);
  	priv->systime_flags = systime_flags;
  
-@@ -1052,8 +1043,16 @@ static void stmmac_mac_link_up(struct phylink_config *config,
+@@ -1052,8 +1043,16 @@ static void stmmac_mac_link_up(struct ph
  		ctrl |= priv->hw->link.duplex;
  
  	/* Flow Control operation */
@@ -3807,7 +3747,7 @@ index 1e4c37e70..2380c7c32 100644
  
  	writel(ctrl, priv->ioaddr + MAC_CTRL_REG);
  
-@@ -2766,6 +2765,14 @@ static int stmmac_hw_setup(struct net_device *dev, bool ptp_register)
+@@ -2766,6 +2765,14 @@ static int stmmac_hw_setup(struct net_de
  
  	stmmac_mmc_setup(priv);
  
@@ -3822,7 +3762,7 @@ index 1e4c37e70..2380c7c32 100644
  	ret = stmmac_init_ptp(priv);
  	if (ret == -EOPNOTSUPP)
  		netdev_warn(priv->dev, "PTP not supported by HW\n");
-@@ -2927,6 +2934,15 @@ static int stmmac_open(struct net_device *dev)
+@@ -2927,6 +2934,15 @@ static int stmmac_open(struct net_device
  		goto init_error;
  	}
  
@@ -3838,7 +3778,7 @@ index 1e4c37e70..2380c7c32 100644
  	ret = stmmac_hw_setup(dev, true);
  	if (ret < 0) {
  		netdev_err(priv->dev, "%s: Hw setup failed\n", __func__);
-@@ -3045,6 +3061,10 @@ static int stmmac_release(struct net_device *dev)
+@@ -3045,6 +3061,10 @@ static int stmmac_release(struct net_dev
  	/* Disable the MAC Rx/Tx */
  	stmmac_mac_set(priv, priv->ioaddr, false);
  
@@ -3849,7 +3789,7 @@ index 1e4c37e70..2380c7c32 100644
  	netif_carrier_off(dev);
  
  	stmmac_release_ptp(priv);
-@@ -5071,7 +5091,7 @@ int stmmac_dvr_probe(struct device *device,
+@@ -5075,7 +5095,7 @@ int stmmac_dvr_probe(struct device *devi
  		dev_info(priv->device, "TSO feature enabled\n");
  	}
  
@@ -3858,7 +3798,7 @@ index 1e4c37e70..2380c7c32 100644
  		ndev->hw_features |= NETIF_F_GRO;
  		if (!priv->plat->sph_disable) {
  			priv->sph = true;
-@@ -5206,14 +5226,6 @@ int stmmac_dvr_probe(struct device *device,
+@@ -5210,14 +5230,6 @@ int stmmac_dvr_probe(struct device *devi
  		goto error_netdev_register;
  	}
  
@@ -3873,7 +3813,7 @@ index 1e4c37e70..2380c7c32 100644
  #ifdef CONFIG_DEBUG_FS
  	stmmac_init_fs(ndev);
  #endif
-@@ -5225,8 +5237,6 @@ int stmmac_dvr_probe(struct device *device,
+@@ -5229,8 +5241,6 @@ int stmmac_dvr_probe(struct device *devi
  
  	return ret;
  
@@ -3882,11 +3822,9 @@ index 1e4c37e70..2380c7c32 100644
  error_netdev_register:
  	phylink_destroy(priv->phylink);
  error_phy_setup:
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
-index 7c1a14b25..8a2992189 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
-@@ -396,6 +396,7 @@ int stmmac_mdio_reset(struct mii_bus *bus)
+@@ -396,6 +396,7 @@ int stmmac_mdio_reset(struct mii_bus *bu
  #endif
  	return 0;
  }
@@ -3894,11 +3832,9 @@ index 7c1a14b25..8a2992189 100644
  
  /**
   * stmmac_mdio_register
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_pci.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_pci.c
-index 272cb47af..a7a1227c9 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_pci.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_pci.c
-@@ -175,7 +175,7 @@ static int stmmac_pci_probe(struct pci_dev *pdev,
+@@ -175,7 +175,7 @@ static int stmmac_pci_probe(struct pci_d
  		return -ENOMEM;
  
  	/* Enable pci device */
@@ -3907,7 +3843,7 @@ index 272cb47af..a7a1227c9 100644
  	if (ret) {
  		dev_err(&pdev->dev, "%s: ERROR: failed to enable device\n",
  			__func__);
-@@ -227,8 +227,6 @@ static void stmmac_pci_remove(struct pci_dev *pdev)
+@@ -227,8 +227,6 @@ static void stmmac_pci_remove(struct pci
  		pcim_iounmap_regions(pdev, BIT(i));
  		break;
  	}
@@ -3916,11 +3852,9 @@ index 272cb47af..a7a1227c9 100644
  }
  
  static int __maybe_unused stmmac_pci_suspend(struct device *dev)
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
-index 98b29b50c..ece948346 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_platform.c
-@@ -108,10 +108,10 @@ static struct stmmac_axi *stmmac_axi_setup(struct platform_device *pdev)
+@@ -108,10 +108,10 @@ static struct stmmac_axi *stmmac_axi_set
  
  	axi->axi_lpi_en = of_property_read_bool(np, "snps,lpi_en");
  	axi->axi_xit_frm = of_property_read_bool(np, "snps,xit_frm");
@@ -3935,7 +3869,7 @@ index 98b29b50c..ece948346 100644
  
  	if (of_property_read_u32(np, "snps,wr_osr_lmt", &axi->axi_wr_osr_lmt))
  		axi->axi_wr_osr_lmt = 1;
-@@ -432,8 +432,7 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
+@@ -432,8 +432,7 @@ stmmac_probe_config_dt(struct platform_d
  	plat->phylink_node = np;
  
  	/* Get max speed of operation from device tree */
@@ -3945,7 +3879,7 @@ index 98b29b50c..ece948346 100644
  
  	plat->bus_id = of_alias_get_id(np, "ethernet");
  	if (plat->bus_id < 0)
-@@ -620,12 +619,6 @@ stmmac_probe_config_dt(struct platform_device *pdev, u8 *mac)
+@@ -620,12 +619,6 @@ stmmac_probe_config_dt(struct platform_d
  		plat->stmmac_rst = NULL;
  	}
  
@@ -3958,7 +3892,7 @@ index 98b29b50c..ece948346 100644
  	return plat;
  
  error_hw_init:
-@@ -824,7 +817,13 @@ static int __maybe_unused stmmac_pltfr_noirq_resume(struct device *dev)
+@@ -824,7 +817,13 @@ static int __maybe_unused stmmac_pltfr_n
  		if (ret)
  			return ret;
  
@@ -3973,11 +3907,9 @@ index 98b29b50c..ece948346 100644
  	}
  
  	return 0;
-diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_selftests.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_selftests.c
-index 0462dcc93..dd5c4ef92 100644
 --- a/drivers/net/ethernet/stmicro/stmmac/stmmac_selftests.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_selftests.c
-@@ -1084,8 +1084,9 @@ static int stmmac_test_rxp(struct stmmac_priv *priv)
+@@ -1084,8 +1084,9 @@ static int stmmac_test_rxp(struct stmmac
  	unsigned char addr[ETH_ALEN] = {0xde, 0xad, 0xbe, 0xef, 0x00, 0x00};
  	struct tc_cls_u32_offload cls_u32 = { };
  	struct stmmac_packet_attrs attr = { };
@@ -3988,7 +3920,7 @@ index 0462dcc93..dd5c4ef92 100644
  	struct tcf_exts *exts;
  	int ret, i, nk = 1;
  
-@@ -1104,14 +1105,14 @@ static int stmmac_test_rxp(struct stmmac_priv *priv)
+@@ -1104,14 +1105,14 @@ static int stmmac_test_rxp(struct stmmac
  		goto cleanup_sel;
  	}
  
@@ -4006,7 +3938,7 @@ index 0462dcc93..dd5c4ef92 100644
  		ret = -ENOMEM;
  		goto cleanup_actions;
  	}
-@@ -1126,9 +1127,7 @@ static int stmmac_test_rxp(struct stmmac_priv *priv)
+@@ -1126,9 +1127,7 @@ static int stmmac_test_rxp(struct stmmac
  	exts->nr_actions = nk;
  	exts->actions = actions;
  	for (i = 0; i < nk; i++) {
@@ -4017,7 +3949,7 @@ index 0462dcc93..dd5c4ef92 100644
  		gact->tcf_action = TC_ACT_SHOT;
  	}
  
-@@ -1152,7 +1151,7 @@ static int stmmac_test_rxp(struct stmmac_priv *priv)
+@@ -1152,7 +1151,7 @@ static int stmmac_test_rxp(struct stmmac
  	stmmac_tc_setup_cls_u32(priv, priv, &cls_u32);
  
  cleanup_act:
@@ -4026,11 +3958,9 @@ index 0462dcc93..dd5c4ef92 100644
  cleanup_actions:
  	kfree(actions);
  cleanup_exts:
-diff --git a/drivers/nvmem/rockchip-otp.c b/drivers/nvmem/rockchip-otp.c
-index 409793f0e..09570fa94 100644
 --- a/drivers/nvmem/rockchip-otp.c
 +++ b/drivers/nvmem/rockchip-otp.c
-@@ -761,6 +761,28 @@ static const struct rockchip_data px30s_data = {
+@@ -761,6 +761,28 @@ static const struct rockchip_data px30s_
  	.reg_read = px30s_otp_read,
  };
  
@@ -4059,7 +3989,7 @@ index 409793f0e..09570fa94 100644
  static const char * const rk3568_otp_clocks[] = {
  	"usr", "sbpi", "apb", "phy",
  };
-@@ -828,6 +850,18 @@ static const struct of_device_id rockchip_otp_match[] = {
+@@ -828,6 +850,18 @@ static const struct of_device_id rockchi
  		.data = (void *)&px30s_data,
  	},
  #endif
@@ -4078,11 +4008,9 @@ index 409793f0e..09570fa94 100644
  #ifdef CONFIG_CPU_RK3568
  	{
  		.compatible = "rockchip,rk3568-otp",
-diff --git a/drivers/pci/controller/dwc/pcie-designware-host.c b/drivers/pci/controller/dwc/pcie-designware-host.c
-index 42d8116a4..1cb04f4e8 100644
 --- a/drivers/pci/controller/dwc/pcie-designware-host.c
 +++ b/drivers/pci/controller/dwc/pcie-designware-host.c
-@@ -61,7 +61,7 @@ irqreturn_t dw_handle_msi_irq(struct pcie_port *pp)
+@@ -61,7 +61,7 @@ irqreturn_t dw_handle_msi_irq(struct pci
  	irqreturn_t ret = IRQ_NONE;
  	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
  
@@ -4091,7 +4019,7 @@ index 42d8116a4..1cb04f4e8 100644
  
  	for (i = 0; i < num_ctrls; i++) {
  		status = dw_pcie_readl_dbi(pci, PCIE_MSI_INTR0_STATUS +
-@@ -84,6 +84,7 @@ irqreturn_t dw_handle_msi_irq(struct pcie_port *pp)
+@@ -84,6 +84,7 @@ irqreturn_t dw_handle_msi_irq(struct pci
  
  	return ret;
  }
@@ -4099,7 +4027,7 @@ index 42d8116a4..1cb04f4e8 100644
  
  /* Chained MSI interrupt service routine */
  static void dw_chained_msi_isr(struct irq_desc *desc)
-@@ -465,9 +466,7 @@ static void __iomem *dw_pcie_other_conf_map_bus(struct pci_bus *bus,
+@@ -465,9 +466,7 @@ static void __iomem *dw_pcie_other_conf_
  		type = PCIE_ATU_TYPE_CFG1;
  
  
@@ -4110,7 +4038,7 @@ index 42d8116a4..1cb04f4e8 100644
  
  	return pp->va_cfg0_base + where;
  }
-@@ -481,9 +480,8 @@ static int dw_pcie_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
+@@ -481,9 +480,8 @@ static int dw_pcie_rd_other_conf(struct
  
  	ret = pci_generic_config_read(bus, devfn, where, size, val);
  
@@ -4122,7 +4050,7 @@ index 42d8116a4..1cb04f4e8 100644
  					  pp->io_bus_addr, pp->io_size);
  
  	return ret;
-@@ -498,9 +496,8 @@ static int dw_pcie_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
+@@ -498,9 +496,8 @@ static int dw_pcie_wr_other_conf(struct
  
  	ret = pci_generic_config_write(bus, devfn, where, size, val);
  
@@ -4134,7 +4062,7 @@ index 42d8116a4..1cb04f4e8 100644
  					  pp->io_bus_addr, pp->io_size);
  
  	return ret;
-@@ -544,7 +541,7 @@ void dw_pcie_setup_rc(struct pcie_port *pp)
+@@ -544,7 +541,7 @@ void dw_pcie_setup_rc(struct pcie_port *
  	dw_pcie_setup(pci);
  
  	if (pci_msi_enabled() && !pp->ops->msi_host_init) {
@@ -4143,7 +4071,7 @@ index 42d8116a4..1cb04f4e8 100644
  
  		/* Initialize IRQ Status array */
  		for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
-@@ -587,21 +584,35 @@ void dw_pcie_setup_rc(struct pcie_port *pp)
+@@ -587,21 +584,35 @@ void dw_pcie_setup_rc(struct pcie_port *
  	 * ATU, so we should not program the ATU here.
  	 */
  	if (pp->bridge->child_ops == &dw_child_pcie_ops) {
@@ -4192,11 +4120,9 @@ index 42d8116a4..1cb04f4e8 100644
  	}
  
  	dw_pcie_writel_dbi(pci, PCI_BASE_ADDRESS_0, 0);
-diff --git a/drivers/pci/controller/dwc/pcie-designware.c b/drivers/pci/controller/dwc/pcie-designware.c
-index 28945351d..daa888513 100644
 --- a/drivers/pci/controller/dwc/pcie-designware.c
 +++ b/drivers/pci/controller/dwc/pcie-designware.c
-@@ -274,7 +274,7 @@ static void __dw_pcie_prog_outbound_atu(struct dw_pcie *pci, u8 func_no,
+@@ -274,7 +274,7 @@ static void __dw_pcie_prog_outbound_atu(
  	if (pci->ops->cpu_addr_fixup)
  		cpu_addr = pci->ops->cpu_addr_fixup(pci, cpu_addr);
  
@@ -4205,7 +4131,7 @@ index 28945351d..daa888513 100644
  		dw_pcie_prog_outbound_atu_unroll(pci, func_no, index, type,
  						 cpu_addr, pci_addr, size);
  		return;
-@@ -394,7 +394,7 @@ int dw_pcie_prog_inbound_atu(struct dw_pcie *pci, u8 func_no, int index,
+@@ -394,7 +394,7 @@ int dw_pcie_prog_inbound_atu(struct dw_p
  	int type;
  	u32 retries, val;
  
@@ -4249,8 +4175,6 @@ index 28945351d..daa888513 100644
  		dw_pcie_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
  	}
  
-diff --git a/drivers/pci/controller/dwc/pcie-designware.h b/drivers/pci/controller/dwc/pcie-designware.h
-index c098ecc33..8363f77b2 100644
 --- a/drivers/pci/controller/dwc/pcie-designware.h
 +++ b/drivers/pci/controller/dwc/pcie-designware.h
 @@ -81,9 +81,6 @@
@@ -4272,8 +4196,6 @@ index c098ecc33..8363f77b2 100644
  struct dw_pcie {
  	struct device		*dev;
  	void __iomem		*dbi_base;
-diff --git a/drivers/phy/rockchip/Kconfig b/drivers/phy/rockchip/Kconfig
-index 2c6ac469d..0a41b89d8 100644
 --- a/drivers/phy/rockchip/Kconfig
 +++ b/drivers/phy/rockchip/Kconfig
 @@ -2,6 +2,16 @@
@@ -4367,8 +4289,6 @@ index 2c6ac469d..0a41b89d8 100644
  	help
  	  Enable this to support the Rockchip USB TYPEC PHY.
  
-diff --git a/drivers/phy/rockchip/Makefile b/drivers/phy/rockchip/Makefile
-index bf6218027..9858a3730 100644
 --- a/drivers/phy/rockchip/Makefile
 +++ b/drivers/phy/rockchip/Makefile
 @@ -1,16 +1,22 @@
@@ -4395,8 +4315,6 @@ index bf6218027..9858a3730 100644
  obj-$(CONFIG_PHY_ROCKCHIP_SNPS_PCIE3)	+= phy-rockchip-snps-pcie3.o
  obj-$(CONFIG_PHY_ROCKCHIP_TYPEC)	+= phy-rockchip-typec.o
  obj-$(CONFIG_PHY_ROCKCHIP_USB)		+= phy-rockchip-usb.o
-diff --git a/drivers/phy/rockchip/phy-rockchip-inno-dsidphy.c b/drivers/phy/rockchip/phy-rockchip-inno-dsidphy.c
-index 8af8c6c5c..04007a04f 100644
 --- a/drivers/phy/rockchip/phy-rockchip-inno-dsidphy.c
 +++ b/drivers/phy/rockchip/phy-rockchip-inno-dsidphy.c
 @@ -19,6 +19,7 @@
@@ -4583,7 +4501,7 @@ index 8af8c6c5c..04007a04f 100644
  static inline struct inno_dsidphy *hw_to_inno(struct clk_hw *hw)
  {
  	return container_of(hw, struct inno_dsidphy, pll.hw);
-@@ -216,6 +315,17 @@ static void phy_update_bits(struct inno_dsidphy *inno,
+@@ -216,6 +315,17 @@ static void phy_update_bits(struct inno_
  	writel(tmp, inno->phy_base + reg);
  }
  
@@ -4601,7 +4519,7 @@ index 8af8c6c5c..04007a04f 100644
  static unsigned long inno_dsidphy_pll_calc_rate(struct inno_dsidphy *inno,
  						unsigned long rate)
  {
-@@ -286,39 +396,48 @@ static unsigned long inno_dsidphy_pll_calc_rate(struct inno_dsidphy *inno,
+@@ -286,39 +396,48 @@ static unsigned long inno_dsidphy_pll_ca
  	return best_freq;
  }
  
@@ -4679,7 +4597,7 @@ index 8af8c6c5c..04007a04f 100644
  	/* Configure PLL */
  	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x03,
  			REG_PREDIV_MASK, REG_PREDIV(inno->pll.prediv));
-@@ -330,6 +449,10 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -330,6 +449,10 @@ static void inno_dsidphy_mipi_mode_enabl
  	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x01,
  			REG_LDOPD_MASK | REG_PLLPD_MASK,
  			REG_LDOPD_POWER_ON | REG_PLLPD_POWER_ON);
@@ -4690,7 +4608,7 @@ index 8af8c6c5c..04007a04f 100644
  	/* Reset analog */
  	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x01,
  			REG_SYNCRST_MASK, REG_SYNCRST_RESET);
-@@ -342,6 +465,17 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -342,6 +465,17 @@ static void inno_dsidphy_mipi_mode_enabl
  	udelay(1);
  	phy_update_bits(inno, REGISTER_PART_DIGITAL, 0x00,
  			REG_DIG_RSTN_MASK, REG_DIG_RSTN_NORMAL);
@@ -4708,7 +4626,7 @@ index 8af8c6c5c..04007a04f 100644
  
  	txbyteclkhs = inno->pll.rate / 8;
  	t_txbyteclkhs = div_u64(PSEC_PER_SEC, txbyteclkhs);
-@@ -365,15 +499,6 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -365,15 +499,6 @@ static void inno_dsidphy_mipi_mode_enabl
  	 * Tclk-pre = Tpin_txbyteclkhs * value
  	 */
  	clk_pre = DIV_ROUND_UP(cfg->clk_pre, t_txbyteclkhs);
@@ -4724,7 +4642,7 @@ index 8af8c6c5c..04007a04f 100644
  	/*
  	 * The value of counter for HS Tta-go
  	 * Tta-go for turnaround
-@@ -393,17 +518,22 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -393,17 +518,22 @@ static void inno_dsidphy_mipi_mode_enabl
  	 */
  	ta_wait = DIV_ROUND_UP(cfg->ta_get, t_txclkesc);
  
@@ -4758,7 +4676,7 @@ index 8af8c6c5c..04007a04f 100644
  	wakeup = 0x3ff;
  
  	for (i = REGISTER_PART_CLOCK_LANE; i <= REGISTER_PART_DATA3_LANE; i++) {
-@@ -416,14 +546,29 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -416,14 +546,29 @@ static void inno_dsidphy_mipi_mode_enabl
  				T_LPX_CNT(lpx));
  		phy_update_bits(inno, i, 0x06, T_HS_PREPARE_CNT_MASK,
  				T_HS_PREPARE_CNT(hs_prepare));
@@ -4794,7 +4712,7 @@ index 8af8c6c5c..04007a04f 100644
  		phy_update_bits(inno, i, 0x0e, T_CLK_PRE_CNT_MASK,
  				T_CLK_PRE_CNT(clk_pre));
  		phy_update_bits(inno, i, 0x0c, T_WAKEUP_CNT_HI_MASK,
-@@ -437,11 +582,51 @@ static void inno_dsidphy_mipi_mode_enable(struct inno_dsidphy *inno)
+@@ -437,11 +582,51 @@ static void inno_dsidphy_mipi_mode_enabl
  		phy_update_bits(inno, i, 0x12, T_TA_WAIT_CNT_MASK,
  				T_TA_WAIT_CNT(ta_wait));
  	}
@@ -4850,7 +4768,7 @@ index 8af8c6c5c..04007a04f 100644
  }
  
  static void inno_dsidphy_lvds_mode_enable(struct inno_dsidphy *inno)
-@@ -451,8 +636,18 @@ static void inno_dsidphy_lvds_mode_enable(struct inno_dsidphy *inno)
+@@ -451,8 +636,18 @@ static void inno_dsidphy_lvds_mode_enabl
  
  	/* Sample clock reverse direction */
  	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x08,
@@ -4871,7 +4789,7 @@ index 8af8c6c5c..04007a04f 100644
  
  	/* Select LVDS mode */
  	phy_update_bits(inno, REGISTER_PART_LVDS, 0x03,
-@@ -472,7 +667,24 @@ static void inno_dsidphy_lvds_mode_enable(struct inno_dsidphy *inno)
+@@ -472,7 +667,24 @@ static void inno_dsidphy_lvds_mode_enabl
  
  	msleep(20);
  
@@ -4897,7 +4815,7 @@ index 8af8c6c5c..04007a04f 100644
  	phy_update_bits(inno, REGISTER_PART_LVDS, 0x00,
  			LVDS_DIGITAL_INTERNAL_RESET_MASK,
  			LVDS_DIGITAL_INTERNAL_RESET_ENABLE);
-@@ -480,20 +692,28 @@ static void inno_dsidphy_lvds_mode_enable(struct inno_dsidphy *inno)
+@@ -480,20 +692,28 @@ static void inno_dsidphy_lvds_mode_enabl
  	phy_update_bits(inno, REGISTER_PART_LVDS, 0x00,
  			LVDS_DIGITAL_INTERNAL_RESET_MASK,
  			LVDS_DIGITAL_INTERNAL_RESET_DISABLE);
@@ -4928,7 +4846,7 @@ index 8af8c6c5c..04007a04f 100644
  
  	clk_prepare_enable(inno->pclk_phy);
  	clk_prepare_enable(inno->ref_clk);
-@@ -506,7 +726,7 @@ static int inno_dsidphy_power_on(struct phy *phy)
+@@ -506,7 +726,7 @@ static int inno_dsidphy_power_on(struct
  	phy_update_bits(inno, REGISTER_PART_ANALOG, 0x00,
  			POWER_WORK_MASK, POWER_WORK_ENABLE);
  
@@ -4937,7 +4855,7 @@ index 8af8c6c5c..04007a04f 100644
  	case PHY_MODE_MIPI_DPHY:
  		inno_dsidphy_mipi_mode_enable(inno);
  		break;
-@@ -514,7 +734,7 @@ static int inno_dsidphy_power_on(struct phy *phy)
+@@ -514,7 +734,7 @@ static int inno_dsidphy_power_on(struct
  		inno_dsidphy_lvds_mode_enable(inno);
  		break;
  	default:
@@ -4946,7 +4864,7 @@ index 8af8c6c5c..04007a04f 100644
  	}
  
  	return 0;
-@@ -551,17 +771,6 @@ static int inno_dsidphy_power_off(struct phy *phy)
+@@ -551,17 +771,6 @@ static int inno_dsidphy_power_off(struct
  static int inno_dsidphy_set_mode(struct phy *phy, enum phy_mode mode,
  				   int submode)
  {
@@ -4964,7 +4882,7 @@ index 8af8c6c5c..04007a04f 100644
  	return 0;
  }
  
-@@ -569,9 +778,11 @@ static int inno_dsidphy_configure(struct phy *phy,
+@@ -569,9 +778,11 @@ static int inno_dsidphy_configure(struct
  				  union phy_configure_opts *opts)
  {
  	struct inno_dsidphy *inno = phy_get_drvdata(phy);
@@ -4977,7 +4895,7 @@ index 8af8c6c5c..04007a04f 100644
  		return -EINVAL;
  
  	ret = phy_mipi_dphy_config_validate(&opts->mipi_dphy);
-@@ -580,6 +791,32 @@ static int inno_dsidphy_configure(struct phy *phy,
+@@ -580,6 +791,32 @@ static int inno_dsidphy_configure(struct
  
  	memcpy(&inno->dphy_cfg, &opts->mipi_dphy, sizeof(inno->dphy_cfg));
  
@@ -5010,7 +4928,7 @@ index 8af8c6c5c..04007a04f 100644
  	return 0;
  }
  
-@@ -588,15 +825,67 @@ static const struct phy_ops inno_dsidphy_ops = {
+@@ -588,15 +825,67 @@ static const struct phy_ops inno_dsidphy
  	.set_mode = inno_dsidphy_set_mode,
  	.power_on = inno_dsidphy_power_on,
  	.power_off = inno_dsidphy_power_off,
@@ -5078,7 +4996,7 @@ index 8af8c6c5c..04007a04f 100644
  	int ret;
  
  	inno = devm_kzalloc(dev, sizeof(*inno), GFP_KERNEL);
-@@ -604,12 +893,26 @@ static int inno_dsidphy_probe(struct platform_device *pdev)
+@@ -604,12 +893,26 @@ static int inno_dsidphy_probe(struct pla
  		return -ENOMEM;
  
  	inno->dev = dev;
@@ -5106,7 +5024,7 @@ index 8af8c6c5c..04007a04f 100644
  	inno->ref_clk = devm_clk_get(dev, "ref");
  	if (IS_ERR(inno->ref_clk)) {
  		ret = PTR_ERR(inno->ref_clk);
-@@ -624,6 +927,13 @@ static int inno_dsidphy_probe(struct platform_device *pdev)
+@@ -624,6 +927,13 @@ static int inno_dsidphy_probe(struct pla
  		return ret;
  	}
  
@@ -5120,7 +5038,7 @@ index 8af8c6c5c..04007a04f 100644
  	inno->rst = devm_reset_control_get(dev, "apb");
  	if (IS_ERR(inno->rst)) {
  		ret = PTR_ERR(inno->rst);
-@@ -638,6 +948,9 @@ static int inno_dsidphy_probe(struct platform_device *pdev)
+@@ -638,6 +948,9 @@ static int inno_dsidphy_probe(struct pla
  		return ret;
  	}
  
@@ -5130,7 +5048,7 @@ index 8af8c6c5c..04007a04f 100644
  	phy_set_drvdata(phy, inno);
  
  	phy_provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
-@@ -662,9 +975,28 @@ static int inno_dsidphy_remove(struct platform_device *pdev)
+@@ -662,9 +975,28 @@ static int inno_dsidphy_remove(struct pl
  }
  
  static const struct of_device_id inno_dsidphy_of_match[] = {
@@ -5162,8 +5080,6 @@ index 8af8c6c5c..04007a04f 100644
  	{}
  };
  MODULE_DEVICE_TABLE(of, inno_dsidphy_of_match);
-diff --git a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
-index e70123732..f97dc879b 100644
 --- a/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
 +++ b/drivers/phy/rockchip/phy-rockchip-inno-usb2.c
 @@ -163,6 +163,7 @@ struct rockchip_chg_det_reg {
@@ -5206,7 +5122,7 @@ index e70123732..f97dc879b 100644
  	struct usb2phy_reg	ls_filter_con;
  	const struct rockchip_usb2phy_port_cfg	port_cfgs[USB2PHY_NUM_PORTS];
  	const struct rockchip_chg_det_reg	chg_det;
-@@ -380,6 +387,29 @@ static inline bool property_enabled(struct regmap *base,
+@@ -380,6 +387,29 @@ static inline bool property_enabled(stru
  	return tmp == reg->enable;
  }
  
@@ -5236,7 +5152,7 @@ index e70123732..f97dc879b 100644
  static inline void phy_clear_bits(void __iomem *reg, u32 bits)
  {
  	u32 tmp = readl(reg);
-@@ -435,7 +465,14 @@ static int rockchip_usb2phy_clk480m_prepare(struct clk_hw *hw)
+@@ -435,7 +465,14 @@ static int rockchip_usb2phy_clk480m_prep
  	int ret;
  
  	/* turn on 480m clk output if it is off */
@@ -5252,7 +5168,7 @@ index e70123732..f97dc879b 100644
  		ret = property_enable(base, &rphy->phy_cfg->clkout_ctl, true);
  		if (ret)
  			return ret;
-@@ -454,7 +491,10 @@ static void rockchip_usb2phy_clk480m_unprepare(struct clk_hw *hw)
+@@ -454,7 +491,10 @@ static void rockchip_usb2phy_clk480m_unp
  	struct regmap *base = get_reg_base(rphy);
  
  	/* turn off 480m clk output */
@@ -5264,7 +5180,7 @@ index e70123732..f97dc879b 100644
  }
  
  static int rockchip_usb2phy_clk480m_prepared(struct clk_hw *hw)
-@@ -463,7 +503,10 @@ static int rockchip_usb2phy_clk480m_prepared(struct clk_hw *hw)
+@@ -463,7 +503,10 @@ static int rockchip_usb2phy_clk480m_prep
  		container_of(hw, struct rockchip_usb2phy, clk480m_hw);
  	struct regmap *base = get_reg_base(rphy);
  
@@ -5276,7 +5192,7 @@ index e70123732..f97dc879b 100644
  }
  
  static unsigned long
-@@ -756,6 +799,10 @@ static int rockchip_usb2phy_init(struct phy *phy)
+@@ -756,6 +799,10 @@ static int rockchip_usb2phy_init(struct
  
  	mutex_lock(&rport->mutex);
  
@@ -5287,7 +5203,7 @@ index e70123732..f97dc879b 100644
  	if (rport->port_id == USB2PHY_PORT_OTG &&
  	    (rport->mode == USB_DR_MODE_PERIPHERAL ||
  	     rport->mode == USB_DR_MODE_OTG)) {
-@@ -843,10 +890,6 @@ static int rockchip_usb2phy_power_on(struct phy *phy)
+@@ -843,10 +890,6 @@ static int rockchip_usb2phy_power_on(str
  	if (ret)
  		goto unlock;
  
@@ -5298,7 +5214,7 @@ index e70123732..f97dc879b 100644
  	ret = property_enable(base, &rport->port_cfg->phy_sus, false);
  	if (ret)
  		goto unlock;
-@@ -1015,7 +1058,8 @@ static int rockchip_usb2phy_set_mode(struct phy *phy,
+@@ -1015,7 +1058,8 @@ static int rockchip_usb2phy_set_mode(str
  	}
  
  	if (rphy->phy_cfg->vbus_detect)
@@ -5308,7 +5224,7 @@ index e70123732..f97dc879b 100644
  	else
  		ret = property_enable(rphy->grf, &rport->port_cfg->vbus_det_en,
  				      vbus_det_en);
-@@ -1255,6 +1299,7 @@ static void rockchip_usb2phy_otg_sm_work(struct work_struct *work)
+@@ -1255,6 +1299,7 @@ static void rockchip_usb2phy_otg_sm_work
  		} else {
  			rphy->chg_state = USB_CHG_STATE_UNDEFINED;
  			rphy->chg_type = POWER_SUPPLY_TYPE_UNKNOWN;
@@ -5316,7 +5232,7 @@ index e70123732..f97dc879b 100644
  			mutex_unlock(&rport->mutex);
  			if (!rport->dis_u2_susphy)
  				rockchip_usb2phy_power_off(rport->phy);
-@@ -1724,7 +1769,9 @@ static irqreturn_t rockchip_usb2phy_id_irq(int irq, void *data)
+@@ -1724,7 +1769,9 @@ static irqreturn_t rockchip_usb2phy_id_i
  	if (property_enabled(rphy->grf, &rport->port_cfg->idfall_det_st)) {
  		property_enable(rphy->grf, &rport->port_cfg->idfall_det_clr,
  				true);
@@ -5327,7 +5243,7 @@ index e70123732..f97dc879b 100644
  	} else if (property_enabled(rphy->grf, &rport->port_cfg->idrise_det_st)) {
  		property_enable(rphy->grf, &rport->port_cfg->idrise_det_clr,
  				true);
-@@ -2045,6 +2092,13 @@ static int rockchip_otg_event(struct notifier_block *nb,
+@@ -2045,6 +2092,13 @@ static int rockchip_otg_event(struct not
  	return NOTIFY_DONE;
  }
  
@@ -5341,7 +5257,7 @@ index e70123732..f97dc879b 100644
  static int rockchip_usb2phy_otg_port_init(struct rockchip_usb2phy *rphy,
  					  struct rockchip_usb2phy_port *rport,
  					  struct device_node *child_np)
-@@ -2164,7 +2218,12 @@ static int rockchip_usb2phy_otg_port_init(struct rockchip_usb2phy *rphy,
+@@ -2164,7 +2218,12 @@ static int rockchip_usb2phy_otg_port_ini
  
  #ifdef CONFIG_PM_WAKELOCKS
  	wake_lock_init(&rport->wakelock, WAKE_LOCK_SUSPEND, "rockchip_otg");
@@ -5354,7 +5270,7 @@ index e70123732..f97dc879b 100644
  	INIT_DELAYED_WORK(&rport->bypass_uart_work,
  			  rockchip_usb_bypass_uart_work);
  	INIT_DELAYED_WORK(&rport->chg_work, rockchip_chg_detect_work);
-@@ -2177,7 +2236,7 @@ static int rockchip_usb2phy_otg_port_init(struct rockchip_usb2phy *rphy,
+@@ -2177,7 +2236,7 @@ static int rockchip_usb2phy_otg_port_ini
  					EXTCON_USB_HOST, &rport->event_nb);
  		if (ret) {
  			dev_err(rphy->dev, "register USB HOST notifier failed\n");
@@ -5363,7 +5279,7 @@ index e70123732..f97dc879b 100644
  		}
  	}
  
-@@ -2193,12 +2252,6 @@ static int rockchip_usb2phy_otg_port_init(struct rockchip_usb2phy *rphy,
+@@ -2193,12 +2252,6 @@ out:
  	rport->suspended = true;
  
  	return 0;
@@ -5376,7 +5292,7 @@ index e70123732..f97dc879b 100644
  }
  
  static int rockchip_usb2phy_probe(struct platform_device *pdev)
-@@ -2682,6 +2735,59 @@ static int rk3399_usb2phy_tuning(struct rockchip_usb2phy *rphy)
+@@ -2682,6 +2735,59 @@ static int rk3399_usb2phy_tuning(struct
  	return ret;
  }
  
@@ -5436,7 +5352,7 @@ index e70123732..f97dc879b 100644
  static int rk3568_usb2phy_tuning(struct rockchip_usb2phy *rphy)
  {
  	int ret = 0;
-@@ -2747,17 +2853,22 @@ static int rv1106_usb2phy_tuning(struct rockchip_usb2phy *rphy)
+@@ -2747,17 +2853,22 @@ static int rv1106_usb2phy_tuning(struct
  	phy_update_bits(rphy->phy_base + 0x1a4, GENMASK(7, 4), (0x01 << 4));
  	phy_update_bits(rphy->phy_base + 0x1b4, GENMASK(7, 4), (0x01 << 4));
  
@@ -5462,7 +5378,7 @@ index e70123732..f97dc879b 100644
  	}
  
  	return 0;
-@@ -2896,6 +3007,14 @@ static int rockchip_usb2phy_pm_suspend(struct device *dev)
+@@ -2896,6 +3007,14 @@ static int rockchip_usb2phy_pm_suspend(s
  		if (!rport->phy)
  			continue;
  
@@ -5477,7 +5393,7 @@ index e70123732..f97dc879b 100644
  		if (rport->port_id == USB2PHY_PORT_OTG &&
  		    (rport->id_irq > 0 || rphy->irq > 0)) {
  			mutex_lock(&rport->mutex);
-@@ -2972,6 +3091,14 @@ static int rockchip_usb2phy_pm_resume(struct device *dev)
+@@ -2972,6 +3091,14 @@ static int rockchip_usb2phy_pm_resume(st
  		if (!rport->phy)
  			continue;
  
@@ -5492,7 +5408,7 @@ index e70123732..f97dc879b 100644
  		if (rport->port_id == USB2PHY_PORT_OTG &&
  		    (rport->id_irq > 0 || rphy->irq > 0)) {
  			mutex_lock(&rport->mutex);
-@@ -3493,12 +3620,127 @@ static const struct rockchip_usb2phy_cfg rk3399_phy_cfgs[] = {
+@@ -3493,12 +3620,127 @@ static const struct rockchip_usb2phy_cfg
  	{ /* sentinel */ }
  };
  
@@ -5621,7 +5537,7 @@ index e70123732..f97dc879b 100644
  		.clkout_ctl	= { 0x0008, 4, 4, 1, 0 },
  		.ls_filter_con	= { 0x0040, 19, 0, 0x30100, 0x00020 },
  		.port_cfgs	= {
-@@ -3525,6 +3767,7 @@ static const struct rockchip_usb2phy_cfg rk3568_phy_cfgs[] = {
+@@ -3525,6 +3767,7 @@ static const struct rockchip_usb2phy_cfg
  				.utmi_bvalid	= { 0x00c0, 9, 9, 0, 1 },
  				.utmi_iddig	= { 0x00c0, 6, 6, 0, 1 },
  				.utmi_ls	= { 0x00c0, 5, 4, 0, 1 },
@@ -5629,7 +5545,7 @@ index e70123732..f97dc879b 100644
  			},
  			[USB2PHY_PORT_HOST] = {
  				/* Select suspend control from controller */
-@@ -3849,6 +4092,12 @@ static const struct of_device_id rockchip_usb2phy_dt_match[] = {
+@@ -3849,6 +4092,12 @@ static const struct of_device_id rockchi
  #ifdef CONFIG_CPU_RK3399
  	{ .compatible = "rockchip,rk3399-usb2phy", .data = &rk3399_phy_cfgs },
  #endif
@@ -5642,8 +5558,6 @@ index e70123732..f97dc879b 100644
  #ifdef CONFIG_CPU_RK3568
  	{ .compatible = "rockchip,rk3568-usb2phy", .data = &rk3568_phy_cfgs },
  #endif
-diff --git a/drivers/phy/rockchip/phy-rockchip-typec.c b/drivers/phy/rockchip/phy-rockchip-typec.c
-index 4d1604de9..13d849d2c 100644
 --- a/drivers/phy/rockchip/phy-rockchip-typec.c
 +++ b/drivers/phy/rockchip/phy-rockchip-typec.c
 @@ -51,6 +51,7 @@
@@ -5687,7 +5601,7 @@ index 4d1604de9..13d849d2c 100644
  	struct phy_config config[3][4];
  };
  
-@@ -1335,50 +1344,7 @@ static void tcphy_phy_deinit(struct rockchip_typec_phy *tcphy)
+@@ -1335,50 +1344,7 @@ static void tcphy_phy_deinit(struct rock
  
  static int tcphy_get_mode(struct rockchip_typec_phy *tcphy)
  {
@@ -5739,7 +5653,7 @@ index 4d1604de9..13d849d2c 100644
  }
  
  static int tcphy_orien_sw_set(struct typec_switch *sw,
-@@ -1388,10 +1354,13 @@ static int tcphy_orien_sw_set(struct typec_switch *sw,
+@@ -1388,10 +1354,13 @@ static int tcphy_orien_sw_set(struct typ
  
  	mutex_lock(&tcphy->lock);
  
@@ -5754,7 +5668,7 @@ index 4d1604de9..13d849d2c 100644
  
  unlock_ret:
  	mutex_unlock(&tcphy->lock);
-@@ -1615,6 +1584,68 @@ static const struct phy_ops rockchip_dp_phy_ops = {
+@@ -1615,6 +1584,68 @@ static const struct phy_ops rockchip_dp_
  	.owner		= THIS_MODULE,
  };
  
@@ -5823,7 +5737,7 @@ index 4d1604de9..13d849d2c 100644
  static int tcphy_parse_dt(struct rockchip_typec_phy *tcphy,
  			  struct device *dev)
  {
-@@ -1735,29 +1766,30 @@ static int rockchip_typec_phy_probe(struct platform_device *pdev)
+@@ -1735,29 +1766,30 @@ static int rockchip_typec_phy_probe(stru
  		return ret;
  
  	tcphy->dev = dev;
@@ -5872,7 +5786,7 @@ index 4d1604de9..13d849d2c 100644
  	}
  
  	pm_runtime_enable(dev);
-@@ -1765,20 +1797,31 @@ static int rockchip_typec_phy_probe(struct platform_device *pdev)
+@@ -1765,20 +1797,31 @@ static int rockchip_typec_phy_probe(stru
  	for_each_available_child_of_node(np, child_np) {
  		struct phy *phy;
  
@@ -5912,7 +5826,7 @@ index 4d1604de9..13d849d2c 100644
  		}
  
  		phy_set_drvdata(phy, tcphy);
-@@ -1787,11 +1830,15 @@ static int rockchip_typec_phy_probe(struct platform_device *pdev)
+@@ -1787,11 +1830,15 @@ static int rockchip_typec_phy_probe(stru
  	phy_provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
  	if (IS_ERR(phy_provider)) {
  		dev_err(dev, "Failed to register phy provider\n");
@@ -5930,11 +5844,9 @@ index 4d1604de9..13d849d2c 100644
  }
  
  static int rockchip_typec_phy_remove(struct platform_device *pdev)
-diff --git a/drivers/pinctrl/pinctrl-rockchip.c b/drivers/pinctrl/pinctrl-rockchip.c
-index 1c8112bee..73c81474d 100644
 --- a/drivers/pinctrl/pinctrl-rockchip.c
 +++ b/drivers/pinctrl/pinctrl-rockchip.c
-@@ -622,9 +622,9 @@ static struct rockchip_mux_recalced_data rk3308_mux_recalced_data[] = {
+@@ -622,9 +622,9 @@ static struct rockchip_mux_recalced_data
  		/* gpio3b3_sel_plus */
  		.num = 3,
  		.pin = 11,
@@ -5947,7 +5859,7 @@ index 1c8112bee..73c81474d 100644
  	}, {
  		/* gpio3b4_sel */
  		.num = 3,
-@@ -1223,6 +1223,19 @@ static int rockchip_set_mux(struct rockchip_pin_bank *bank, int pin, int mux)
+@@ -1223,6 +1223,19 @@ static int rockchip_set_mux(struct rockc
  	if (bank->recalced_mask & BIT(pin))
  		rockchip_get_recalced_mux(bank, pin, &reg, &bit, &mask);
  
@@ -5967,7 +5879,7 @@ index 1c8112bee..73c81474d 100644
  	if (ctrl->type == RK3588) {
  		if (bank->bank_num == 0) {
  			if ((pin >= RK_PB4) && (pin <= RK_PD7)) {
-@@ -2271,6 +2284,295 @@ static int rk3399_calc_drv_reg_and_bit(struct rockchip_pin_bank *bank,
+@@ -2271,6 +2284,295 @@ static int rk3399_calc_drv_reg_and_bit(s
  	return 0;
  }
  
@@ -6263,7 +6175,7 @@ index 1c8112bee..73c81474d 100644
  #define RK3568_SR_PMU_OFFSET		0x60
  #define RK3568_SR_GRF_OFFSET		0x0180
  #define RK3568_SR_BANK_STRIDE		0x10
-@@ -2371,108 +2673,108 @@ static int rk3568_calc_drv_reg_and_bit(struct rockchip_pin_bank *bank,
+@@ -2371,108 +2673,108 @@ static int rk3568_calc_drv_reg_and_bit(s
  	return 0;
  }
  
@@ -6466,7 +6378,7 @@ index 1c8112bee..73c81474d 100644
  };
  
  #define RK3588_PULL_BITS_PER_PIN		2
-@@ -2686,7 +2988,10 @@ static int rockchip_set_drive_perpin(struct rockchip_pin_bank *bank,
+@@ -2686,7 +2988,10 @@ static int rockchip_set_drive_perpin(str
  		rmask_bits = RV1126_DRV_BITS_PER_PIN;
  		ret = strength;
  		goto config;
@@ -6478,7 +6390,7 @@ index 1c8112bee..73c81474d 100644
  		rmask_bits = RK3568_DRV_BITS_PER_PIN;
  		ret = (1 << (strength + 1)) - 1;
  		goto config;
-@@ -2858,6 +3163,8 @@ static int rockchip_get_pull(struct rockchip_pin_bank *bank, int pin_num)
+@@ -2858,6 +3163,8 @@ static int rockchip_get_pull(struct rock
  	case RK3308:
  	case RK3368:
  	case RK3399:
@@ -6487,7 +6399,7 @@ index 1c8112bee..73c81474d 100644
  	case RK3568:
  	case RK3588:
  		pull_type = bank->pull_type[pin_num / 8];
-@@ -2910,6 +3217,8 @@ static int rockchip_set_pull(struct rockchip_pin_bank *bank,
+@@ -2910,6 +3217,8 @@ static int rockchip_set_pull(struct rock
  	case RK3308:
  	case RK3368:
  	case RK3399:
@@ -6496,7 +6408,7 @@ index 1c8112bee..73c81474d 100644
  	case RK3568:
  	case RK3588:
  		pull_type = bank->pull_type[pin_num / 8];
-@@ -3020,6 +3329,7 @@ static int rockchip_get_schmitt(struct rockchip_pin_bank *bank, int pin_num)
+@@ -3020,6 +3329,7 @@ static int rockchip_get_schmitt(struct r
  
  	data >>= bit;
  	switch (ctrl->type) {
@@ -6504,7 +6416,7 @@ index 1c8112bee..73c81474d 100644
  	case RK3568:
  		return data & ((1 << RK3568_SCHMITT_BITS_PER_PIN) - 1);
  	default:
-@@ -3049,6 +3359,7 @@ static int rockchip_set_schmitt(struct rockchip_pin_bank *bank,
+@@ -3049,6 +3359,7 @@ static int rockchip_set_schmitt(struct r
  
  	/* enable the write to the equivalent lower bits */
  	switch (ctrl->type) {
@@ -6512,7 +6424,7 @@ index 1c8112bee..73c81474d 100644
  	case RK3568:
  		data = ((1 << RK3568_SCHMITT_BITS_PER_PIN) - 1) << (bit + 16);
  		rmask = data | (data >> 16);
-@@ -3244,6 +3555,8 @@ static bool rockchip_pinconf_pull_valid(struct rockchip_pin_ctrl *ctrl,
+@@ -3244,6 +3555,8 @@ static bool rockchip_pinconf_pull_valid(
  	case RK3308:
  	case RK3368:
  	case RK3399:
@@ -6521,7 +6433,7 @@ index 1c8112bee..73c81474d 100644
  	case RK3568:
  	case RK3588:
  		return (pull != PIN_CONFIG_BIAS_PULL_PIN_DEFAULT);
-@@ -4532,6 +4845,92 @@ static struct rockchip_pin_ctrl rk3399_pin_ctrl __maybe_unused = {
+@@ -4532,6 +4845,92 @@ static struct rockchip_pin_ctrl rk3399_p
  		.drv_calc_reg		= rk3399_calc_drv_reg_and_bit,
  };
  
@@ -6614,7 +6526,7 @@ index 1c8112bee..73c81474d 100644
  static struct rockchip_pin_bank rk3568_pin_banks[] = {
  	PIN_BANK_IOMUX_FLAGS(0, 32, "gpio0", IOMUX_SOURCE_PMU | IOMUX_WIDTH_4BIT,
  					     IOMUX_SOURCE_PMU | IOMUX_WIDTH_4BIT,
-@@ -4662,6 +5061,14 @@ static const struct of_device_id rockchip_pinctrl_dt_match[] = {
+@@ -4662,6 +5061,14 @@ static const struct of_device_id rockchi
  	{ .compatible = "rockchip,rk3399-pinctrl",
  		.data = &rk3399_pin_ctrl },
  #endif
@@ -6629,16 +6541,15 @@ index 1c8112bee..73c81474d 100644
  #ifdef CONFIG_CPU_RK3568
  	{ .compatible = "rockchip,rk3568-pinctrl",
  		.data = &rk3568_pin_ctrl },
-diff --git a/drivers/regulator/fan53555.c b/drivers/regulator/fan53555.c
-index c672754ce..eca3e3aa6 100644
 --- a/drivers/regulator/fan53555.c
 +++ b/drivers/regulator/fan53555.c
-@@ -20,22 +20,16 @@
+@@ -21,23 +21,17 @@
+ #include <linux/regulator/machine.h>
+ #include <linux/regulator/of_regulator.h>
  #include <linux/slab.h>
- #include <linux/regmap.h>
- #include <linux/regulator/fan53555.h>
 -#include <linux/gpio.h>
 -#include <linux/of_gpio.h>
+ 
  
  /* Voltage setting */
  #define FAN53555_VSEL0		0x00
@@ -6661,7 +6572,7 @@ index c672754ce..eca3e3aa6 100644
  
  /* Control register */
  #define FAN53555_CONTROL	0x02
-@@ -49,7 +43,6 @@
+@@ -51,7 +45,6 @@
  /* VSEL bit definitions */
  #define VSEL_BUCK_EN	(1 << 7)
  #define VSEL_MODE		(1 << 6)
@@ -6669,7 +6580,7 @@ index c672754ce..eca3e3aa6 100644
  /* Chip ID and Verison */
  #define DIE_ID		0x0F	/* ID1 */
  #define DIE_REV		0x0F	/* ID2 */
-@@ -61,25 +54,20 @@
+@@ -63,25 +56,20 @@
  #define CTL_MODE_VSEL0_MODE	BIT(0)
  #define CTL_MODE_VSEL1_MODE	BIT(1)
  
@@ -6698,7 +6609,7 @@ index c672754ce..eca3e3aa6 100644
  };
  
  enum {
-@@ -101,6 +89,14 @@ enum {
+@@ -103,6 +91,14 @@ enum {
  	FAN53555_CHIP_ID_08 = 8,
  };
  
@@ -6713,7 +6624,7 @@ index c672754ce..eca3e3aa6 100644
  /* IC mask revision */
  enum {
  	FAN53555_CHIP_REV_00 = 0x3,
-@@ -117,7 +113,6 @@ struct fan53555_device_info {
+@@ -119,7 +115,6 @@ struct fan53555_device_info {
  	struct regmap *regmap;
  	struct device *dev;
  	struct regulator_desc desc;
@@ -6721,7 +6632,7 @@ index c672754ce..eca3e3aa6 100644
  	struct regulator_init_data *regulator;
  	/* IC Type and Rev */
  	int chip_id;
-@@ -125,24 +120,20 @@ struct fan53555_device_info {
+@@ -127,24 +122,20 @@ struct fan53555_device_info {
  	/* Voltage setting register */
  	unsigned int vol_reg;
  	unsigned int sleep_reg;
@@ -6754,7 +6665,7 @@ index c672754ce..eca3e3aa6 100644
  };
  
  static unsigned int fan53555_map_mode(unsigned int mode)
-@@ -151,26 +142,6 @@ static unsigned int fan53555_map_mode(unsigned int mode)
+@@ -153,26 +144,6 @@ static unsigned int fan53555_map_mode(un
  		REGULATOR_MODE_FAST : REGULATOR_MODE_NORMAL;
  }
  
@@ -6781,7 +6692,7 @@ index c672754ce..eca3e3aa6 100644
  static int fan53555_set_suspend_voltage(struct regulator_dev *rdev, int uV)
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
-@@ -181,8 +152,8 @@ static int fan53555_set_suspend_voltage(struct regulator_dev *rdev, int uV)
+@@ -183,8 +154,8 @@ static int fan53555_set_suspend_voltage(
  	ret = regulator_map_voltage_linear(rdev, uV, uV);
  	if (ret < 0)
  		return ret;
@@ -6792,7 +6703,7 @@ index c672754ce..eca3e3aa6 100644
  	if (ret < 0)
  		return ret;
  	/* Cache the sleep voltage setting.
-@@ -196,7 +167,7 @@ static int fan53555_set_suspend_enable(struct regulator_dev *rdev)
+@@ -198,7 +169,7 @@ static int fan53555_set_suspend_enable(s
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
  
@@ -6801,15 +6712,14 @@ index c672754ce..eca3e3aa6 100644
  				  VSEL_BUCK_EN, VSEL_BUCK_EN);
  }
  
-@@ -204,69 +175,21 @@ static int fan53555_set_suspend_disable(struct regulator_dev *rdev)
+@@ -206,69 +177,21 @@ static int fan53555_set_suspend_disable(
  {
  	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
  
 -	return regmap_update_bits(di->regmap, di->sleep_en_reg,
-+	return regmap_update_bits(rdev->regmap, di->sleep_reg,
- 				  VSEL_BUCK_EN, 0);
- }
- 
+-				  VSEL_BUCK_EN, 0);
+-}
+-
 -static int fan53555_set_enable(struct regulator_dev *rdev)
 -{
 -	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
@@ -6833,9 +6743,10 @@ index c672754ce..eca3e3aa6 100644
 -	}
 -
 -	return regmap_update_bits(di->regmap, di->en_reg,
--				  VSEL_BUCK_EN, 0);
--}
--
++	return regmap_update_bits(rdev->regmap, di->sleep_reg,
+ 				  VSEL_BUCK_EN, 0);
+ }
+ 
 -static int fan53555_is_enabled(struct regulator_dev *rdev)
 -{
 -	struct fan53555_device_info *di = rdev_get_drvdata(rdev);
@@ -6874,7 +6785,7 @@ index c672754ce..eca3e3aa6 100644
  		break;
  	default:
  		return -EINVAL;
-@@ -280,7 +203,7 @@ static unsigned int fan53555_get_mode(struct regulator_dev *rdev)
+@@ -282,7 +205,7 @@ static unsigned int fan53555_get_mode(st
  	unsigned int val;
  	int ret = 0;
  
@@ -6883,7 +6794,7 @@ index c672754ce..eca3e3aa6 100644
  	if (ret < 0)
  		return ret;
  	if (val & di->mode_mask)
-@@ -315,13 +238,13 @@ static int fan53555_set_ramp(struct regulator_dev *rdev, int ramp)
+@@ -317,13 +240,13 @@ static int fan53555_set_ramp(struct regu
  	int slew_rate_n;
  
  	switch (di->vendor) {
@@ -6899,7 +6810,7 @@ index c672754ce..eca3e3aa6 100644
  		slew_rate_t = tcs_slew_rates;
  		slew_rate_n = ARRAY_SIZE(tcs_slew_rates);
  		break;
-@@ -341,20 +264,20 @@ static int fan53555_set_ramp(struct regulator_dev *rdev, int ramp)
+@@ -343,20 +266,20 @@ static int fan53555_set_ramp(struct regu
  		return -EINVAL;
  	}
  
@@ -6925,7 +6836,7 @@ index c672754ce..eca3e3aa6 100644
  	.set_mode = fan53555_set_mode,
  	.get_mode = fan53555_get_mode,
  	.set_ramp_delay = fan53555_set_ramp,
-@@ -385,7 +308,10 @@ static int fan53526_voltages_setup_fairchild(struct fan53555_device_info *di)
+@@ -387,7 +310,10 @@ static int fan53526_voltages_setup_fairc
  		return -EINVAL;
  	}
  
@@ -6937,7 +6848,7 @@ index c672754ce..eca3e3aa6 100644
  
  	return 0;
  }
-@@ -427,58 +353,10 @@ static int fan53555_voltages_setup_fairchild(struct fan53555_device_info *di)
+@@ -429,58 +355,10 @@ static int fan53555_voltages_setup_fairc
  			"Chip ID %d not supported!\n", di->chip_id);
  		return -EINVAL;
  	}
@@ -6997,7 +6908,7 @@ index c672754ce..eca3e3aa6 100644
  
  	return 0;
  }
-@@ -497,43 +375,32 @@ static int fan53555_voltages_setup_silergy(struct fan53555_device_info *di)
+@@ -499,43 +377,32 @@ static int fan53555_voltages_setup_siler
  			"Chip ID %d not supported!\n", di->chip_id);
  		return -EINVAL;
  	}
@@ -7058,7 +6969,7 @@ index c672754ce..eca3e3aa6 100644
  
  	return 0;
  }
-@@ -549,24 +416,45 @@ static int fan53555_device_setup(struct fan53555_device_info *di,
+@@ -551,24 +418,45 @@ static int fan53555_device_setup(struct
  	int ret = 0;
  
  	/* Setup voltage control register */
@@ -7066,6 +6977,10 @@ index c672754ce..eca3e3aa6 100644
 -	case FAN53555_VSEL_ID_0:
 -		di->sleep_reg = FAN53555_VSEL0;
 -		di->vol_reg = FAN53555_VSEL1;
+-		break;
+-	case FAN53555_VSEL_ID_1:
+-		di->sleep_reg = FAN53555_VSEL1;
+-		di->vol_reg = FAN53555_VSEL0;
 +	switch (di->vendor) {
 +	case FAN53526_VENDOR_FAIRCHILD:
 +	case FAN53555_VENDOR_FAIRCHILD:
@@ -7083,10 +6998,7 @@ index c672754ce..eca3e3aa6 100644
 +			dev_err(di->dev, "Invalid VSEL ID!\n");
 +			return -EINVAL;
 +		}
- 		break;
--	case FAN53555_VSEL_ID_1:
--		di->sleep_reg = FAN53555_VSEL1;
--		di->vol_reg = FAN53555_VSEL0;
++		break;
 +	case FAN53526_VENDOR_TCS:
 +		switch (pdata->sleep_vsel_id) {
 +		case FAN53555_VSEL_ID_0:
@@ -7116,7 +7028,7 @@ index c672754ce..eca3e3aa6 100644
  	switch (di->vendor) {
  	case FAN53526_VENDOR_FAIRCHILD:
  		di->mode_reg = FAN53555_CONTROL;
-@@ -579,19 +467,42 @@ static int fan53555_device_setup(struct fan53555_device_info *di,
+@@ -581,19 +469,42 @@ static int fan53555_device_setup(struct
  			di->mode_mask = CTL_MODE_VSEL0_MODE;
  			break;
  		}
@@ -7164,7 +7076,7 @@ index c672754ce..eca3e3aa6 100644
  		break;
  	default:
  		dev_err(di->dev, "vendor %d not supported!\n", di->vendor);
-@@ -605,23 +516,23 @@ static int fan53555_regulator_register(struct fan53555_device_info *di,
+@@ -607,23 +518,23 @@ static int fan53555_regulator_register(s
  			struct regulator_config *config)
  {
  	struct regulator_desc *rdesc = &di->desc;
@@ -7194,7 +7106,7 @@ index c672754ce..eca3e3aa6 100644
  }
  
  static const struct regmap_config fan53555_regmap_config = {
-@@ -634,7 +545,7 @@ static struct fan53555_platform_data *fan53555_parse_dt(struct device *dev,
+@@ -636,7 +547,7 @@ static struct fan53555_platform_data *fa
  					      const struct regulator_desc *desc)
  {
  	struct fan53555_platform_data *pdata;
@@ -7203,7 +7115,7 @@ index c672754ce..eca3e3aa6 100644
  	u32 tmp;
  
  	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
-@@ -642,30 +553,12 @@ static struct fan53555_platform_data *fan53555_parse_dt(struct device *dev,
+@@ -644,30 +555,12 @@ static struct fan53555_platform_data *fa
  		return NULL;
  
  	pdata->regulator = of_get_regulator_init_data(dev, np, desc);
@@ -7234,7 +7146,7 @@ index c672754ce..eca3e3aa6 100644
  	return pdata;
  }
  
-@@ -676,15 +569,21 @@ static const struct of_device_id __maybe_unused fan53555_dt_ids[] = {
+@@ -678,15 +571,21 @@ static const struct of_device_id __maybe
  	}, {
  		.compatible = "fcs,fan53555",
  		.data = (void *)FAN53555_VENDOR_FAIRCHILD
@@ -7259,7 +7171,7 @@ index c672754ce..eca3e3aa6 100644
  	},
  	{ }
  };
-@@ -697,6 +596,7 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -699,6 +598,7 @@ static int fan53555_regulator_probe(stru
  	struct fan53555_device_info *di;
  	struct fan53555_platform_data *pdata;
  	struct regulator_config config = { };
@@ -7267,7 +7179,7 @@ index c672754ce..eca3e3aa6 100644
  	unsigned int val;
  	int ret;
  
-@@ -716,9 +616,6 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -718,9 +618,6 @@ static int fan53555_regulator_probe(stru
  		return -ENODEV;
  	}
  
@@ -7277,7 +7189,7 @@ index c672754ce..eca3e3aa6 100644
  	di->regulator = pdata->regulator;
  	if (client->dev.of_node) {
  		di->vendor =
-@@ -738,22 +635,23 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -740,22 +637,23 @@ static int fan53555_regulator_probe(stru
  		di->vendor = id->driver_data;
  	}
  
@@ -7306,7 +7218,7 @@ index c672754ce..eca3e3aa6 100644
  	if (ret < 0) {
  		dev_err(&client->dev, "Failed to get chip Rev!\n");
  		return ret;
-@@ -770,7 +668,7 @@ static int fan53555_regulator_probe(struct i2c_client *client,
+@@ -772,7 +670,7 @@ static int fan53555_regulator_probe(stru
  	/* Register regulator */
  	config.dev = di->dev;
  	config.init_data = di->regulator;
@@ -7315,7 +7227,7 @@ index c672754ce..eca3e3aa6 100644
  	config.driver_data = di;
  	config.of_node = np;
  
-@@ -792,13 +690,12 @@ static void fan53555_regulator_shutdown(struct i2c_client *client)
+@@ -794,13 +692,12 @@ static void fan53555_regulator_shutdown(
  
  	switch (di->vendor) {
  	case FAN53555_VENDOR_FAIRCHILD:
@@ -7331,25 +7243,22 @@ index c672754ce..eca3e3aa6 100644
  					 CTL_RESET, CTL_RESET);
  		/*
  		 * the device can't return 'ack' during the reset,
-@@ -831,9 +728,15 @@ static const struct i2c_device_id fan53555_id[] = {
- 	}, {
+@@ -834,8 +731,14 @@ static const struct i2c_device_id fan535
  		.name = "syr828",
  		.driver_data = FAN53555_VENDOR_SILERGY
-+	}, {
+ 	}, {
 +		.name = "tcs4525",
 +		.driver_data = FAN53526_VENDOR_TCS
 +	}, {
 +		.name = "tcs4526",
 +		.driver_data = FAN53526_VENDOR_TCS
- 	}, {
++	}, {
  		.name = "tcs452x",
 -		.driver_data = FAN53555_VENDOR_TCS
 +		.driver_data = FAN53526_VENDOR_TCS
  	},
  	{ },
  };
-diff --git a/drivers/soc/rockchip/Kconfig b/drivers/soc/rockchip/Kconfig
-index 34ddbd148..132797f10 100644
 --- a/drivers/soc/rockchip/Kconfig
 +++ b/drivers/soc/rockchip/Kconfig
 @@ -1,6 +1,8 @@
@@ -7361,7 +7270,7 @@ index 34ddbd148..132797f10 100644
  source "drivers/soc/rockchip/Kconfig.cpu"
  
  #
-@@ -177,12 +179,9 @@ config ROCKCHIP_VENDOR_STORAGE_UPDATE_LOADER
+@@ -177,12 +179,9 @@ config ROCKCHIP_VENDOR_STORAGE_UPDATE_LO
  	  Say y here to enable rockchip vendor storage update loader support.
  	  The /dev/vendor_storage must set root user access only.
  
@@ -7384,11 +7293,9 @@ index 34ddbd148..132797f10 100644
 +endmenu
 +
  endif
-diff --git a/drivers/soc/rockchip/Makefile b/drivers/soc/rockchip/Makefile
-index 802166aa4..970cfce7a 100644
 --- a/drivers/soc/rockchip/Makefile
 +++ b/drivers/soc/rockchip/Makefile
-@@ -10,7 +10,7 @@ obj-$(CONFIG_ROCKCHIP_HW_DECOMPRESS_USER) += rockchip_decompress_user.o
+@@ -10,7 +10,7 @@ obj-$(CONFIG_ROCKCHIP_HW_DECOMPRESS_USER
  obj-$(CONFIG_ROCKCHIP_IODOMAIN) += io-domain.o
  obj-$(CONFIG_ROCKCHIP_IOMUX) += iomux.o
  obj-$(CONFIG_ROCKCHIP_PM_DOMAINS) += pm_domains.o
@@ -7397,11 +7304,9 @@ index 802166aa4..970cfce7a 100644
  obj-$(CONFIG_ROCKCHIP_VENDOR_STORAGE) += rk_vendor_storage.o
  obj-$(CONFIG_ROCKCHIP_MMC_VENDOR_STORAGE) += sdmmc_vendor_storage.o
  obj-$(CONFIG_ROCKCHIP_IPA) += rockchip_ipa.o
-diff --git a/drivers/soc/rockchip/grf.c b/drivers/soc/rockchip/grf.c
-index 7b1f24d27..890158d0d 100644
 --- a/drivers/soc/rockchip/grf.c
 +++ b/drivers/soc/rockchip/grf.c
-@@ -322,12 +322,14 @@ static int __init rockchip_grf_init(void)
+@@ -322,12 +322,14 @@ static int __init rockchip_grf_init(void
  		return 0;
  	if (!match || !match->data) {
  		pr_err("%s: missing grf data\n", __func__);
@@ -7416,8 +7321,6 @@ index 7b1f24d27..890158d0d 100644
  	if (IS_ERR(grf)) {
  		pr_err("%s: could not get grf syscon\n", __func__);
  		return PTR_ERR(grf);
-diff --git a/drivers/soc/rockchip/io-domain.c b/drivers/soc/rockchip/io-domain.c
-index ae8ed0f3c..f5ec81667 100644
 --- a/drivers/soc/rockchip/io-domain.c
 +++ b/drivers/soc/rockchip/io-domain.c
 @@ -68,15 +68,6 @@
@@ -7460,7 +7363,7 @@ index ae8ed0f3c..f5ec81667 100644
  {
  	struct rockchip_iodomain *iod = supply->iod;
  	u32 is_3v3 = uV > MAX_VOLTAGE_1_8;
-@@ -504,6 +501,7 @@ static const struct rockchip_iodomain_soc_data soc_data_rk3568_pmu = {
+@@ -504,6 +501,7 @@ static const struct rockchip_iodomain_so
  		"vccio6",
  		"vccio7",
  	},
@@ -7468,7 +7371,7 @@ index ae8ed0f3c..f5ec81667 100644
  };
  
  static const struct rockchip_iodomain_soc_data soc_data_rv1108 = {
-@@ -788,8 +786,8 @@ static int rockchip_iodomain_probe(struct platform_device *pdev)
+@@ -788,8 +786,8 @@ static int rockchip_iodomain_probe(struc
  	match = of_match_node(rockchip_iodomain_match, np);
  	iod->soc_data = match->data;
  
@@ -7479,8 +7382,6 @@ index ae8ed0f3c..f5ec81667 100644
  	else
  		iod->write = rockchip_iodomain_write;
  
-diff --git a/drivers/soc/rockchip/pm_domains.c b/drivers/soc/rockchip/pm_domains.c
-index f137d4c09..3f5a744a9 100644
 --- a/drivers/soc/rockchip/pm_domains.c
 +++ b/drivers/soc/rockchip/pm_domains.c
 @@ -40,6 +40,8 @@
@@ -7511,7 +7412,7 @@ index f137d4c09..3f5a744a9 100644
  
  	u32 core_pwrcnt_offset;
  	u32 gpu_pwrcnt_offset;
-@@ -191,6 +198,37 @@ static void rockchip_pmu_unlock(struct rockchip_pm_domain *pd)
+@@ -191,6 +198,37 @@ static void rockchip_pmu_unlock(struct r
  	.keepon_startup = keepon,			\
  }
  
@@ -7549,7 +7450,7 @@ index f137d4c09..3f5a744a9 100644
  #define DOMAIN_M_O(_name, pwr, status, p_offset, req, idle, ack, r_offset, wakeup, keepon)	\
  {							\
  	.name = _name,					\
-@@ -272,6 +310,15 @@ static void rockchip_pmu_unlock(struct rockchip_pm_domain *pd)
+@@ -272,6 +310,15 @@ static void rockchip_pmu_unlock(struct r
  #define DOMAIN_RK3399_PROTECT(name, pwr, status, req, wakeup)	\
  	DOMAIN(name, pwr, status, req, req, req, wakeup, true)
  
@@ -7565,7 +7466,7 @@ index f137d4c09..3f5a744a9 100644
  #define DOMAIN_RK3568(name, pwr, req, wakeup)			\
  	DOMAIN_M(name, pwr, pwr, req, req, req, wakeup, false)
  
-@@ -302,6 +349,42 @@ static unsigned int rockchip_pmu_read_ack(struct rockchip_pmu *pmu)
+@@ -302,6 +349,42 @@ static unsigned int rockchip_pmu_read_ac
  	return val;
  }
  
@@ -7608,7 +7509,7 @@ index f137d4c09..3f5a744a9 100644
  static int rockchip_pmu_set_idle_request(struct rockchip_pm_domain *pd,
  					 bool idle)
  {
-@@ -695,6 +778,7 @@ static int rockchip_pd_power(struct rockchip_pm_domain *pd, bool power_on)
+@@ -695,6 +778,7 @@ static int rockchip_pd_power(struct rock
  			rockchip_pmu_unlock(pd);
  			return ret;
  		}
@@ -7616,7 +7517,7 @@ index f137d4c09..3f5a744a9 100644
  
  		if (!power_on) {
  			rockchip_pmu_save_qos(pd);
-@@ -707,6 +791,7 @@ static int rockchip_pd_power(struct rockchip_pm_domain *pd, bool power_on)
+@@ -707,6 +791,7 @@ static int rockchip_pd_power(struct rock
  					genpd->name);
  				goto out;
  			}
@@ -7624,7 +7525,7 @@ index f137d4c09..3f5a744a9 100644
  		}
  
  		ret = rockchip_do_pmu_set_power_domain(pd, power_on);
-@@ -717,6 +802,7 @@ static int rockchip_pd_power(struct rockchip_pm_domain *pd, bool power_on)
+@@ -717,6 +802,7 @@ static int rockchip_pd_power(struct rock
  		}
  
  		if (power_on) {
@@ -7632,7 +7533,7 @@ index f137d4c09..3f5a744a9 100644
  			/* if powering up, leave idle mode */
  			ret = rockchip_pmu_set_idle_request(pd, false);
  			if (ret) {
-@@ -732,6 +818,7 @@ static int rockchip_pd_power(struct rockchip_pm_domain *pd, bool power_on)
+@@ -732,6 +818,7 @@ static int rockchip_pd_power(struct rock
  		}
  
  out:
@@ -7640,7 +7541,7 @@ index f137d4c09..3f5a744a9 100644
  		clk_bulk_disable(pd->num_clks, pd->clks);
  
  		if (!power_on && !IS_ERR(pd->supply))
-@@ -1263,14 +1350,32 @@ late_initcall_sync(rockchip_pd_keepon_release);
+@@ -1263,14 +1350,32 @@ late_initcall_sync(rockchip_pd_keepon_re
  
  static void __iomem *pd_base;
  
@@ -7679,7 +7580,7 @@ index f137d4c09..3f5a744a9 100644
  }
  EXPORT_SYMBOL_GPL(rockchip_dump_pmu);
  
-@@ -1547,6 +1652,29 @@ static const struct rockchip_domain_info rk3399_pm_domains[] = {
+@@ -1547,6 +1652,29 @@ static const struct rockchip_domain_info
  	[RK3399_PD_SDIOAUDIO]	= DOMAIN_RK3399("sdioaudio",    BIT(31), BIT(31), BIT(29), true),
  };
  
@@ -7709,7 +7610,7 @@ index f137d4c09..3f5a744a9 100644
  static const struct rockchip_domain_info rk3568_pm_domains[] = {
  	[RK3568_PD_NPU]		= DOMAIN_RK3568("npu",        BIT(1), BIT(2),  false),
  	[RK3568_PD_GPU]		= DOMAIN_RK3568("gpu",        BIT(0), BIT(1),  false),
-@@ -1751,6 +1879,30 @@ static const struct rockchip_pmu_info rk3399_pmu = {
+@@ -1751,6 +1879,30 @@ static const struct rockchip_pmu_info rk
  	.domain_info = rk3399_pm_domains,
  };
  
@@ -7740,7 +7641,7 @@ index f137d4c09..3f5a744a9 100644
  static const struct rockchip_pmu_info rk3568_pmu = {
  	.pwr_offset = 0xa0,
  	.status_offset = 0x98,
-@@ -1834,6 +1986,16 @@ static const struct of_device_id rockchip_pm_domain_dt_match[] = {
+@@ -1834,6 +1986,16 @@ static const struct of_device_id rockchi
  		.compatible = "rockchip,rk3399-power-controller",
  		.data = (void *)&rk3399_pmu,
  	},
@@ -7757,8 +7658,6 @@ index f137d4c09..3f5a744a9 100644
  	{
  		.compatible = "rockchip,rk3568-power-controller",
  		.data = (void *)&rk3568_pmu,
-diff --git a/drivers/spi/spi-rockchip.c b/drivers/spi/spi-rockchip.c
-index c8302e38f..3e2de189d 100644
 --- a/drivers/spi/spi-rockchip.c
 +++ b/drivers/spi/spi-rockchip.c
 @@ -172,6 +172,12 @@
@@ -7791,7 +7690,7 @@ index c8302e38f..3e2de189d 100644
  
  	bool cs_asserted[ROCKCHIP_SPI_MAX_CS_NUM];
  
-@@ -227,16 +236,14 @@ static inline void spi_enable_chip(struct rockchip_spi *rs, bool enable)
+@@ -227,16 +236,14 @@ static inline void spi_enable_chip(struc
  static inline void wait_for_tx_idle(struct rockchip_spi *rs, bool slave_mode)
  {
  	unsigned long timeout = jiffies + msecs_to_jiffies(5);
@@ -7814,7 +7713,7 @@ index c8302e38f..3e2de189d 100644
  	} while (!time_after(jiffies, timeout));
  
  	dev_warn(rs->dev, "spi controller is in busy state!\n");
-@@ -244,11 +251,7 @@ static inline void wait_for_tx_idle(struct rockchip_spi *rs, bool slave_mode)
+@@ -244,11 +251,7 @@ static inline void wait_for_tx_idle(stru
  
  static u32 get_fifo_len(struct rockchip_spi *rs)
  {
@@ -7827,7 +7726,7 @@ index c8302e38f..3e2de189d 100644
  	case ROCKCHIP_SPI_VER2_TYPE1:
  	case ROCKCHIP_SPI_VER2_TYPE2:
  		return 64;
-@@ -293,6 +296,11 @@ static void rockchip_spi_handle_err(struct spi_controller *ctlr,
+@@ -293,6 +296,11 @@ static void rockchip_spi_handle_err(stru
  {
  	struct rockchip_spi *rs = spi_controller_get_devdata(ctlr);
  
@@ -7839,7 +7738,7 @@ index c8302e38f..3e2de189d 100644
  	/* stop running spi transfer
  	 * this also flushes both rx and tx fifos
  	 */
-@@ -368,7 +376,7 @@ static irqreturn_t rockchip_spi_isr(int irq, void *dev_id)
+@@ -368,7 +376,7 @@ static irqreturn_t rockchip_spi_isr(int
  	struct rockchip_spi *rs = spi_controller_get_devdata(ctlr);
  
  	/* When int_cs_inactive comes, spi slave abort */
@@ -7848,7 +7747,7 @@ index c8302e38f..3e2de189d 100644
  		ctlr->slave_abort(ctlr);
  		writel_relaxed(0, rs->regs + ROCKCHIP_SPI_IMR);
  		writel_relaxed(0xffffffff, rs->regs + ROCKCHIP_SPI_ICR);
-@@ -394,8 +402,6 @@ static int rockchip_spi_prepare_irq(struct rockchip_spi *rs,
+@@ -394,8 +402,6 @@ static int rockchip_spi_prepare_irq(stru
  				    struct spi_controller *ctlr,
  				    struct spi_transfer *xfer)
  {
@@ -7857,7 +7756,7 @@ index c8302e38f..3e2de189d 100644
  	rs->tx_left = rs->tx ? xfer->len / rs->n_bytes : 0;
  	rs->rx_left = xfer->len / rs->n_bytes;
  
-@@ -428,6 +434,8 @@ static void rockchip_spi_dma_rxcb(void *data)
+@@ -428,6 +434,8 @@ static void rockchip_spi_dma_rxcb(void *
  		writel_relaxed(0, rs->regs + ROCKCHIP_SPI_IMR);
  
  	spi_enable_chip(rs, false);
@@ -7866,7 +7765,7 @@ index c8302e38f..3e2de189d 100644
  	spi_finalize_current_transfer(ctlr);
  }
  
-@@ -444,6 +452,8 @@ static void rockchip_spi_dma_txcb(void *data)
+@@ -444,6 +452,8 @@ static void rockchip_spi_dma_txcb(void *
  	wait_for_tx_idle(rs, ctlr->slave);
  
  	spi_enable_chip(rs, false);
@@ -7875,7 +7774,7 @@ index c8302e38f..3e2de189d 100644
  	spi_finalize_current_transfer(ctlr);
  }
  
-@@ -467,9 +477,6 @@ static int rockchip_spi_prepare_dma(struct rockchip_spi *rs,
+@@ -467,9 +477,6 @@ static int rockchip_spi_prepare_dma(stru
  
  	atomic_set(&rs->state, 0);
  
@@ -7885,7 +7784,7 @@ index c8302e38f..3e2de189d 100644
  	rxdesc = NULL;
  	if (xfer->rx_buf) {
  		struct dma_slave_config rxconf = {
-@@ -539,14 +546,64 @@ static int rockchip_spi_prepare_dma(struct rockchip_spi *rs,
+@@ -539,14 +546,64 @@ static int rockchip_spi_prepare_dma(stru
  	return 1;
  }
  
@@ -7954,7 +7853,7 @@ index c8302e38f..3e2de189d 100644
  	u32 cr1;
  	u32 dmacr = 0;
  
-@@ -555,18 +612,30 @@ static int rockchip_spi_config(struct rockchip_spi *rs,
+@@ -555,18 +612,30 @@ static int rockchip_spi_config(struct ro
  	rs->slave_abort = false;
  
  	cr0 |= rs->rsd << CR0_RSD_OFFSET;
@@ -7989,7 +7888,7 @@ index c8302e38f..3e2de189d 100644
  
  	switch (xfer->bits_per_word) {
  	case 4:
-@@ -591,7 +660,7 @@ static int rockchip_spi_config(struct rockchip_spi *rs,
+@@ -591,7 +660,7 @@ static int rockchip_spi_config(struct ro
  		return -EINVAL;
  	}
  
@@ -7998,7 +7897,7 @@ index c8302e38f..3e2de189d 100644
  		if (xfer->tx_buf)
  			dmacr |= TF_DMA_EN;
  		if (xfer->rx_buf)
-@@ -692,7 +761,6 @@ static int rockchip_spi_slave_abort(struct spi_controller *ctlr)
+@@ -692,7 +761,6 @@ static int rockchip_spi_slave_abort(stru
  				*(u16 *)rs->rx = (u16)rxw;
  			rs->rx += rs->n_bytes;
  		}
@@ -8051,7 +7950,7 @@ index c8302e38f..3e2de189d 100644
  }
  
  static bool rockchip_spi_can_dma(struct spi_controller *ctlr,
-@@ -851,7 +935,7 @@ static int rockchip_spi_probe(struct platform_device *pdev)
+@@ -851,7 +935,7 @@ static int rockchip_spi_probe(struct pla
  	struct spi_controller *ctlr;
  	struct resource *mem;
  	struct device_node *np = pdev->dev.of_node;
@@ -8060,7 +7959,7 @@ index c8302e38f..3e2de189d 100644
  	bool slave_mode;
  	struct pinctrl *pinctrl = NULL;
  	const struct rockchip_spi_quirks *quirks_cfg;
-@@ -961,6 +1045,16 @@ static int rockchip_spi_probe(struct platform_device *pdev)
+@@ -961,6 +1045,16 @@ static int rockchip_spi_probe(struct pla
  		rs->rsd = rsd;
  	}
  
@@ -8077,7 +7976,7 @@ index c8302e38f..3e2de189d 100644
  	rs->fifo_len = get_fifo_len(rs);
  	if (!rs->fifo_len) {
  		dev_err(&pdev->dev, "Failed to get fifo length\n");
-@@ -1030,11 +1124,13 @@ static int rockchip_spi_probe(struct platform_device *pdev)
+@@ -1030,11 +1124,13 @@ static int rockchip_spi_probe(struct pla
  		ctlr->can_dma = rockchip_spi_can_dma;
  	}
  
@@ -8093,7 +7992,7 @@ index c8302e38f..3e2de189d 100644
  			rs->cs_inactive = true;
  		else
  			rs->cs_inactive = false;
-@@ -1075,6 +1171,8 @@ static int rockchip_spi_probe(struct platform_device *pdev)
+@@ -1075,6 +1171,8 @@ static int rockchip_spi_probe(struct pla
  			dev_info(&pdev->dev, "register misc device %s\n", misc_name);
  	}
  
@@ -8102,8 +8001,6 @@ index c8302e38f..3e2de189d 100644
  	return 0;
  
  err_free_dma_rx:
-diff --git a/drivers/thermal/rockchip_thermal.c b/drivers/thermal/rockchip_thermal.c
-index e91cca2f8..855ac237a 100644
 --- a/drivers/thermal/rockchip_thermal.c
 +++ b/drivers/thermal/rockchip_thermal.c
 @@ -91,6 +91,7 @@ struct chip_tsadc_table {
@@ -8256,7 +8153,7 @@ index e91cca2f8..855ac237a 100644
  	{374, -40000},
  	{382, -35000},
  	{389, -30000},
-@@ -373,11 +390,13 @@ static const struct tsadc_table rv1108_table[] = {
+@@ -373,11 +390,13 @@ static const struct tsadc_table rv1108_t
  	{618, 115000},
  	{626, 120000},
  	{634, 125000},
@@ -8272,7 +8169,7 @@ index e91cca2f8..855ac237a 100644
  	{3455, -40000},
  	{3463, -35000},
  	{3471, -30000},
-@@ -412,11 +431,13 @@ static const struct tsadc_table rk1808_code_table[] = {
+@@ -412,11 +431,13 @@ static const struct tsadc_table rk1808_c
  	{3709, 115000},
  	{3718, 120000},
  	{3726, 125000},
@@ -8288,7 +8185,7 @@ index e91cca2f8..855ac237a 100644
  	{588, -40000},
  	{593, -35000},
  	{598, -30000},
-@@ -451,11 +472,13 @@ static const struct tsadc_table rk3228_code_table[] = {
+@@ -451,11 +472,13 @@ static const struct tsadc_table rk3228_c
  	{749, 115000},
  	{754, 120000},
  	{760, 125000},
@@ -8304,7 +8201,7 @@ index e91cca2f8..855ac237a 100644
  	{3800, -40000},
  	{3792, -35000},
  	{3783, -30000},
-@@ -490,11 +513,15 @@ static const struct tsadc_table rk3288_code_table[] = {
+@@ -490,11 +513,15 @@ static const struct tsadc_table rk3288_c
  	{3452, 115000},
  	{3437, 120000},
  	{3421, 125000},
@@ -8322,7 +8219,7 @@ index e91cca2f8..855ac237a 100644
  	{296, -40000},
  	{304, -35000},
  	{313, -30000},
-@@ -528,11 +555,15 @@ static const struct tsadc_table rk3328_code_table[] = {
+@@ -528,11 +555,15 @@ static const struct tsadc_table rk3328_c
  	{644, 115000},
  	{659, 120000},
  	{675, 125000},
@@ -8340,7 +8237,7 @@ index e91cca2f8..855ac237a 100644
  	{106, -40000},
  	{108, -35000},
  	{110, -30000},
-@@ -567,11 +598,13 @@ static const struct tsadc_table rk3368_code_table[] = {
+@@ -567,11 +598,13 @@ static const struct tsadc_table rk3368_c
  	{167, 115000},
  	{169, 120000},
  	{171, 125000},
@@ -8356,7 +8253,7 @@ index e91cca2f8..855ac237a 100644
  	{402, -40000},
  	{410, -35000},
  	{419, -30000},
-@@ -606,11 +639,95 @@ static const struct tsadc_table rk3399_code_table[] = {
+@@ -606,11 +639,95 @@ static const struct tsadc_table rk3399_c
  	{668, 115000},
  	{677, 120000},
  	{685, 125000},
@@ -8454,7 +8351,7 @@ index e91cca2f8..855ac237a 100644
  	{1584, -40000},
  	{1620, -35000},
  	{1652, -30000},
-@@ -645,16 +762,19 @@ static const struct tsadc_table rk3568_code_table[] = {
+@@ -645,16 +762,19 @@ static const struct tsadc_table rk3568_c
  	{2636, 115000},
  	{2672, 120000},
  	{2704, 125000},
@@ -8477,7 +8374,7 @@ index e91cca2f8..855ac237a 100644
  };
  
  static u32 rk_tsadcv2_temp_to_code(const struct chip_tsadc_table *table,
-@@ -1030,6 +1150,68 @@ static void rk_tsadcv10_initialize(struct regmap *grf, void __iomem *regs,
+@@ -1030,6 +1150,68 @@ static void rk_tsadcv10_initialize(struc
  	}
  }
  
@@ -8546,7 +8443,7 @@ index e91cca2f8..855ac237a 100644
  static void rk_tsadcv2_irq_ack(void __iomem *regs)
  {
  	u32 val;
-@@ -1282,25 +1464,22 @@ static void rk_tsadcv4_tshut_mode(struct regmap *grf, int chn,
+@@ -1282,25 +1464,22 @@ static void rk_tsadcv4_tshut_mode(struct
  	writel_relaxed(val_cru, regs + TSADCV3_HSHUT_CRU_INT_EN);
  }
  
@@ -8559,12 +8456,12 @@ index e91cca2f8..855ac237a 100644
 -	const struct chip_tsadc_table *table = &thermal->chip->table;
 -	u32 base_code;
 -	int trim_code;
--
--	base_code = trim_base * table->kNum / 1000 + table->bNum;
--	trim_code = code - base_code - 10;
 +	u32 base_code = (trim_base * table->kNum +
 +			 trim_base_frac * table->kNum / 10) / 1000 + table->bNum;
  
+-	base_code = trim_base * table->kNum / 1000 + table->bNum;
+-	trim_code = code - base_code - 10;
+-
 -	return trim_code;
 +	return code - base_code;
  }
@@ -8582,7 +8479,7 @@ index e91cca2f8..855ac237a 100644
  }
  
  static int rk_tsadcv1_set_clk_rate(struct platform_device *pdev)
-@@ -1435,7 +1614,7 @@ static const struct rockchip_tsadc_chip rv1126_tsadc_data = {
+@@ -1435,7 +1614,7 @@ static const struct rockchip_tsadc_chip
  	.set_tshut_temp = rk_tsadcv2_tshut_temp,
  	.set_tshut_mode = rk_tsadcv3_tshut_mode,
  	.get_trim_code = rk_tsadcv1_get_trim_code,
@@ -8591,7 +8488,7 @@ index e91cca2f8..855ac237a 100644
  
  	.table = {
  		.kNum = 2263,
-@@ -1666,6 +1845,54 @@ static const struct rockchip_tsadc_chip rk3399_tsadc_data = {
+@@ -1666,6 +1845,54 @@ static const struct rockchip_tsadc_chip
  	},
  };
  
@@ -8646,7 +8543,7 @@ index e91cca2f8..855ac237a 100644
  static const struct rockchip_tsadc_chip rk3568_tsadc_data = {
  	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
  	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
-@@ -1682,6 +1909,8 @@ static const struct rockchip_tsadc_chip rk3568_tsadc_data = {
+@@ -1682,6 +1909,8 @@ static const struct rockchip_tsadc_chip
  	.set_alarm_temp = rk_tsadcv2_alarm_temp,
  	.set_tshut_temp = rk_tsadcv2_tshut_temp,
  	.set_tshut_mode = rk_tsadcv2_tshut_mode,
@@ -8655,7 +8552,7 @@ index e91cca2f8..855ac237a 100644
  
  	.table = {
  		.id = rk3568_code_table,
-@@ -1792,6 +2021,18 @@ static const struct of_device_id of_rockchip_thermal_match[] = {
+@@ -1792,6 +2021,18 @@ static const struct of_device_id of_rock
  		.data = (void *)&rk3399_tsadc_data,
  	},
  #endif
@@ -8674,7 +8571,7 @@ index e91cca2f8..855ac237a 100644
  #ifdef CONFIG_CPU_RK3568
  	{
  		.compatible = "rockchip,rk3568-tsadc",
-@@ -1844,8 +2085,7 @@ static int rockchip_thermal_set_trips(void *_sensor, int low, int high)
+@@ -1844,8 +2085,7 @@ static int rockchip_thermal_set_trips(vo
  	dev_dbg(&thermal->pdev->dev, "%s: sensor %d: low: %d, high %d\n",
  		__func__, sensor->id, low, high);
  
@@ -8684,7 +8581,7 @@ index e91cca2f8..855ac237a 100644
  
  	return tsadc->set_alarm_temp(&tsadc->table,
  				     sensor->id, thermal->regs, high);
-@@ -1860,8 +2100,7 @@ static int rockchip_thermal_get_temp(void *_sensor, int *out_temp)
+@@ -1860,8 +2100,7 @@ static int rockchip_thermal_get_temp(voi
  
  	retval = tsadc->get_temp(&tsadc->table,
  				 sensor->id, thermal->regs, out_temp);
@@ -8694,7 +8591,7 @@ index e91cca2f8..855ac237a 100644
  	dev_dbg(&thermal->pdev->dev, "sensor %d - temp: %d, retval: %d\n",
  		sensor->id, *out_temp, retval);
  
-@@ -1912,27 +2151,103 @@ static int rockchip_get_efuse_value(struct device_node *np, char *porp_name,
+@@ -1912,27 +2151,103 @@ static int rockchip_get_efuse_value(stru
  	return 0;
  }
  
@@ -8808,7 +8705,7 @@ index e91cca2f8..855ac237a 100644
  
  	if (of_property_read_u32(np, "rockchip,hw-tshut-mode", &tshut_mode)) {
  		dev_warn(dev,
-@@ -1974,28 +2289,7 @@ static int rockchip_configure_from_dt(struct device *dev,
+@@ -1974,28 +2289,7 @@ static int rockchip_configure_from_dt(st
  	if (IS_ERR(thermal->grf))
  		dev_warn(dev, "Missing rockchip,grf property\n");
  
@@ -8838,7 +8735,7 @@ index e91cca2f8..855ac237a 100644
  
  	return 0;
  }
-@@ -2013,10 +2307,10 @@ rockchip_thermal_register_sensor(struct platform_device *pdev,
+@@ -2013,10 +2307,10 @@ rockchip_thermal_register_sensor(struct
  			      thermal->tshut_mode);
  
  	error = tsadc->set_tshut_temp(&tsadc->table, id, thermal->regs,
@@ -8851,7 +8748,7 @@ index e91cca2f8..855ac237a 100644
  
  	sensor->thermal = thermal;
  	sensor->id = id;
-@@ -2297,16 +2591,17 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
+@@ -2297,16 +2591,17 @@ static int __maybe_unused rockchip_therm
  
  	for (i = 0; i < thermal->chip->chn_num; i++) {
  		int id = thermal->sensors[i].id;
@@ -8872,7 +8769,7 @@ index e91cca2f8..855ac237a 100644
  	}
  
  	thermal->chip->control(thermal->regs, true);
-@@ -2337,7 +2632,17 @@ static struct platform_driver rockchip_thermal_driver = {
+@@ -2337,7 +2632,17 @@ static struct platform_driver rockchip_t
  	.shutdown = rockchip_thermal_shutdown,
  };
  
@@ -8891,11 +8788,9 @@ index e91cca2f8..855ac237a 100644
  
  MODULE_DESCRIPTION("ROCKCHIP THERMAL Driver");
  MODULE_AUTHOR("Rockchip, Inc.");
-diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
-index 3dd40623a..d14b033d5 100644
 --- a/drivers/usb/dwc3/core.c
 +++ b/drivers/usb/dwc3/core.c
-@@ -169,8 +169,13 @@ static void __dwc3_set_mode(struct work_struct *work)
+@@ -169,8 +169,13 @@ static void __dwc3_set_mode(struct work_
  		break;
  	}
  
@@ -8911,7 +8806,7 @@ index 3dd40623a..d14b033d5 100644
  		reg = dwc3_readl(dwc->regs, DWC3_GCTL);
  		reg |= DWC3_GCTL_CORESOFTRESET;
  		dwc3_writel(dwc->regs, DWC3_GCTL, reg);
-@@ -305,7 +310,8 @@ int dwc3_core_soft_reset(struct dwc3 *dwc)
+@@ -342,7 +347,8 @@ int dwc3_core_soft_reset(struct dwc3 *dw
  
  	reg = dwc3_readl(dwc->regs, DWC3_DCTL);
  	reg |= DWC3_DCTL_CSFTRST;
@@ -8921,7 +8816,7 @@ index 3dd40623a..d14b033d5 100644
  
  	/*
  	 * For DWC_usb31 controller 1.90a and later, the DCTL.CSFRST bit
-@@ -756,15 +762,16 @@ static void dwc3_core_exit(struct dwc3 *dwc)
+@@ -793,15 +799,16 @@ static void dwc3_core_exit(struct dwc3 *
  {
  	dwc3_event_buffers_cleanup(dwc);
  
@@ -8942,7 +8837,7 @@ index 3dd40623a..d14b033d5 100644
  	clk_bulk_disable_unprepare(dwc->num_clks, dwc->clks);
  	reset_control_assert(dwc->reset);
  }
-@@ -1299,10 +1306,10 @@ static void dwc3_get_properties(struct dwc3 *dwc)
+@@ -1320,10 +1327,10 @@ static void dwc3_get_properties(struct d
  	u8			lpm_nyet_threshold;
  	u8			tx_de_emphasis;
  	u8			hird_threshold;
@@ -8957,7 +8852,7 @@ index 3dd40623a..d14b033d5 100644
  	u8			tx_fifo_resize_max_num;
  	const char		*usb_psy_name;
  	int			ret;
-@@ -1696,16 +1703,16 @@ static int dwc3_probe(struct platform_device *pdev)
+@@ -1715,16 +1722,16 @@ err5:
  	dwc3_debugfs_exit(dwc);
  	dwc3_event_buffers_cleanup(dwc);
  
@@ -8979,8 +8874,6 @@ index 3dd40623a..d14b033d5 100644
  	dwc3_ulpi_exit(dwc);
  
  err4:
-diff --git a/drivers/usb/dwc3/drd.c b/drivers/usb/dwc3/drd.c
-index adcdf9ad6..f6f63cfc1 100644
 --- a/drivers/usb/dwc3/drd.c
 +++ b/drivers/usb/dwc3/drd.c
 @@ -595,16 +595,15 @@ int dwc3_drd_init(struct dwc3 *dwc)
@@ -9005,11 +8898,9 @@ index adcdf9ad6..f6f63cfc1 100644
  		dwc->edev_nb.notifier_call = dwc3_drd_notifier;
  		ret = extcon_register_notifier(dwc->edev, EXTCON_USB_HOST,
  					       &dwc->edev_nb);
-diff --git a/drivers/usb/dwc3/gadget.c b/drivers/usb/dwc3/gadget.c
-index 893d88848..68ca3b993 100644
 --- a/drivers/usb/dwc3/gadget.c
 +++ b/drivers/usb/dwc3/gadget.c
-@@ -291,7 +291,8 @@ int dwc3_send_gadget_ep_cmd(struct dwc3_ep *dep, unsigned int cmd,
+@@ -292,7 +292,8 @@ int dwc3_send_gadget_ep_cmd(struct dwc3_
  	 *
  	 * DWC_usb3 3.30a and DWC_usb31 1.90a programming guide section 3.2.2
  	 */
@@ -9019,7 +8910,7 @@ index 893d88848..68ca3b993 100644
  		reg = dwc3_readl(dwc->regs, DWC3_GUSB2PHYCFG(0));
  		if (unlikely(reg & DWC3_GUSB2PHYCFG_SUSPHY)) {
  			saved_config |= DWC3_GUSB2PHYCFG_SUSPHY;
-@@ -331,9 +332,17 @@ int dwc3_send_gadget_ep_cmd(struct dwc3_ep *dep, unsigned int cmd,
+@@ -332,9 +333,17 @@ int dwc3_send_gadget_ep_cmd(struct dwc3_
  		}
  	}
  
@@ -9040,7 +8931,7 @@ index 893d88848..68ca3b993 100644
  
  	/*
  	 * Synopsys Databook 2.60a states in section 6.3.2.5.6 of that if we're
-@@ -1157,13 +1166,7 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
+@@ -1158,13 +1167,7 @@ static int __dwc3_gadget_ep_disable(stru
  	reg &= ~DWC3_DALEPENA_EP(dep->number);
  	dwc3_writel(dwc->regs, DWC3_DALEPENA, reg);
  
@@ -9055,7 +8946,7 @@ index 893d88848..68ca3b993 100644
  
  	dep->stream_capable = false;
  	dep->type = 0;
-@@ -1177,6 +1180,12 @@ static int __dwc3_gadget_ep_disable(struct dwc3_ep *dep)
+@@ -1178,6 +1181,12 @@ static int __dwc3_gadget_ep_disable(stru
  		mask |= (DWC3_EP_DELAY_STOP | DWC3_EP_TRANSFER_STARTED);
  	dep->flags &= mask;
  
@@ -9068,7 +8959,7 @@ index 893d88848..68ca3b993 100644
  	return 0;
  }
  
-@@ -1332,17 +1341,49 @@ static u32 dwc3_calc_trbs_left(struct dwc3_ep *dep)
+@@ -1333,17 +1342,49 @@ static u32 dwc3_calc_trbs_left(struct dw
  	return trbs_left;
  }
  
@@ -9124,7 +9015,7 @@ index 893d88848..68ca3b993 100644
  	trb->bpl = lower_32_bits(dma);
  	trb->bph = upper_32_bits(dma);
  
-@@ -1382,10 +1423,10 @@ static void __dwc3_prepare_one_trb(struct dwc3_ep *dep, struct dwc3_trb *trb,
+@@ -1383,10 +1424,10 @@ static void __dwc3_prepare_one_trb(struc
  				unsigned int mult = 2;
  				unsigned int maxp = usb_endpoint_maxp(ep->desc);
  
@@ -9137,7 +9028,7 @@ index 893d88848..68ca3b993 100644
  					mult--;
  
  				trb->size |= DWC3_TRB_SIZE_PCM1(mult);
-@@ -1394,8 +1435,8 @@ static void __dwc3_prepare_one_trb(struct dwc3_ep *dep, struct dwc3_trb *trb,
+@@ -1395,8 +1436,8 @@ static void __dwc3_prepare_one_trb(struc
  			trb->ctrl = DWC3_TRBCTL_ISOCHRONOUS;
  		}
  
@@ -9148,7 +9039,7 @@ index 893d88848..68ca3b993 100644
  		break;
  
  	case USB_ENDPOINT_XFER_BULK:
-@@ -1454,50 +1495,6 @@ static void __dwc3_prepare_one_trb(struct dwc3_ep *dep, struct dwc3_trb *trb,
+@@ -1455,50 +1496,6 @@ static void __dwc3_prepare_one_trb(struc
  	trace_dwc3_prepare_trb(dep, trb);
  }
  
@@ -9199,7 +9090,7 @@ index 893d88848..68ca3b993 100644
  static bool dwc3_needs_extra_trb(struct dwc3_ep *dep, struct dwc3_request *req)
  {
  	unsigned int maxp = usb_endpoint_maxp(dep->endpoint.desc);
-@@ -2094,13 +2091,11 @@ static int __dwc3_gadget_ep_queue(struct dwc3_ep *dep, struct dwc3_request *req)
+@@ -2095,13 +2092,11 @@ static int __dwc3_gadget_ep_queue(struct
  	 * errors which will force us issue EndTransfer command.
  	 */
  	if (usb_endpoint_xfer_isoc(dep->endpoint.desc)) {
@@ -9217,7 +9108,7 @@ index 893d88848..68ca3b993 100644
  		}
  	}
  
-@@ -3145,8 +3140,8 @@ static const struct usb_gadget_ops dwc3_gadget_ops = {
+@@ -3148,8 +3143,8 @@ static const struct usb_gadget_ops dwc3_
  	.udc_set_ssp_rate	= dwc3_gadget_set_ssp_rate,
  	.get_config_params	= dwc3_gadget_config_params,
  	.vbus_draw		= dwc3_gadget_vbus_draw,
@@ -9228,7 +9119,7 @@ index 893d88848..68ca3b993 100644
  };
  
  /* -------------------------------------------------------------------------- */
-@@ -3171,6 +3166,7 @@ static int dwc3_gadget_init_in_endpoint(struct dwc3_ep *dep)
+@@ -3174,6 +3169,7 @@ static int dwc3_gadget_init_in_endpoint(
  	struct dwc3 *dwc = dep->dwc;
  	u32 mdwidth;
  	int size;
@@ -9236,7 +9127,7 @@ index 893d88848..68ca3b993 100644
  
  	mdwidth = dwc3_mdwidth(dwc);
  
-@@ -3183,21 +3179,24 @@ static int dwc3_gadget_init_in_endpoint(struct dwc3_ep *dep)
+@@ -3186,21 +3182,24 @@ static int dwc3_gadget_init_in_endpoint(
  	else
  		size = DWC31_GTXFIFOSIZ_TXFDEP(size);
  
@@ -9272,7 +9163,7 @@ index 893d88848..68ca3b993 100644
  	/*
  	 * If enable tx fifos resize, set each in ep maxpacket
  	 * to 1024, it can avoid being dependent on the default
-@@ -3205,7 +3204,6 @@ static int dwc3_gadget_init_in_endpoint(struct dwc3_ep *dep)
+@@ -3208,7 +3207,6 @@ static int dwc3_gadget_init_in_endpoint(
  	 */
  	if (dwc->do_fifo_resize)
  		size = 1024;
@@ -9280,7 +9171,7 @@ index 893d88848..68ca3b993 100644
  	usb_ep_set_maxpacket_limit(&dep->endpoint, size);
  
  	dep->endpoint.max_streams = 16;
-@@ -3432,6 +3430,10 @@ static int dwc3_gadget_ep_reclaim_completed_trb(struct dwc3_ep *dep,
+@@ -3435,6 +3433,10 @@ static int dwc3_gadget_ep_reclaim_comple
  	if (event->status & DEPEVT_STATUS_SHORT && !chain)
  		return 1;
  
@@ -9291,7 +9182,7 @@ index 893d88848..68ca3b993 100644
  	if ((trb->ctrl & DWC3_TRB_CTRL_IOC) ||
  	    (trb->ctrl & DWC3_TRB_CTRL_LST))
  		return 1;
-@@ -3485,6 +3487,7 @@ static int dwc3_gadget_ep_cleanup_completed_request(struct dwc3_ep *dep,
+@@ -3488,6 +3490,7 @@ static int dwc3_gadget_ep_cleanup_comple
  		struct dwc3_request *req, int status)
  {
  	struct dwc3 *dwc = dep->dwc;
@@ -9299,7 +9190,7 @@ index 893d88848..68ca3b993 100644
  	int ret;
  
  	if (req->request.num_mapped_sgs)
-@@ -3527,7 +3530,35 @@ static int dwc3_gadget_ep_cleanup_completed_request(struct dwc3_ep *dep,
+@@ -3530,7 +3533,35 @@ static int dwc3_gadget_ep_cleanup_comple
  		goto out;
  	}
  
@@ -9336,7 +9227,7 @@ index 893d88848..68ca3b993 100644
  
  out:
  	return ret;
-@@ -4472,7 +4503,6 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3_event_buffer *evt)
+@@ -4472,7 +4503,6 @@ static irqreturn_t dwc3_process_event_bu
  	struct dwc3 *dwc = evt->dwc;
  	irqreturn_t ret = IRQ_NONE;
  	int left;
@@ -9344,7 +9235,7 @@ index 893d88848..68ca3b993 100644
  
  	left = evt->count;
  
-@@ -4500,19 +4530,20 @@ static irqreturn_t dwc3_process_event_buf(struct dwc3_event_buffer *evt)
+@@ -4500,19 +4530,20 @@ static irqreturn_t dwc3_process_event_bu
  	}
  
  	evt->count = 0;
@@ -9369,15 +9260,15 @@ index 893d88848..68ca3b993 100644
  	return ret;
  }
  
-@@ -4537,7 +4568,6 @@ static irqreturn_t dwc3_check_event_buf(struct dwc3_event_buffer *evt)
+@@ -4537,7 +4568,6 @@ static irqreturn_t dwc3_check_event_buf(
  	struct dwc3 *dwc = evt->dwc;
  	u32 amount;
  	u32 count;
 -	u32 reg;
  
  	if (pm_runtime_suspended(dwc->dev)) {
- 		pm_runtime_get(dwc->dev);
-@@ -4564,9 +4594,8 @@ static irqreturn_t dwc3_check_event_buf(struct dwc3_event_buffer *evt)
+ 		dwc->pending_events = true;
+@@ -4569,9 +4599,8 @@ static irqreturn_t dwc3_check_event_buf(
  	evt->flags |= DWC3_EVENT_PENDING;
  
  	/* Mask interrupt */
@@ -9389,8 +9280,6 @@ index 893d88848..68ca3b993 100644
  
  	amount = min(count, evt->length - evt->lpos);
  	memcpy(evt->cache + evt->lpos, evt->buf + evt->lpos, amount);
-diff --git a/drivers/usb/host/ehci-platform.c b/drivers/usb/host/ehci-platform.c
-index c3dc90627..d9fc22c15 100644
 --- a/drivers/usb/host/ehci-platform.c
 +++ b/drivers/usb/host/ehci-platform.c
 @@ -56,6 +56,25 @@ struct ehci_platform_priv {
@@ -9419,7 +9308,7 @@ index c3dc90627..d9fc22c15 100644
  static int ehci_platform_reset(struct usb_hcd *hcd)
  {
  	struct platform_device *pdev = to_platform_device(hcd->self.controller);
-@@ -244,6 +263,8 @@ static int ehci_platform_probe(struct platform_device *dev)
+@@ -244,6 +263,8 @@ static int ehci_platform_probe(struct pl
  	struct ehci_platform_priv *priv;
  	struct ehci_hcd *ehci;
  	int err, irq, clk = 0;
@@ -9428,7 +9317,7 @@ index c3dc90627..d9fc22c15 100644
  
  	if (usb_disabled())
  		return -ENODEV;
-@@ -375,6 +396,25 @@ static int ehci_platform_probe(struct platform_device *dev)
+@@ -375,6 +396,25 @@ static int ehci_platform_probe(struct pl
  	if (err)
  		goto err_power;
  
@@ -9454,7 +9343,7 @@ index c3dc90627..d9fc22c15 100644
  	device_wakeup_enable(hcd->self.controller);
  	device_enable_async_suspend(hcd->self.controller);
  	platform_set_drvdata(dev, hcd);
-@@ -406,11 +446,21 @@ static int ehci_platform_remove(struct platform_device *dev)
+@@ -406,11 +446,21 @@ static int ehci_platform_remove(struct p
  	struct usb_hcd *hcd = platform_get_drvdata(dev);
  	struct usb_ehci_pdata *pdata = dev_get_platdata(&dev->dev);
  	struct ehci_platform_priv *priv = hcd_to_ehci_priv(hcd);
@@ -9476,8 +9365,6 @@ index c3dc90627..d9fc22c15 100644
  	usb_remove_hcd(hcd);
  
  	if (pdata->power_off)
-diff --git a/include/dt-bindings/soc/rockchip,boot-mode.h b/include/dt-bindings/soc/rockchip,boot-mode.h
-index 1436e1d32..ec4e5dd83 100644
 --- a/include/dt-bindings/soc/rockchip,boot-mode.h
 +++ b/include/dt-bindings/soc/rockchip,boot-mode.h
 @@ -20,5 +20,7 @@
@@ -9488,8 +9375,6 @@ index 1436e1d32..ec4e5dd83 100644
 +#define BOOT_QUIESCENT		(REBOOT_FLAG + 14)
  
  #endif
-diff --git a/include/linux/dma-buf.h b/include/linux/dma-buf.h
-index b30f97c46..e346da151 100644
 --- a/include/linux/dma-buf.h
 +++ b/include/linux/dma-buf.h
 @@ -355,7 +355,7 @@ struct dma_buf_ops {
@@ -9513,7 +9398,7 @@ index b30f97c46..e346da151 100644
  #endif
  };
  
-@@ -632,7 +633,7 @@ long dma_buf_set_name(struct dma_buf *dmabuf, const char *name);
+@@ -632,7 +633,7 @@ long dma_buf_set_name(struct dma_buf *dm
  int dma_buf_get_flags(struct dma_buf *dmabuf, unsigned long *flags);
  int dma_buf_get_uuid(struct dma_buf *dmabuf, uuid_t *uuid);
  
@@ -9522,8 +9407,6 @@ index b30f97c46..e346da151 100644
  /**
   * dma_buf_set_destructor - set the dma-buf's destructor
   * @dmabuf:		[in]	pointer to dma-buf
-diff --git a/include/linux/irqchip/arm-gic-v4.h b/include/linux/irqchip/arm-gic-v4.h
-index 6976b8331..943c3411c 100644
 --- a/include/linux/irqchip/arm-gic-v4.h
 +++ b/include/linux/irqchip/arm-gic-v4.h
 @@ -39,6 +39,8 @@ struct its_vpe {
@@ -9543,7 +9426,7 @@ index 6976b8331..943c3411c 100644
  	INVALL_VPE,
  	PROP_UPDATE_VSGI,
  };
-@@ -129,6 +132,7 @@ int its_alloc_vcpu_irqs(struct its_vm *vm);
+@@ -129,6 +132,7 @@ int its_alloc_vcpu_irqs(struct its_vm *v
  void its_free_vcpu_irqs(struct its_vm *vm);
  int its_make_vpe_resident(struct its_vpe *vpe, bool g0en, bool g1en);
  int its_make_vpe_non_resident(struct its_vpe *vpe, bool db);
@@ -9551,8 +9434,6 @@ index 6976b8331..943c3411c 100644
  int its_invall_vpe(struct its_vpe *vpe);
  int its_map_vlpi(int irq, struct its_vlpi_map *map);
  int its_get_vlpi(int irq, struct its_vlpi_map *map);
-diff --git a/include/linux/regulator/fan53555.h b/include/linux/regulator/fan53555.h
-index e8703b6fc..ce8df2186 100644
 --- a/include/linux/regulator/fan53555.h
 +++ b/include/linux/regulator/fan53555.h
 @@ -52,8 +52,6 @@ struct fan53555_platform_data {
@@ -9564,8 +9445,6 @@ index e8703b6fc..ce8df2186 100644
  };
  
  #endif /* __FAN53555_H__ */
-diff --git a/include/media/videobuf2-core.h b/include/media/videobuf2-core.h
-index bbb3f26fb..7ae816d8b 100644
 --- a/include/media/videobuf2-core.h
 +++ b/include/media/videobuf2-core.h
 @@ -19,7 +19,7 @@
@@ -9577,7 +9456,7 @@ index bbb3f26fb..7ae816d8b 100644
  #define VB2_MAX_PLANES	(8)
  
  /**
-@@ -1177,6 +1177,22 @@ vb2_plane_size(struct vb2_buffer *vb, unsigned int plane_no)
+@@ -1177,6 +1177,22 @@ vb2_plane_size(struct vb2_buffer *vb, un
  	return 0;
  }
  
@@ -9600,8 +9479,6 @@ index bbb3f26fb..7ae816d8b 100644
  /**
   * vb2_start_streaming_called() - return streaming status of driver.
   * @q:		pointer to &struct vb2_queue with videobuf2 queue.
-diff --git a/include/uapi/linux/videodev2.h b/include/uapi/linux/videodev2.h
-index b28817c59..514db71fb 100644
 --- a/include/uapi/linux/videodev2.h
 +++ b/include/uapi/linux/videodev2.h
 @@ -70,7 +70,7 @@
@@ -9657,11 +9534,9 @@ index b28817c59..514db71fb 100644
  };
  
  /*  Used in the VIDIOC_QUERYCTRL ioctl for querying controls */
-diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
-index 511c1806c..52531b4fb 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
-@@ -151,6 +151,7 @@ config SND_SOC_ALL_CODECS
+@@ -152,6 +152,7 @@ config SND_SOC_ALL_CODECS
  	imply SND_SOC_PCM512x_SPI
  	imply SND_SOC_RK3308
  	imply SND_SOC_RK3328
@@ -9669,7 +9544,7 @@ index 511c1806c..52531b4fb 100644
  	imply SND_SOC_RK817
  	imply SND_SOC_RT274
  	imply SND_SOC_RT286
-@@ -1029,6 +1030,10 @@ config SND_SOC_RK3328
+@@ -1034,6 +1035,10 @@ config SND_SOC_RK3328
  	tristate "Rockchip RK3328 audio CODEC"
  	select REGMAP_MMIO
  
@@ -9680,11 +9555,9 @@ index 511c1806c..52531b4fb 100644
  config SND_SOC_RK817
  	tristate "Rockchip RK817 CODEC"
  	depends on MFD_RK808
-diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
-index fa8e928c8..62df364ad 100644
 --- a/sound/soc/codecs/Makefile
 +++ b/sound/soc/codecs/Makefile
-@@ -156,6 +156,7 @@ snd-soc-pcm512x-i2c-objs := pcm512x-i2c.o
+@@ -157,6 +157,7 @@ snd-soc-pcm512x-i2c-objs := pcm512x-i2c.
  snd-soc-pcm512x-spi-objs := pcm512x-spi.o
  snd-soc-rk3308-objs := rk3308_codec.o
  snd-soc-rk3328-objs := rk3328_codec.o
@@ -9692,7 +9565,7 @@ index fa8e928c8..62df364ad 100644
  snd-soc-rk817-objs := rk817_codec.o
  snd-soc-rk-codec-digital-objs := rk_codec_digital.o
  snd-soc-rl6231-objs := rl6231.o
-@@ -467,6 +468,7 @@ obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd-soc-pcm512x-i2c.o
+@@ -469,6 +470,7 @@ obj-$(CONFIG_SND_SOC_PCM512x_I2C)	+= snd
  obj-$(CONFIG_SND_SOC_PCM512x_SPI)	+= snd-soc-pcm512x-spi.o
  obj-$(CONFIG_SND_SOC_RK3308)	+= snd-soc-rk3308.o
  obj-$(CONFIG_SND_SOC_RK3328)	+= snd-soc-rk3328.o
@@ -9700,6 +9573,3 @@ index fa8e928c8..62df364ad 100644
  obj-$(CONFIG_SND_SOC_RK817)	+= snd-soc-rk817.o
  obj-$(CONFIG_SND_SOC_RK_CODEC_DIGITAL)	+= snd-soc-rk-codec-digital.o
  obj-$(CONFIG_SND_SOC_RL6231)	+= snd-soc-rl6231.o
--- 
-2.31.0
-

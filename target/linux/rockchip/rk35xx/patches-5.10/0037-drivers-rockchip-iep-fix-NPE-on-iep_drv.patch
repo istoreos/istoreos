@@ -7,8 +7,6 @@ Subject: [PATCH 37/42] drivers/rockchip/iep: fix NPE on iep_drv
  drivers/video/rockchip/iep/iep_drv.c | 44 ++++++++++++++++------------
  1 file changed, 26 insertions(+), 18 deletions(-)
 
-diff --git a/drivers/video/rockchip/iep/iep_drv.c b/drivers/video/rockchip/iep/iep_drv.c
-index ce95352b3..656fd4cc4 100644
 --- a/drivers/video/rockchip/iep/iep_drv.c
 +++ b/drivers/video/rockchip/iep/iep_drv.c
 @@ -280,7 +280,7 @@ static void iep_power_off(void)
@@ -20,7 +18,7 @@ index ce95352b3..656fd4cc4 100644
  		if (!iep_drvdata1->dpi_mode) {
  			IEP_INFO("iep dpi mode inactivity\n");
  			iep_power_off();
-@@ -1083,6 +1083,7 @@ static int iep_drv_remove(struct platform_device *pdev)
+@@ -1083,6 +1083,7 @@ static int iep_drv_remove(struct platfor
  {
  	struct iep_drvdata *data = platform_get_drvdata(pdev);
  
@@ -28,7 +26,7 @@ index ce95352b3..656fd4cc4 100644
  	iep_iommu_info_destroy(iep_service.iommu_info);
  	iep_service.iommu_info = NULL;
  #ifdef CONFIG_PM_WAKELOCKS
-@@ -1124,25 +1125,31 @@ static int proc_iep_show(struct seq_file *s, void *v)
+@@ -1124,25 +1125,31 @@ static int proc_iep_show(struct seq_file
  {
  	struct iep_status sts;
  	//mutex_lock(&iep_service.mutex);
@@ -41,6 +39,10 @@ index ce95352b3..656fd4cc4 100644
 -		sts.wrgb_sts, sts.rrgb_sts, sts.voi_sts); {
 -		int *reg = (int *)iep_drvdata1->iep_base;
 -		int i;
+-
+-		/* could not read validate data from address after base+0x40 */
+-		for (i = 0; i < 0x40; i++) {
+-			seq_printf(s, "%08x ", reg[i]);
 +	if (iep_drvdata1) {
 +		iep_power_on();
 +		seq_printf(s, "\nIEP Modules Status:\n");
@@ -53,16 +55,13 @@ index ce95352b3..656fd4cc4 100644
 +			int *reg = (int *)iep_drvdata1->iep_base;
 +			int i;
  
--		/* could not read validate data from address after base+0x40 */
--		for (i = 0; i < 0x40; i++) {
--			seq_printf(s, "%08x ", reg[i]);
-+			/* could not read validate data from address after base+0x40 */
-+			for (i = 0; i < 0x40; i++) {
-+				seq_printf(s, "%08x ", reg[i]);
- 
 -			if ((i + 1) % 4 == 0)
 -				seq_printf(s, "\n");
 -		}
++			/* could not read validate data from address after base+0x40 */
++			for (i = 0; i < 0x40; i++) {
++				seq_printf(s, "%08x ", reg[i]);
++
 +				if ((i + 1) % 4 == 0)
 +					seq_printf(s, "\n");
 +			}
@@ -86,6 +85,3 @@ index ce95352b3..656fd4cc4 100644
  	platform_driver_unregister(&iep_driver);
  }
  
--- 
-2.37.1 (Apple Git-137.1)
-

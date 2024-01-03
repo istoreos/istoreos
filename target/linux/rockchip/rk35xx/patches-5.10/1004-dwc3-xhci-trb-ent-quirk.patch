@@ -19,11 +19,9 @@ Signed-off-by: William Wu <william.wu@rock-chips.com>
  drivers/usb/dwc3/host.c | 5 ++++-
  3 files changed, 10 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/usb/dwc3/core.c b/drivers/usb/dwc3/core.c
-index 35fdf9d54..3dd40623a 100644
 --- a/drivers/usb/dwc3/core.c
 +++ b/drivers/usb/dwc3/core.c
-@@ -1411,6 +1411,8 @@ static void dwc3_get_properties(struct dwc3 *dwc)
+@@ -1432,6 +1432,8 @@ static void dwc3_get_properties(struct d
  				"snps,dis-tx-ipgap-linecheck-quirk");
  	dwc->parkmode_disable_ss_quirk = device_property_read_bool(dev,
  				"snps,parkmode-disable-ss-quirk");
@@ -32,11 +30,9 @@ index 35fdf9d54..3dd40623a 100644
  
  	dwc->tx_de_emphasis_quirk = device_property_read_bool(dev,
  				"snps,tx_de_emphasis_quirk");
-diff --git a/drivers/usb/dwc3/core.h b/drivers/usb/dwc3/core.h
-index e69e8136a..055c3df5e 100644
 --- a/drivers/usb/dwc3/core.h
 +++ b/drivers/usb/dwc3/core.h
-@@ -1083,6 +1083,9 @@ struct dwc3_scratchpad_array {
+@@ -1080,6 +1080,9 @@ struct dwc3_scratchpad_array {
   *			check during HS transmit.
   * @parkmode_disable_ss_quirk: set if we need to disable all SuperSpeed
   *			instances in park mode.
@@ -46,7 +42,7 @@ index e69e8136a..055c3df5e 100644
   * @tx_de_emphasis_quirk: set if we enable Tx de-emphasis quirk
   * @tx_de_emphasis: Tx de-emphasis value
   *	0	- -6dB de-emphasis
-@@ -1298,6 +1301,7 @@ struct dwc3 {
+@@ -1295,6 +1298,7 @@ struct dwc3 {
  	unsigned		dis_del_phy_power_chg_quirk:1;
  	unsigned		dis_tx_ipgap_linecheck_quirk:1;
  	unsigned		parkmode_disable_ss_quirk:1;
@@ -54,11 +50,9 @@ index e69e8136a..055c3df5e 100644
  
  	unsigned		tx_de_emphasis_quirk:1;
  	unsigned		tx_de_emphasis:2;
-diff --git a/drivers/usb/dwc3/host.c b/drivers/usb/dwc3/host.c
-index a66f16e88..695cbaec5 100644
 --- a/drivers/usb/dwc3/host.c
 +++ b/drivers/usb/dwc3/host.c
-@@ -44,7 +44,7 @@ static int dwc3_host_get_irq(struct dwc3 *dwc)
+@@ -44,7 +44,7 @@ out:
  
  int dwc3_host_init(struct dwc3 *dwc)
  {
@@ -77,6 +71,3 @@ index a66f16e88..695cbaec5 100644
  	/**
  	 * WORKAROUND: dwc3 revisions <=3.00a have a limitation
  	 * where Port Disable command doesn't work.
--- 
-2.31.0
-

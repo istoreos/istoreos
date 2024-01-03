@@ -10,8 +10,6 @@ Subject: [PATCH 07/42] drivers: add rockchip mfd
  include/linux/mfd/rk808.h | 453 +++++++++++++++++-
  4 files changed, 1348 insertions(+), 72 deletions(-)
 
-diff --git a/drivers/mfd/Kconfig b/drivers/mfd/Kconfig
-index b8847ae04..4e503ef68 100644
 --- a/drivers/mfd/Kconfig
 +++ b/drivers/mfd/Kconfig
 @@ -1116,15 +1116,34 @@ config MFD_RC5T583
@@ -51,11 +49,9 @@ index b8847ae04..4e503ef68 100644
  	  This driver provides common support for accessing the device
  	  through I2C interface. The device supports multiple sub-devices
  	  including interrupts, RTC, LDO & DCDC regulators, and onkey.
-diff --git a/drivers/mfd/Makefile b/drivers/mfd/Makefile
-index 1780019d2..da268cd5c 100644
 --- a/drivers/mfd/Makefile
 +++ b/drivers/mfd/Makefile
-@@ -219,6 +219,8 @@ obj-$(CONFIG_MFD_INTEL_PMC_BXT)	+= intel_pmc_bxt.o
+@@ -219,6 +219,8 @@ obj-$(CONFIG_MFD_INTEL_PMC_BXT)	+= intel
  obj-$(CONFIG_MFD_PALMAS)	+= palmas.o
  obj-$(CONFIG_MFD_VIPERBOARD)    += viperboard.o
  obj-$(CONFIG_MFD_RC5T583)	+= rc5t583.o rc5t583-irq.o
@@ -64,8 +60,6 @@ index 1780019d2..da268cd5c 100644
  obj-$(CONFIG_MFD_RK808)		+= rk808.o
  obj-$(CONFIG_MFD_RN5T618)	+= rn5t618.o
  obj-$(CONFIG_MFD_SEC_CORE)	+= sec-core.o sec-irq.o
-diff --git a/drivers/mfd/rk808.c b/drivers/mfd/rk808.c
-index d109b9f14..514ba539f 100644
 --- a/drivers/mfd/rk808.c
 +++ b/drivers/mfd/rk808.c
 @@ -2,7 +2,7 @@
@@ -89,7 +83,7 @@ index d109b9f14..514ba539f 100644
  
  struct rk808_reg_data {
  	int addr;
-@@ -65,22 +69,61 @@ static bool rk817_is_volatile_reg(struct device *dev, unsigned int reg)
+@@ -65,22 +69,61 @@ static bool rk817_is_volatile_reg(struct
  	switch (reg) {
  	case RK817_SECONDS_REG ... RK817_WEEKS_REG:
  	case RK817_RTC_STATUS_REG:
@@ -155,7 +149,7 @@ index d109b9f14..514ba539f 100644
  };
  
  static const struct regmap_config rk805_regmap_config = {
-@@ -99,30 +142,48 @@ static const struct regmap_config rk808_regmap_config = {
+@@ -99,30 +142,48 @@ static const struct regmap_config rk808_
  	.volatile_reg = rk808_is_volatile_reg,
  };
  
@@ -211,7 +205,7 @@ index d109b9f14..514ba539f 100644
  };
  
  static const struct mfd_cell rk805s[] = {
-@@ -150,9 +211,28 @@ static const struct mfd_cell rk808s[] = {
+@@ -150,9 +211,28 @@ static const struct mfd_cell rk808s[] =
  	},
  };
  
@@ -240,7 +234,7 @@ index d109b9f14..514ba539f 100644
  	{
  		.name = "rk805-pwrkey",
  		.num_resources = ARRAY_SIZE(rk817_pwrkey_resources),
-@@ -163,11 +243,17 @@ static const struct mfd_cell rk817s[] = {
+@@ -163,11 +243,17 @@ static const struct mfd_cell rk817s[] =
  		.num_resources = ARRAY_SIZE(rk817_rtc_resources),
  		.resources = &rk817_rtc_resources[0],
  	},
@@ -258,7 +252,7 @@ index d109b9f14..514ba539f 100644
  	{
  		.name = "rk808-rtc",
  		.num_resources = ARRAY_SIZE(rtc_resources),
-@@ -176,16 +262,18 @@ static const struct mfd_cell rk818s[] = {
+@@ -176,16 +262,18 @@ static const struct mfd_cell rk818s[] =
  };
  
  static const struct rk808_reg_data rk805_pre_init_reg[] = {
@@ -285,7 +279,7 @@ index d109b9f14..514ba539f 100644
  };
  
  static const struct rk808_reg_data rk808_pre_init_reg[] = {
-@@ -195,11 +283,40 @@ static const struct rk808_reg_data rk808_pre_init_reg[] = {
+@@ -195,11 +283,40 @@ static const struct rk808_reg_data rk808
  	{ RK808_BUCK1_CONFIG_REG, BUCK1_RATE_MASK,  BUCK_ILMIN_200MA },
  	{ RK808_BUCK2_CONFIG_REG, BUCK2_RATE_MASK,  BUCK_ILMIN_200MA },
  	{ RK808_DCDC_UV_ACT_REG,  BUCK_UV_ACT_MASK, BUCK_UV_ACT_DISABLE},
@@ -326,7 +320,7 @@ index d109b9f14..514ba539f 100644
  	{RK817_RTC_CTRL_REG, RTC_STOP, RTC_STOP},
  	{RK817_GPIO_INT_CFG, RK817_INT_POL_MSK, RK817_INT_POL_L},
  	{RK817_SYS_CFG(1), RK817_HOTDIE_TEMP_MSK | RK817_TSD_TEMP_MSK,
-@@ -220,8 +337,10 @@ static const struct rk808_reg_data rk818_pre_init_reg[] = {
+@@ -220,8 +337,10 @@ static const struct rk808_reg_data rk818
  	{ RK818_H5V_EN_REG,	  BIT(1),	    RK818_REF_RDY_CTRL },
  	/* enable HDMI 5V */
  	{ RK818_H5V_EN_REG,	  BIT(0),	    RK818_H5V_EN },
@@ -337,7 +331,7 @@ index d109b9f14..514ba539f 100644
  };
  
  static const struct regmap_irq rk805_irqs[] = {
-@@ -301,6 +420,70 @@ static const struct regmap_irq rk808_irqs[] = {
+@@ -301,6 +420,70 @@ static const struct regmap_irq rk808_irq
  	},
  };
  
@@ -408,7 +402,7 @@ index d109b9f14..514ba539f 100644
  static const struct regmap_irq rk818_irqs[] = {
  	/* INT_STS */
  	[RK818_IRQ_VOUT_LO] = {
-@@ -398,7 +581,7 @@ static const struct regmap_irq rk817_irqs[RK817_IRQ_END] = {
+@@ -398,7 +581,7 @@ static const struct regmap_irq rk817_irq
  	REGMAP_IRQ_REG_LINE(23, 8)
  };
  
@@ -417,7 +411,7 @@ index d109b9f14..514ba539f 100644
  	.name = "rk805",
  	.irqs = rk805_irqs,
  	.num_irqs = ARRAY_SIZE(rk805_irqs),
-@@ -421,7 +604,62 @@ static const struct regmap_irq_chip rk808_irq_chip = {
+@@ -421,7 +604,62 @@ static const struct regmap_irq_chip rk80
  	.init_ack_masked = true,
  };
  
@@ -481,7 +475,7 @@ index d109b9f14..514ba539f 100644
  	.name = "rk817",
  	.irqs = rk817_irqs,
  	.num_irqs = ARRAY_SIZE(rk817_irqs),
-@@ -446,8 +684,70 @@ static const struct regmap_irq_chip rk818_irq_chip = {
+@@ -446,8 +684,70 @@ static const struct regmap_irq_chip rk81
  };
  
  static struct i2c_client *rk808_i2c_client;
@@ -720,7 +714,7 @@ index d109b9f14..514ba539f 100644
 +	if (!pinctrl_dev) {
 +		dev_err(dev, "Alloc pinctrl dev failed!\n");
 +		return -ENOMEM;
- 	}
++	}
 +
 +	pinctrl_dev->dev.parent = dev;
 +
@@ -786,9 +780,7 @@ index d109b9f14..514ba539f 100644
 +
 +	ret = pinctrl_select_state(rk808->pins->p, rk808->pins->reset);
 +
- 	if (ret)
--		dev_warn(&client->dev,
--			 "Cannot switch to power down function\n");
++	if (ret)
 +		dev_dbg(dev, "failed to activate reset-setting pinctrl state\n");
 +
 +	return 0;
@@ -872,8 +864,8 @@ index d109b9f14..514ba539f 100644
 +	}
 +
 +	return NOTIFY_OK;
- }
- 
++}
++
 +static void rk817_of_property_prepare(struct rk808 *rk808, struct device *dev)
 +{
 +	u32 inner;
@@ -901,7 +893,7 @@ index d109b9f14..514ba539f 100644
 +		       (func << RK817_RST_FUNC_SFT);
 +	} else {
 +		val |= RK817_RST_FUNC_REG;
-+	}
+ 	}
 +
 +	regmap_update_bits(rk808->regmap, RK817_SYS_CFG(3), msk, val);
 +
@@ -911,10 +903,12 @@ index d109b9f14..514ba539f 100644
 +	rk817_reboot_data.reboot_notifier.notifier_call =
 +		rk817_reboot_notifier_handler;
 +	ret = register_reboot_notifier(&rk817_reboot_data.reboot_notifier);
-+	if (ret)
+ 	if (ret)
+-		dev_warn(&client->dev,
+-			 "Cannot switch to power down function\n");
 +		dev_err(dev, "failed to register reboot nb\n");
-+}
-+
+ }
+ 
 +static struct kobject *rk8xx_kobj;
 +static struct device_attribute rk8xx_attrs =
 +		__ATTR(rk8xx_dbg, 0200, NULL, rk8xx_dbg_store);
@@ -927,7 +921,7 @@ index d109b9f14..514ba539f 100644
  	{ .compatible = "rockchip,rk817" },
  	{ .compatible = "rockchip,rk818" },
  	{ },
-@@ -517,13 +1124,20 @@ static int rk808_probe(struct i2c_client *client,
+@@ -517,13 +1124,20 @@ static int rk808_probe(struct i2c_client
  	struct device_node *np = client->dev.of_node;
  	struct rk808 *rk808;
  	const struct rk808_reg_data *pre_init_reg;
@@ -950,7 +944,7 @@ index d109b9f14..514ba539f 100644
  
  	rk808 = devm_kzalloc(&client->dev, sizeof(*rk808), GFP_KERNEL);
  	if (!rk808)
-@@ -564,6 +1178,14 @@ static int rk808_probe(struct i2c_client *client,
+@@ -564,6 +1178,14 @@ static int rk808_probe(struct i2c_client
  		nr_pre_init_regs = ARRAY_SIZE(rk805_pre_init_reg);
  		cells = rk805s;
  		nr_cells = ARRAY_SIZE(rk805s);
@@ -965,7 +959,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	case RK808_ID:
  		rk808->regmap_cfg = &rk808_regmap_config;
-@@ -572,6 +1194,23 @@ static int rk808_probe(struct i2c_client *client,
+@@ -572,6 +1194,23 @@ static int rk808_probe(struct i2c_client
  		nr_pre_init_regs = ARRAY_SIZE(rk808_pre_init_reg);
  		cells = rk808s;
  		nr_cells = ARRAY_SIZE(rk808s);
@@ -989,7 +983,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	case RK818_ID:
  		rk808->regmap_cfg = &rk818_regmap_config;
-@@ -580,6 +1219,13 @@ static int rk808_probe(struct i2c_client *client,
+@@ -580,6 +1219,13 @@ static int rk808_probe(struct i2c_client
  		nr_pre_init_regs = ARRAY_SIZE(rk818_pre_init_reg);
  		cells = rk818s;
  		nr_cells = ARRAY_SIZE(rk818s);
@@ -1003,7 +997,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	case RK809_ID:
  	case RK817_ID:
-@@ -589,6 +1235,11 @@ static int rk808_probe(struct i2c_client *client,
+@@ -589,6 +1235,11 @@ static int rk808_probe(struct i2c_client
  		nr_pre_init_regs = ARRAY_SIZE(rk817_pre_init_reg);
  		cells = rk817s;
  		nr_cells = ARRAY_SIZE(rk817s);
@@ -1015,7 +1009,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	default:
  		dev_err(&client->dev, "Unsupported RK8XX ID %lu\n",
-@@ -597,6 +1248,7 @@ static int rk808_probe(struct i2c_client *client,
+@@ -597,6 +1248,7 @@ static int rk808_probe(struct i2c_client
  	}
  
  	rk808->i2c = client;
@@ -1023,7 +1017,7 @@ index d109b9f14..514ba539f 100644
  	i2c_set_clientdata(client, rk808);
  
  	rk808->regmap = devm_regmap_init_i2c(client, rk808->regmap_cfg);
-@@ -605,28 +1257,67 @@ static int rk808_probe(struct i2c_client *client,
+@@ -605,28 +1257,67 @@ static int rk808_probe(struct i2c_client
  		return PTR_ERR(rk808->regmap);
  	}
  
@@ -1099,7 +1093,7 @@ index d109b9f14..514ba539f 100644
  			return ret;
  		}
  	}
-@@ -639,15 +1330,34 @@ static int rk808_probe(struct i2c_client *client,
+@@ -639,15 +1330,34 @@ static int rk808_probe(struct i2c_client
  		goto err_irq;
  	}
  
@@ -1137,7 +1131,7 @@ index d109b9f14..514ba539f 100644
  	return ret;
  }
  
-@@ -656,21 +1366,45 @@ static int rk808_remove(struct i2c_client *client)
+@@ -656,21 +1366,45 @@ static int rk808_remove(struct i2c_clien
  	struct rk808 *rk808 = i2c_get_clientdata(client);
  
  	regmap_del_irq_chip(client->irq, rk808->irq_data);
@@ -1186,7 +1180,7 @@ index d109b9f14..514ba539f 100644
  
  	switch (rk808->variant) {
  	case RK805_ID:
-@@ -681,10 +1415,34 @@ static int __maybe_unused rk8xx_suspend(struct device *dev)
+@@ -681,10 +1415,34 @@ static int __maybe_unused rk8xx_suspend(
  		break;
  	case RK809_ID:
  	case RK817_ID:
@@ -1225,7 +1219,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	default:
  		break;
-@@ -695,16 +1453,51 @@ static int __maybe_unused rk8xx_suspend(struct device *dev)
+@@ -695,16 +1453,51 @@ static int __maybe_unused rk8xx_suspend(
  
  static int __maybe_unused rk8xx_resume(struct device *dev)
  {
@@ -1283,7 +1277,7 @@ index d109b9f14..514ba539f 100644
  		break;
  	default:
  		break;
-@@ -712,7 +1505,7 @@ static int __maybe_unused rk8xx_resume(struct device *dev)
+@@ -712,7 +1505,7 @@ static int __maybe_unused rk8xx_resume(s
  
  	return ret;
  }
@@ -1292,7 +1286,7 @@ index d109b9f14..514ba539f 100644
  
  static struct i2c_driver rk808_i2c_driver = {
  	.driver = {
-@@ -722,10 +1515,23 @@ static struct i2c_driver rk808_i2c_driver = {
+@@ -722,10 +1515,23 @@ static struct i2c_driver rk808_i2c_drive
  	},
  	.probe    = rk808_probe,
  	.remove   = rk808_remove,
@@ -1317,8 +1311,6 @@ index d109b9f14..514ba539f 100644
  
  MODULE_LICENSE("GPL");
  MODULE_AUTHOR("Chris Zhong <zyw@rock-chips.com>");
-diff --git a/include/linux/mfd/rk808.h b/include/linux/mfd/rk808.h
-index e07f6e61c..7cdc5dfa4 100644
 --- a/include/linux/mfd/rk808.h
 +++ b/include/linux/mfd/rk808.h
 @@ -113,6 +113,235 @@ enum rk808_reg {
@@ -1869,6 +1861,3 @@ index e07f6e61c..7cdc5dfa4 100644
 +	struct rk808_pin_info *pins;
  };
  #endif /* __LINUX_REGULATOR_RK808_H */
--- 
-2.37.1 (Apple Git-137.1)
-

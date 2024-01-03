@@ -9,8 +9,6 @@ Change-Id: Iaf29eebe4ccf3e9a25f5a76cd727af2410d514b3
  drivers/devfreq/event/rockchip-dfi.c | 42 ++++++++++++++++++++++++++++
  1 file changed, 42 insertions(+)
 
-diff --git a/drivers/devfreq/event/rockchip-dfi.c b/drivers/devfreq/event/rockchip-dfi.c
-index 4aa090e78..e65e4890d 100644
 --- a/drivers/devfreq/event/rockchip-dfi.c
 +++ b/drivers/devfreq/event/rockchip-dfi.c
 @@ -52,6 +52,10 @@
@@ -24,7 +22,7 @@ index 4aa090e78..e65e4890d 100644
  #define MAX_DMC_NUM_CH			4
  #define READ_DRAMTYPE_INFO(n)		(((n) >> 13) & 0x7)
  #define READ_CH_INFO(n)			(((n) >> 28) & 0x3)
-@@ -723,6 +727,41 @@ static __maybe_unused __init int rk3328_dfi_init(struct platform_device *pdev,
+@@ -723,6 +727,41 @@ static __maybe_unused __init int rk3328_
  	return 0;
  }
  
@@ -66,7 +64,7 @@ index 4aa090e78..e65e4890d 100644
  static const struct of_device_id rockchip_dfi_id_match[] = {
  #ifdef CONFIG_CPU_PX30
  	{ .compatible = "rockchip,px30-dfi", .data = px30_dfi_init },
-@@ -745,6 +784,9 @@ static const struct of_device_id rockchip_dfi_id_match[] = {
+@@ -745,6 +784,9 @@ static const struct of_device_id rockchi
  #ifdef CONFIG_CPU_RK3399
  	{ .compatible = "rockchip,rk3399-dfi", .data = rockchip_dfi_init },
  #endif
@@ -76,6 +74,3 @@ index 4aa090e78..e65e4890d 100644
  #ifdef CONFIG_CPU_RK3562
  	{ .compatible = "rockchip,rk3562-dfi", .data = px30_dfi_init },
  #endif
--- 
-2.31.0
-

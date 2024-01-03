@@ -1181,14 +1181,18 @@ Subject: [PATCH 19/42] drivers: update stmmac
 +	if (IS_ERR(bsp_priv->grf)) {
 +		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
 +		return;
-+	}
+ 	}
 +
 +	regmap_write(bsp_priv->grf, RV1126_GRF_GMAC_CON0,
 +		     RV1126_GMAC_PHY_INTF_SEL_RMII);
-+}
-+
+ }
+ 
+-static void rk_gmac_integrated_phy_powerdown(struct rk_priv_data *priv)
 +static void rv1126_set_rgmii_speed(struct rk_priv_data *bsp_priv, int speed)
-+{
+ {
+-	regmap_write(priv->grf, RK_GRF_MACPHY_CON0, RK_MACPHY_DISABLE);
+-	if (priv->phy_reset)
+-		reset_control_assert(priv->phy_reset);
 +	struct device *dev = &bsp_priv->pdev->dev;
 +	unsigned long rate;
 +	int ret;
@@ -1206,20 +1210,16 @@ Subject: [PATCH 19/42] drivers: update stmmac
 +	default:
 +		dev_err(dev, "unknown speed value for RGMII speed=%d", speed);
 +		return;
- 	}
++	}
 +
 +	ret = clk_set_rate(bsp_priv->clk_mac_speed, rate);
 +	if (ret)
 +		dev_err(dev, "%s: set clk_mac_speed rate %ld failed %d\n",
 +			__func__, rate, ret);
- }
- 
--static void rk_gmac_integrated_phy_powerdown(struct rk_priv_data *priv)
++}
++
 +static void rv1126_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
- {
--	regmap_write(priv->grf, RK_GRF_MACPHY_CON0, RK_MACPHY_DISABLE);
--	if (priv->phy_reset)
--		reset_control_assert(priv->phy_reset);
++{
 +	struct device *dev = &bsp_priv->pdev->dev;
 +	unsigned long rate;
 +	int ret;
@@ -1343,15 +1343,15 @@ Subject: [PATCH 19/42] drivers: update stmmac
  {
  	struct regulator *ldo = bsp_priv->regulator;
  	int ret;
-@@ -1263,6 +2108,7 @@ static struct rk_priv_data *rk_gmac_setu
+@@ -1260,6 +2105,7 @@ static struct rk_priv_data *rk_gmac_setu
  
  	of_get_phy_mode(dev->of_node, &bsp_priv->phy_iface);
  	bsp_priv->ops = ops;
 +	bsp_priv->bus_id = plat->bus_id;
  
- 	bsp_priv->regulator = devm_regulator_get_optional(dev, "phy");
+ 	bsp_priv->regulator = devm_regulator_get(dev, "phy");
  	if (IS_ERR(bsp_priv->regulator)) {
-@@ -1289,7 +2135,7 @@ static struct rk_priv_data *rk_gmac_setu
+@@ -1283,7 +2129,7 @@ static struct rk_priv_data *rk_gmac_setu
  
  	ret = of_property_read_u32(dev->of_node, "tx_delay", &value);
  	if (ret) {
@@ -1360,7 +1360,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		dev_err(dev, "Can not read property: tx_delay.");
  		dev_err(dev, "set tx_delay to 0x%x\n",
  			bsp_priv->tx_delay);
-@@ -1300,7 +2146,7 @@ static struct rk_priv_data *rk_gmac_setu
+@@ -1294,7 +2140,7 @@ static struct rk_priv_data *rk_gmac_setu
  
  	ret = of_property_read_u32(dev->of_node, "rx_delay", &value);
  	if (ret) {
@@ -1369,7 +1369,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		dev_err(dev, "Can not read property: rx_delay.");
  		dev_err(dev, "set rx_delay to 0x%x\n",
  			bsp_priv->rx_delay);
-@@ -1314,16 +2160,51 @@ static struct rk_priv_data *rk_gmac_setu
+@@ -1308,16 +2154,51 @@ static struct rk_priv_data *rk_gmac_setu
  
  	bsp_priv->grf = syscon_regmap_lookup_by_phandle(dev->of_node,
  							"rockchip,grf");
@@ -1421,7 +1421,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		}
  	}
  	dev_info(dev, "integrated PHY? (%s).\n",
-@@ -1347,30 +2228,45 @@ static int rk_gmac_powerup(struct rk_pri
+@@ -1341,30 +2222,45 @@ static int rk_gmac_powerup(struct rk_pri
  	switch (bsp_priv->phy_iface) {
  	case PHY_INTERFACE_MODE_RGMII:
  		dev_info(dev, "init for RGMII\n");
@@ -1474,7 +1474,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	if (ret) {
  		gmac_clk_enable(bsp_priv, false);
  		return ret;
-@@ -1378,20 +2274,14 @@ static int rk_gmac_powerup(struct rk_pri
+@@ -1372,20 +2268,14 @@ static int rk_gmac_powerup(struct rk_pri
  
  	pm_runtime_get_sync(dev);
  
@@ -1496,7 +1496,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	gmac_clk_enable(gmac, false);
  }
  
-@@ -1405,16 +2295,109 @@ static void rk_fix_speed(void *priv, uns
+@@ -1399,16 +2289,109 @@ static void rk_fix_speed(void *priv, uns
  	case PHY_INTERFACE_MODE_RGMII_ID:
  	case PHY_INTERFACE_MODE_RGMII_RXID:
  	case PHY_INTERFACE_MODE_RGMII_TXID:
@@ -1608,7 +1608,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  static int rk_gmac_probe(struct platform_device *pdev)
  {
  	struct plat_stmmacenet_data *plat_dat;
-@@ -1436,8 +2419,13 @@ static int rk_gmac_probe(struct platform
+@@ -1430,8 +2413,13 @@ static int rk_gmac_probe(struct platform
  	if (IS_ERR(plat_dat))
  		return PTR_ERR(plat_dat);
  
@@ -1623,7 +1623,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  	plat_dat->bsp_priv = rk_gmac_setup(pdev, plat_dat, data);
  	if (IS_ERR(plat_dat->bsp_priv)) {
-@@ -1457,6 +2445,10 @@ static int rk_gmac_probe(struct platform
+@@ -1451,6 +2439,10 @@ static int rk_gmac_probe(struct platform
  	if (ret)
  		goto err_gmac_powerdown;
  
@@ -1634,7 +1634,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	return 0;
  
  err_gmac_powerdown:
-@@ -1473,6 +2465,7 @@ static int rk_gmac_remove(struct platfor
+@@ -1467,6 +2459,7 @@ static int rk_gmac_remove(struct platfor
  	int ret = stmmac_dvr_remove(&pdev->dev);
  
  	rk_gmac_powerdown(bsp_priv);
@@ -1642,7 +1642,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  	return ret;
  }
-@@ -1509,15 +2502,51 @@ static int rk_gmac_resume(struct device
+@@ -1503,15 +2496,51 @@ static int rk_gmac_resume(struct device
  static SIMPLE_DEV_PM_OPS(rk_gmac_pm_ops, rk_gmac_suspend, rk_gmac_resume);
  
  static const struct of_device_id rk_gmac_dwmac_match[] = {
@@ -1706,7 +1706,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	} else {
  		value &= ~MTL_RXQ_DMA_QXMDMACH_MASK(queue);
  		value |= MTL_RXQ_DMA_QXMDMACH(chan, queue);
-@@ -719,8 +716,6 @@ static void dwmac4_flow_ctrl(struct mac_
+@@ -665,8 +662,6 @@ static void dwmac4_flow_ctrl(struct mac_
  	if (fc & FLOW_RX) {
  		pr_debug("\tReceive Flow-Control ON\n");
  		flow |= GMAC_RX_FLOW_CTRL_RFE;
@@ -1715,7 +1715,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	}
  	writel(flow, ioaddr + GMAC_RX_FLOW_CTRL);
  
-@@ -1147,6 +1142,7 @@ static int dwmac4_config_l4_filter(struc
+@@ -1093,6 +1088,7 @@ static int dwmac4_config_l4_filter(struc
  	return 0;
  }
  
@@ -1723,7 +1723,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  const struct stmmac_ops dwmac4_ops = {
  	.core_init = dwmac4_core_init,
  	.set_mac = stmmac_set_mac,
-@@ -1187,6 +1183,7 @@ const struct stmmac_ops dwmac4_ops = {
+@@ -1133,6 +1129,7 @@ const struct stmmac_ops dwmac4_ops = {
  	.del_hw_vlan_rx_fltr = dwmac4_del_hw_vlan_rx_fltr,
  	.restore_hw_vlan_rx_fltr = dwmac4_restore_hw_vlan_rx_fltr,
  };
@@ -1731,7 +1731,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  const struct stmmac_ops dwmac410_ops = {
  	.core_init = dwmac4_core_init,
-@@ -1217,7 +1214,9 @@ const struct stmmac_ops dwmac410_ops = {
+@@ -1163,7 +1160,9 @@ const struct stmmac_ops dwmac410_ops = {
  	.pcs_get_adv_lp = dwmac4_get_adv_lp,
  	.debug = dwmac4_debug,
  	.set_filter = dwmac4_set_filter,
@@ -1741,7 +1741,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	.set_mac_loopback = dwmac4_set_mac_loopback,
  	.update_vlan_hash = dwmac4_update_vlan_hash,
  	.sarc_configure = dwmac4_sarc_configure,
-@@ -1225,13 +1224,16 @@ const struct stmmac_ops dwmac410_ops = {
+@@ -1171,13 +1170,16 @@ const struct stmmac_ops dwmac410_ops = {
  	.set_arp_offload = dwmac4_set_arp_offload,
  	.config_l3_filter = dwmac4_config_l3_filter,
  	.config_l4_filter = dwmac4_config_l4_filter,
@@ -1758,7 +1758,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  const struct stmmac_ops dwmac510_ops = {
  	.core_init = dwmac4_core_init,
  	.set_mac = stmmac_dwmac4_set_mac,
-@@ -1279,6 +1281,7 @@ const struct stmmac_ops dwmac510_ops = {
+@@ -1225,6 +1227,7 @@ const struct stmmac_ops dwmac510_ops = {
  	.del_hw_vlan_rx_fltr = dwmac4_del_hw_vlan_rx_fltr,
  	.restore_hw_vlan_rx_fltr = dwmac4_restore_hw_vlan_rx_fltr,
  };
@@ -2186,7 +2186,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		}
  	}
  }
-@@ -5053,6 +5042,10 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5057,6 +5046,10 @@ int stmmac_dvr_probe(struct device *devi
  			reset_control_reset(priv->plat->stmmac_rst);
  	}
  
@@ -2197,7 +2197,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	/* Init MAC and get the capabilities */
  	ret = stmmac_hw_init(priv);
  	if (ret)
-@@ -5078,10 +5071,12 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5082,10 +5075,12 @@ int stmmac_dvr_probe(struct device *devi
  		dev_info(priv->device, "TSO feature enabled\n");
  	}
  
@@ -2213,7 +2213,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	}
  
  	/* The current IP register MAC_HW_Feature1[ADDR64] only define
-@@ -5211,6 +5206,14 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5215,6 +5210,14 @@ int stmmac_dvr_probe(struct device *devi
  		goto error_netdev_register;
  	}
  
@@ -2228,7 +2228,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  #ifdef CONFIG_DEBUG_FS
  	stmmac_init_fs(ndev);
  #endif
-@@ -5222,6 +5225,8 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5226,6 +5229,8 @@ int stmmac_dvr_probe(struct device *devi
  
  	return ret;
  
@@ -2237,7 +2237,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  error_netdev_register:
  	phylink_destroy(priv->phylink);
  error_phy_setup:
-@@ -5267,6 +5272,7 @@ int stmmac_dvr_remove(struct device *dev
+@@ -5265,6 +5270,7 @@ int stmmac_dvr_remove(struct device *dev
  	phylink_destroy(priv->phylink);
  	if (priv->plat->stmmac_rst)
  		reset_control_assert(priv->plat->stmmac_rst);
@@ -2245,7 +2245,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	pm_runtime_put(dev);
  	pm_runtime_disable(dev);
  	if (priv->hw->pcs != STMMAC_PCS_TBI &&
-@@ -5326,6 +5332,9 @@ int stmmac_suspend(struct device *dev)
+@@ -5324,6 +5330,9 @@ int stmmac_suspend(struct device *dev)
  		rtnl_lock();
  		if (device_may_wakeup(priv->device))
  			phylink_speed_down(priv->phylink, false);
@@ -2255,7 +2255,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		phylink_stop(priv->phylink);
  		rtnl_unlock();
  		mutex_lock(&priv->lock);
-@@ -5399,6 +5408,9 @@ int stmmac_resume(struct device *dev)
+@@ -5397,6 +5406,9 @@ int stmmac_resume(struct device *dev)
  		/* reset the phy so that it's ready */
  		if (priv->mii)
  			stmmac_mdio_reset(priv->mii);

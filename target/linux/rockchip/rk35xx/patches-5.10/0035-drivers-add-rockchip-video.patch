@@ -8,8 +8,6 @@ Subject: [PATCH 35/42] drivers: add rockchip video
  drivers/video/Makefile | 1 +
  2 files changed, 5 insertions(+)
 
-diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
-index 427a993c7..c0c623a82 100644
 --- a/drivers/video/Kconfig
 +++ b/drivers/video/Kconfig
 @@ -25,6 +25,10 @@ endmenu
@@ -23,8 +21,6 @@ index 427a993c7..c0c623a82 100644
  config VGASTATE
         tristate
         default n
-diff --git a/drivers/video/Makefile b/drivers/video/Makefile
-index df7650ade..b355e2fcb 100644
 --- a/drivers/video/Makefile
 +++ b/drivers/video/Makefile
 @@ -6,6 +6,7 @@ obj-$(CONFIG_VT)		  += console/
@@ -35,6 +31,3 @@ index df7650ade..b355e2fcb 100644
  
  obj-y				  += fbdev/
  
--- 
-2.37.1 (Apple Git-137.1)
-

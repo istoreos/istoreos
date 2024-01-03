@@ -22,11 +22,9 @@ Signed-off-by: William Wu <william.wu@rock-chips.com>
  drivers/usb/host/xhci.h      |  1 +
  3 files changed, 21 insertions(+)
 
-diff --git a/drivers/usb/host/xhci-plat.c b/drivers/usb/host/xhci-plat.c
-index 32fb2f07c..68dad7a81 100644
 --- a/drivers/usb/host/xhci-plat.c
 +++ b/drivers/usb/host/xhci-plat.c
-@@ -312,6 +312,9 @@ static int xhci_plat_probe(struct platform_device *pdev)
+@@ -312,6 +312,9 @@ static int xhci_plat_probe(struct platfo
  		if (device_property_read_bool(tmpdev, "quirk-broken-port-ped"))
  			xhci->quirks |= XHCI_BROKEN_PORT_PED;
  
@@ -36,11 +34,9 @@ index 32fb2f07c..68dad7a81 100644
  		device_property_read_u32(tmpdev, "imod-interval-ns",
  					 &xhci->imod_interval);
  	}
-diff --git a/drivers/usb/host/xhci-ring.c b/drivers/usb/host/xhci-ring.c
-index b69b8c7e7..aec407342 100644
 --- a/drivers/usb/host/xhci-ring.c
 +++ b/drivers/usb/host/xhci-ring.c
-@@ -3403,6 +3403,7 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+@@ -3402,6 +3402,7 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
  	bool more_trbs_coming = true;
  	bool need_zero_pkt = false;
  	bool first_trb = true;
@@ -48,7 +44,7 @@ index b69b8c7e7..aec407342 100644
  	unsigned int num_trbs;
  	unsigned int start_cycle, num_sgs = 0;
  	unsigned int enqd_len, block_len, trb_buff_len, full_len;
-@@ -3439,6 +3440,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+@@ -3438,6 +3439,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
  	if (urb->transfer_flags & URB_ZERO_PACKET && urb_priv->num_tds > 1)
  		need_zero_pkt = true;
  
@@ -62,7 +58,7 @@ index b69b8c7e7..aec407342 100644
  	td = &urb_priv->td[0];
  
  	/*
-@@ -3467,6 +3475,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+@@ -3466,6 +3474,13 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
  			first_trb = false;
  			if (start_cycle == 0)
  				field |= TRB_CYCLE;
@@ -76,7 +72,7 @@ index b69b8c7e7..aec407342 100644
  		} else
  			field |= ring->cycle_state;
  
-@@ -3475,6 +3490,8 @@ int xhci_queue_bulk_tx(struct xhci_hcd *xhci, gfp_t mem_flags,
+@@ -3474,6 +3489,8 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
  		 */
  		if (enqd_len + trb_buff_len < full_len) {
  			field |= TRB_CHAIN;
@@ -85,18 +81,13 @@ index b69b8c7e7..aec407342 100644
  			if (trb_is_link(ring->enqueue + 1)) {
  				if (xhci_align_td(xhci, urb, enqd_len,
  						  &trb_buff_len,
-diff --git a/drivers/usb/host/xhci.h b/drivers/usb/host/xhci.h
-index c7749f6e3..c2060e04d 100644
 --- a/drivers/usb/host/xhci.h
 +++ b/drivers/usb/host/xhci.h
-@@ -1895,6 +1895,7 @@ struct xhci_hcd {
- #define XHCI_EP_CTX_BROKEN_DCS	BIT_ULL(42)
- #define XHCI_SUSPEND_RESUME_CLKS	BIT_ULL(43)
+@@ -1896,6 +1896,7 @@ struct xhci_hcd {
  #define XHCI_RESET_TO_DEFAULT	BIT_ULL(44)
-+#define XHCI_TRB_ENT_QUIRK     BIT_ULL(45)
+ #define XHCI_ZHAOXIN_TRB_FETCH	BIT_ULL(45)
+ #define XHCI_ZHAOXIN_HOST	BIT_ULL(46)
++#define XHCI_TRB_ENT_QUIRK	BIT_ULL(47)
  
  	unsigned int		num_active_eps;
  	unsigned int		limit_active_eps;
--- 
-2.31.0
-

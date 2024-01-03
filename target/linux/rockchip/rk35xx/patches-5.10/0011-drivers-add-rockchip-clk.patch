@@ -15,8 +15,6 @@ Subject: [PATCH 11/42] drivers: add rockchip clk
  include/linux/clk-provider.h            |    3 +
  9 files changed, 1853 insertions(+), 150 deletions(-)
 
-diff --git a/drivers/clk/rockchip/Kconfig b/drivers/clk/rockchip/Kconfig
-index 47cd6c5de..c8c6d8909 100644
 --- a/drivers/clk/rockchip/Kconfig
 +++ b/drivers/clk/rockchip/Kconfig
 @@ -2,7 +2,7 @@
@@ -86,8 +84,6 @@ index 47cd6c5de..c8c6d8909 100644
 +source "drivers/clk/rockchip/regmap/Kconfig"
 +
  endif
-diff --git a/drivers/clk/rockchip/Makefile b/drivers/clk/rockchip/Makefile
-index a99e4d9bb..ccdb4b1b7 100644
 --- a/drivers/clk/rockchip/Makefile
 +++ b/drivers/clk/rockchip/Makefile
 @@ -4,17 +4,20 @@
@@ -113,14 +109,12 @@ index a99e4d9bb..ccdb4b1b7 100644
  obj-$(CONFIG_CLK_PX30)          += clk-px30.o
  obj-$(CONFIG_CLK_RV110X)        += clk-rv1108.o
  obj-$(CONFIG_CLK_RK3036)        += clk-rk3036.o
-@@ -26,3 +29,5 @@ obj-$(CONFIG_CLK_RK3308)        += clk-rk3308.o
+@@ -26,3 +29,5 @@ obj-$(CONFIG_CLK_RK3308)        += clk-r
  obj-$(CONFIG_CLK_RK3328)        += clk-rk3328.o
  obj-$(CONFIG_CLK_RK3368)        += clk-rk3368.o
  obj-$(CONFIG_CLK_RK3399)        += clk-rk3399.o
 +obj-$(CONFIG_CLK_RK3568)        += clk-rk3568.o
 +obj-$(CONFIG_CLK_RK3588)	+= clk-rk3588.o
-diff --git a/drivers/clk/rockchip/clk-cpu.c b/drivers/clk/rockchip/clk-cpu.c
-index 0dc478a19..6bcb07931 100644
 --- a/drivers/clk/rockchip/clk-cpu.c
 +++ b/drivers/clk/rockchip/clk-cpu.c
 @@ -51,6 +51,7 @@
@@ -131,7 +125,7 @@ index 0dc478a19..6bcb07931 100644
  
  	struct clk_mux				cpu_mux;
  	const struct clk_ops			*cpu_mux_ops;
-@@ -88,10 +89,10 @@ static unsigned long rockchip_cpuclk_recalc_rate(struct clk_hw *hw,
+@@ -88,10 +89,10 @@ static unsigned long rockchip_cpuclk_rec
  {
  	struct rockchip_cpuclk *cpuclk = to_rockchip_cpuclk_hw(hw);
  	const struct rockchip_cpuclk_reg_data *reg_data = cpuclk->reg_data;
@@ -145,7 +139,7 @@ index 0dc478a19..6bcb07931 100644
  	return parent_rate / (clksel0 + 1);
  }
  
-@@ -117,6 +118,42 @@ static void rockchip_cpuclk_set_dividers(struct rockchip_cpuclk *cpuclk,
+@@ -117,6 +118,42 @@ static void rockchip_cpuclk_set_dividers
  	}
  }
  
@@ -188,7 +182,7 @@ index 0dc478a19..6bcb07931 100644
  static int rockchip_cpuclk_pre_rate_change(struct rockchip_cpuclk *cpuclk,
  					   struct clk_notifier_data *ndata)
  {
-@@ -124,6 +161,7 @@ static int rockchip_cpuclk_pre_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -124,6 +161,7 @@ static int rockchip_cpuclk_pre_rate_chan
  	const struct rockchip_cpuclk_rate_table *rate;
  	unsigned long alt_prate, alt_div;
  	unsigned long flags;
@@ -196,7 +190,7 @@ index 0dc478a19..6bcb07931 100644
  
  	/* check validity of the new rate */
  	rate = rockchip_get_cpuclk_settings(cpuclk, ndata->new_rate);
-@@ -133,6 +171,9 @@ static int rockchip_cpuclk_pre_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -133,6 +171,9 @@ static int rockchip_cpuclk_pre_rate_chan
  		return -EINVAL;
  	}
  
@@ -206,7 +200,7 @@ index 0dc478a19..6bcb07931 100644
  	alt_prate = clk_get_rate(cpuclk->alt_parent);
  
  	spin_lock_irqsave(cpuclk->lock, flags);
-@@ -146,10 +187,10 @@ static int rockchip_cpuclk_pre_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -146,10 +187,10 @@ static int rockchip_cpuclk_pre_rate_chan
  	if (alt_prate > ndata->old_rate) {
  		/* calculate dividers */
  		alt_div =  DIV_ROUND_UP(alt_prate, ndata->old_rate) - 1;
@@ -220,7 +214,7 @@ index 0dc478a19..6bcb07931 100644
  		}
  
  		/*
-@@ -162,19 +203,29 @@ static int rockchip_cpuclk_pre_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -162,19 +203,29 @@ static int rockchip_cpuclk_pre_rate_chan
  		pr_debug("%s: setting div %lu as alt-rate %lu > old-rate %lu\n",
  			 __func__, alt_div, alt_prate, ndata->old_rate);
  
@@ -258,7 +252,7 @@ index 0dc478a19..6bcb07931 100644
  
  	spin_unlock_irqrestore(cpuclk->lock, flags);
  	return 0;
-@@ -186,6 +237,7 @@ static int rockchip_cpuclk_post_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -186,6 +237,7 @@ static int rockchip_cpuclk_post_rate_cha
  	const struct rockchip_cpuclk_reg_data *reg_data = cpuclk->reg_data;
  	const struct rockchip_cpuclk_rate_table *rate;
  	unsigned long flags;
@@ -266,7 +260,7 @@ index 0dc478a19..6bcb07931 100644
  
  	rate = rockchip_get_cpuclk_settings(cpuclk, ndata->new_rate);
  	if (!rate) {
-@@ -206,16 +258,32 @@ static int rockchip_cpuclk_post_rate_change(struct rockchip_cpuclk *cpuclk,
+@@ -206,16 +258,32 @@ static int rockchip_cpuclk_post_rate_cha
  	 * primary parent by the extra dividers that were needed for the alt.
  	 */
  
@@ -305,7 +299,7 @@ index 0dc478a19..6bcb07931 100644
  	spin_unlock_irqrestore(cpuclk->lock, flags);
  	return 0;
  }
-@@ -244,14 +312,16 @@ static int rockchip_cpuclk_notifier_cb(struct notifier_block *nb,
+@@ -244,14 +312,16 @@ static int rockchip_cpuclk_notifier_cb(s
  }
  
  struct clk *rockchip_clk_register_cpuclk(const char *name,
@@ -324,7 +318,7 @@ index 0dc478a19..6bcb07931 100644
  	int ret;
  
  	if (num_parents < 2) {
-@@ -259,12 +329,18 @@ struct clk *rockchip_clk_register_cpuclk(const char *name,
+@@ -259,12 +329,18 @@ struct clk *rockchip_clk_register_cpuclk
  		return ERR_PTR(-EINVAL);
  	}
  
@@ -344,7 +338,7 @@ index 0dc478a19..6bcb07931 100644
  	init.num_parents = 1;
  	init.ops = &rockchip_cpuclk_ops;
  
-@@ -281,8 +357,19 @@ struct clk *rockchip_clk_register_cpuclk(const char *name,
+@@ -281,8 +357,19 @@ struct clk *rockchip_clk_register_cpuclk
  	cpuclk->reg_data = reg_data;
  	cpuclk->clk_nb.notifier_call = rockchip_cpuclk_notifier_cb;
  	cpuclk->hw.init = &init;
@@ -365,7 +359,7 @@ index 0dc478a19..6bcb07931 100644
  	if (!cpuclk->alt_parent) {
  		pr_err("%s: could not lookup alternate parent: (%d)\n",
  		       __func__, reg_data->mux_core_alt);
-@@ -297,11 +384,11 @@ struct clk *rockchip_clk_register_cpuclk(const char *name,
+@@ -297,11 +384,11 @@ struct clk *rockchip_clk_register_cpuclk
  		goto free_cpuclk;
  	}
  
@@ -379,8 +373,6 @@ index 0dc478a19..6bcb07931 100644
  		ret = -EINVAL;
  		goto free_alt_parent;
  	}
-diff --git a/drivers/clk/rockchip/clk-ddr.c b/drivers/clk/rockchip/clk-ddr.c
-index 86718c54e..aca0539d2 100644
 --- a/drivers/clk/rockchip/clk-ddr.c
 +++ b/drivers/clk/rockchip/clk-ddr.c
 @@ -8,10 +8,20 @@
@@ -458,7 +450,7 @@ index 86718c54e..aca0539d2 100644
  }
  
  static unsigned long
-@@ -87,18 +119,134 @@ static const struct clk_ops rockchip_ddrclk_sip_ops = {
+@@ -87,18 +119,134 @@ static const struct clk_ops rockchip_ddr
  	.get_parent = rockchip_ddrclk_get_parent,
  };
  
@@ -595,7 +587,7 @@ index 86718c54e..aca0539d2 100644
  	ddrclk = kzalloc(sizeof(*ddrclk), GFP_KERNEL);
  	if (!ddrclk)
  		return ERR_PTR(-ENOMEM);
-@@ -111,9 +259,21 @@ struct clk *rockchip_clk_register_ddrclk(const char *name, int flags,
+@@ -111,9 +259,21 @@ struct clk *rockchip_clk_register_ddrclk
  	init.flags |= CLK_SET_RATE_NO_REPARENT;
  
  	switch (ddr_flag) {
@@ -617,7 +609,7 @@ index 86718c54e..aca0539d2 100644
  	default:
  		pr_err("%s: unsupported ddrclk type %d\n", __func__, ddr_flag);
  		kfree(ddrclk);
-@@ -121,7 +281,6 @@ struct clk *rockchip_clk_register_ddrclk(const char *name, int flags,
+@@ -121,7 +281,6 @@ struct clk *rockchip_clk_register_ddrclk
  	}
  
  	ddrclk->reg_base = reg_base;
@@ -625,11 +617,9 @@ index 86718c54e..aca0539d2 100644
  	ddrclk->hw.init = &init;
  	ddrclk->mux_offset = mux_offset;
  	ddrclk->mux_shift = mux_shift;
-diff --git a/drivers/clk/rockchip/clk-half-divider.c b/drivers/clk/rockchip/clk-half-divider.c
-index ccd5c270c..b978af08d 100644
 --- a/drivers/clk/rockchip/clk-half-divider.c
 +++ b/drivers/clk/rockchip/clk-half-divider.c
-@@ -14,9 +14,9 @@ static bool _is_best_half_div(unsigned long rate, unsigned long now,
+@@ -14,9 +14,9 @@ static bool _is_best_half_div(unsigned l
  			      unsigned long best, unsigned long flags)
  {
  	if (flags & CLK_DIVIDER_ROUND_CLOSEST)
@@ -641,7 +631,7 @@ index ccd5c270c..b978af08d 100644
  }
  
  static unsigned long clk_half_divider_recalc_rate(struct clk_hw *hw,
-@@ -38,7 +38,7 @@ static int clk_half_divider_bestdiv(struct clk_hw *hw, unsigned long rate,
+@@ -38,7 +38,7 @@ static int clk_half_divider_bestdiv(stru
  {
  	unsigned int i, bestdiv = 0;
  	unsigned long parent_rate, best = 0, now, maxdiv;
@@ -650,7 +640,7 @@ index ccd5c270c..b978af08d 100644
  
  	if (!rate)
  		rate = 1;
-@@ -51,7 +51,7 @@ static int clk_half_divider_bestdiv(struct clk_hw *hw, unsigned long rate,
+@@ -51,7 +51,7 @@ static int clk_half_divider_bestdiv(stru
  		if (bestdiv < 3)
  			bestdiv = 0;
  		else
@@ -659,7 +649,7 @@ index ccd5c270c..b978af08d 100644
  		bestdiv = bestdiv > maxdiv ? maxdiv : bestdiv;
  		return bestdiv;
  	}
-@@ -63,28 +63,20 @@ static int clk_half_divider_bestdiv(struct clk_hw *hw, unsigned long rate,
+@@ -63,28 +63,20 @@ static int clk_half_divider_bestdiv(stru
  	maxdiv = min(ULONG_MAX / rate, maxdiv);
  
  	for (i = 0; i <= maxdiv; i++) {
@@ -690,7 +680,7 @@ index ccd5c270c..b978af08d 100644
  		bestdiv = div_mask(width);
  		*best_parent_rate = clk_hw_round_rate(clk_hw_get_parent(hw), 1);
  	}
-@@ -114,7 +106,7 @@ static int clk_half_divider_set_rate(struct clk_hw *hw, unsigned long rate,
+@@ -114,7 +106,7 @@ static int clk_half_divider_set_rate(str
  	u32 val;
  
  	value = DIV_ROUND_UP_ULL(((u64)parent_rate * 2), rate);
@@ -699,7 +689,7 @@ index ccd5c270c..b978af08d 100644
  	value =  min_t(unsigned int, value, div_mask(divider->width));
  
  	if (divider->lock)
-@@ -160,10 +152,10 @@ struct clk *rockchip_clk_register_halfdiv(const char *name,
+@@ -160,10 +152,10 @@ struct clk *rockchip_clk_register_halfdi
  					  u8 num_parents, void __iomem *base,
  					  int muxdiv_offset, u8 mux_shift,
  					  u8 mux_width, u8 mux_flags,
@@ -714,7 +704,7 @@ index ccd5c270c..b978af08d 100644
  					  spinlock_t *lock)
  {
  	struct clk_hw *hw = ERR_PTR(-ENOMEM);
-@@ -205,7 +197,10 @@ struct clk *rockchip_clk_register_halfdiv(const char *name,
+@@ -205,7 +197,10 @@ struct clk *rockchip_clk_register_halfdi
  			goto err_div;
  
  		div->flags = div_flags;
@@ -726,8 +716,6 @@ index ccd5c270c..b978af08d 100644
  		div->shift = div_shift;
  		div->width = div_width;
  		div->lock = lock;
-diff --git a/drivers/clk/rockchip/clk-pll.c b/drivers/clk/rockchip/clk-pll.c
-index d0bd513ff..35b0badde 100644
 --- a/drivers/clk/rockchip/clk-pll.c
 +++ b/drivers/clk/rockchip/clk-pll.c
 @@ -15,6 +15,9 @@
@@ -1098,7 +1086,7 @@ index d0bd513ff..35b0badde 100644
  static const struct rockchip_pll_rate_table *rockchip_get_pll_settings(
  			    struct rockchip_clk_pll *pll, unsigned long rate)
  {
-@@ -54,28 +399,29 @@ static const struct rockchip_pll_rate_table *rockchip_get_pll_settings(
+@@ -54,28 +399,29 @@ static const struct rockchip_pll_rate_ta
  	int i;
  
  	for (i = 0; i < pll->rate_count; i++) {
@@ -1142,7 +1130,7 @@ index d0bd513ff..35b0badde 100644
  }
  
  /*
-@@ -114,6 +460,7 @@ static int rockchip_pll_wait_lock(struct rockchip_clk_pll *pll)
+@@ -114,6 +460,7 @@ static int rockchip_pll_wait_lock(struct
  #define RK3036_PLLCON1_DSMPD_MASK		0x1
  #define RK3036_PLLCON1_DSMPD_SHIFT		12
  #define RK3036_PLLCON1_PWRDOWN			BIT(13)
@@ -1150,7 +1138,7 @@ index d0bd513ff..35b0badde 100644
  #define RK3036_PLLCON2_FRAC_MASK		0xffffff
  #define RK3036_PLLCON2_FRAC_SHIFT		0
  
-@@ -136,6 +483,30 @@ static int rockchip_rk3036_pll_wait_lock(struct rockchip_clk_pll *pll)
+@@ -136,6 +483,30 @@ static int rockchip_rk3036_pll_wait_lock
  	return ret;
  }
  
@@ -1181,7 +1169,7 @@ index d0bd513ff..35b0badde 100644
  static void rockchip_rk3036_pll_get_params(struct rockchip_clk_pll *pll,
  					struct rockchip_pll_rate_table *rate)
  {
-@@ -165,7 +536,10 @@ static unsigned long rockchip_rk3036_pll_recalc_rate(struct clk_hw *hw,
+@@ -165,7 +536,10 @@ static unsigned long rockchip_rk3036_pll
  {
  	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
  	struct rockchip_pll_rate_table cur;
@@ -1193,7 +1181,7 @@ index d0bd513ff..35b0badde 100644
  
  	rockchip_rk3036_pll_get_params(pll, &cur);
  
-@@ -174,7 +548,7 @@ static unsigned long rockchip_rk3036_pll_recalc_rate(struct clk_hw *hw,
+@@ -174,7 +548,7 @@ static unsigned long rockchip_rk3036_pll
  
  	if (cur.dsmpd == 0) {
  		/* fractional mode */
@@ -1202,7 +1190,7 @@ index d0bd513ff..35b0badde 100644
  
  		do_div(frac_rate64, cur.refdiv);
  		rate64 += frac_rate64 >> 24;
-@@ -231,6 +605,9 @@ static int rockchip_rk3036_pll_set_params(struct rockchip_clk_pll *pll,
+@@ -231,6 +605,9 @@ static int rockchip_rk3036_pll_set_param
  	pllcon |= rate->frac << RK3036_PLLCON2_FRAC_SHIFT;
  	writel_relaxed(pllcon, pll->reg_base + RK3036_PLLCON(2));
  
@@ -1212,7 +1200,7 @@ index d0bd513ff..35b0badde 100644
  	/* wait for the pll to lock */
  	ret = rockchip_rk3036_pll_wait_lock(pll);
  	if (ret) {
-@@ -412,6 +789,9 @@ static unsigned long rockchip_rk3066_pll_recalc_rate(struct clk_hw *hw,
+@@ -412,6 +789,9 @@ static unsigned long rockchip_rk3066_pll
  		return prate;
  	}
  
@@ -1222,7 +1210,7 @@ index d0bd513ff..35b0badde 100644
  	rockchip_rk3066_pll_get_params(pll, &cur);
  
  	rate64 *= cur.nf;
-@@ -485,9 +865,18 @@ static int rockchip_rk3066_pll_set_rate(struct clk_hw *hw, unsigned long drate,
+@@ -485,9 +865,18 @@ static int rockchip_rk3066_pll_set_rate(
  {
  	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
  	const struct rockchip_pll_rate_table *rate;
@@ -1243,7 +1231,7 @@ index d0bd513ff..35b0badde 100644
  
  	/* Get required rate settings from table */
  	rate = rockchip_get_pll_settings(pll, drate);
-@@ -497,7 +886,11 @@ static int rockchip_rk3066_pll_set_rate(struct clk_hw *hw, unsigned long drate,
+@@ -497,7 +886,11 @@ static int rockchip_rk3066_pll_set_rate(
  		return -EINVAL;
  	}
  
@@ -1256,7 +1244,7 @@ index d0bd513ff..35b0badde 100644
  }
  
  static int rockchip_rk3066_pll_enable(struct clk_hw *hw)
-@@ -649,6 +1042,9 @@ static unsigned long rockchip_rk3399_pll_recalc_rate(struct clk_hw *hw,
+@@ -649,6 +1042,9 @@ static unsigned long rockchip_rk3399_pll
  	struct rockchip_pll_rate_table cur;
  	u64 rate64 = prate;
  
@@ -1266,7 +1254,7 @@ index d0bd513ff..35b0badde 100644
  	rockchip_rk3399_pll_get_params(pll, &cur);
  
  	rate64 *= cur.fbdiv;
-@@ -692,6 +1088,11 @@ static int rockchip_rk3399_pll_set_params(struct rockchip_clk_pll *pll,
+@@ -692,6 +1088,11 @@ static int rockchip_rk3399_pll_set_param
  		rate_change_remuxed = 1;
  	}
  
@@ -1278,7 +1266,7 @@ index d0bd513ff..35b0badde 100644
  	/* update pll values */
  	writel_relaxed(HIWORD_UPDATE(rate->fbdiv, RK3399_PLLCON0_FBDIV_MASK,
  						  RK3399_PLLCON0_FBDIV_SHIFT),
-@@ -715,6 +1116,11 @@ static int rockchip_rk3399_pll_set_params(struct rockchip_clk_pll *pll,
+@@ -715,6 +1116,11 @@ static int rockchip_rk3399_pll_set_param
  					    RK3399_PLLCON3_DSMPD_SHIFT),
  		       pll->reg_base + RK3399_PLLCON(3));
  
@@ -1290,7 +1278,7 @@ index d0bd513ff..35b0badde 100644
  	/* wait for the pll to lock */
  	ret = rockchip_rk3399_pll_wait_lock(pll);
  	if (ret) {
-@@ -734,9 +1140,11 @@ static int rockchip_rk3399_pll_set_rate(struct clk_hw *hw, unsigned long drate,
+@@ -734,9 +1140,11 @@ static int rockchip_rk3399_pll_set_rate(
  {
  	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
  	const struct rockchip_pll_rate_table *rate;
@@ -1304,7 +1292,7 @@ index d0bd513ff..35b0badde 100644
  
  	/* Get required rate settings from table */
  	rate = rockchip_get_pll_settings(pll, drate);
-@@ -746,7 +1154,11 @@ static int rockchip_rk3399_pll_set_rate(struct clk_hw *hw, unsigned long drate,
+@@ -746,7 +1154,11 @@ static int rockchip_rk3399_pll_set_rate(
  		return -EINVAL;
  	}
  
@@ -1317,7 +1305,7 @@ index d0bd513ff..35b0badde 100644
  }
  
  static int rockchip_rk3399_pll_enable(struct clk_hw *hw)
-@@ -842,6 +1254,359 @@ static const struct clk_ops rockchip_rk3399_pll_clk_ops = {
+@@ -842,6 +1254,359 @@ static const struct clk_ops rockchip_rk3
  	.init = rockchip_rk3399_pll_init,
  };
  
@@ -1677,7 +1665,7 @@ index d0bd513ff..35b0badde 100644
  /*
   * Common registering of pll clocks
   */
-@@ -886,12 +1651,7 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
+@@ -886,12 +1651,7 @@ struct clk *rockchip_clk_register_pll(st
  	pll_mux->flags = 0;
  	pll_mux->lock = &ctx->lock;
  	pll_mux->hw.init = &init;
@@ -1691,7 +1679,7 @@ index d0bd513ff..35b0badde 100644
  
  	/* the actual muxing is xin24m, pll-output, xin32k */
  	pll_parents[0] = parent_names[0];
-@@ -914,8 +1674,12 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
+@@ -914,8 +1674,12 @@ struct clk *rockchip_clk_register_pll(st
  	/* now create the actual pll */
  	init.name = pll_name;
  
@@ -1704,7 +1692,7 @@ index d0bd513ff..35b0badde 100644
  
  	init.parent_names = &parent_names[0];
  	init.num_parents = 1;
-@@ -945,18 +1709,32 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
+@@ -945,18 +1709,32 @@ struct clk *rockchip_clk_register_pll(st
  		else
  			init.ops = &rockchip_rk3036_pll_clk_ops;
  		break;
@@ -1737,7 +1725,7 @@ index d0bd513ff..35b0badde 100644
  	default:
  		pr_warn("%s: Unknown pll type for pll clk %s\n",
  			__func__, name);
-@@ -981,10 +1759,324 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
+@@ -981,10 +1759,324 @@ struct clk *rockchip_clk_register_pll(st
  	return mux_clk;
  
  err_pll:
@@ -2063,11 +2051,9 @@ index d0bd513ff..35b0badde 100644
 +#endif /* MODULE */
 +#endif /* CONFIG_DEBUG_FS */
 +#endif /* CONFIG_ROCKCHIP_CLK_BOOST */
-diff --git a/drivers/clk/rockchip/clk.c b/drivers/clk/rockchip/clk.c
-index b443169dd..3cea6b7eb 100644
 --- a/drivers/clk/rockchip/clk.c
 +++ b/drivers/clk/rockchip/clk.c
-@@ -38,6 +38,7 @@ static struct clk *rockchip_clk_register_branch(const char *name,
+@@ -38,6 +38,7 @@ static struct clk *rockchip_clk_register
  		const char *const *parent_names, u8 num_parents,
  		void __iomem *base,
  		int muxdiv_offset, u8 mux_shift, u8 mux_width, u8 mux_flags,
@@ -2075,7 +2061,7 @@ index b443169dd..3cea6b7eb 100644
  		int div_offset, u8 div_shift, u8 div_width, u8 div_flags,
  		struct clk_div_table *div_table, int gate_offset,
  		u8 gate_shift, u8 gate_flags, unsigned long flags,
-@@ -60,6 +61,7 @@ static struct clk *rockchip_clk_register_branch(const char *name,
+@@ -60,6 +61,7 @@ static struct clk *rockchip_clk_register
  		mux->shift = mux_shift;
  		mux->mask = BIT(mux_width) - 1;
  		mux->flags = mux_flags;
@@ -2083,7 +2069,7 @@ index b443169dd..3cea6b7eb 100644
  		mux->lock = lock;
  		mux_ops = (mux_flags & CLK_MUX_READ_ONLY) ? &clk_mux_ro_ops
  							: &clk_mux_ops;
-@@ -186,8 +188,32 @@ static void rockchip_fractional_approximation(struct clk_hw *hw,
+@@ -186,8 +188,32 @@ static void rockchip_fractional_approxim
  	p_rate = clk_hw_get_rate(clk_hw_get_parent(hw));
  	if ((rate * 20 > p_rate) && (p_rate % rate != 0)) {
  		p_parent = clk_hw_get_parent(clk_hw_get_parent(hw));
@@ -2118,7 +2104,7 @@ index b443169dd..3cea6b7eb 100644
  	}
  
  	/*
-@@ -278,6 +304,8 @@ static struct clk *rockchip_clk_register_frac_branch(
+@@ -278,6 +304,8 @@ static struct clk *rockchip_clk_register
  		frac_mux->shift = child->mux_shift;
  		frac_mux->mask = BIT(child->mux_width) - 1;
  		frac_mux->flags = child->mux_flags;
@@ -2127,7 +2113,7 @@ index b443169dd..3cea6b7eb 100644
  		frac_mux->lock = lock;
  		frac_mux->hw.init = &init;
  
-@@ -387,6 +415,8 @@ struct rockchip_clk_provider *rockchip_clk_init(struct device_node *np,
+@@ -387,6 +415,8 @@ struct rockchip_clk_provider *rockchip_c
  
  	ctx->grf = syscon_regmap_lookup_by_phandle(ctx->cru_node,
  						   "rockchip,grf");
@@ -2136,7 +2122,7 @@ index b443169dd..3cea6b7eb 100644
  
  	return ctx;
  
-@@ -452,11 +482,22 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+@@ -452,11 +482,22 @@ void rockchip_clk_register_branches(stru
  		/* catch simple muxes */
  		switch (list->branch_type) {
  		case branch_mux:
@@ -2164,7 +2150,7 @@ index b443169dd..3cea6b7eb 100644
  			break;
  		case branch_muxgrf:
  			clk = rockchip_clk_register_muxgrf(list->name,
-@@ -465,6 +506,13 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+@@ -465,6 +506,13 @@ void rockchip_clk_register_branches(stru
  				list->mux_shift, list->mux_width,
  				list->mux_flags);
  			break;
@@ -2178,7 +2164,7 @@ index b443169dd..3cea6b7eb 100644
  		case branch_divider:
  			if (list->div_table)
  				clk = clk_register_divider_table(NULL,
-@@ -495,14 +543,23 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+@@ -495,10 +543,11 @@ void rockchip_clk_register_branches(stru
  				list->parent_names, list->num_parents,
  				ctx->reg_base, list->muxdiv_offset,
  				list->mux_shift, list->mux_width,
@@ -2194,19 +2180,21 @@ index b443169dd..3cea6b7eb 100644
  			break;
  		case branch_gate:
  			flags |= CLK_SET_RATE_PARENT;
- 
+@@ -508,13 +557,22 @@ void rockchip_clk_register_branches(stru
+ 				ctx->reg_base + list->gate_offset,
+ 				list->gate_shift, list->gate_flags, &ctx->lock);
+ 			break;
++		case branch_gate_no_set_rate:
++			flags &= ~CLK_SET_RATE_PARENT;
++
 +			clk = clk_register_gate(NULL, list->name,
 +				list->parent_names[0], flags,
 +				ctx->reg_base + list->gate_offset,
 +				list->gate_shift, list->gate_flags, &ctx->lock);
 +			break;
-+		case branch_gate_no_set_rate:
-+			flags &= ~CLK_SET_RATE_PARENT;
-+
- 			clk = clk_register_gate(NULL, list->name,
- 				list->parent_names[0], flags,
- 				ctx->reg_base + list->gate_offset,
-@@ -514,7 +571,8 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+ 		case branch_composite:
+ 			clk = rockchip_clk_register_branch(list->name,
+ 				list->parent_names, list->num_parents,
  				ctx->reg_base, list->muxdiv_offset,
  				list->mux_shift,
  				list->mux_width, list->mux_flags,
@@ -2216,7 +2204,7 @@ index b443169dd..3cea6b7eb 100644
  				list->div_flags, list->div_table,
  				list->gate_offset, list->gate_shift,
  				list->gate_flags, flags, &ctx->lock);
-@@ -528,11 +586,13 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+@@ -528,11 +586,13 @@ void rockchip_clk_register_branches(stru
  			);
  			break;
  		case branch_inverter:
@@ -2230,7 +2218,7 @@ index b443169dd..3cea6b7eb 100644
  			break;
  		case branch_factor:
  			clk = rockchip_clk_register_factor_branch(
-@@ -549,7 +609,7 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
+@@ -549,7 +609,7 @@ void rockchip_clk_register_branches(stru
  				list->muxdiv_offset, list->mux_shift,
  				list->mux_width, list->div_shift,
  				list->div_width, list->div_flags,
@@ -2239,7 +2227,7 @@ index b443169dd..3cea6b7eb 100644
  			break;
  		}
  
-@@ -573,15 +633,17 @@ EXPORT_SYMBOL_GPL(rockchip_clk_register_branches);
+@@ -573,15 +633,17 @@ EXPORT_SYMBOL_GPL(rockchip_clk_register_
  
  void rockchip_clk_register_armclk(struct rockchip_clk_provider *ctx,
  				  unsigned int lookup_id,
@@ -2259,7 +2247,7 @@ index b443169dd..3cea6b7eb 100644
  					   reg_data, rates, nrates,
  					   ctx->reg_base, &ctx->lock);
  	if (IS_ERR(clk)) {
-@@ -594,20 +656,20 @@ void rockchip_clk_register_armclk(struct rockchip_clk_provider *ctx,
+@@ -594,20 +656,20 @@ void rockchip_clk_register_armclk(struct
  }
  EXPORT_SYMBOL_GPL(rockchip_clk_register_armclk);
  
@@ -2292,7 +2280,7 @@ index b443169dd..3cea6b7eb 100644
  
  static void __iomem *rst_base;
  static unsigned int reg_restart;
-@@ -641,5 +703,7 @@ rockchip_register_restart_notifier(struct rockchip_clk_provider *ctx,
+@@ -641,5 +703,7 @@ rockchip_register_restart_notifier(struc
  	if (ret)
  		pr_err("%s: cannot register restart handler, %d\n",
  		       __func__, ret);
@@ -2300,8 +2288,6 @@ index b443169dd..3cea6b7eb 100644
 +				       &rk_clk_panic_block);
  }
  EXPORT_SYMBOL_GPL(rockchip_register_restart_notifier);
-diff --git a/drivers/clk/rockchip/clk.h b/drivers/clk/rockchip/clk.h
-index 2271a8412..370c943e6 100644
 --- a/drivers/clk/rockchip/clk.h
 +++ b/drivers/clk/rockchip/clk.h
 @@ -37,12 +37,25 @@ struct clk;
@@ -2482,7 +2468,7 @@ index 2271a8412..370c943e6 100644
  };
  
  /**
-@@ -317,39 +429,56 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
+@@ -317,39 +429,56 @@ struct clk *rockchip_clk_register_pll(st
  		struct rockchip_pll_rate_table *rate_table,
  		unsigned long flags, u8 clk_pll_flags);
  
@@ -2552,7 +2538,7 @@ index 2271a8412..370c943e6 100644
  			const struct rockchip_cpuclk_reg_data *reg_data,
  			const struct rockchip_cpuclk_rate_table *rates,
  			int nrates, void __iomem *reg_base, spinlock_t *lock);
-@@ -361,16 +490,36 @@ struct clk *rockchip_clk_register_mmc(const char *name,
+@@ -361,16 +490,36 @@ struct clk *rockchip_clk_register_mmc(co
  /*
   * DDRCLK flags, including method of setting the rate
   * ROCKCHIP_DDRCLK_SIP: use SIP call to bl31 to change ddrclk rate.
@@ -2734,7 +2720,7 @@ index 2271a8412..370c943e6 100644
  #define COMPOSITE_NOGATE_HALFDIV(_id, cname, pnames, f, mo, ms, mw, mf,	\
  				 ds, dw, df)				\
  	{							\
-@@ -841,12 +1081,16 @@ void rockchip_clk_register_plls(struct rockchip_clk_provider *ctx,
+@@ -841,12 +1081,16 @@ void rockchip_clk_register_plls(struct r
  				struct rockchip_pll_clock *pll_list,
  				unsigned int nr_pll, int grf_lock_offset);
  void rockchip_clk_register_armclk(struct rockchip_clk_provider *ctx,
@@ -2757,7 +2743,7 @@ index 2271a8412..370c943e6 100644
  void rockchip_register_restart_notifier(struct rockchip_clk_provider *ctx,
  					unsigned int reg, void (*cb)(void));
  
-@@ -857,10 +1101,10 @@ struct clk *rockchip_clk_register_halfdiv(const char *name,
+@@ -857,10 +1101,10 @@ struct clk *rockchip_clk_register_halfdi
  					  u8 num_parents, void __iomem *base,
  					  int muxdiv_offset, u8 mux_shift,
  					  u8 mux_width, u8 mux_flags,
@@ -2772,18 +2758,16 @@ index 2271a8412..370c943e6 100644
  					  spinlock_t *lock);
  
  #ifdef CONFIG_RESET_CONTROLLER
-@@ -874,5 +1118,6 @@ static inline void rockchip_register_softrst(struct device_node *np,
+@@ -874,5 +1118,6 @@ static inline void rockchip_register_sof
  {
  }
  #endif
 +extern void (*rk_dump_cru)(void);
  
  #endif
-diff --git a/include/linux/clk-provider.h b/include/linux/clk-provider.h
-index 03a5de5f9..6fde0532e 100644
 --- a/include/linux/clk-provider.h
 +++ b/include/linux/clk-provider.h
-@@ -936,6 +936,8 @@ void clk_hw_unregister_fixed_factor(struct clk_hw *hw);
+@@ -958,6 +958,8 @@ void clk_hw_unregister_fixed_factor(stru
   * CLK_FRAC_DIVIDER_BIG_ENDIAN - By default little endian register accesses are
   *	used for the divider register.  Setting this flag makes the register
   *	accesses big endian.
@@ -2792,7 +2776,7 @@ index 03a5de5f9..6fde0532e 100644
   */
  struct clk_fractional_divider {
  	struct clk_hw	hw;
-@@ -957,6 +959,7 @@ struct clk_fractional_divider {
+@@ -979,6 +981,7 @@ struct clk_fractional_divider {
  
  #define CLK_FRAC_DIVIDER_ZERO_BASED		BIT(0)
  #define CLK_FRAC_DIVIDER_BIG_ENDIAN		BIT(1)
@@ -2800,6 +2784,3 @@ index 03a5de5f9..6fde0532e 100644
  
  extern const struct clk_ops clk_fractional_divider_ops;
  struct clk *clk_register_fractional_divider(struct device *dev,
--- 
-2.37.1 (Apple Git-137.1)
-

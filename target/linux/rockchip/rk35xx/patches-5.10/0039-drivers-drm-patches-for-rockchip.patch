@@ -20,11 +20,9 @@ Subject: [PATCH 39/42] drivers: drm patches for rockchip
  include/uapi/drm/drm_fourcc.h             |  12 +
  14 files changed, 645 insertions(+), 33 deletions(-)
 
-diff --git a/drivers/gpu/drm/drm_atomic_helper.c b/drivers/gpu/drm/drm_atomic_helper.c
-index 7fc8e7000..33768ddfa 100644
 --- a/drivers/gpu/drm/drm_atomic_helper.c
 +++ b/drivers/gpu/drm/drm_atomic_helper.c
-@@ -3554,6 +3554,9 @@ int drm_atomic_helper_legacy_gamma_set(struct drm_crtc *crtc,
+@@ -3563,6 +3563,9 @@ int drm_atomic_helper_legacy_gamma_set(s
  	replaced  = drm_property_replace_blob(&crtc_state->degamma_lut, NULL);
  	replaced |= drm_property_replace_blob(&crtc_state->ctm, NULL);
  	replaced |= drm_property_replace_blob(&crtc_state->gamma_lut, blob);
@@ -34,11 +32,9 @@ index 7fc8e7000..33768ddfa 100644
  	crtc_state->color_mgmt_changed |= replaced;
  
  	ret = drm_atomic_commit(state);
-diff --git a/drivers/gpu/drm/drm_atomic_state_helper.c b/drivers/gpu/drm/drm_atomic_state_helper.c
-index 9ad740451..c29183d2a 100644
 --- a/drivers/gpu/drm/drm_atomic_state_helper.c
 +++ b/drivers/gpu/drm/drm_atomic_state_helper.c
-@@ -141,6 +141,10 @@ void __drm_atomic_helper_crtc_duplicate_state(struct drm_crtc *crtc,
+@@ -141,6 +141,10 @@ void __drm_atomic_helper_crtc_duplicate_
  		drm_property_blob_get(state->ctm);
  	if (state->gamma_lut)
  		drm_property_blob_get(state->gamma_lut);
@@ -49,7 +45,7 @@ index 9ad740451..c29183d2a 100644
  	state->mode_changed = false;
  	state->active_changed = false;
  	state->planes_changed = false;
-@@ -213,6 +217,9 @@ void __drm_atomic_helper_crtc_destroy_state(struct drm_crtc_state *state)
+@@ -213,6 +217,9 @@ void __drm_atomic_helper_crtc_destroy_st
  	drm_property_blob_put(state->degamma_lut);
  	drm_property_blob_put(state->ctm);
  	drm_property_blob_put(state->gamma_lut);
@@ -59,11 +55,9 @@ index 9ad740451..c29183d2a 100644
  }
  EXPORT_SYMBOL(__drm_atomic_helper_crtc_destroy_state);
  
-diff --git a/drivers/gpu/drm/drm_atomic_uapi.c b/drivers/gpu/drm/drm_atomic_uapi.c
-index 25c269bc4..975ece7e0 100644
 --- a/drivers/gpu/drm/drm_atomic_uapi.c
 +++ b/drivers/gpu/drm/drm_atomic_uapi.c
-@@ -459,6 +459,16 @@ static int drm_atomic_crtc_set_property(struct drm_crtc *crtc,
+@@ -461,6 +461,16 @@ static int drm_atomic_crtc_set_property(
  					&replaced);
  		state->color_mgmt_changed |= replaced;
  		return ret;
@@ -80,7 +74,7 @@ index 25c269bc4..975ece7e0 100644
  	} else if (property == config->prop_out_fence_ptr) {
  		s32 __user *fence_ptr = u64_to_user_ptr(val);
  
-@@ -501,6 +511,10 @@ drm_atomic_crtc_get_property(struct drm_crtc *crtc,
+@@ -503,6 +513,10 @@ drm_atomic_crtc_get_property(struct drm_
  		*val = (state->ctm) ? state->ctm->base.id : 0;
  	else if (property == config->gamma_lut_property)
  		*val = (state->gamma_lut) ? state->gamma_lut->base.id : 0;
@@ -91,8 +85,6 @@ index 25c269bc4..975ece7e0 100644
  	else if (property == config->prop_out_fence_ptr)
  		*val = 0;
  	else if (crtc->funcs->atomic_get_property)
-diff --git a/drivers/gpu/drm/drm_color_mgmt.c b/drivers/gpu/drm/drm_color_mgmt.c
-index 138ff34b3..7b270b68a 100644
 --- a/drivers/gpu/drm/drm_color_mgmt.c
 +++ b/drivers/gpu/drm/drm_color_mgmt.c
 @@ -33,7 +33,7 @@
@@ -159,11 +151,9 @@ index 138ff34b3..7b270b68a 100644
   *
   *	Setting this to NULL (blob property value set to 0) means a
   *	linear/pass-thru gamma table should be used. This is generally the
-diff --git a/drivers/gpu/drm/drm_fourcc.c b/drivers/gpu/drm/drm_fourcc.c
-index 8d1064061..e4c8aa361 100644
 --- a/drivers/gpu/drm/drm_fourcc.c
 +++ b/drivers/gpu/drm/drm_fourcc.c
-@@ -282,6 +282,16 @@ const struct drm_format_info *__drm_format_info(u32 format)
+@@ -282,6 +282,16 @@ const struct drm_format_info *__drm_form
  		  .num_planes = 2, .char_per_block = { 5, 5, 0 },
  		  .block_w = { 4, 2, 0 }, .block_h = { 1, 1, 0 }, .hsub = 2,
  		  .vsub = 2, .is_yuv = true },
@@ -180,11 +170,9 @@ index 8d1064061..e4c8aa361 100644
  		{ .format = DRM_FORMAT_Q410,		.depth = 0,
  		  .num_planes = 3, .char_per_block = { 2, 2, 2 },
  		  .block_w = { 1, 1, 1 }, .block_h = { 1, 1, 1 }, .hsub = 1,
-diff --git a/drivers/gpu/drm/drm_mode_config.c b/drivers/gpu/drm/drm_mode_config.c
-index fad2c1181..58050d4ae 100644
 --- a/drivers/gpu/drm/drm_mode_config.c
 +++ b/drivers/gpu/drm/drm_mode_config.c
-@@ -364,6 +364,22 @@ static int drm_mode_create_standard_properties(struct drm_device *dev)
+@@ -364,6 +364,22 @@ static int drm_mode_create_standard_prop
  		return -ENOMEM;
  	dev->mode_config.gamma_lut_size_property = prop;
  
@@ -207,11 +195,9 @@ index fad2c1181..58050d4ae 100644
  	prop = drm_property_create(dev,
  				   DRM_MODE_PROP_IMMUTABLE | DRM_MODE_PROP_BLOB,
  				   "IN_FORMATS", 0);
-diff --git a/drivers/gpu/drm/drm_prime.c b/drivers/gpu/drm/drm_prime.c
-index 825499ea3..272e5cdd6 100644
 --- a/drivers/gpu/drm/drm_prime.c
 +++ b/drivers/gpu/drm/drm_prime.c
-@@ -784,6 +784,28 @@ int drm_gem_dmabuf_mmap(struct dma_buf *dma_buf, struct vm_area_struct *vma)
+@@ -784,6 +784,28 @@ int drm_gem_dmabuf_mmap(struct dma_buf *
  }
  EXPORT_SYMBOL(drm_gem_dmabuf_mmap);
  
@@ -240,7 +226,7 @@ index 825499ea3..272e5cdd6 100644
  static const struct dma_buf_ops drm_gem_prime_dmabuf_ops =  {
  	.cache_sgt_mapping = true,
  	.attach = drm_gem_map_attach,
-@@ -794,6 +816,7 @@ static const struct dma_buf_ops drm_gem_prime_dmabuf_ops =  {
+@@ -794,6 +816,7 @@ static const struct dma_buf_ops drm_gem_
  	.mmap = drm_gem_dmabuf_mmap,
  	.vmap = drm_gem_dmabuf_vmap,
  	.vunmap = drm_gem_dmabuf_vunmap,
@@ -248,8 +234,6 @@ index 825499ea3..272e5cdd6 100644
  };
  
  /**
-diff --git a/drivers/gpu/drm/panel/panel-simple.c b/drivers/gpu/drm/panel/panel-simple.c
-index 1a87cc445..4e298108a 100644
 --- a/drivers/gpu/drm/panel/panel-simple.c
 +++ b/drivers/gpu/drm/panel/panel-simple.c
 @@ -30,6 +30,7 @@
@@ -335,7 +319,7 @@ index 1a87cc445..4e298108a 100644
  	enum drm_panel_orientation orientation;
  };
  
-@@ -121,6 +154,124 @@ static inline struct panel_simple *to_panel_simple(struct drm_panel *panel)
+@@ -121,6 +154,124 @@ static inline struct panel_simple *to_pa
  	return container_of(panel, struct panel_simple, base);
  }
  
@@ -460,7 +444,7 @@ index 1a87cc445..4e298108a 100644
  static unsigned int panel_simple_get_timings_modes(struct panel_simple *panel,
  						   struct drm_connector *connector)
  {
-@@ -219,17 +370,72 @@ static int panel_simple_get_non_edid_modes(struct panel_simple *panel,
+@@ -219,17 +370,72 @@ static int panel_simple_get_non_edid_mod
  	if (num == 0)
  		num = panel_simple_get_display_modes(panel, connector);
  
@@ -537,7 +521,7 @@ index 1a87cc445..4e298108a 100644
  static int panel_simple_disable(struct drm_panel *panel)
  {
  	struct panel_simple *p = to_panel_simple(panel);
-@@ -252,9 +458,14 @@ static int panel_simple_unprepare(struct drm_panel *panel)
+@@ -252,9 +458,14 @@ static int panel_simple_unprepare(struct
  	if (!p->prepared)
  		return 0;
  
@@ -545,16 +529,16 @@ index 1a87cc445..4e298108a 100644
 +	if (p->desc->exit_seq)
 +		if (p->dsi)
 +			panel_simple_xfer_dsi_cmd_seq(p, p->desc->exit_seq);
- 
--	regulator_disable(p->supply);
++
 +	gpiod_direction_output(p->reset_gpio, 1);
 +	gpiod_direction_output(p->enable_gpio, 0);
-+
+ 
+-	regulator_disable(p->supply);
 +	panel_simple_regulator_disable(p);
  
  	if (p->desc->delay.unprepare)
  		msleep(p->desc->delay.unprepare);
-@@ -299,13 +510,13 @@ static int panel_simple_prepare(struct drm_panel *panel)
+@@ -299,13 +510,13 @@ static int panel_simple_prepare(struct d
  	if (p->prepared)
  		return 0;
  
@@ -570,7 +554,7 @@ index 1a87cc445..4e298108a 100644
  
  	delay = p->desc->delay.prepare;
  	if (p->no_hpd)
-@@ -333,6 +544,20 @@ static int panel_simple_prepare(struct drm_panel *panel)
+@@ -333,6 +544,20 @@ static int panel_simple_prepare(struct d
  		}
  	}
  
@@ -591,7 +575,7 @@ index 1a87cc445..4e298108a 100644
  	p->prepared = true;
  
  	return 0;
-@@ -500,6 +725,52 @@ static void panel_simple_parse_panel_timing_node(struct device *dev,
+@@ -500,6 +725,52 @@ static void panel_simple_parse_panel_tim
  		dev_err(dev, "Reject override mode: No display_timing found\n");
  }
  
@@ -644,7 +628,7 @@ index 1a87cc445..4e298108a 100644
  static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
  {
  	struct panel_simple *panel;
-@@ -525,15 +796,25 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+@@ -525,15 +796,25 @@ static int panel_simple_probe(struct dev
  	}
  
  	panel->supply = devm_regulator_get(dev, "power");
@@ -675,7 +659,7 @@ index 1a87cc445..4e298108a 100644
  		return err;
  	}
  
-@@ -543,13 +824,18 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+@@ -543,13 +824,18 @@ static int panel_simple_probe(struct dev
  		return err;
  	}
  
@@ -696,7 +680,7 @@ index 1a87cc445..4e298108a 100644
  	}
  
  	if (desc == &panel_dpi) {
-@@ -567,7 +853,7 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+@@ -567,7 +853,7 @@ static int panel_simple_probe(struct dev
  	/* Catch common mistakes for panels. */
  	switch (connector_type) {
  	case 0:
@@ -705,7 +689,7 @@ index 1a87cc445..4e298108a 100644
  		connector_type = DRM_MODE_CONNECTOR_DPI;
  		break;
  	case DRM_MODE_CONNECTOR_LVDS:
-@@ -622,8 +908,10 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
+@@ -622,8 +908,10 @@ static int panel_simple_probe(struct dev
  	drm_panel_init(&panel->base, dev, &panel_simple_funcs, connector_type);
  
  	err = drm_panel_of_backlight(&panel->base);
@@ -717,7 +701,7 @@ index 1a87cc445..4e298108a 100644
  
  	drm_panel_add(&panel->base);
  
-@@ -676,7 +964,7 @@ static const struct drm_display_mode ampire_am_1280800n3tzqw_t00h_mode = {
+@@ -676,7 +964,7 @@ static const struct drm_display_mode amp
  static const struct panel_desc ampire_am_1280800n3tzqw_t00h = {
  	.modes = &ampire_am_1280800n3tzqw_t00h_mode,
  	.num_modes = 1,
@@ -726,7 +710,7 @@ index 1a87cc445..4e298108a 100644
  	.size = {
  		.width = 217,
  		.height = 136,
-@@ -2144,7 +2432,6 @@ static const struct panel_desc innolux_g070y2_l01 = {
+@@ -2147,7 +2435,6 @@ static const struct panel_desc innolux_g
  		.unprepare = 800,
  	},
  	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
@@ -734,7 +718,7 @@ index 1a87cc445..4e298108a 100644
  	.connector_type = DRM_MODE_CONNECTOR_LVDS,
  };
  
-@@ -2201,7 +2488,7 @@ static const struct panel_desc innolux_g121i1_l01 = {
+@@ -2204,7 +2491,7 @@ static const struct panel_desc innolux_g
  		.enable = 200,
  		.disable = 20,
  	},
@@ -743,7 +727,7 @@ index 1a87cc445..4e298108a 100644
  	.connector_type = DRM_MODE_CONNECTOR_LVDS,
  };
  
-@@ -2655,7 +2942,6 @@ static const struct display_timing logictechno_lt161010_2nh_timing = {
+@@ -2658,7 +2945,6 @@ static const struct display_timing logic
  static const struct panel_desc logictechno_lt161010_2nh = {
  	.timings = &logictechno_lt161010_2nh_timing,
  	.num_timings = 1,
@@ -751,7 +735,7 @@ index 1a87cc445..4e298108a 100644
  	.size = {
  		.width = 154,
  		.height = 86,
-@@ -2685,7 +2971,6 @@ static const struct display_timing logictechno_lt170410_2whc_timing = {
+@@ -2688,7 +2974,6 @@ static const struct display_timing logic
  static const struct panel_desc logictechno_lt170410_2whc = {
  	.timings = &logictechno_lt170410_2whc_timing,
  	.num_timings = 1,
@@ -759,7 +743,7 @@ index 1a87cc445..4e298108a 100644
  	.size = {
  		.width = 217,
  		.height = 136,
-@@ -3906,6 +4191,9 @@ static const struct panel_desc arm_rtsm = {
+@@ -3910,6 +4195,9 @@ static const struct panel_desc arm_rtsm
  
  static const struct of_device_id platform_of_match[] = {
  	{
@@ -769,7 +753,7 @@ index 1a87cc445..4e298108a 100644
  		.compatible = "ampire,am-1280800n3tzqw-t00h",
  		.data = &ampire_am_1280800n3tzqw_t00h,
  	}, {
-@@ -4314,15 +4602,132 @@ static const struct of_device_id platform_of_match[] = {
+@@ -4318,15 +4606,132 @@ static const struct of_device_id platfor
  };
  MODULE_DEVICE_TABLE(of, platform_of_match);
  
@@ -903,7 +887,7 @@ index 1a87cc445..4e298108a 100644
  }
  
  static int panel_simple_platform_remove(struct platform_device *pdev)
-@@ -4557,6 +4962,9 @@ static const struct panel_desc_dsi osd101t2045_53ts = {
+@@ -4561,6 +4966,9 @@ static const struct panel_desc_dsi osd10
  
  static const struct of_device_id dsi_of_match[] = {
  	{
@@ -913,7 +897,7 @@ index 1a87cc445..4e298108a 100644
  		.compatible = "auo,b080uan01",
  		.data = &auo_b080uan01
  	}, {
-@@ -4583,9 +4991,33 @@ static const struct of_device_id dsi_of_match[] = {
+@@ -4587,9 +4995,33 @@ static const struct of_device_id dsi_of_
  };
  MODULE_DEVICE_TABLE(of, dsi_of_match);
  
@@ -947,7 +931,7 @@ index 1a87cc445..4e298108a 100644
  	const struct of_device_id *id;
  	int err;
  
-@@ -4593,12 +5025,47 @@ static int panel_simple_dsi_probe(struct mipi_dsi_device *dsi)
+@@ -4597,12 +5029,47 @@ static int panel_simple_dsi_probe(struct
  	if (!id)
  		return -ENODEV;
  
@@ -996,8 +980,6 @@ index 1a87cc445..4e298108a 100644
  	dsi->mode_flags = desc->flags;
  	dsi->format = desc->format;
  	dsi->lanes = desc->lanes;
-diff --git a/include/drm/drm_crtc.h b/include/drm/drm_crtc.h
-index 59b51a09c..3a3d9d887 100644
 --- a/include/drm/drm_crtc.h
 +++ b/include/drm/drm_crtc.h
 @@ -287,7 +287,16 @@ struct drm_crtc_state {
@@ -1018,8 +1000,6 @@ index 59b51a09c..3a3d9d887 100644
  	/**
  	 * @target_vblank:
  	 *
-diff --git a/include/drm/drm_drv.h b/include/drm/drm_drv.h
-index e57d0440f..e395d1fc1 100644
 --- a/include/drm/drm_drv.h
 +++ b/include/drm/drm_drv.h
 @@ -29,6 +29,7 @@
@@ -1030,11 +1010,10 @@ index e57d0440f..e395d1fc1 100644
  
  #include <drm/drm_device.h>
  
-@@ -460,6 +461,15 @@ struct drm_driver {
- 	int (*gem_prime_mmap)(struct drm_gem_object *obj,
+@@ -461,6 +462,15 @@ struct drm_driver {
  				struct vm_area_struct *vma);
  
-+	/**
+ 	/**
 +	 * @gem_prime_get_uuid
 +	 *
 +	 * get_uuid hook for GEM drivers. Retrieves the virtio uuid of the
@@ -1043,11 +1022,10 @@ index e57d0440f..e395d1fc1 100644
 +	int (*gem_prime_get_uuid)(struct drm_gem_object *obj,
 +				  uuid_t *uuid);
 +
- 	/**
++	/**
  	 * @dumb_create:
  	 *
-diff --git a/include/drm/drm_mode_config.h b/include/drm/drm_mode_config.h
-index a18f73eb3..76d114569 100644
+ 	 * This creates a new dumb buffer in the driver's backing storage manager (GEM,
 --- a/include/drm/drm_mode_config.h
 +++ b/include/drm/drm_mode_config.h
 @@ -794,6 +794,19 @@ struct drm_mode_config {
@@ -1070,8 +1048,6 @@ index a18f73eb3..76d114569 100644
  	/**
  	 * @suggested_x_property: Optional connector property with a hint for
  	 * the position of the output on the host's screen.
-diff --git a/include/drm/drm_mode_object.h b/include/drm/drm_mode_object.h
-index c34a3e803..6292fa663 100644
 --- a/include/drm/drm_mode_object.h
 +++ b/include/drm/drm_mode_object.h
 @@ -60,7 +60,7 @@ struct drm_mode_object {
@@ -1083,19 +1059,15 @@ index c34a3e803..6292fa663 100644
  /**
   * struct drm_object_properties - property tracking for &drm_mode_object
   */
-diff --git a/include/drm/drm_prime.h b/include/drm/drm_prime.h
-index 0f69f9fbf..a9d0c6b08 100644
 --- a/include/drm/drm_prime.h
 +++ b/include/drm/drm_prime.h
-@@ -107,5 +107,6 @@ void drm_prime_gem_destroy(struct drm_gem_object *obj, struct sg_table *sg);
+@@ -107,5 +107,6 @@ void drm_prime_gem_destroy(struct drm_ge
  int drm_prime_sg_to_page_addr_arrays(struct sg_table *sgt, struct page **pages,
  				     dma_addr_t *addrs, int max_pages);
  
 +int drm_gem_dmabuf_get_uuid(struct dma_buf *dma_buf, uuid_t *uuid);
  
  #endif /* __DRM_PRIME_H__ */
-diff --git a/include/uapi/drm/drm_fourcc.h b/include/uapi/drm/drm_fourcc.h
-index dad9d3b4a..199ad9009 100644
 --- a/include/uapi/drm/drm_fourcc.h
 +++ b/include/uapi/drm/drm_fourcc.h
 @@ -242,6 +242,8 @@ extern "C" {
@@ -1115,7 +1087,7 @@ index dad9d3b4a..199ad9009 100644
  
  /* add more to the end as needed */
  
-@@ -1067,6 +1070,15 @@ drm_fourcc_canonicalize_nvidia_format_mod(__u64 modifier)
+@@ -1067,6 +1070,15 @@ drm_fourcc_canonicalize_nvidia_format_mo
   */
  #define AMLOGIC_FBC_OPTION_MEM_SAVING		(1ULL << 0)
  
@@ -1131,6 +1103,3 @@ index dad9d3b4a..199ad9009 100644
  #if defined(__cplusplus)
  }
  #endif
--- 
-2.37.1 (Apple Git-137.1)
-

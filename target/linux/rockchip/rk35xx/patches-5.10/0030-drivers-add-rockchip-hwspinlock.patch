@@ -8,8 +8,6 @@ Subject: [PATCH 30/42] drivers: add rockchip hwspinlock
  drivers/hwspinlock/Makefile |  1 +
  2 files changed, 11 insertions(+)
 
-diff --git a/drivers/hwspinlock/Kconfig b/drivers/hwspinlock/Kconfig
-index 32cd26352..1760015ba 100644
 --- a/drivers/hwspinlock/Kconfig
 +++ b/drivers/hwspinlock/Kconfig
 @@ -28,6 +28,16 @@ config HWSPINLOCK_QCOM
@@ -29,8 +27,6 @@ index 32cd26352..1760015ba 100644
  config HWSPINLOCK_SIRF
  	tristate "SIRF Hardware Spinlock device"
  	depends on ARCH_SIRF || COMPILE_TEST
-diff --git a/drivers/hwspinlock/Makefile b/drivers/hwspinlock/Makefile
-index ed053e3f0..6b74ba156 100644
 --- a/drivers/hwspinlock/Makefile
 +++ b/drivers/hwspinlock/Makefile
 @@ -6,6 +6,7 @@
@@ -41,6 +37,3 @@ index ed053e3f0..6b74ba156 100644
  obj-$(CONFIG_HWSPINLOCK_SIRF)		+= sirf_hwspinlock.o
  obj-$(CONFIG_HWSPINLOCK_SPRD)		+= sprd_hwspinlock.o
  obj-$(CONFIG_HWSPINLOCK_STM32)		+= stm32_hwspinlock.o
--- 
-2.37.1 (Apple Git-137.1)
-

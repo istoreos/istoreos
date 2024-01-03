@@ -9,11 +9,9 @@ Change-Id: I90b09d044769747e8858c23f3087c00b2fcb2f12
  drivers/devfreq/rockchip_dmc.c | 75 +++++++++++++++++++++++++++++++++-
  1 file changed, 74 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/devfreq/rockchip_dmc.c b/drivers/devfreq/rockchip_dmc.c
-index 99bdd0374..0c521283e 100644
 --- a/drivers/devfreq/rockchip_dmc.c
 +++ b/drivers/devfreq/rockchip_dmc.c
-@@ -1775,6 +1775,79 @@ static __maybe_unused int rk3399_dmc_init(struct platform_device *pdev,
+@@ -1775,6 +1775,79 @@ static __maybe_unused int rk3399_dmc_ini
  	return 0;
  }
  
@@ -93,7 +91,7 @@ index 99bdd0374..0c521283e 100644
  static __maybe_unused int rk3568_dmc_init(struct platform_device *pdev,
  					  struct rockchip_dmcfreq *dmcfreq)
  {
-@@ -2043,7 +2116,7 @@ static const struct of_device_id rockchip_dmcfreq_of_match[] = {
+@@ -2043,7 +2116,7 @@ static const struct of_device_id rockchi
  	{ .compatible = "rockchip,rk3399-dmc", .data = rk3399_dmc_init },
  #endif
  #if IS_ENABLED(CONFIG_CPU_RK3528)
@@ -102,6 +100,3 @@ index 99bdd0374..0c521283e 100644
  #endif
  #if IS_ENABLED(CONFIG_CPU_RK3562)
  	{ .compatible = "rockchip,rk3562-dmc", .data = rk3568_dmc_init },
--- 
-2.31.0
-

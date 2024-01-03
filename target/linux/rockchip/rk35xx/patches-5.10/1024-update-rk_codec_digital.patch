@@ -8,11 +8,9 @@ Subject: [PATCH] rk_codec_digital: update
  sound/soc/codecs/rk_codec_digital.h | 9 +++++++--
  2 files changed, 11 insertions(+), 6 deletions(-)
 
-diff --git a/sound/soc/codecs/rk_codec_digital.c b/sound/soc/codecs/rk_codec_digital.c
-index cece49d15..2c844193e 100644
 --- a/sound/soc/codecs/rk_codec_digital.c
 +++ b/sound/soc/codecs/rk_codec_digital.c
-@@ -407,13 +407,13 @@ static int rk_codec_digital_set_clk_sync(struct rk_codec_digital_priv *rcd,
+@@ -407,13 +407,13 @@ static int rk_codec_digital_set_clk_sync
  			   ACDCDIG_DACSCLKRXINT_DIV_SCKRXDIV(div_bclk));
  	regmap_update_bits(rcd->regmap, I2S_CKR0,
  			   ACDCDIG_I2S_CKR0_RSD_MASK,
@@ -28,7 +26,7 @@ index cece49d15..2c844193e 100644
  
  	return 0;
  }
-@@ -450,7 +450,7 @@ static int rk_codec_digital_set_clk(struct rk_codec_digital_priv *rcd,
+@@ -450,7 +450,7 @@ static int rk_codec_digital_set_clk(stru
  				   ACDCDIG_DACSCLKRXINT_DIV_SCKRXDIV(div_bclk));
  		regmap_update_bits(rcd->regmap, I2S_CKR0,
  				   ACDCDIG_I2S_CKR0_RSD_MASK,
@@ -37,7 +35,7 @@ index cece49d15..2c844193e 100644
  	} else {
  		clk_set_rate(rcd->clk_adc, mclk);
  
-@@ -464,7 +464,7 @@ static int rk_codec_digital_set_clk(struct rk_codec_digital_priv *rcd,
+@@ -464,7 +464,7 @@ static int rk_codec_digital_set_clk(stru
  				   ACDCDIG_ADCSCLKTXINT_DIV_SCKTXDIV(div_bclk));
  		regmap_update_bits(rcd->regmap, I2S_CKR0,
  				   ACDCDIG_I2S_CKR0_TSD_MASK,
@@ -46,8 +44,6 @@ index cece49d15..2c844193e 100644
  	}
  
  	return 0;
-diff --git a/sound/soc/codecs/rk_codec_digital.h b/sound/soc/codecs/rk_codec_digital.h
-index 4bb409b8d..79e01b474 100644
 --- a/sound/soc/codecs/rk_codec_digital.h
 +++ b/sound/soc/codecs/rk_codec_digital.h
 @@ -288,9 +288,14 @@
@@ -67,6 +63,3 @@ index 4bb409b8d..79e01b474 100644
  /* I2S_CKR1 */
  #define ACDCDIG_I2S_CKR1_TLP_MASK		BIT(0)
  #define ACDCDIG_I2S_CKR1_TLP_INVERTED		BIT(0)
--- 
-2.31.0
-

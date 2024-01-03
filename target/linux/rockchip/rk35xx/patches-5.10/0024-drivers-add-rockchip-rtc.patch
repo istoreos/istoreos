@@ -8,8 +8,6 @@ Subject: [PATCH 24/42] drivers: add rockchip rtc
  drivers/rtc/rtc-rk808.c | 53 ++++++++++++++++++++++++++++++++++++-----
  2 files changed, 49 insertions(+), 8 deletions(-)
 
-diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
-index 54cf5ec8f..a27b5e5f8 100644
 --- a/drivers/rtc/Kconfig
 +++ b/drivers/rtc/Kconfig
 @@ -375,11 +375,11 @@ config RTC_DRV_MAX77686
@@ -26,8 +24,6 @@ index 54cf5ec8f..a27b5e5f8 100644
  
  	  This driver can also be built as a module. If so, the module
  	  will be called rk808-rtc.
-diff --git a/drivers/rtc/rtc-rk808.c b/drivers/rtc/rtc-rk808.c
-index c0334c602..c65286b9a 100644
 --- a/drivers/rtc/rtc-rk808.c
 +++ b/drivers/rtc/rtc-rk808.c
 @@ -37,6 +37,7 @@
@@ -46,7 +42,7 @@ index c0334c602..c65286b9a 100644
  };
  
  /*
-@@ -138,8 +140,13 @@ static int rk808_rtc_readtime(struct device *dev, struct rtc_time *tm)
+@@ -138,8 +140,13 @@ static int rk808_rtc_readtime(struct dev
  	tm->tm_mon = (bcd2bin(rtc_data[4] & MONTHS_REG_MSK)) - 1;
  	tm->tm_year = (bcd2bin(rtc_data[5] & YEARS_REG_MSK)) + 100;
  	tm->tm_wday = bcd2bin(rtc_data[6] & WEEKS_REG_MSK);
@@ -62,7 +58,7 @@ index c0334c602..c65286b9a 100644
  
  	return ret;
  }
-@@ -152,8 +159,13 @@ static int rk808_rtc_set_time(struct device *dev, struct rtc_time *tm)
+@@ -152,8 +159,13 @@ static int rk808_rtc_set_time(struct dev
  	u8 rtc_data[NUM_TIME_REGS];
  	int ret;
  
@@ -78,7 +74,7 @@ index c0334c602..c65286b9a 100644
  	rtc_data[0] = bin2bcd(tm->tm_sec);
  	rtc_data[1] = bin2bcd(tm->tm_min);
  	rtc_data[2] = bin2bcd(tm->tm_hour);
-@@ -210,7 +222,9 @@ static int rk808_rtc_readalarm(struct device *dev, struct rtc_wkalrm *alrm)
+@@ -210,7 +222,9 @@ static int rk808_rtc_readalarm(struct de
  	alrm->time.tm_mday = bcd2bin(alrm_data[3] & DAYS_REG_MSK);
  	alrm->time.tm_mon = (bcd2bin(alrm_data[4] & MONTHS_REG_MSK)) - 1;
  	alrm->time.tm_year = (bcd2bin(alrm_data[5] & YEARS_REG_MSK)) + 100;
@@ -89,7 +85,7 @@ index c0334c602..c65286b9a 100644
  
  	ret = regmap_read(rk808->regmap, rk808_rtc->creg->int_reg, &int_reg);
  	if (ret) {
-@@ -264,7 +278,9 @@ static int rk808_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
+@@ -264,7 +278,9 @@ static int rk808_rtc_setalarm(struct dev
  	dev_dbg(dev, "alrm set RTC date/time %ptRd(%d) %ptRt\n",
  		&alrm->time, alrm->time.tm_wday, &alrm->time);
  
@@ -100,7 +96,7 @@ index c0334c602..c65286b9a 100644
  	alrm_data[0] = bin2bcd(alrm->time.tm_sec);
  	alrm_data[1] = bin2bcd(alrm->time.tm_min);
  	alrm_data[2] = bin2bcd(alrm->time.tm_hour);
-@@ -388,13 +404,38 @@ static int rk808_rtc_probe(struct platform_device *pdev)
+@@ -388,13 +404,38 @@ static int rk808_rtc_probe(struct platfo
  {
  	struct rk808 *rk808 = dev_get_drvdata(pdev->dev.parent);
  	struct rk808_rtc *rk808_rtc;
@@ -139,6 +135,3 @@ index c0334c602..c65286b9a 100644
  	case RK809_ID:
  	case RK817_ID:
  		rk808_rtc->creg = &rk817_creg;
--- 
-2.37.1 (Apple Git-137.1)
-

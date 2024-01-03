@@ -19,11 +19,9 @@ Change-Id: I956c5f1a707770d5b6bf52dbe0512654df38edd4
  drivers/usb/gadget/configfs.c | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/drivers/usb/gadget/configfs.c b/drivers/usb/gadget/configfs.c
-index d51ea1c05..fc9fcb2a9 100644
 --- a/drivers/usb/gadget/configfs.c
 +++ b/drivers/usb/gadget/configfs.c
-@@ -1404,6 +1404,10 @@ static int configfs_composite_bind(struct usb_gadget *gadget,
+@@ -1404,6 +1404,10 @@ static int configfs_composite_bind(struc
  				goto err_purge_funcs;
  			}
  		}
@@ -34,6 +32,3 @@ index d51ea1c05..fc9fcb2a9 100644
  		usb_ep_autoconfig_reset(cdev->gadget);
  	}
  	if (cdev->use_os_string) {
--- 
-2.31.0
-

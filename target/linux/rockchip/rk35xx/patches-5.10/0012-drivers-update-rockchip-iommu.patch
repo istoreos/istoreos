@@ -11,8 +11,6 @@ Subject: [PATCH 12/42] drivers: update rockchip iommu
  include/linux/iova.h           |  12 +
  6 files changed, 1105 insertions(+), 121 deletions(-)
 
-diff --git a/drivers/iommu/Kconfig b/drivers/iommu/Kconfig
-index 04878caf6..fe1256b01 100644
 --- a/drivers/iommu/Kconfig
 +++ b/drivers/iommu/Kconfig
 @@ -160,7 +160,8 @@ config OMAP_IOMMU_DEBUG
@@ -25,11 +23,9 @@ index 04878caf6..fe1256b01 100644
  	depends on ARCH_ROCKCHIP || COMPILE_TEST
  	select IOMMU_API
  	select ARM_DMA_USE_IOMMU
-diff --git a/drivers/iommu/dma-iommu.c b/drivers/iommu/dma-iommu.c
-index d1539b739..3e534207e 100644
 --- a/drivers/iommu/dma-iommu.c
 +++ b/drivers/iommu/dma-iommu.c
-@@ -372,6 +372,34 @@ static int iommu_dma_deferred_attach(struct device *dev,
+@@ -372,6 +372,34 @@ static int iommu_dma_deferred_attach(str
  	return 0;
  }
  
@@ -64,7 +60,7 @@ index d1539b739..3e534207e 100644
  /**
   * dma_info_to_prot - Translate DMA API directions and attributes to IOMMU API
   *                    page flags.
-@@ -1192,6 +1220,13 @@ void iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size)
+@@ -1192,6 +1220,13 @@ void iommu_setup_dma_ops(struct device *
  		dev->dma_ops = &iommu_dma_ops;
  	}
  
@@ -78,8 +74,6 @@ index d1539b739..3e534207e 100644
  	return;
  out_err:
  	 pr_warn("Failed to set up IOMMU for device %s; retaining platform DMA ops\n",
-diff --git a/drivers/iommu/iova.c b/drivers/iommu/iova.c
-index 4600e97ac..dd7468d8d 100644
 --- a/drivers/iommu/iova.c
 +++ b/drivers/iommu/iova.c
 @@ -11,6 +11,8 @@
@@ -91,7 +85,7 @@ index 4600e97ac..dd7468d8d 100644
  
  /* The anchor node sits above the top of the usable address space */
  #define IOVA_ANCHOR	~0UL
-@@ -25,6 +27,66 @@ static void init_iova_rcaches(struct iova_domain *iovad);
+@@ -25,6 +27,66 @@ static void init_iova_rcaches(struct iov
  static void free_iova_rcaches(struct iova_domain *iovad);
  static void fq_destroy_all_entries(struct iova_domain *iovad);
  static void fq_flush_timeout(struct timer_list *t);
@@ -158,7 +152,7 @@ index 4600e97ac..dd7468d8d 100644
  
  void
  init_iova_domain(struct iova_domain *iovad, unsigned long granule,
-@@ -177,6 +239,24 @@ iova_insert_rbtree(struct rb_root *root, struct iova *iova,
+@@ -177,6 +239,24 @@ iova_insert_rbtree(struct rb_root *root,
  	rb_insert_color(&iova->node, root);
  }
  
@@ -183,7 +177,7 @@ index 4600e97ac..dd7468d8d 100644
  static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
  		unsigned long size, unsigned long limit_pfn,
  			struct iova *new, bool size_aligned)
-@@ -184,11 +264,12 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -184,11 +264,12 @@ static int __alloc_and_insert_iova_range
  	struct rb_node *curr, *prev;
  	struct iova *curr_iova;
  	unsigned long flags;
@@ -198,7 +192,7 @@ index 4600e97ac..dd7468d8d 100644
  
  	/* Walk the tree backwards */
  	spin_lock_irqsave(&iovad->iova_rbtree_lock, flags);
-@@ -198,15 +279,25 @@ static int __alloc_and_insert_iova_range(struct iova_domain *iovad,
+@@ -198,15 +279,25 @@ static int __alloc_and_insert_iova_range
  
  	curr = __get_cached_rbnode(iovad, limit_pfn);
  	curr_iova = rb_entry(curr, struct iova, node);
@@ -214,10 +208,9 @@ index 4600e97ac..dd7468d8d 100644
  		curr = rb_prev(curr);
  		curr_iova = rb_entry(curr, struct iova, node);
 -	} while (curr && new_pfn <= curr_iova->pfn_hi);
--
--	if (limit_pfn < size || new_pfn < iovad->start_pfn) {
 +	} while (curr && new_pfn <= curr_iova->pfn_hi && new_pfn >= low_pfn);
-+
+ 
+-	if (limit_pfn < size || new_pfn < iovad->start_pfn) {
 +	if (high_pfn < size || new_pfn < low_pfn) {
 +		if (low_pfn == iovad->start_pfn && low_pfn_new < limit_pfn) {
 +			high_pfn = limit_pfn;
@@ -229,7 +222,7 @@ index 4600e97ac..dd7468d8d 100644
  		iovad->max32_alloc_size = size;
  		goto iova32_full;
  	}
-@@ -424,13 +515,16 @@ alloc_iova_fast(struct iova_domain *iovad, unsigned long size,
+@@ -424,13 +515,16 @@ retry:
  	if (!new_iova) {
  		unsigned int cpu;
  
@@ -280,7 +273,7 @@ index 4600e97ac..dd7468d8d 100644
  static struct iova_magazine *iova_magazine_alloc(gfp_t flags)
  {
  	return kzalloc(sizeof(struct iova_magazine), flags);
-@@ -1046,5 +1166,27 @@ void free_cpu_cached_iovas(unsigned int cpu, struct iova_domain *iovad)
+@@ -1046,5 +1166,27 @@ void free_cpu_cached_iovas(unsigned int
  	}
  }
  
@@ -308,8 +301,6 @@ index 4600e97ac..dd7468d8d 100644
 +
  MODULE_AUTHOR("Anil S Keshavamurthy <anil.s.keshavamurthy@intel.com>");
  MODULE_LICENSE("GPL");
-diff --git a/drivers/iommu/rockchip-iommu.c b/drivers/iommu/rockchip-iommu.c
-index e5d86b717..cf4f03f33 100644
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
 @@ -19,6 +19,7 @@
@@ -416,7 +407,7 @@ index e5d86b717..cf4f03f33 100644
  
  static inline void rk_table_flush(struct rk_iommu_domain *dom, dma_addr_t dma,
  				  unsigned int count)
-@@ -174,11 +216,32 @@ static struct rk_iommu_domain *to_rk_domain(struct iommu_domain *dom)
+@@ -174,11 +216,32 @@ static struct rk_iommu_domain *to_rk_dom
  #define RK_DTE_PT_ADDRESS_MASK    0xfffff000
  #define RK_DTE_PT_VALID           BIT(0)
  
@@ -449,7 +440,7 @@ index e5d86b717..cf4f03f33 100644
  static inline bool rk_dte_is_pt_valid(u32 dte)
  {
  	return dte & RK_DTE_PT_VALID;
-@@ -189,6 +252,15 @@ static inline u32 rk_mk_dte(dma_addr_t pt_dma)
+@@ -189,6 +252,15 @@ static inline u32 rk_mk_dte(dma_addr_t p
  	return (pt_dma & RK_DTE_PT_ADDRESS_MASK) | RK_DTE_PT_VALID;
  }
  
@@ -465,7 +456,7 @@ index e5d86b717..cf4f03f33 100644
  /*
   * Each PTE has a Page address, some flags and a valid bit:
   * +---------------------+---+-------+-+
-@@ -215,29 +287,84 @@ static inline u32 rk_mk_dte(dma_addr_t pt_dma)
+@@ -215,29 +287,84 @@ static inline u32 rk_mk_dte(dma_addr_t p
  #define RK_PTE_PAGE_READABLE      BIT(1)
  #define RK_PTE_PAGE_VALID         BIT(0)
  
@@ -551,7 +542,7 @@ index e5d86b717..cf4f03f33 100644
  }
  
  /*
-@@ -350,6 +477,10 @@ static int rk_iommu_enable_stall(struct rk_iommu *iommu)
+@@ -350,6 +477,10 @@ static int rk_iommu_enable_stall(struct
  {
  	int ret, i;
  	bool val;
@@ -562,7 +553,7 @@ index e5d86b717..cf4f03f33 100644
  
  	if (rk_iommu_is_stall_active(iommu))
  		return 0;
-@@ -358,15 +489,22 @@ static int rk_iommu_enable_stall(struct rk_iommu *iommu)
+@@ -358,15 +489,22 @@ static int rk_iommu_enable_stall(struct
  	if (!rk_iommu_is_paging_enabled(iommu))
  		return 0;
  
@@ -587,7 +578,7 @@ index e5d86b717..cf4f03f33 100644
  
  	return ret;
  }
-@@ -375,19 +513,30 @@ static int rk_iommu_disable_stall(struct rk_iommu *iommu)
+@@ -375,19 +513,30 @@ static int rk_iommu_disable_stall(struct
  {
  	int ret, i;
  	bool val;
@@ -620,7 +611,7 @@ index e5d86b717..cf4f03f33 100644
  
  	return ret;
  }
-@@ -396,19 +545,30 @@ static int rk_iommu_enable_paging(struct rk_iommu *iommu)
+@@ -396,19 +545,30 @@ static int rk_iommu_enable_paging(struct
  {
  	int ret, i;
  	bool val;
@@ -653,7 +644,7 @@ index e5d86b717..cf4f03f33 100644
  
  	return ret;
  }
-@@ -417,51 +577,84 @@ static int rk_iommu_disable_paging(struct rk_iommu *iommu)
+@@ -417,51 +577,84 @@ static int rk_iommu_disable_paging(struc
  {
  	int ret, i;
  	bool val;
@@ -744,7 +735,7 @@ index e5d86b717..cf4f03f33 100644
  	if (ret) {
  		dev_err(iommu->dev, "FORCE_RESET command timed out\n");
  		return ret;
-@@ -490,6 +683,10 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+@@ -490,6 +683,10 @@ static void log_iova(struct rk_iommu *io
  
  	mmu_dte_addr = rk_iommu_read(base, RK_MMU_DTE_ADDR);
  	mmu_dte_addr_phys = (phys_addr_t)mmu_dte_addr;
@@ -755,7 +746,7 @@ index e5d86b717..cf4f03f33 100644
  
  	dte_addr_phys = mmu_dte_addr_phys + (4 * dte_index);
  	dte_addr = phys_to_virt(dte_addr_phys);
-@@ -498,14 +695,20 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+@@ -498,14 +695,20 @@ static void log_iova(struct rk_iommu *io
  	if (!rk_dte_is_pt_valid(dte))
  		goto print_it;
  
@@ -778,7 +769,7 @@ index e5d86b717..cf4f03f33 100644
  	page_flags = pte & RK_PTE_PAGE_FLAGS_MASK;
  
  print_it:
-@@ -517,21 +720,14 @@ static void log_iova(struct rk_iommu *iommu, int index, dma_addr_t iova)
+@@ -517,21 +720,14 @@ print_it:
  		rk_pte_is_page_valid(pte), &page_addr_phys, page_flags);
  }
  
@@ -803,7 +794,7 @@ index e5d86b717..cf4f03f33 100644
  
  	for (i = 0; i < iommu->num_mmu; i++) {
  		int_status = rk_iommu_read(iommu->bases[i], RK_MMU_INT_STATUS);
-@@ -554,19 +750,29 @@ static irqreturn_t rk_iommu_irq(int irq, void *dev_id)
+@@ -554,19 +750,29 @@ static irqreturn_t rk_iommu_irq(int irq,
  
  			log_iova(iommu, i, iova);
  
@@ -844,7 +835,7 @@ index e5d86b717..cf4f03f33 100644
  		}
  
  		if (int_status & RK_MMU_IRQ_BUS_ERROR)
-@@ -579,6 +785,46 @@ static irqreturn_t rk_iommu_irq(int irq, void *dev_id)
+@@ -579,6 +785,46 @@ static irqreturn_t rk_iommu_irq(int irq,
  		rk_iommu_write(iommu->bases[i], RK_MMU_INT_CLEAR, int_status);
  	}
  
@@ -891,7 +882,7 @@ index e5d86b717..cf4f03f33 100644
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
  
  out:
-@@ -614,12 +860,44 @@ static phys_addr_t rk_iommu_iova_to_phys(struct iommu_domain *domain,
+@@ -614,12 +860,44 @@ out:
  	return phys;
  }
  
@@ -936,7 +927,7 @@ index e5d86b717..cf4f03f33 100644
  	/* shootdown these iova from all iommus using this domain */
  	spin_lock_irqsave(&rk_domain->iommus_lock, flags);
  	list_for_each(pos, &rk_domain->iommus) {
-@@ -690,12 +968,51 @@ static u32 *rk_dte_get_page_table(struct rk_iommu_domain *rk_domain,
+@@ -690,12 +968,51 @@ done:
  	return (u32 *)phys_to_virt(pt_phys);
  }
  
@@ -989,7 +980,7 @@ index e5d86b717..cf4f03f33 100644
  
  	assert_spin_locked(&rk_domain->dt_lock);
  
-@@ -704,7 +1021,15 @@ static size_t rk_iommu_unmap_iova(struct rk_iommu_domain *rk_domain,
+@@ -704,7 +1021,15 @@ static size_t rk_iommu_unmap_iova(struct
  		if (!rk_pte_is_page_valid(pte))
  			break;
  
@@ -1006,7 +997,7 @@ index e5d86b717..cf4f03f33 100644
  	}
  
  	rk_table_flush(rk_domain, pte_dma, pte_count);
-@@ -712,6 +1037,23 @@ static size_t rk_iommu_unmap_iova(struct rk_iommu_domain *rk_domain,
+@@ -712,6 +1037,23 @@ static size_t rk_iommu_unmap_iova(struct
  	return pte_count * SPAGE_SIZE;
  }
  
@@ -1030,7 +1021,7 @@ index e5d86b717..cf4f03f33 100644
  static int rk_iommu_map_iova(struct rk_iommu_domain *rk_domain, u32 *pte_addr,
  			     dma_addr_t pte_dma, dma_addr_t iova,
  			     phys_addr_t paddr, size_t size, int prot)
-@@ -725,12 +1067,15 @@ static int rk_iommu_map_iova(struct rk_iommu_domain *rk_domain, u32 *pte_addr,
+@@ -725,12 +1067,15 @@ static int rk_iommu_map_iova(struct rk_i
  	for (pte_count = 0; pte_count < pte_total; pte_count++) {
  		u32 pte = pte_addr[pte_count];
  
@@ -1050,7 +1041,7 @@ index e5d86b717..cf4f03f33 100644
  	}
  
  	rk_table_flush(rk_domain, pte_dma, pte_total);
-@@ -747,7 +1092,7 @@ static int rk_iommu_map_iova(struct rk_iommu_domain *rk_domain, u32 *pte_addr,
+@@ -747,7 +1092,7 @@ static int rk_iommu_map_iova(struct rk_i
  unwind:
  	/* Unmap the range of iovas that we just mapped */
  	rk_iommu_unmap_iova(rk_domain, pte_addr, pte_dma,
@@ -1059,7 +1050,7 @@ index e5d86b717..cf4f03f33 100644
  
  	iova += pte_count * SPAGE_SIZE;
  	page_phys = rk_pte_page_address(pte_addr[pte_count]);
-@@ -757,6 +1102,54 @@ static int rk_iommu_map_iova(struct rk_iommu_domain *rk_domain, u32 *pte_addr,
+@@ -757,6 +1102,54 @@ unwind:
  	return -EADDRINUSE;
  }
  
@@ -1114,7 +1105,7 @@ index e5d86b717..cf4f03f33 100644
  static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
  			phys_addr_t paddr, size_t size, int prot, gfp_t gfp)
  {
-@@ -764,7 +1157,7 @@ static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
+@@ -764,7 +1157,7 @@ static int rk_iommu_map(struct iommu_dom
  	unsigned long flags;
  	dma_addr_t pte_dma, iova = (dma_addr_t)_iova;
  	u32 *page_table, *pte_addr;
@@ -1123,7 +1114,7 @@ index e5d86b717..cf4f03f33 100644
  	int ret;
  
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
-@@ -782,10 +1175,10 @@ static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
+@@ -782,10 +1175,10 @@ static int rk_iommu_map(struct iommu_dom
  		return PTR_ERR(page_table);
  	}
  
@@ -1136,7 +1127,7 @@ index e5d86b717..cf4f03f33 100644
  	ret = rk_iommu_map_iova(rk_domain, pte_addr, pte_dma, iova,
  				paddr, size, prot);
  
-@@ -794,6 +1187,43 @@ static int rk_iommu_map(struct iommu_domain *domain, unsigned long _iova,
+@@ -794,6 +1187,43 @@ static int rk_iommu_map(struct iommu_dom
  	return ret;
  }
  
@@ -1180,7 +1171,7 @@ index e5d86b717..cf4f03f33 100644
  static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
  			     size_t size, struct iommu_iotlb_gather *gather)
  {
-@@ -804,6 +1234,7 @@ static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
+@@ -804,6 +1234,7 @@ static size_t rk_iommu_unmap(struct iomm
  	u32 dte;
  	u32 *pte_addr;
  	size_t unmap_size;
@@ -1188,20 +1179,22 @@ index e5d86b717..cf4f03f33 100644
  
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
-@@ -824,7 +1255,8 @@ static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
+@@ -824,7 +1255,50 @@ static size_t rk_iommu_unmap(struct iomm
  	pt_phys = rk_dte_pt_address(dte);
  	pte_addr = (u32 *)phys_to_virt(pt_phys) + rk_iova_pte_index(iova);
  	pte_dma = pt_phys + rk_iova_pte_index(iova) * sizeof(u32);
 -	unmap_size = rk_iommu_unmap_iova(rk_domain, pte_addr, pte_dma, size);
 +	unmap_size = rk_iommu_unmap_iova(rk_domain, pte_addr, pte_dma, size,
 +					 iommu);
- 
- 	spin_unlock_irqrestore(&rk_domain->dt_lock, flags);
- 
-@@ -834,6 +1266,77 @@ static size_t rk_iommu_unmap(struct iommu_domain *domain, unsigned long _iova,
- 	return unmap_size;
- }
- 
++
++	spin_unlock_irqrestore(&rk_domain->dt_lock, flags);
++
++	/* Shootdown iotlb entries for iova range that was just unmapped */
++	rk_iommu_zap_iova(rk_domain, iova, unmap_size);
++
++	return unmap_size;
++}
++
 +static size_t rk_iommu_unmap_v2(struct iommu_domain *domain, unsigned long _iova,
 +				size_t size, struct iommu_iotlb_gather *gather)
 +{
@@ -1235,15 +1228,13 @@ index e5d86b717..cf4f03f33 100644
 +	pte_dma = pt_phys + rk_iova_pte_index(iova) * sizeof(u32);
 +	unmap_size = rk_iommu_unmap_iova(rk_domain, pte_addr, pte_dma, size,
 +					 iommu);
-+
-+	spin_unlock_irqrestore(&rk_domain->dt_lock, flags);
-+
-+	/* Shootdown iotlb entries for iova range that was just unmapped */
-+	rk_iommu_zap_iova(rk_domain, iova, unmap_size);
-+
-+	return unmap_size;
-+}
-+
+ 
+ 	spin_unlock_irqrestore(&rk_domain->dt_lock, flags);
+ 
+@@ -834,6 +1308,35 @@ static size_t rk_iommu_unmap(struct iomm
+ 	return unmap_size;
+ }
+ 
 +static void rk_iommu_flush_tlb_all(struct iommu_domain *domain)
 +{
 +	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
@@ -1276,7 +1267,7 @@ index e5d86b717..cf4f03f33 100644
  static struct rk_iommu *rk_iommu_from_dev(struct device *dev)
  {
  	struct rk_iommudata *data = dev_iommu_priv_get(dev);
-@@ -856,7 +1359,23 @@ static void rk_iommu_disable(struct rk_iommu *iommu)
+@@ -856,7 +1359,23 @@ static void rk_iommu_disable(struct rk_i
  	}
  	rk_iommu_disable_stall(iommu);
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -1300,7 +1291,7 @@ index e5d86b717..cf4f03f33 100644
  
  /* Must be called with iommu powered on and attached */
  static int rk_iommu_enable(struct rk_iommu *iommu)
-@@ -864,6 +1383,8 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+@@ -864,6 +1383,8 @@ static int rk_iommu_enable(struct rk_iom
  	struct iommu_domain *domain = iommu->domain;
  	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
  	int ret, i;
@@ -1309,7 +1300,7 @@ index e5d86b717..cf4f03f33 100644
  
  	ret = clk_bulk_enable(iommu->num_clocks, iommu->clocks);
  	if (ret)
-@@ -878,10 +1399,21 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+@@ -878,10 +1399,21 @@ static int rk_iommu_enable(struct rk_iom
  		goto out_disable_stall;
  
  	for (i = 0; i < iommu->num_mmu; i++) {
@@ -1333,7 +1324,7 @@ index e5d86b717..cf4f03f33 100644
  	}
  
  	ret = rk_iommu_enable_paging(iommu);
-@@ -890,9 +1422,37 @@ static int rk_iommu_enable(struct rk_iommu *iommu)
+@@ -890,9 +1422,37 @@ out_disable_stall:
  	rk_iommu_disable_stall(iommu);
  out_disable_clocks:
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -1371,7 +1362,7 @@ index e5d86b717..cf4f03f33 100644
  static void rk_iommu_detach_device(struct iommu_domain *domain,
  				   struct device *dev)
  {
-@@ -908,8 +1468,7 @@ static void rk_iommu_detach_device(struct iommu_domain *domain,
+@@ -908,8 +1468,7 @@ static void rk_iommu_detach_device(struc
  
  	dev_dbg(dev, "Detaching from iommu domain\n");
  
@@ -1381,7 +1372,7 @@ index e5d86b717..cf4f03f33 100644
  		return;
  
  	iommu->domain = NULL;
-@@ -944,19 +1503,20 @@ static int rk_iommu_attach_device(struct iommu_domain *domain,
+@@ -944,19 +1503,20 @@ static int rk_iommu_attach_device(struct
  
  	dev_dbg(dev, "Attaching to iommu domain\n");
  
@@ -1406,7 +1397,7 @@ index e5d86b717..cf4f03f33 100644
  	ret = pm_runtime_get_if_in_use(iommu->dev);
  	if (!ret || WARN_ON_ONCE(ret < 0))
  		return 0;
-@@ -1054,6 +1614,35 @@ static void rk_iommu_domain_free(struct iommu_domain *domain)
+@@ -1054,6 +1614,35 @@ static void rk_iommu_domain_free(struct
  	kfree(rk_domain);
  }
  
@@ -1442,7 +1433,7 @@ index e5d86b717..cf4f03f33 100644
  static struct iommu_device *rk_iommu_probe_device(struct device *dev)
  {
  	struct rk_iommudata *data;
-@@ -1068,6 +1657,16 @@ static struct iommu_device *rk_iommu_probe_device(struct device *dev)
+@@ -1068,6 +1657,16 @@ static struct iommu_device *rk_iommu_pro
  	data->link = device_link_add(dev, iommu->dev,
  				     DL_FLAG_STATELESS | DL_FLAG_PM_RUNTIME);
  
@@ -1459,7 +1450,7 @@ index e5d86b717..cf4f03f33 100644
  	return &iommu->iommu;
  }
  
-@@ -1087,6 +1686,14 @@ static struct iommu_group *rk_iommu_device_group(struct device *dev)
+@@ -1087,6 +1686,14 @@ static struct iommu_group *rk_iommu_devi
  	return iommu_group_ref_get(iommu->group);
  }
  
@@ -1474,7 +1465,7 @@ index e5d86b717..cf4f03f33 100644
  static int rk_iommu_of_xlate(struct device *dev,
  			     struct of_phandle_args *args)
  {
-@@ -1100,6 +1707,10 @@ static int rk_iommu_of_xlate(struct device *dev,
+@@ -1100,6 +1707,10 @@ static int rk_iommu_of_xlate(struct devi
  	iommu_dev = of_find_device_by_node(args->np);
  
  	data->iommu = platform_get_drvdata(iommu_dev);
@@ -1485,7 +1476,7 @@ index e5d86b717..cf4f03f33 100644
  	dev_iommu_priv_set(dev, data);
  
  	platform_device_put(iommu_dev);
-@@ -1107,21 +1718,90 @@ static int rk_iommu_of_xlate(struct device *dev,
+@@ -1107,21 +1718,90 @@ static int rk_iommu_of_xlate(struct devi
  	return 0;
  }
  
@@ -1577,7 +1568,7 @@ index e5d86b717..cf4f03f33 100644
  static int rk_iommu_probe(struct platform_device *pdev)
  {
  	struct device *dev = &pdev->dev;
-@@ -1129,11 +1809,21 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1129,11 +1809,21 @@ static int rk_iommu_probe(struct platfor
  	struct resource *res;
  	int num_res = pdev->num_resources;
  	int err, i;
@@ -1599,19 +1590,10 @@ index e5d86b717..cf4f03f33 100644
  	platform_set_drvdata(pdev, iommu);
  	iommu->dev = dev;
  	iommu->num_mmu = 0;
-@@ -1161,26 +1851,34 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1161,26 +1851,34 @@ static int rk_iommu_probe(struct platfor
  
  	iommu->reset_disabled = device_property_read_bool(dev,
  					"rockchip,disable-mmu-reset");
--
--	iommu->num_clocks = ARRAY_SIZE(rk_iommu_clocks);
--	iommu->clocks = devm_kcalloc(iommu->dev, iommu->num_clocks,
--				     sizeof(*iommu->clocks), GFP_KERNEL);
--	if (!iommu->clocks)
--		return -ENOMEM;
--
--	for (i = 0; i < iommu->num_clocks; ++i)
--		iommu->clocks[i].id = rk_iommu_clocks[i];
 +	iommu->skip_read = device_property_read_bool(dev,
 +					"rockchip,skip-mmu-read");
 +	iommu->dlr_disable = device_property_read_bool(dev,
@@ -1624,7 +1606,15 @@ index e5d86b717..cf4f03f33 100644
 +	    of_machine_is_compatible("rockchip,rv1109"))
 +		iommu->cmd_retry = device_property_read_bool(dev,
 +					"rockchip,enable-cmd-retry");
-+
+ 
+-	iommu->num_clocks = ARRAY_SIZE(rk_iommu_clocks);
+-	iommu->clocks = devm_kcalloc(iommu->dev, iommu->num_clocks,
+-				     sizeof(*iommu->clocks), GFP_KERNEL);
+-	if (!iommu->clocks)
+-		return -ENOMEM;
+-
+-	for (i = 0; i < iommu->num_clocks; ++i)
+-		iommu->clocks[i].id = rk_iommu_clocks[i];
 +	iommu->need_res_map = device_property_read_bool(dev,
 +					"rockchip,reserve-map");
  
@@ -1645,7 +1635,7 @@ index e5d86b717..cf4f03f33 100644
  
  	err = clk_bulk_prepare(iommu->num_clocks, iommu->clocks);
  	if (err)
-@@ -1196,7 +1894,10 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1196,7 +1894,10 @@ static int rk_iommu_probe(struct platfor
  	if (err)
  		goto err_put_group;
  
@@ -1657,7 +1647,7 @@ index e5d86b717..cf4f03f33 100644
  	iommu_device_set_fwnode(&iommu->iommu, &dev->of_node->fwnode);
  
  	err = iommu_device_register(&iommu->iommu);
-@@ -1211,10 +1912,16 @@ static int rk_iommu_probe(struct platform_device *pdev)
+@@ -1211,10 +1912,16 @@ static int rk_iommu_probe(struct platfor
  	if (!dma_dev)
  		dma_dev = &pdev->dev;
  
@@ -1675,8 +1665,8 @@ index e5d86b717..cf4f03f33 100644
  	for (i = 0; i < iommu->num_irq; i++) {
  		int irq = platform_get_irq(pdev, i);
  
-@@ -1229,6 +1936,13 @@ static int rk_iommu_probe(struct platform_device *pdev)
- 		}
+@@ -1229,6 +1936,13 @@ static int rk_iommu_probe(struct platfor
+ 			goto err_pm_disable;
  	}
  
 +skip_request_irq:
@@ -1687,9 +1677,9 @@ index e5d86b717..cf4f03f33 100644
 +	}
 +
  	return 0;
- err_remove_sysfs:
- 	iommu_device_sysfs_remove(&iommu->iommu);
-@@ -1244,12 +1958,16 @@ static void rk_iommu_shutdown(struct platform_device *pdev)
+ err_pm_disable:
+ 	pm_runtime_disable(dev);
+@@ -1246,12 +1960,16 @@ static void rk_iommu_shutdown(struct pla
  	struct rk_iommu *iommu = platform_get_drvdata(pdev);
  	int i;
  
@@ -1706,7 +1696,7 @@ index e5d86b717..cf4f03f33 100644
  	pm_runtime_force_suspend(&pdev->dev);
  }
  
-@@ -1260,6 +1978,9 @@ static int __maybe_unused rk_iommu_suspend(struct device *dev)
+@@ -1262,6 +1980,9 @@ static int __maybe_unused rk_iommu_suspe
  	if (!iommu->domain)
  		return 0;
  
@@ -1716,7 +1706,7 @@ index e5d86b717..cf4f03f33 100644
  	rk_iommu_disable(iommu);
  	return 0;
  }
-@@ -1271,6 +1992,9 @@ static int __maybe_unused rk_iommu_resume(struct device *dev)
+@@ -1273,6 +1994,9 @@ static int __maybe_unused rk_iommu_resum
  	if (!iommu->domain)
  		return 0;
  
@@ -1726,7 +1716,7 @@ index e5d86b717..cf4f03f33 100644
  	return rk_iommu_enable(iommu);
  }
  
-@@ -1280,11 +2004,6 @@ static const struct dev_pm_ops rk_iommu_pm_ops = {
+@@ -1282,11 +2006,6 @@ static const struct dev_pm_ops rk_iommu_
  				pm_runtime_force_resume)
  };
  
@@ -1738,7 +1728,7 @@ index e5d86b717..cf4f03f33 100644
  static struct platform_driver rk_iommu_driver = {
  	.probe = rk_iommu_probe,
  	.shutdown = rk_iommu_shutdown,
-@@ -1301,3 +2020,8 @@ static int __init rk_iommu_init(void)
+@@ -1303,3 +2022,8 @@ static int __init rk_iommu_init(void)
  	return platform_driver_register(&rk_iommu_driver);
  }
  subsys_initcall(rk_iommu_init);
@@ -1747,11 +1737,9 @@ index e5d86b717..cf4f03f33 100644
 +MODULE_AUTHOR("Simon Xue <xxm@rock-chips.com> and Daniel Kurtz <djkurtz@chromium.org>");
 +MODULE_ALIAS("platform:rockchip-iommu");
 +MODULE_LICENSE("GPL v2");
-diff --git a/include/linux/iova.h b/include/linux/iova.h
-index 6c19b09e9..ef3d83262 100644
 --- a/include/linux/iova.h
 +++ b/include/linux/iova.h
-@@ -155,6 +155,7 @@ struct iova *reserve_iova(struct iova_domain *iovad, unsigned long pfn_lo,
+@@ -155,6 +155,7 @@ struct iova *reserve_iova(struct iova_do
  void copy_reserved_iova(struct iova_domain *from, struct iova_domain *to);
  void init_iova_domain(struct iova_domain *iovad, unsigned long granule,
  	unsigned long start_pfn);
@@ -1759,7 +1747,7 @@ index 6c19b09e9..ef3d83262 100644
  bool has_iova_flush_queue(struct iova_domain *iovad);
  int init_iova_flush_queue(struct iova_domain *iovad,
  			  iova_flush_cb flush_cb, iova_entry_dtor entry_dtor);
-@@ -163,6 +164,7 @@ void put_iova_domain(struct iova_domain *iovad);
+@@ -163,6 +164,7 @@ void put_iova_domain(struct iova_domain
  struct iova *split_and_remove_iova(struct iova_domain *iovad,
  	struct iova *iova, unsigned long pfn_lo, unsigned long pfn_hi);
  void free_cpu_cached_iovas(unsigned int cpu, struct iova_domain *iovad);
@@ -1767,7 +1755,7 @@ index 6c19b09e9..ef3d83262 100644
  #else
  static inline int iova_cache_get(void)
  {
-@@ -236,6 +238,11 @@ static inline void init_iova_domain(struct iova_domain *iovad,
+@@ -236,6 +238,11 @@ static inline void init_iova_domain(stru
  {
  }
  
@@ -1779,7 +1767,7 @@ index 6c19b09e9..ef3d83262 100644
  static inline bool has_iova_flush_queue(struct iova_domain *iovad)
  {
  	return false;
-@@ -270,6 +277,11 @@ static inline void free_cpu_cached_iovas(unsigned int cpu,
+@@ -270,6 +277,11 @@ static inline void free_cpu_cached_iovas
  					 struct iova_domain *iovad)
  {
  }
@@ -1791,6 +1779,3 @@ index 6c19b09e9..ef3d83262 100644
  #endif
  
  #endif
--- 
-2.31.0
-

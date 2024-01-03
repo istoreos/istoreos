@@ -19,11 +19,9 @@ but still not working
  drivers/gpu/drm/panfrost/panfrost_drv.c    | 12 ++++++
  3 files changed, 63 insertions(+)
 
-diff --git a/drivers/gpu/drm/panfrost/panfrost_device.c b/drivers/gpu/drm/panfrost/panfrost_device.c
-index c256929e8..336b19fc3 100644
 --- a/drivers/gpu/drm/panfrost/panfrost_device.c
 +++ b/drivers/gpu/drm/panfrost/panfrost_device.c
-@@ -42,6 +42,7 @@ static int panfrost_clk_init(struct panfrost_device *pfdev)
+@@ -42,6 +42,7 @@ static int panfrost_clk_init(struct panf
  {
  	int err;
  	unsigned long rate;
@@ -31,7 +29,7 @@ index c256929e8..336b19fc3 100644
  
  	pfdev->clock = devm_clk_get(pfdev->dev, NULL);
  	if (IS_ERR(pfdev->clock)) {
-@@ -73,6 +74,39 @@ static int panfrost_clk_init(struct panfrost_device *pfdev)
+@@ -73,6 +74,39 @@ static int panfrost_clk_init(struct panf
  			goto disable_clock;
  	}
  
@@ -71,7 +69,7 @@ index c256929e8..336b19fc3 100644
  	return 0;
  
  disable_clock:
-@@ -83,6 +117,17 @@ static int panfrost_clk_init(struct panfrost_device *pfdev)
+@@ -83,6 +117,17 @@ disable_clock:
  
  static void panfrost_clk_fini(struct panfrost_device *pfdev)
  {
@@ -89,8 +87,6 @@ index c256929e8..336b19fc3 100644
  	clk_disable_unprepare(pfdev->bus_clock);
  	clk_disable_unprepare(pfdev->clock);
  }
-diff --git a/drivers/gpu/drm/panfrost/panfrost_device.h b/drivers/gpu/drm/panfrost/panfrost_device.h
-index 4c6bdea55..7a927e69c 100644
 --- a/drivers/gpu/drm/panfrost/panfrost_device.h
 +++ b/drivers/gpu/drm/panfrost/panfrost_device.h
 @@ -23,6 +23,7 @@ struct panfrost_perfcnt;
@@ -120,11 +116,9 @@ index 4c6bdea55..7a927e69c 100644
  	struct regulator_bulk_data *regulators;
  	struct reset_control *rstc;
  	/* pm_domains for devices with more than one. */
-diff --git a/drivers/gpu/drm/panfrost/panfrost_drv.c b/drivers/gpu/drm/panfrost/panfrost_drv.c
-index 4af25c0b6..95d7caa9f 100644
 --- a/drivers/gpu/drm/panfrost/panfrost_drv.c
 +++ b/drivers/gpu/drm/panfrost/panfrost_drv.c
-@@ -636,6 +636,17 @@ static const struct panfrost_compatible default_data = {
+@@ -636,6 +636,17 @@ static const struct panfrost_compatible
  	.pm_domain_names = NULL,
  };
  
@@ -142,7 +136,7 @@ index 4af25c0b6..95d7caa9f 100644
  static const struct panfrost_compatible amlogic_data = {
  	.num_supplies = ARRAY_SIZE(default_supplies),
  	.supply_names = default_supplies,
-@@ -648,6 +659,7 @@ static const struct of_device_id dt_match[] = {
+@@ -648,6 +659,7 @@ static const struct of_device_id dt_matc
  	  .data = &amlogic_data, },
  	{ .compatible = "amlogic,meson-g12a-mali",
  	  .data = &amlogic_data, },
@@ -150,6 +144,3 @@ index 4af25c0b6..95d7caa9f 100644
  	{ .compatible = "arm,mali-t604", .data = &default_data, },
  	{ .compatible = "arm,mali-t624", .data = &default_data, },
  	{ .compatible = "arm,mali-t628", .data = &default_data, },
--- 
-2.31.0
-

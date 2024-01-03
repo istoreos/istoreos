@@ -9,11 +9,9 @@ Subject: [PATCH 32/42] drivers: add rockchip firmware
  include/soc/rockchip/rockchip_sip.h | 8 +++++++-
  3 files changed, 15 insertions(+), 1 deletion(-)
 
-diff --git a/drivers/firmware/Kconfig b/drivers/firmware/Kconfig
-index c08968c5d..5dcc98555 100644
 --- a/drivers/firmware/Kconfig
 +++ b/drivers/firmware/Kconfig
-@@ -251,6 +251,13 @@ config QCOM_SCM_DOWNLOAD_MODE_DEFAULT
+@@ -252,6 +252,13 @@ config QCOM_SCM_DOWNLOAD_MODE_DEFAULT
  
  	  Say Y here to enable "download mode" by default.
  
@@ -27,11 +25,9 @@ index c08968c5d..5dcc98555 100644
  config TI_SCI_PROTOCOL
  	tristate "TI System Control Interface (TISCI) Message Protocol"
  	depends on TI_MESSAGE_MANAGER
-diff --git a/drivers/firmware/Makefile b/drivers/firmware/Makefile
-index 5e013b6a3..850970fba 100644
 --- a/drivers/firmware/Makefile
 +++ b/drivers/firmware/Makefile
-@@ -16,6 +16,7 @@ obj-$(CONFIG_ISCSI_IBFT_FIND)	+= iscsi_ibft_find.o
+@@ -16,6 +16,7 @@ obj-$(CONFIG_ISCSI_IBFT_FIND)	+= iscsi_i
  obj-$(CONFIG_ISCSI_IBFT)	+= iscsi_ibft.o
  obj-$(CONFIG_FIRMWARE_MEMMAP)	+= memmap.o
  obj-$(CONFIG_RASPBERRYPI_FIRMWARE) += raspberrypi.o
@@ -39,8 +35,6 @@ index 5e013b6a3..850970fba 100644
  obj-$(CONFIG_FW_CFG_SYSFS)	+= qemu_fw_cfg.o
  obj-$(CONFIG_QCOM_SCM)		+= qcom_scm.o qcom_scm-smc.o qcom_scm-legacy.o
  obj-$(CONFIG_TI_SCI_PROTOCOL)	+= ti_sci.o
-diff --git a/include/soc/rockchip/rockchip_sip.h b/include/soc/rockchip/rockchip_sip.h
-index c46a9ae2a..4afba01c6 100644
 --- a/include/soc/rockchip/rockchip_sip.h
 +++ b/include/soc/rockchip/rockchip_sip.h
 @@ -15,6 +15,12 @@
@@ -57,6 +51,3 @@ index c46a9ae2a..4afba01c6 100644
 +#define ROCKCHIP_SIP_CONFIG_DRAM_ADDRMAP_GET	0x10
  
  #endif
--- 
-2.37.1 (Apple Git-137.1)
-

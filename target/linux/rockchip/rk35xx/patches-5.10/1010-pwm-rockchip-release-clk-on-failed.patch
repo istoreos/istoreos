@@ -10,11 +10,9 @@ Change-Id: Ic67407ee416a24ba368c3cff21aefde0ddf63700
  drivers/pwm/pwm-rockchip.c | 6 ++++--
  1 file changed, 4 insertions(+), 2 deletions(-)
 
-diff --git a/drivers/pwm/pwm-rockchip.c b/drivers/pwm/pwm-rockchip.c
-index 460a65452..67bab5c7f 100644
 --- a/drivers/pwm/pwm-rockchip.c
 +++ b/drivers/pwm/pwm-rockchip.c
-@@ -395,13 +395,15 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+@@ -395,13 +395,15 @@ static int rockchip_pwm_probe(struct pla
  	pc->pinctrl = devm_pinctrl_get(&pdev->dev);
  	if (IS_ERR(pc->pinctrl)) {
  		dev_err(&pdev->dev, "Get pinctrl failed!\n");
@@ -32,6 +30,3 @@ index 460a65452..67bab5c7f 100644
  	}
  
  	platform_set_drvdata(pdev, pc);
--- 
-2.31.0
-

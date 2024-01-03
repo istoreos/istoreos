@@ -14,11 +14,9 @@ Change-Id: I66ff92dce1711e3d189801c8caa3219217a50dda
  drivers/ata/ahci_platform.c | 4 ++++
  1 file changed, 4 insertions(+)
 
-diff --git a/drivers/ata/ahci_platform.c b/drivers/ata/ahci_platform.c
-index 3aab2e3d5..1825b33cc 100644
 --- a/drivers/ata/ahci_platform.c
 +++ b/drivers/ata/ahci_platform.c
-@@ -62,6 +62,9 @@ static int ahci_probe(struct platform_device *pdev)
+@@ -62,6 +62,9 @@ static int ahci_probe(struct platform_de
  	if (of_device_is_compatible(dev->of_node, "hisilicon,hisi-ahci"))
  		hpriv->flags |= AHCI_HFLAG_NO_FBS | AHCI_HFLAG_NO_NCQ;
  
@@ -28,7 +26,7 @@ index 3aab2e3d5..1825b33cc 100644
  	port = acpi_device_get_match_data(dev);
  	if (!port)
  		port = &ahci_port_info;
-@@ -88,6 +91,7 @@ static const struct of_device_id ahci_of_match[] = {
+@@ -88,6 +91,7 @@ static const struct of_device_id ahci_of
  	{ .compatible = "snps,dwc-ahci", },
  	{ .compatible = "hisilicon,hisi-ahci", },
  	{ .compatible = "cavium,octeon-7130-ahci", },
@@ -36,6 +34,3 @@ index 3aab2e3d5..1825b33cc 100644
  	{},
  };
  MODULE_DEVICE_TABLE(of, ahci_of_match);
--- 
-2.31.0
-

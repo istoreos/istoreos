@@ -10,8 +10,6 @@ Subject: [PATCH 26/42] drivers: add rockchip pwm
  include/linux/pwm.h        |   3 +
  4 files changed, 149 insertions(+), 14 deletions(-)
 
-diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
-index 63be5362f..ca5db4311 100644
 --- a/drivers/pwm/Kconfig
 +++ b/drivers/pwm/Kconfig
 @@ -408,6 +408,12 @@ config PWM_ROCKCHIP
@@ -27,8 +25,6 @@ index 63be5362f..ca5db4311 100644
  config PWM_SAMSUNG
  	tristate "Samsung PWM support"
  	depends on PLAT_SAMSUNG || ARCH_S5PV210 || ARCH_EXYNOS || COMPILE_TEST
-diff --git a/drivers/pwm/pwm-rockchip.c b/drivers/pwm/pwm-rockchip.c
-index 1f3079562..460a65452 100644
 --- a/drivers/pwm/pwm-rockchip.c
 +++ b/drivers/pwm/pwm-rockchip.c
 @@ -11,6 +11,7 @@
@@ -75,7 +71,7 @@ index 1f3079562..460a65452 100644
  };
  
  static inline struct rockchip_pwm_chip *to_rockchip_pwm_chip(struct pwm_chip *c)
-@@ -63,7 +76,6 @@ static void rockchip_pwm_get_state(struct pwm_chip *chip,
+@@ -63,7 +76,6 @@ static void rockchip_pwm_get_state(struc
  {
  	struct rockchip_pwm_chip *pc = to_rockchip_pwm_chip(chip);
  	u32 enable_conf = pc->data->enable_conf;
@@ -83,7 +79,7 @@ index 1f3079562..460a65452 100644
  	u64 tmp;
  	u32 val;
  	int ret;
-@@ -72,15 +84,13 @@ static void rockchip_pwm_get_state(struct pwm_chip *chip,
+@@ -72,15 +84,13 @@ static void rockchip_pwm_get_state(struc
  	if (ret)
  		return;
  
@@ -101,7 +97,7 @@ index 1f3079562..460a65452 100644
  
  	val = readl_relaxed(pc->base + pc->data->regs.ctrl);
  	state->enabled = (val & enable_conf) == enable_conf;
-@@ -98,28 +108,48 @@ static void rockchip_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -98,28 +108,48 @@ static void rockchip_pwm_config(struct p
  {
  	struct rockchip_pwm_chip *pc = to_rockchip_pwm_chip(chip);
  	unsigned long period, duty;
@@ -155,7 +151,7 @@ index 1f3079562..460a65452 100644
  	if (pc->data->supports_lock) {
  		ctrl |= PWM_LOCK_EN;
  		writel_relaxed(ctrl, pc->base + pc->data->regs.ctrl);
-@@ -145,6 +175,7 @@ static void rockchip_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -145,6 +175,7 @@ static void rockchip_pwm_config(struct p
  		ctrl &= ~PWM_LOCK_EN;
  
  	writel(ctrl, pc->base + pc->data->regs.ctrl);
@@ -163,7 +159,7 @@ index 1f3079562..460a65452 100644
  }
  
  static int rockchip_pwm_enable(struct pwm_chip *chip,
-@@ -163,13 +194,24 @@ static int rockchip_pwm_enable(struct pwm_chip *chip,
+@@ -163,13 +194,24 @@ static int rockchip_pwm_enable(struct pw
  	}
  
  	val = readl_relaxed(pc->base + pc->data->regs.ctrl);
@@ -190,7 +186,7 @@ index 1f3079562..460a65452 100644
  
  	if (!enable)
  		clk_disable(pc->clk);
-@@ -207,6 +249,8 @@ static int rockchip_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
+@@ -207,6 +249,8 @@ static int rockchip_pwm_apply(struct pwm
  			goto out;
  	}
  
@@ -199,7 +195,7 @@ index 1f3079562..460a65452 100644
  out:
  	clk_disable(pc->pclk);
  
-@@ -229,7 +273,9 @@ static const struct rockchip_pwm_data pwm_data_v1 = {
+@@ -229,7 +273,9 @@ static const struct rockchip_pwm_data pw
  	.prescaler = 2,
  	.supports_polarity = false,
  	.supports_lock = false,
@@ -209,7 +205,7 @@ index 1f3079562..460a65452 100644
  };
  
  static const struct rockchip_pwm_data pwm_data_v2 = {
-@@ -242,8 +288,10 @@ static const struct rockchip_pwm_data pwm_data_v2 = {
+@@ -242,8 +288,10 @@ static const struct rockchip_pwm_data pw
  	.prescaler = 1,
  	.supports_polarity = true,
  	.supports_lock = false,
@@ -220,7 +216,7 @@ index 1f3079562..460a65452 100644
  };
  
  static const struct rockchip_pwm_data pwm_data_vop = {
-@@ -256,8 +304,10 @@ static const struct rockchip_pwm_data pwm_data_vop = {
+@@ -256,8 +304,10 @@ static const struct rockchip_pwm_data pw
  	.prescaler = 1,
  	.supports_polarity = true,
  	.supports_lock = false,
@@ -231,7 +227,7 @@ index 1f3079562..460a65452 100644
  };
  
  static const struct rockchip_pwm_data pwm_data_v3 = {
-@@ -270,8 +320,10 @@ static const struct rockchip_pwm_data pwm_data_v3 = {
+@@ -270,8 +320,10 @@ static const struct rockchip_pwm_data pw
  	.prescaler = 1,
  	.supports_polarity = true,
  	.supports_lock = true,
@@ -242,7 +238,7 @@ index 1f3079562..460a65452 100644
  };
  
  static const struct of_device_id rockchip_pwm_dt_ids[] = {
-@@ -301,7 +353,8 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+@@ -301,7 +353,8 @@ static int rockchip_pwm_probe(struct pla
  		return -ENOMEM;
  
  	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -252,7 +248,7 @@ index 1f3079562..460a65452 100644
  	if (IS_ERR(pc->base))
  		return PTR_ERR(pc->base);
  
-@@ -339,13 +392,26 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+@@ -339,13 +392,26 @@ static int rockchip_pwm_probe(struct pla
  		goto err_clk;
  	}
  
@@ -280,7 +276,7 @@ index 1f3079562..460a65452 100644
  
  	if (pc->data->supports_polarity) {
  		pc->chip.of_xlate = of_pwm_xlate_with_flags;
-@@ -356,6 +422,9 @@ static int rockchip_pwm_probe(struct platform_device *pdev)
+@@ -356,6 +422,9 @@ static int rockchip_pwm_probe(struct pla
  	ctrl = readl_relaxed(pc->base + pc->data->regs.ctrl);
  	enabled = (ctrl & enable_conf) == enable_conf;
  
@@ -290,7 +286,7 @@ index 1f3079562..460a65452 100644
  	ret = pwmchip_add(&pc->chip);
  	if (ret < 0) {
  		dev_err(&pdev->dev, "pwmchip_add() failed: %d\n", ret);
-@@ -396,7 +465,21 @@ static struct platform_driver rockchip_pwm_driver = {
+@@ -396,7 +465,21 @@ static struct platform_driver rockchip_p
  	.probe = rockchip_pwm_probe,
  	.remove = rockchip_pwm_remove,
  };
@@ -312,11 +308,9 @@ index 1f3079562..460a65452 100644
  
  MODULE_AUTHOR("Beniamino Galvani <b.galvani@gmail.com>");
  MODULE_DESCRIPTION("Rockchip SoC PWM driver");
-diff --git a/drivers/pwm/sysfs.c b/drivers/pwm/sysfs.c
-index 9903c3a7e..54619969d 100644
 --- a/drivers/pwm/sysfs.c
 +++ b/drivers/pwm/sysfs.c
-@@ -103,6 +103,43 @@ static ssize_t duty_cycle_store(struct device *child,
+@@ -103,6 +103,43 @@ static ssize_t duty_cycle_store(struct d
  	return ret ? : size;
  }
  
@@ -360,7 +354,7 @@ index 9903c3a7e..54619969d 100644
  static ssize_t enable_show(struct device *child,
  			   struct device_attribute *attr,
  			   char *buf)
-@@ -217,6 +254,9 @@ static ssize_t capture_show(struct device *child,
+@@ -217,6 +254,9 @@ static ssize_t capture_show(struct devic
  
  static DEVICE_ATTR_RW(period);
  static DEVICE_ATTR_RW(duty_cycle);
@@ -380,8 +374,6 @@ index 9903c3a7e..54619969d 100644
  	&dev_attr_enable.attr,
  	&dev_attr_polarity.attr,
  	&dev_attr_capture.attr,
-diff --git a/include/linux/pwm.h b/include/linux/pwm.h
-index a13ff383f..6b2a7fb80 100644
 --- a/include/linux/pwm.h
 +++ b/include/linux/pwm.h
 @@ -59,6 +59,9 @@ struct pwm_state {
@@ -394,6 +386,3 @@ index a13ff383f..6b2a7fb80 100644
  	bool enabled;
  };
  
--- 
-2.37.1 (Apple Git-137.1)
-

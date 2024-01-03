@@ -9,11 +9,9 @@ Subject: [PATCH] drivers/gpu/arm/bifrost: fix rk platform code build without
  drivers/gpu/arm/bifrost/platform/rk/mali_kbase_rk.h    |  4 ++++
  2 files changed, 14 insertions(+)
 
-diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
-index c32526a86..8afb1593a 100755
 --- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 +++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
-@@ -118,7 +118,9 @@ static void rk_pm_power_off_delay_work(struct work_struct *work)
+@@ -118,7 +118,9 @@ static void rk_pm_power_off_delay_work(s
  	}
  
  	platform->is_powered = false;
@@ -23,7 +21,7 @@ index c32526a86..8afb1593a 100755
  
  	mutex_unlock(&platform->lock);
  }
-@@ -150,7 +152,9 @@ static int kbase_platform_rk_init(struct kbase_device *kbdev)
+@@ -150,7 +152,9 @@ static int kbase_platform_rk_init(struct
  	}
  	INIT_DEFERRABLE_WORK(&platform->work, rk_pm_power_off_delay_work);
  
@@ -33,7 +31,7 @@ index c32526a86..8afb1593a 100755
  
  	platform->utilisation_period = DEFAULT_UTILISATION_PERIOD_IN_MS;
  
-@@ -168,7 +172,9 @@ static int kbase_platform_rk_init(struct kbase_device *kbdev)
+@@ -168,7 +172,9 @@ static int kbase_platform_rk_init(struct
  	return 0;
  
  err_sysfs_files:
@@ -43,7 +41,7 @@ index c32526a86..8afb1593a 100755
  	destroy_workqueue(platform->power_off_wq);
  err_wq:
  	return ret;
-@@ -184,7 +190,9 @@ static void kbase_platform_rk_term(struct kbase_device *kbdev)
+@@ -184,7 +190,9 @@ static void kbase_platform_rk_term(struc
  
  	if (platform) {
  		cancel_delayed_work_sync(&platform->work);
@@ -53,7 +51,7 @@ index c32526a86..8afb1593a 100755
  		destroy_workqueue(platform->power_off_wq);
  		platform->is_powered = false;
  		platform->kbdev = NULL;
-@@ -291,7 +299,9 @@ static int rk_pm_callback_power_on(struct kbase_device *kbdev)
+@@ -291,7 +299,9 @@ static int rk_pm_callback_power_on(struc
  	rockchip_monitor_volt_adjust_unlock(kbdev->mdev_info);
  
  	platform->is_powered = true;
@@ -63,8 +61,6 @@ index c32526a86..8afb1593a 100755
  
  out:
  	mutex_unlock(&platform->lock);
-diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_rk.h b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_rk.h
-index 0a42559df..4888f94cc 100755
 --- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_rk.h
 +++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_rk.h
 @@ -15,7 +15,9 @@
@@ -91,6 +87,3 @@ index 0a42559df..4888f94cc 100755
  
  	/* debug only, the period in ms to count gpu_utilisation. */
  	unsigned int utilisation_period;
--- 
-2.31.0
-

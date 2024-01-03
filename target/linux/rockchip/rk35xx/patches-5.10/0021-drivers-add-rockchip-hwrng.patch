@@ -8,8 +8,6 @@ Subject: [PATCH 21/42] drivers: add rockchip hwrng
  drivers/char/hw_random/Makefile |  1 +
  2 files changed, 13 insertions(+)
 
-diff --git a/drivers/char/hw_random/Kconfig b/drivers/char/hw_random/Kconfig
-index a7d9e4600..f006d9175 100644
 --- a/drivers/char/hw_random/Kconfig
 +++ b/drivers/char/hw_random/Kconfig
 @@ -536,6 +536,18 @@ config HW_RANDOM_XIPHERA
@@ -31,15 +29,10 @@ index a7d9e4600..f006d9175 100644
  endif # HW_RANDOM
  
  config UML_RANDOM
-diff --git a/drivers/char/hw_random/Makefile b/drivers/char/hw_random/Makefile
-index 5da344509..ff587206a 100644
 --- a/drivers/char/hw_random/Makefile
 +++ b/drivers/char/hw_random/Makefile
-@@ -46,3 +46,4 @@ obj-$(CONFIG_HW_RANDOM_OPTEE) += optee-rng.o
+@@ -46,3 +46,4 @@ obj-$(CONFIG_HW_RANDOM_OPTEE) += optee-r
  obj-$(CONFIG_HW_RANDOM_NPCM) += npcm-rng.o
  obj-$(CONFIG_HW_RANDOM_CCTRNG) += cctrng.o
  obj-$(CONFIG_HW_RANDOM_XIPHERA) += xiphera-trng.o
 +obj-$(CONFIG_HW_RANDOM_ROCKCHIP) += rockchip-rng.o
--- 
-2.37.1 (Apple Git-137.1)
-

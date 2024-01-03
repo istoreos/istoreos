@@ -9,8 +9,6 @@ Subject: [PATCH 02/42] kernel: add pre restart hook
  kernel/reboot.c             | 21 +++++++++++++++++++++
  3 files changed, 43 insertions(+)
 
-diff --git a/arch/arm64/kernel/process.c b/arch/arm64/kernel/process.c
-index 3696dbcbf..ead9c33eb 100644
 --- a/arch/arm64/kernel/process.c
 +++ b/arch/arm64/kernel/process.c
 @@ -191,6 +191,8 @@ void machine_restart(char *cmd)
@@ -22,11 +20,9 @@ index 3696dbcbf..ead9c33eb 100644
  	/*
  	 * UpdateCapsule() depends on the system being reset via
  	 * ResetSystem().
-diff --git a/include/linux/reboot.h b/include/linux/reboot.h
-index 3734cd8f3..1c8d7856c 100644
 --- a/include/linux/reboot.h
 +++ b/include/linux/reboot.h
-@@ -49,6 +49,26 @@ extern int register_restart_handler(struct notifier_block *);
+@@ -49,6 +49,26 @@ extern int register_restart_handler(stru
  extern int unregister_restart_handler(struct notifier_block *);
  extern void do_kernel_restart(char *cmd);
  
@@ -53,8 +49,6 @@ index 3734cd8f3..1c8d7856c 100644
  /*
   * Architecture-specific implementations of sys_reboot commands.
   */
-diff --git a/kernel/reboot.c b/kernel/reboot.c
-index af6f23d8b..bce629531 100644
 --- a/kernel/reboot.c
 +++ b/kernel/reboot.c
 @@ -215,6 +215,27 @@ void do_kernel_restart(char *cmd)
@@ -85,6 +79,3 @@ index af6f23d8b..bce629531 100644
  void migrate_to_reboot_cpu(void)
  {
  	/* The boot cpu is always logical cpu 0 */
--- 
-2.37.1 (Apple Git-137.1)
-

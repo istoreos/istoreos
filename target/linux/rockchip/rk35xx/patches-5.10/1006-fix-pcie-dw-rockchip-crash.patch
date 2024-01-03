@@ -77,11 +77,9 @@ kernel crash on run `lspci` or load some kmods
  drivers/pci/controller/dwc/pcie-dw-rockchip.c | 6 ++++++
  1 file changed, 6 insertions(+)
 
-diff --git a/drivers/pci/controller/dwc/pcie-dw-rockchip.c b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-index b3b073c62..730a3f92f 100644
 --- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
 +++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
-@@ -854,6 +854,12 @@ static int rk_pcie_init_dma_trx(struct rk_pcie *rk_pcie)
+@@ -854,6 +854,12 @@ static int rk_pcie_init_dma_trx(struct r
  
  	rk_pcie->dma_obj = rk_pcie_dma_obj_probe(rk_pcie->pci->dev);
  	if (IS_ERR(rk_pcie->dma_obj)) {
@@ -94,6 +92,3 @@ index b3b073c62..730a3f92f 100644
  		dev_err(rk_pcie->pci->dev, "failed to prepare dma object\n");
  		return -EINVAL;
  	} else if (rk_pcie->dma_obj) {
--- 
-2.31.0
-
