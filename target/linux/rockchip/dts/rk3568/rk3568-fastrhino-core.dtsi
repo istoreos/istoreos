@@ -424,7 +424,7 @@
 
 &gpu {
 	mali-supply = <&vdd_gpu>;
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi {

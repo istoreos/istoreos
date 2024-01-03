@@ -13,6 +13,7 @@
 #include <dt-bindings/display/drm_mipi_dsi.h>
 #include <dt-bindings/sensor-dev.h>
 #include "rk3568.dtsi"
+#include "../rockchip-drm-vvop.dtsi"
 
 / {
     compatible = "hsa,bh2", "rockchip,rk3568";
@@ -662,7 +663,7 @@
 
 &gpu {
     mali-supply = <&vdd_gpu>;
-    status = "disabled";
+    status = "okay";
 };
 
 &iep {
@@ -747,14 +748,14 @@
 };
 
 &vop {
-    status = "okay";
+    status = "disabled";
     disable-win-move;
     assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
     assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
 };
 
 &vop_mmu {
-    status = "okay";
+    status = "disabled";
 };
 
 &pinctrl {
