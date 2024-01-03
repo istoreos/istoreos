@@ -1,0 +1,47 @@
+--- a/drivers/gpu/drm/drm_connector.c
++++ b/drivers/gpu/drm/drm_connector.c
+@@ -2526,6 +2526,7 @@ struct drm_connector *drm_connector_find
+  * This function can be used to report these out-of-band events after obtaining
+  * a drm_connector reference through calling drm_connector_find_by_fwnode().
+  */
++/*
+ void drm_connector_oob_hotplug_event(struct fwnode_handle *connector_fwnode)
+ {
+ 	struct drm_connector *connector;
+@@ -2540,7 +2541,7 @@ void drm_connector_oob_hotplug_event(str
+ 	drm_connector_put(connector);
+ }
+ EXPORT_SYMBOL(drm_connector_oob_hotplug_event);
+-
++*/
+ 
+ /**
+  * DOC: Tile group
+--- a/drivers/usb/typec/altmodes/displayport.c
++++ b/drivers/usb/typec/altmodes/displayport.c
+@@ -139,12 +139,12 @@ static int dp_altmode_status_update(stru
+ 		ret = dp_altmode_configure(dp, con);
+ 		if (!ret)
+ 			dp->state = DP_STATE_CONFIGURE;
+-	} else {
++	}/* else {
+ 		if (dp->hpd != hpd) {
+ 			drm_connector_oob_hotplug_event(dp->connector_fwnode);
+ 			dp->hpd = hpd;
+ 		}
+-	}
++	}*/
+ 
+ 	return ret;
+ }
+--- a/include/drm/drm_connector.h
++++ b/include/drm/drm_connector.h
+@@ -1620,7 +1620,7 @@ drm_connector_is_unregistered(struct drm
+ 		DRM_CONNECTOR_UNREGISTERED;
+ }
+ 
+-void drm_connector_oob_hotplug_event(struct fwnode_handle *connector_fwnode);
++// void drm_connector_oob_hotplug_event(struct fwnode_handle *connector_fwnode);
+ const char *drm_get_connector_type_name(unsigned int connector_type);
+ const char *drm_get_connector_status_name(enum drm_connector_status status);
+ const char *drm_get_subpixel_order_name(enum subpixel_order order);
