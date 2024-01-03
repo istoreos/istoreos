@@ -6,6 +6,8 @@
 #include <dt-bindings/pinctrl/rockchip.h>
 #ifdef DTS_NO_LEGACY
 #include <dt-bindings/soc/rockchip,vop2.h>
+#else
+#include <dt-bindings/display/rockchip_vop.h>
 #endif
 #include "rk3568.dtsi"
 
@@ -217,6 +219,21 @@
 		regulator-min-microvolt = <4000000>;
 		regulator-max-microvolt = <4000000>;
 		vin-supply = <&battery_mainboard>;
+	};
+
+	hdmi_sound: hdmi-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <128>;
+		simple-audio-card,name = "rockchip,hdmi";
+		status = "disabled";
+
+		simple-audio-card,cpu {
+				sound-dai = <&i2s0_8ch>;
+		};
+		simple-audio-card,codec {
+				sound-dai = <&hdmi>;
+		};
 	};
 
 #ifdef DTS_NO_LEGACY
@@ -718,18 +735,23 @@
 	status = "okay";
 };
 
-#ifdef DTS_NO_LEGACY
 &gpu {
 	mali-supply = <&vdd_gpu>;
 	status = "okay";
 };
 
 &hdmi {
-	avdd-0v9-supply = <&vdda0v9_image>;
-	avdd-1v8-supply = <&vcca1v8_image>;
+	avdd-0v9-supply = <&vdda0v9_image_p>;
+	avdd-1v8-supply = <&vcca1v8_image_p>;
 	status = "okay";
 };
 
+&route_hdmi {
+	status = "okay";
+	connect = <&vp0_out_hdmi>;
+};
+
+#ifdef DTS_NO_LEGACY
 &hdmi_in {
 	hdmi_in_vp0: endpoint {
 		remote-endpoint = <&vp0_out_hdmi>;
@@ -741,13 +763,24 @@
 		remote-endpoint = <&hdmi_con_in>;
 	};
 };
+#else
+&hdmi_in_vp0 {
+	status = "okay";
+};
+
+&hdmi_in_vp1 {
+	status = "disabled";
+};
+#endif
+
+&i2s0_8ch {
+	status = "okay";
+};
 
 &hdmi_sound {
 	status = "okay";
 };
-#endif
 
-#ifdef DTS_NO_LEGACY
 &vop {
 	assigned-clocks = <&cru DCLK_VOP0>, <&cru DCLK_VOP1>;
 	assigned-clock-parents = <&pmucru PLL_HPLL>, <&cru PLL_VPLL>;
@@ -758,6 +791,7 @@
 	status = "okay";
 };
 
+#ifdef DTS_NO_LEGACY
 &vp0 {
 	vp0_out_hdmi: endpoint@ROCKCHIP_VOP2_EP_HDMI0 {
 		reg = <ROCKCHIP_VOP2_EP_HDMI0>;
