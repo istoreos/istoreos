@@ -105,7 +105,7 @@ TARGET_DEVICES += fastrhino_r6xs
 define Device/hinlink_common
 $(call Device/rk3568)
   DEVICE_VENDOR := HINLINK
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
 endef
 
 define Device/hinlink_opc-h6xk
