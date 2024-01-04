@@ -30,6 +30,7 @@ friendlyelec,nanopi-r5c)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
 	ucidef_set_led_netdev "lan1" "LAN1" "green:lan1" "eth1"
 	;;
+easepi,ars4|\
 hinlink,h88k-*|\
 hinlink,h88k|\
 hinlink,hnas|\

@@ -124,6 +124,15 @@ $(call Device/hinlink_common)
 endef
 TARGET_DEVICES += hinlink_hnas
 
+define Device/easepi_ars4
+$(call Device/rk3568)
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := ARS4
+  SUPPORTED_DEVICES += easepi,ars4
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += easepi_ars4
+
 define Device/friendlyarm_nanopi-r5s
 $(call Device/rk3568)
 $(call Device/rk3568_combined_friendlyelec)

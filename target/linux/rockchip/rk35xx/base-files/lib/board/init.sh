@@ -70,6 +70,7 @@ board_fixup_iface_name() {
 			rename_iface lan1 eth1
 		fi
 		;;
+	easepi,ars4|\
 	jsy,h1|\
 	hinlink,hnas|\
 	hinlink,opc-h66k)
@@ -194,6 +195,7 @@ board_set_iface_smp_affinity() {
 		;;
 	jsy,h1|\
 	yyy,h1|\
+	easepi,ars4|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,hnas|\
@@ -311,6 +313,7 @@ set_gpio() {
 
 board_gpio_defaults() {
 	case $(board_name) in
+	easepi,ars4|\
 	hinlink,hnas)
 		# set GPIO4_A7 to high, deassert SATA PM chip
 		set_gpio 135

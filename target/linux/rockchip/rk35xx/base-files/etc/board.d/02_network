@@ -12,6 +12,7 @@ rockchip_setup_interfaces()
 
 	case "$board" in
 	armsom,sige7-v1|\
+	easepi,ars4|\
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6c|\
 	fastrhino,r66s|\
@@ -76,6 +77,7 @@ rockchip_setup_macs()
 
 	case "$board" in
 	armsom,sige7-v1|\
+	easepi,ars4|\
 	firefly,rk3568-roc-pc|\
 	friendlyelec,nanopi-r5s|\
 	friendlyelec,nanopi-r5c|\
