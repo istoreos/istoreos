@@ -642,31 +642,6 @@
 	status = "okay";
 };
 
-&uart1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart1m0_xfer &uart1m0_ctsn &uart1m0_rtsn>;
-	status = "disabled";
-	uart-has-rtscts;
-
-	bluetooth {
-		compatible = "brcm,bcm43438-bt";
-		clocks = <&rk809 1>;
-		clock-names = "lpo";
-		device-wakeup-gpios = <&gpio2 RK_PC0 GPIO_ACTIVE_HIGH>;
-		host-wakeup-gpios = <&gpio2 RK_PC1 GPIO_ACTIVE_HIGH>;
-		shutdown-gpios = <&gpio2 RK_PB7 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&bt_host_wake_l &bt_wake_l &bt_enable_h>;
-		vbat-supply = <&vcc3v3_sys>;
-		vddio-supply = <&vcca1v8_pmu>;
-		max-speed = <3000000>;
-	};
-};
-
-&uart2 {
-	status = "disabled";
-};
-
 &usb2phy0 {
 	status = "okay";
 };
@@ -721,5 +696,103 @@
 };
 
 &vdpu_mmu {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+&rockchip_suspend {
+	status = "okay";
+};
+
+&bus_npu {
+	bus-supply = <&vdd_logic>;
+	pvtm-supply = <&vdd_cpu>;
+	status = "okay";
+};
+
+&dfi {
+	status = "okay";
+};
+
+&dmc {
+	center-supply = <&vdd_logic>;
+	status = "okay";
+};
+
+&iep {
+	status = "okay";
+};
+
+&iep_mmu {
+	status = "okay";
+};
+
+&jpegd {
+    status = "okay";
+};
+
+&jpegd_mmu {
+    status = "okay";
+};
+
+&mpp_srv {
+    status = "okay";
+};
+
+&rk_rga {
+	status = "okay";
+};
+
+&rkvdec {
+	status = "okay";
+};
+
+&rkvdec_mmu {
+	status = "okay";
+};
+
+&rkvenc {
+	venc-supply = <&vdd_logic>;
+	status = "okay";
+};
+
+&rkvenc_mmu {
+	status = "okay";
+};
+
+&rknpu {	
+	rknpu-supply = <&vdd_npu>;
+	status = "okay";
+};
+
+&rknpu_mmu {
+	status = "okay";
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+&usbdrd30 {
+    status = "okay";
+};
+
+&usbhost_dwc3 {
+    status = "okay";
+};
+
+&usbhost30 {
+    status = "okay";
+};
+
+&vdpu {
+	status = "okay";
+};
+
+&vepu_mmu {
 	status = "okay";
 };
