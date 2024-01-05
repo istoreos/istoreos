@@ -11,7 +11,7 @@
 #include "rk3566.dtsi"
 
 / {
-	model = "JianPianTV Box by hx801217";
+	model = "JianPian TV Box";
 	compatible = "rockchip,rk3566-jianpian", "rockchip,rk3566";
 
 	aliases {
