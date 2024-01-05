@@ -1,5 +1,5 @@
-src-git-full packages https://github.com/jjm2473/packages.git;istoreos-22.03
-src-git-full luci https://github.com/jjm2473/luci.git;istoreos-22.03
+src-git-full packages https://github.com/jjm2473/packages.git;istoreos-22.03.5
+src-git-full luci https://github.com/jjm2473/luci.git;istoreos-22.03.5
 src-git-full routing https://git.openwrt.org/feed/routing.git;openwrt-22.03
 src-git-full telephony https://git.openwrt.org/feed/telephony.git;openwrt-22.03
 # istore
