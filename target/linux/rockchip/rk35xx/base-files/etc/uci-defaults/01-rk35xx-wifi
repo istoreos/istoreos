@@ -34,6 +34,9 @@ board_config_wifi() {
 	hinlink,opc-h69k)
 		ssid=H69K
 	;;
+	jp,tvbox)
+		ssid=JianPianTV
+	;;
 	hinlink,h88k-*|\
 	hinlink,h88k)
 		ssid=H88K
