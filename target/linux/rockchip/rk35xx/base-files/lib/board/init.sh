@@ -269,6 +269,7 @@ board_wait_wifi() {
 	case $(board_name) in
 	hinlink,h88k-*|\
 	hinlink,h88k|\
+	jp,tvbox|\
 	hinlink,opc-h68k|\
 	hinlink,opc-h69k)
 		for seconds in $(seq 0 30); do
