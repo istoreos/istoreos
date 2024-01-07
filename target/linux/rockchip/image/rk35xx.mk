@@ -256,7 +256,7 @@ $(call Device/rk3566)
   DEVICE_MODEL := tvbox
   DEVICE_DTS := rk3566-jp-tvbox
   SUPPORTED_DEVICES += jp,tvbox
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
 endef
 TARGET_DEVICES += jp_tvbox
 
