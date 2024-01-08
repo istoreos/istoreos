@@ -1,0 +1,70 @@
+From e39030a88e7348b97834dec84cf3829817d1015c Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Mon, 8 Jan 2024 12:51:13 +0800
+Subject: [PATCH] dwc3: remove android kabi stuff
+
+---
+ drivers/usb/dwc3/core.h | 12 ------------
+ 1 file changed, 12 deletions(-)
+
+diff --git a/drivers/usb/dwc3/core.h b/drivers/usb/dwc3/core.h
+index b64ad464f..cbd0b8628 100644
+--- a/drivers/usb/dwc3/core.h
++++ b/drivers/usb/dwc3/core.h
+@@ -22,7 +22,6 @@
+ #include <linux/debugfs.h>
+ #include <linux/wait.h>
+ #include <linux/workqueue.h>
+-#include <linux/android_kabi.h>
+ 
+ #include <linux/usb/ch9.h>
+ #include <linux/usb/gadget.h>
+@@ -668,7 +667,6 @@ struct dwc3_event_buffer {
+ 
+ 	struct dwc3		*dwc;
+ 
+-	ANDROID_KABI_RESERVE(1);
+ };
+ 
+ #define DWC3_EP_FLAG_STALLED	BIT(0)
+@@ -765,8 +763,6 @@ struct dwc3_ep {
+ 	u8			combo_num;
+ 	int			start_cmd_status;
+ 
+-	ANDROID_KABI_RESERVE(1);
+-	ANDROID_KABI_RESERVE(2);
+ };
+ 
+ enum dwc3_phy {
+@@ -879,8 +875,6 @@ struct dwc3_hwparams {
+ 	u32	hwparams8;
+ 	u32	hwparams9;
+ 
+-	ANDROID_KABI_RESERVE(1);
+-	ANDROID_KABI_RESERVE(2);
+ };
+ 
+ /* HWPARAMS0 */
+@@ -951,8 +945,6 @@ struct dwc3_request {
+ 	unsigned int		direction:1;
+ 	unsigned int		mapped:1;
+ 
+-	ANDROID_KABI_RESERVE(1);
+-	ANDROID_KABI_RESERVE(2);
+ };
+ 
+ /*
+@@ -1335,10 +1327,6 @@ struct dwc3 {
+ 	int			last_fifo_depth;
+ 	int			num_ep_resized;
+ 
+-	ANDROID_KABI_RESERVE(1);
+-	ANDROID_KABI_RESERVE(2);
+-	ANDROID_KABI_RESERVE(3);
+-	ANDROID_KABI_RESERVE(4);
+ };
+ 
+ /**
+-- 
+2.31.0
+
