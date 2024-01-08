@@ -2487,13 +2487,14 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	struct stmmac_axi *axi;
  	int has_gmac4;
  	bool has_sun8i;
-@@ -199,12 +205,10 @@ struct plat_stmmacenet_data {
+@@ -199,13 +205,11 @@ struct plat_stmmacenet_data {
  	int rss_en;
  	int mac_port_sel_speed;
  	bool en_tx_lpi_clockgating;
 -	bool rx_clk_runs_in_lpi;
  	int has_xgmac;
  	bool vlan_fail_q_en;
+ 	bool vlhash_en;
  	u8 vlan_fail_q;
  	unsigned int eee_usecs_rate;
 -	bool sph_disable;
