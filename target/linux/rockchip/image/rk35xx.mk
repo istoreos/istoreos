@@ -272,6 +272,14 @@ $(call Device/rk3568_combined_nlnet)
 endef
 TARGET_DEVICES += nlnet_xgp
 
+define Device/rk_demo-rtl8367s
+$(call Device/rk3568)
+  DEVICE_VENDOR := Rockchip
+  DEVICE_MODEL := Demo RTL8367S
+  DEVICE_PACKAGES := kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+endef
+# TARGET_DEVICES += rk_demo-rtl8367s
+
 
 define Device/rk3308
   SOC := rk3308
