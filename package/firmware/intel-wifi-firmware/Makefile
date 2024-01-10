@@ -41,6 +41,7 @@ define Package/iwlwifi-firmware-ax201/install
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-QuZ-a0-hr-b0-66.ucode $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-hr-b0-64.ucode $(1)/lib/firmware
+	$(LN) iwlwifi-so-a0-hr-b0-64.ucode $(1)/lib/firmware/iwlwifi-so-a0-hr-b0-66.ucode
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-ax201))
 
@@ -49,5 +50,6 @@ define Package/iwlwifi-firmware-ax211/install
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-gf-a0-64.ucode $(1)/lib/firmware
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/iwlwifi-so-a0-gf-a0.pnvm $(1)/lib/firmware
+	$(LN) iwlwifi-so-a0-gf-a0-64.ucode $(1)/lib/firmware/iwlwifi-so-a0-gf-a0-66.ucode
 endef
 $(eval $(call BuildPackage,iwlwifi-firmware-ax211))
