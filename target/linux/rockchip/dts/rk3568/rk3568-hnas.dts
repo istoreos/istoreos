@@ -185,8 +185,8 @@
 		};
 
 		cpu_idle: cpu_idle {
-			temperature = <45000>;
-			hysteresis = <3000>;
+			temperature = <47000>;
+			hysteresis = <5000>;
 			type = "passive";
 		};
 	};
