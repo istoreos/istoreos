@@ -1,0 +1,72 @@
+From 1cbb2bce0057548cf91a7d7d130a608d20ae2de9 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 11 Jan 2024 22:43:25 +0800
+Subject: [PATCH] drivers: thermal: step_wise: add support for hysteresis
+
+replace patch https://patchwork.kernel.org/project/linux-pm/patch/20180507175408.2154-1-ilina@codeaurora.org/
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/thermal/gov_step_wise.c | 21 ++++++++++++++++-----
+ 1 file changed, 16 insertions(+), 5 deletions(-)
+
+--- a/drivers/thermal/gov_step_wise.c
++++ b/drivers/thermal/gov_step_wise.c
+@@ -24,7 +24,7 @@
+  *       for this trip point
+  *    d. if the trend is THERMAL_TREND_DROP_FULL, use lower limit
+  *       for this trip point
+- * If the temperature is lower than a trip point,
++ * If the temperature is lower than a hysteresis temperature,
+  *    a. if the trend is THERMAL_TREND_RAISING, do nothing
+  *    b. if the trend is THERMAL_TREND_DROPPING, use lower cooling
+  *       state for this trip point, if the cooling state already
+@@ -115,18 +115,26 @@ static void update_passive_instance(stru
+ 
+ static void thermal_zone_trip_update(struct thermal_zone_device *tz, int trip)
+ {
+-	int trip_temp;
++	int trip_temp, hyst_temp;
+ 	enum thermal_trip_type trip_type;
+ 	enum thermal_trend trend;
+ 	struct thermal_instance *instance;
+-	bool throttle = false;
++	bool throttle = false, hysteresis = false;
+ 	int old_target;
+ 
+ 	if (trip == THERMAL_TRIPS_NONE) {
+-		trip_temp = tz->forced_passive;
++		hyst_temp = trip_temp = tz->forced_passive;
+ 		trip_type = THERMAL_TRIPS_NONE;
+ 	} else {
+ 		tz->ops->get_trip_temp(tz, trip, &trip_temp);
++		hyst_temp = trip_temp;
++		if (tz->ops->get_trip_hyst) {
++			hyst_temp = 0;
++			tz->ops->get_trip_hyst(tz, trip, &hyst_temp);
++			if (hyst_temp < 0)
++				hyst_temp = 0;
++			hyst_temp = trip_temp - hyst_temp;
++		}
+ 		tz->ops->get_trip_type(tz, trip, &trip_type);
+ 	}
+ 
+@@ -135,6 +143,8 @@ static void thermal_zone_trip_update(str
+ 	if (tz->temperature >= trip_temp) {
+ 		throttle = true;
+ 		trace_thermal_zone_trip(tz, trip, trip_type);
++	} else if (tz->temperature > hyst_temp) {
++		hysteresis = true;
+ 	}
+ 
+ 	dev_dbg(&tz->device, "Trip%d[type=%d,temp=%d]:trend=%d,throttle=%d\n",
+@@ -147,7 +157,8 @@ static void thermal_zone_trip_update(str
+ 			continue;
+ 
+ 		old_target = instance->target;
+-		instance->target = get_target_state(instance, trend, throttle);
++		instance->target = get_target_state(instance, trend,
++			throttle || (hysteresis && old_target != THERMAL_NO_TARGET));
+ 		dev_dbg(&instance->cdev->device, "old_target=%d, target=%d\n",
+ 					old_target, (int)instance->target);
+ 
