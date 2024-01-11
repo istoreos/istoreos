@@ -357,6 +357,12 @@ if [ $TEST -eq 1 ]; then
 	exit 0
 fi
 
+# In case $RAM_ROOT was mounted or a regular file
+/bin/umount -l $RAM_ROOT 2>/dev/null
+rm -f $RAM_ROOT
+/bin/mount -o bind /tmp /tmp
+mkdir $RAM_ROOT
+
 install_bin /sbin/upgraded
 v "Commencing upgrade. Closing all shell sessions."
 
