@@ -20,6 +20,13 @@
 	model = "Inspur IHEC";
 	compatible = "inspur,ihec", "rockchip,rk3588";
 
+	aliases {
+		led-boot = &led_work;
+		led-failsafe = &led_work;
+		led-running = &led_work;
+		led-upgrade = &led_work;
+	};
+
 	vcc12v_dcin: vcc12v-dcin {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc12v_dcin";
@@ -137,8 +144,30 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&rs485_pwren>;
 		enable-active-high;
-		gpio = <&gpio3 RK_PC0 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
 		vin-supply = <&vcc3v3>;
+	};
+
+	sata_power: sata-power {
+		compatible = "regulator-fixed";
+		regulator-name = "sata_power";
+		regulator-always-on;
+		regulator-boot-on;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sata_pwr_pins>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&led_red_en>;
+
+		led_work: led-power {
+			gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_HIGH>;
+			label = "rgb:power";
+			default-state = "on";
+		};
 	};
 
 	rtl8367s {
@@ -264,10 +293,14 @@
 
 // SATA
 &sata0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sata0m0_pins>;
 	status = "okay";
 };
 
 &sata1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&sata1m0_pins>;
 	status = "okay";
 };
 
@@ -729,6 +762,31 @@
 		};
 		plc_rst_pin: plc-rst-pin {
 			rockchip,pins = <3 RK_PC7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	sata {
+		/omit-if-no-ref/
+		sata_pwr_pins: sata-pwr-pins {
+			rockchip,pins =
+				/* hdd1 pwr */
+				<0 RK_PC5 RK_FUNC_GPIO &pcfg_output_high>,
+				/* hdd2 pwr */
+				<0 RK_PC6 RK_FUNC_GPIO &pcfg_output_high>,
+				/* hdd3 pwr */
+				<0 RK_PB7 RK_FUNC_GPIO &pcfg_output_high>,
+				/* hdd4 pwr */
+				<0 RK_PD3 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
+
+	leds {
+		led_red_en: led-red-en {
+			rockchip,pins =
+				<4 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_green_en: led-green-en {
+			rockchip,pins =
+				<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 };
