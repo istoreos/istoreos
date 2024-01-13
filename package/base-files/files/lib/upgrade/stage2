@@ -64,6 +64,14 @@ switch_to_ramfs() {
 
 	[ -L "/lib64" ] && ln -s /lib $RAM_ROOT/lib64
 
+	# avoid shared rootfs, which makes `/bin/mount -o noatime,move * *` fail
+	# https://github.com/istoreos/istoreos/issues/1200
+	mount --make-private / 2>&-
+	mount --make-private /tmp 2>&-
+	mount --make-private /mnt 2>&-
+	mount --make-private /overlay 2>&-
+	mount --make-private /ext_overlay 2>&-
+
 	supivot $RAM_ROOT /mnt || {
 		v "Failed to switch over to ramfs. Please reboot."
 		exit 1
