@@ -1,0 +1,51 @@
+From 73b4b53276a1d6290cd4f47dbbc885b6e6e59ac6 Mon Sep 17 00:00:00 2001
+From: Andrey Grodzovsky <andrey.grodzovsky@amd.com>
+Date: Thu, 19 May 2022 09:47:28 -0400
+Subject: [PATCH] Revert "workqueue: remove unused cancel_work()"
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This reverts commit 6417250d3f894e66a68ba1cd93676143f2376a6f.
+
+amdpgu need this function in order to prematurly stop pending
+reset works when another reset work already in progress.
+
+Acked-by: Tejun Heo <tj@kernel.org>
+Signed-off-by: Andrey Grodzovsky <andrey.grodzovsky@amd.com>
+Reviewed-by: Lai Jiangshan<jiangshanlai@gmail.com>
+Reviewed-by: Christian König <christian.koenig@amd.com>
+Signed-off-by: Alex Deucher <alexander.deucher@amd.com>
+---
+ include/linux/workqueue.h | 1 +
+ kernel/workqueue.c        | 9 +++++++++
+ 2 files changed, 10 insertions(+)
+
+--- a/include/linux/workqueue.h
++++ b/include/linux/workqueue.h
+@@ -460,6 +460,7 @@ extern int schedule_on_each_cpu(work_fun
+ int execute_in_process_context(work_func_t fn, struct execute_work *);
+ 
+ extern bool flush_work(struct work_struct *work);
++extern bool cancel_work(struct work_struct *work);
+ extern bool cancel_work_sync(struct work_struct *work);
+ 
+ extern bool flush_delayed_work(struct delayed_work *dwork);
+--- a/kernel/workqueue.c
++++ b/kernel/workqueue.c
+@@ -3240,6 +3240,15 @@ static bool __cancel_work(struct work_st
+ 	return ret;
+ }
+ 
++/*
++ * See cancel_delayed_work()
++ */
++bool cancel_work(struct work_struct *work)
++{
++	return __cancel_work(work, false);
++}
++EXPORT_SYMBOL(cancel_work);
++
+ /**
+  * cancel_delayed_work - cancel a delayed work
+  * @dwork: delayed_work to cancel

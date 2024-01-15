@@ -1,0 +1,41 @@
+From 91d3d149978ba7b238198dd80e4b823756aa7cfa Mon Sep 17 00:00:00 2001
+From: Heiner Kallweit <hkallweit1@gmail.com>
+Date: Sun, 26 Nov 2023 23:01:02 +0100
+Subject: [PATCH] r8169: prevent potential deadlock in rtl8169_close
+
+ndo_stop() is RTNL-protected by net core, and the worker function takes
+RTNL as well. Therefore we will deadlock when trying to execute a
+pending work synchronously. To fix this execute any pending work
+asynchronously. This will do no harm because netif_running() is false
+in ndo_stop(), and therefore the work function is effectively a no-op.
+However we have to ensure that no task is running or pending after
+rtl_remove_one(), therefore add a call to cancel_work_sync().
+
+Fixes: abe5fc42f9ce ("r8169: use RTNL to protect critical sections")
+Signed-off-by: Heiner Kallweit <hkallweit1@gmail.com>
+Link: https://lore.kernel.org/r/12395867-1d17-4cac-aa7d-c691938fcddf@gmail.com
+Signed-off-by: Paolo Abeni <pabeni@redhat.com>
+---
+ drivers/net/ethernet/realtek/r8169_main.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -4786,7 +4786,7 @@ static int rtl8169_close(struct net_devi
+ 	rtl8169_down(tp);
+ 	rtl8169_rx_clear(tp);
+ 
+-	cancel_work_sync(&tp->wk.work);
++	cancel_work(&tp->wk.work);
+ 
+ 	free_irq(pci_irq_vector(pdev, 0), tp);
+ 
+@@ -5052,6 +5052,8 @@ static void rtl_remove_one(struct pci_de
+ 	if (pci_dev_run_wake(pdev))
+ 		pm_runtime_get_noresume(&pdev->dev);
+ 
++	cancel_work_sync(&tp->wk.work);
++
+ 	unregister_netdev(tp->dev);
+ 
+ 	if (r8168_check_dash(tp))
