@@ -41,4 +41,31 @@ preinit_gpio() {
 	esac
 }
 
+preinit_otg() {
+	case $(board_name) in
+	firefly,rk3568-roc-pc)
+		# unknown
+		;;
+	ynn,nas|\
+	jp,tvbox)
+		# default host mode, nothing to do
+		;;
+	friendlyelec,nanopi-r5s|\
+	friendlyelec,nanopi-r5c)
+		# auto switch role
+		;;
+	lyt,t68m|\
+	jsy,h1|\
+	yyy,h1|\
+	idiskk,h1|\
+	fastrhino,r66s|\
+	fastrhino,r68s)
+		# RK356x
+		/bin/mount -o noatime -t debugfs debugfs /sys/kernel/debug
+		echo host >/sys/kernel/debug/usb/fcc00000.dwc3/mode
+		;;
+	esac
+}
+
 boot_hook_add preinit_main preinit_gpio
+boot_hook_add preinit_main preinit_otg

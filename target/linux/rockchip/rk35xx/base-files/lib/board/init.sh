@@ -280,32 +280,6 @@ board_wait_wifi() {
 	esac
 }
 
-board_otg_defaults() {
-	case $(board_name) in
-	firefly,rk3568-roc-pc)
-		# unknown
-	;;
-	ynn,nas|\
-	jp,tvbox)
-		# default host mode, nothing to do
-	;;
-	friendlyelec,nanopi-r5s|\
-	friendlyelec,nanopi-r5c)
-		# auto switch role
-	;;
-	lyt,t68m|\
-	jsy,h1|\
-	yyy,h1|\
-	idiskk,h1|\
-	fastrhino,r66s|\
-	fastrhino,r68s)
-		echo host >/sys/kernel/debug/usb/fcc00000.dwc3/mode
-	;;
-	esac
-}
-
-board_otg_defaults
-
 board_fixup_iface_name
 
 board_set_iface_smp_affinity
