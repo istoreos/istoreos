@@ -21,6 +21,19 @@ platform_check_image() {
 		return 1
 	}
 
+	# EFI non match will break grub
+	if part_magic_efi "/dev/$diskdev"; then
+		if ! part_magic_efi "$1"; then
+			v "Flashing a non EFI image to EFI system!"
+			return 1
+		fi
+	else
+		if part_magic_efi "$1"; then
+			v "Flashing a EFI image to non EFI system!"
+			return 1
+		fi
+	fi
+
 	[ "$SAVE_CONFIG" -eq 1 ] && return 0
 
 	get_partitions "/dev/$diskdev" bootdisk
