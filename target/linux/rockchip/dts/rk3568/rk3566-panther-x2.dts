@@ -779,7 +779,7 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "otg";
+	dr_mode = "host";
 	status = "okay";
 };
 
