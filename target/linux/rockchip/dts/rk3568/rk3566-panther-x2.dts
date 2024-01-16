@@ -628,7 +628,7 @@
 };
 
 &sata2 {
-	status = "okay";
+	status = "disabled";
 };
 
 &saradc {
@@ -779,20 +779,20 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "host";
-	status = "okay";
+	dr_mode = "otg";
+	status = "disabled";
 };
 
 &usbdrd30 {
-    status = "okay";
+    status = "disabled";
 };
 
 &usbhost_dwc3 {
-    status = "okay";
+    status = "disabled";
 };
 
 &usbhost30 {
-    status = "okay";
+    status = "disabled";
 };
 
 &vdpu {
