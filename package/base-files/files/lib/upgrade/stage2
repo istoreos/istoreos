@@ -175,6 +175,7 @@ istoreos_show_new_firmware_version() {
 }
 
 date '+%Y-%m-%d %H:%M:%S' >/overlay/upgrade.log
+export SAVE_LOG=1
 v "Running Version: $(grep DISTRIB_DESCRIPTION= /etc/openwrt_release | cut -d= -f2)"
 if [ -s /tmp/sysupgrade.meta ]; then
 	(istoreos_show_new_firmware_version)
