@@ -47,7 +47,8 @@ preinit_otg() {
 		# unknown
 		;;
 	ynn,nas|\
-	jp,tvbox)
+	jp,tvbox|\
+	panther,x2)
 		# default host mode, nothing to do
 		;;
 	friendlyelec,nanopi-r5s|\
