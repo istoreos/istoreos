@@ -780,19 +780,19 @@
 
 &usbdrd_dwc3 {
 	dr_mode = "otg";
-	status = "disabled";
+	status = "okay";
 };
 
 &usbdrd30 {
-    status = "disabled";
+    status = "okay";
 };
 
 &usbhost_dwc3 {
-    status = "disabled";
+    status = "okay";
 };
 
 &usbhost30 {
-    status = "disabled";
+    status = "okay";
 };
 
 &vdpu {
