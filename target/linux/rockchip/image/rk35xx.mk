@@ -260,6 +260,15 @@ $(call Device/rk3566)
 endef
 TARGET_DEVICES += jp_tvbox
 
+define Device/panther_x2
+$(call Device/rk3566)
+  DEVICE_VENDOR := Panther
+  DEVICE_MODEL := X2
+  DEVICE_DTS := rk3566-panther-x2
+  SUPPORTED_DEVICES += panther,x2
+endef
+TARGET_DEVICES += panther_x2
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
