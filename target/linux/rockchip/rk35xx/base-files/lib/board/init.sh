@@ -257,6 +257,7 @@ board_set_iface_smp_affinity() {
 		;;
 	ynn,nas|\
 	jp,tvbox|\
+	panther,x2|\
 	hsa,bh2)
 		set_iface_cpumask 2 "eth0"
 		;;
