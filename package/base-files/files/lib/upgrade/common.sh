@@ -67,7 +67,7 @@ _v() {
 
 v() {
 	_v "$(date) upgrade: $@"
-	echo "$@" >>/overlay/upgrade.log
+	[ "$SAVE_LOG" = "1" ] && echo "$@" >>/overlay/upgrade.log
 	logger -p info -t upgrade "$@"
 }
 
