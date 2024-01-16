@@ -252,11 +252,11 @@ TARGET_DEVICES += ynn_ynnnas
 
 define Device/jp_tvbox
 $(call Device/rk3566)
-  DEVICE_VENDOR := jp
-  DEVICE_MODEL := tvbox
+  DEVICE_VENDOR := JianPian
+  DEVICE_MODEL := TV Box
   DEVICE_DTS := rk3566-jp-tvbox
   SUPPORTED_DEVICES += jp,tvbox
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core
+  DEVICE_PACKAGES := kmod-scsi-core
 endef
 TARGET_DEVICES += jp_tvbox
 
