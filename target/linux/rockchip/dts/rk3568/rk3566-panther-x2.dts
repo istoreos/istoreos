@@ -25,7 +25,7 @@
 		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rw rootwait";
 	};
 
-	fiq-debugger {
+	fiq_debugger: fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
 		rockchip,serial-id = <2>;
 		rockchip,wake-irq = <0>;
@@ -515,15 +515,15 @@
 	status = "okay";
 };
 
-&i2s0_8ch {
-	status = "okay";
-};
-
 &mdio1 {
 	rgmii_phy1: ethernet-phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x1>;
 	};
+};
+
+&i2s0_8ch {
+	status = "okay";
 };
 
 &pinctrl {
@@ -579,15 +579,16 @@
 };
 
 &pmu_io_domains {
-	status = "okay";
 	pmuio1-supply = <&vcc3v3_pmu>;
 	pmuio2-supply = <&vcc3v3_pmu>;
 	vccio1-supply = <&vccio_acodec>;
+	vccio2-supply = <&vcc_1v8>;
 	vccio3-supply = <&vccio_sd>;
 	vccio4-supply = <&vcc_1v8>;
 	vccio5-supply = <&vcc_3v3>;
-	vccio6-supply = <&vcc_1v8>;
+	vccio6-supply = <&vcc_3v3>;
 	vccio7-supply = <&vcc_3v3>;
+	status = "okay";
 };
 
 &sdhci {
@@ -618,10 +619,10 @@
 	cap-sd-highspeed;
 	cap-sdio-irq;
 	disable-wp;
-	keep-power-in-suspend;
-	mmc-pwrseq = <&sdio_pwrseq>;
 	non-removable;
 	supports-sdio;
+	keep-power-in-suspend;
+	mmc-pwrseq = <&sdio_pwrseq>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
 	status = "okay";
@@ -778,6 +779,14 @@
 	status = "okay";
 };
 
+&vdpu {
+	status = "okay";
+};
+
+&vepu_mmu {
+	status = "okay";
+};
+
 &usbdrd_dwc3 {
 	dr_mode = "host";
 	status = "okay";
@@ -793,12 +802,4 @@
 
 &usbhost30 {
     status = "okay";
-};
-
-&vdpu {
-	status = "okay";
-};
-
-&vepu_mmu {
-	status = "okay";
 };
