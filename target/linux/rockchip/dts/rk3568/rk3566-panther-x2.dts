@@ -38,19 +38,49 @@
 		status = "okay";
 	};
 
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		led-diy {
-			label = "diy-led";
-			default-state = "on";
-			gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			pinctrl-names = "default";
-			pinctrl-0 = <&diy_led_enable_h>;
-			retain-state-suspended;
-		};
-	};
+    gpio-leds {
+        compatible = "gpio-leds";
+        led_pwr: led-pwr {
+            label = "led-pwr";
+            default-state = "on";
+            gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_pwr_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_wifi: led-wifi {
+            label = "led-wifi";
+            default-state = "off";
+            gpios = <&gpio0 RK_PD6 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_wifi_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_eth: led-eth {
+            label = "led-eth";
+            default-state = "off";
+            gpios = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_eth_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_status: led-status {
+            label = "led-status";
+            default-state = "on";
+            gpios = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
+            linux,default-trigger = "heartbeat";
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_status_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+    };
 
 #ifdef DTS_NO_LEGACY
 	hdmi-con {
@@ -545,11 +575,23 @@
 			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	leds {
-		diy_led_enable_h: diy-led-enable-h {
-			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
+    leds {
+        led_pwr_enable_h: led-pwr-enable-h {
+            rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        
+        led_wifi_enable_h: led-wifi-enable-h {
+            rockchip,pins = <0 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        
+        led_eth_enable_h: led-eth-enable-h {
+            rockchip,pins = <0 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+
+        led_status_enable_h: led-status-enable-h {
+            rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
 	pmic {
 		pmic_int: pmic_int {
 			rockchip,pins =	<0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>;
