@@ -25,7 +25,7 @@
 		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rw rootwait";
 	};
 
-	fiq-debugger {
+	fiq_debugger: fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
 		rockchip,serial-id = <2>;
 		rockchip,wake-irq = <0>;
@@ -38,19 +38,49 @@
 		status = "okay";
 	};
 
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		led-diy {
-			label = "diy-led";
-			default-state = "on";
-			gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
-			pinctrl-names = "default";
-			pinctrl-0 = <&diy_led_enable_h>;
-			retain-state-suspended;
-		};
-	};
+    gpio-leds {
+        compatible = "gpio-leds";
+        led_pwr: led-pwr {
+            label = "led-pwr";
+            default-state = "on";
+            gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_pwr_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_wifi: led-wifi {
+            label = "led-wifi";
+            default-state = "off";
+            gpios = <&gpio0 RK_PD6 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_wifi_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_eth: led-eth {
+            label = "led-eth";
+            default-state = "off";
+            gpios = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_eth_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+        
+        led_status: led-status {
+            label = "led-status";
+            default-state = "on";
+            gpios = <&gpio0 RK_PD3 GPIO_ACTIVE_HIGH>;
+            linux,default-trigger = "heartbeat";
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_status_enable_h>;
+            retain-state-suspended;
+            status = "okay";
+        };
+    };
 
 #ifdef DTS_NO_LEGACY
 	hdmi-con {
@@ -515,15 +545,15 @@
 	status = "okay";
 };
 
-&i2s0_8ch {
-	status = "okay";
-};
-
 &mdio1 {
 	rgmii_phy1: ethernet-phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x1>;
 	};
+};
+
+&i2s0_8ch {
+	status = "okay";
 };
 
 &pinctrl {
@@ -545,11 +575,23 @@
 			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	leds {
-		diy_led_enable_h: diy-led-enable-h {
-			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
+    leds {
+        led_pwr_enable_h: led-pwr-enable-h {
+            rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        
+        led_wifi_enable_h: led-wifi-enable-h {
+            rockchip,pins = <0 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+        
+        led_eth_enable_h: led-eth-enable-h {
+            rockchip,pins = <0 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+
+        led_status_enable_h: led-status-enable-h {
+            rockchip,pins = <0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_none>;
+        };
+    };
 	pmic {
 		pmic_int: pmic_int {
 			rockchip,pins =	<0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_up>;
@@ -579,15 +621,16 @@
 };
 
 &pmu_io_domains {
-	status = "okay";
 	pmuio1-supply = <&vcc3v3_pmu>;
 	pmuio2-supply = <&vcc3v3_pmu>;
 	vccio1-supply = <&vccio_acodec>;
+	vccio2-supply = <&vcc_1v8>;
 	vccio3-supply = <&vccio_sd>;
 	vccio4-supply = <&vcc_1v8>;
 	vccio5-supply = <&vcc_3v3>;
-	vccio6-supply = <&vcc_1v8>;
+	vccio6-supply = <&vcc_3v3>;
 	vccio7-supply = <&vcc_3v3>;
+	status = "okay";
 };
 
 &sdhci {
@@ -618,10 +661,10 @@
 	cap-sd-highspeed;
 	cap-sdio-irq;
 	disable-wp;
-	keep-power-in-suspend;
-	mmc-pwrseq = <&sdio_pwrseq>;
 	non-removable;
 	supports-sdio;
+	keep-power-in-suspend;
+	mmc-pwrseq = <&sdio_pwrseq>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
 	status = "okay";
@@ -778,6 +821,14 @@
 	status = "okay";
 };
 
+&vdpu {
+	status = "okay";
+};
+
+&vepu_mmu {
+	status = "okay";
+};
+
 &usbdrd_dwc3 {
 	dr_mode = "host";
 	status = "okay";
@@ -793,12 +844,4 @@
 
 &usbhost30 {
     status = "okay";
-};
-
-&vdpu {
-	status = "okay";
-};
-
-&vepu_mmu {
-	status = "okay";
 };
