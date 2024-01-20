@@ -72,7 +72,7 @@ $(eval $(call KernelPackage,drm-rockchip-rk35xx-hdmi-audio))
 
 define KernelPackage/drm-rockchip-rk35xx-vvop
   SUBMENU:=$(VIDEO_MENU)
-  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-drm @!PACKAGE_kmod-drm-rockchip-rk35xx
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-drm @!PACKAGE_kmod-drm-rockchip-rk35xx @!(PACKAGE_kmod-drm-rockchip-rk35xx=m)
   TITLE:=Rockchip virtual VOP drm driver
   KCONFIG:=\
 	CONFIG_DRM_ROCKCHIP \
