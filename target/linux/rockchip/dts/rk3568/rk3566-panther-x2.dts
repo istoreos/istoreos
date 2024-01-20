@@ -641,19 +641,18 @@
 };
 
 &sdmmc0 {
-	supports-sd;
-	broken-cd;
 	bus-width = <4>;
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
+	supports-sd;
 	disable-wp;
 	sd-uhs-sdr50;
 	sd-uhs-sdr104;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc0_bus4 &sdmmc0_cmd &sdmmc0_clk>;
-	status = "okay";
 	vmmc-supply = <&vcc3v3_sd>;
 	vqmmc-supply = <&vccio_sd>;
+	status = "okay";
 };
 
 &sdmmc1 {
