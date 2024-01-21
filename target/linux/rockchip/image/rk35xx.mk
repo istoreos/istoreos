@@ -306,3 +306,15 @@ $(call Device/rk3308)
   DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool kmod-rkwifi-bcmdhd rkwifi-firmware-ap6256 kmod-sound-soc-rk3308
 endef
 # TARGET_DEVICES += armsom_p2-pro
+
+define Device/xunlong_orangepi-5-plus
+$(call Device/rk3588)
+$(call Device/rk3588_combined_friendlyelec)
+  DEVICE_VENDOR := XunLong
+  DEVICE_MODEL := RK3588 OPi 5 Plus
+  SUPPORTED_DEVICES := rockchip,rk3588-orangepi-5-plus
+    DEVICE_DTS := rk3588-orangepi-5-plus
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3588-friendlyelec | pine64-img | gzip | append-metadata
+   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal 
+endef
+TARGET_DEVICES += xunlong_orangepi-5-plus
