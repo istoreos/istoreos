@@ -3,6 +3,7 @@
 所需依赖：build-essential clang flex bison g++ gawk \
 gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
 python3-distutils rsync unzip zlib1g-dev file wget python2 python3
+
 1. 下载源码：git clone https://github.com/snnh/istoreos-orangepi-5-plus.git
 2. 进入源码目录：cd istoreos-orangepi-5-plus
 3. 下载依赖：./scripts/feeds update -a
@@ -11,13 +12,6 @@ python3-distutils rsync unzip zlib1g-dev file wget python2 python3
 6. 下载dl目录：make download V=s （可使用 -j4 参数进行多线程下载）
 7. 编译：make V=s
 编译完成后，在bin/targets/rockchip/rk35xx目录下可找到镜像文件
-
-以下是 iStoreOS 原始的 README
---------
-iStoreOS 是入门级的路由系统，也是入门级的 NAS 系统，
-基于原版 OpenWRT，在 ARS2 上经过长期迭代，最终开放适配到多个硬件平台
-
-更多信息请参阅 https://github.com/istoreos
 
 
 以下是 OpenWRT 原始的 README
