@@ -5,7 +5,7 @@
 3. 下载依赖：./scripts/feeds update -a
 4. 安装依赖：./scripts/feeds install -a
 5. 配置：make menuconfig（我已经配置好了一份.config文件,若无特殊需求可直接编译）
-6. 下载dl目录：make download V=s
+6. 下载dl目录：make download V=s （可使用 -j4 参数进行多线程下载）
 7. 编译：make V=s
 编译完成后，在bin/targets/rockchip/rk35xx目录下可找到镜像文件
 
