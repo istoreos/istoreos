@@ -9,14 +9,14 @@ python3-distutils rsync unzip zlib1g-dev file wget python2 python3
 2. 进入源码目录：cd istoreos-orangepi-5-plus
 3. 下载依赖：./scripts/feeds update -a
 4. 安装依赖：./scripts/feeds install -a
-5. 配置：make menuconfig（我已经配置好了一份.config文件,若无特殊需求可直接编译）
+5. 配置：make menuconfig
 6. 下载dl目录：make download V=s （可使用 -j4 参数进行多线程下载）
 7. 编译：make -j1 V=s （首次编译建议使用单线程）
 编译完成后，在bin/targets/rockchip/rk35xx目录下可找到镜像文件
 
 常见问题：
-1. Q;编译过程中提示找不到某个包
-   A; 请先安装依赖
+1. Q:编译过程中提示找不到某个包
+   A: 请先安装依赖
 2. Q:为什么下载这么慢？
    A: 国内网络环境差，建议使用代理
    Q:代理怎么设置？
