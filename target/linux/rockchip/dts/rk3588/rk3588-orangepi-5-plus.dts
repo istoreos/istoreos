@@ -1,0 +1,323 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ *
+ */
+
+/dts-v1/;
+
+#include "rk3588-orangepi-5-plus.dtsi"
+#include "rk3588-linux.dtsi"
+
+/ {
+	model = "RK3588 OPi 5 Plus";
+	compatible = "rockchip,rk3588-orangepi-5-plus", "rockchip,rk3588";
+
+	leds: gpio-leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 =<&leds_rgb>;
+		status = "okay";
+
+		blue_led@1 {
+			gpios = <&gpio3 RK_PA6 GPIO_ACTIVE_HIGH>;
+			label = "blue_led";
+			linux,default-trigger = "heartbeat";
+			linux,default-trigger-delay-ms = <0>;
+		};
+
+		green_led@2 {
+			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
+			label = "green_led";
+			linux,default-trigger = "heartbeat";
+			linux,default-trigger-delay-ms = <0>;
+		};
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		pwms = <&pwm3 0 50000 0>;
+		cooling-levels = <0 50 100 150 200 255>;
+		rockchip,temp-trips = <
+			50000   1
+			55000   2
+			60000   3
+			65000   4
+			70000   5
+		>;
+
+		status = "okay";
+	};
+};
+
+&sdhci {
+	status = "okay";
+};
+
+&mipi_dcphy0 {
+	status = "okay";
+};
+
+&mipi_dcphy1 {
+	status = "okay";
+};
+
+&rkcif {
+        status = "okay";
+};
+
+&rkcif_mmu {
+        status = "okay";
+};
+
+&rkisp0 {
+        status = "okay";
+};
+
+&isp0_mmu {
+        status = "okay";
+};
+
+&usbdrd3_1 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_1 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+/* Fan */
+&pwm3 {
+	status = "okay";
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm3m1_pins>;
+};
+
+/* watchdog */
+&wdt {
+	status = "okay";
+};
+
+&sfc {
+	status = "okay";
+	max-freq = <100000000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&fspim1_pins>;
+
+	spi_flash: spi-flash@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "jedec,spi-nor";
+		reg = <0x0>;
+		spi-max-frequency = <100000000>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <4>;
+		status = "okay";
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			loader@0 {
+				label = "loader";
+				reg = <0x0 0x1000000>;
+			};
+		};
+	};
+};
+
+&pwm15 {
+	compatible = "rockchip,remotectl-pwm";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm15m1_pins>;
+	remote_pwm_id = <3>;
+	handle_cpu_id = <1>;
+	remote_support_psci = <0>;
+	status = "okay";
+
+	ir_key1 {
+		rockchip,usercode = <0xfb04>;
+		rockchip,key_table =
+			<0xa3   KEY_ENTER>,
+			<0xe4   388>,
+			<0xf5   KEY_BACK>,
+			<0xbb   KEY_UP>,
+			<0xe2   KEY_DOWN>,
+			<0xe3   KEY_LEFT>,
+			<0xb7   KEY_RIGHT>,
+			<0xe0   KEY_HOME>,
+			<0xba   KEY_VOLUMEUP>,
+			<0xda   KEY_VOLUMEUP>,
+			<0xe6   KEY_VOLUMEDOWN>,
+			<0xdb   KEY_VOLUMEDOWN>,
+			<0xbc   KEY_SEARCH>,
+			<0xb2   KEY_POWER>,
+			<0xe5   KEY_POWER>,
+			<0xde   KEY_POWER>,
+			<0xdc   KEY_MUTE>,
+			<0xa2   KEY_MENU>,
+			<0xec   KEY_1>,
+			<0xef   KEY_2>,
+			<0xee   KEY_3>,
+			<0xf0   KEY_4>,
+			<0xf3   KEY_5>,
+			<0xf2   KEY_6>,
+			<0xf4   KEY_7>,
+			<0xf7   KEY_8>,
+			<0xf6   KEY_9>,
+			<0xb8   KEY_0>;
+	};
+};
+
+&pinctrl {
+	leds_gpio {
+		leds_rgb: leds-rgb {
+		        rockchip,pins = <3 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>,
+					<3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+};
+
+/*** 40 pins ***/
+&i2c2 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2m0_xfer>;
+};
+
+&can0 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0m0_pins>;
+	assigned-clocks = <&cru CLK_CAN0>;
+	assigned-clock-rates = <200000000>;
+};
+
+&can1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&can1m0_pins>;
+	assigned-clocks = <&cru CLK_CAN1>;
+	assigned-clock-rates = <200000000>;
+};
+
+&pwm0 {
+	status = "disabled";
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+&pwm14 {
+	status = "disabled";
+};
+
+&spi0 {
+	status = "disabled";
+	assigned-clocks = <&cru CLK_SPI0>;
+	assigned-clock-rates = <200000000>;
+	num-cs = <2>;
+};
+
+&uart3 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart3m1_xfer>;
+};
+
+&uart4 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart4m2_xfer>;
+};
+
+&i2c2 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c2m4_xfer>;
+};
+
+&i2c4 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4m3_xfer>;
+};
+
+&i2c5 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c5m3_xfer>;
+};
+
+&i2c8 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c8m2_xfer>;
+};
+
+&uart1 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart1m1_xfer>;
+};
+
+&uart6 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart6m1_xfer>;
+};
+
+&uart7 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart7m2_xfer>;
+};
+
+&uart8 {
+	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart8m1_xfer>;
+};
+
+&pwm10 {
+	status = "disabled";
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm10m0_pins>;
+};
+
+&pwm11 {
+	status = "disabled";
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm11m0_pins>;
+};
+
+&pwm12 {
+	status = "disabled";
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm12m0_pins>;
+};
+
+&pwm13 {
+	status = "disabled";
+	pinctrl-names = "active";
+	pinctrl-0 = <&pwm13m2_pins>;
+	//pinctrl-0 = <&pwm13m0_pins>;
+};
+
+&spi4 {
+	status = "disabled";
+	assigned-clocks = <&cru CLK_SPI4>;
+	assigned-clock-rates = <200000000>;
+	num-cs = <2>;
+};
+/*** 40 pins ***/
+
+&hdmirx_ctrler {
+	status = "disabled";
+};
