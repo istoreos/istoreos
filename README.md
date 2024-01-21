@@ -1,3 +1,15 @@
+**编译方法：**
+1. 下载源码：git clone https://github.com/snnh/istoreos-orangepi-5-plus.git
+2. 进入源码目录：cd istoreos-orangepi-5-plus
+3. 下载依赖：./scripts/feeds update -a
+4. 安装依赖：./scripts/feeds install -a
+5. 配置：make menuconfig（我已经配置好了一份.config文件,若无特殊需求可直接编译）
+6. 下载dl目录：make download V=s
+7. 编译：make V=s
+编译完成后，在bin/targets/rockchip/rk35xx目录下可找到镜像文件
+
+以下是 iStoreOS 原始的 README
+--------
 iStoreOS 是入门级的路由系统，也是入门级的 NAS 系统，
 基于原版 OpenWRT，在 ARS2 上经过长期迭代，最终开放适配到多个硬件平台
 
