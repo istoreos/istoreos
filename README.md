@@ -1,4 +1,5 @@
 **编译方法：**
+--------
 1. 下载源码：git clone https://github.com/snnh/istoreos-orangepi-5-plus.git
 2. 进入源码目录：cd istoreos-orangepi-5-plus
 3. 下载依赖：./scripts/feeds update -a
