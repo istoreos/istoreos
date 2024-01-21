@@ -1,8 +1,9 @@
-**编译方法：**
---------
 所需依赖：build-essential clang flex bison g++ gawk \
 gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
 python3-distutils rsync unzip zlib1g-dev file wget python2 python3
+
+**编译方法：**
+--------
 
 1. 下载源码：git clone https://github.com/snnh/istoreos-orangepi-5-plus.git
 2. 进入源码目录：cd istoreos-orangepi-5-plus
@@ -10,8 +11,22 @@ python3-distutils rsync unzip zlib1g-dev file wget python2 python3
 4. 安装依赖：./scripts/feeds install -a
 5. 配置：make menuconfig（我已经配置好了一份.config文件,若无特殊需求可直接编译）
 6. 下载dl目录：make download V=s （可使用 -j4 参数进行多线程下载）
-7. 编译：make V=s
+7. 编译：make -j1 V=s （首次编译建议使用单线程）
 编译完成后，在bin/targets/rockchip/rk35xx目录下可找到镜像文件
+
+常见问题：
+1. Q;编译过程中提示找不到某个包
+   A; 请先安装依赖
+2. Q:为什么下载这么慢？
+   A: 国内网络环境差，建议使用代理
+   Q:代理怎么设置？
+   A: 请使用搜索引擎查找相关教程
+3. Q:为什么编译时间很长？
+   A: 请升级你的电脑配置或者慢慢等
+4. Q:为什么编译失败？
+   A: 请根据报错提示，使用搜索引擎查找相关教程
+5. Q:为什么编译后找不到文件？
+   A: 请使用命令行进入目录，然后输入ls查看文件是否存在
 
 
 以下是 OpenWRT 原始的 README
