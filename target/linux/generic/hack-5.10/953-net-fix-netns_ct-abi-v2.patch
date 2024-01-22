@@ -1,0 +1,85 @@
+From 334b51a828575f9988b2e79f4b784ce27cbc1f59 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Mon, 22 Jan 2024 15:40:46 +0800
+Subject: [PATCH] net: fix netns_ct abi compitable
+
+Fixes: 42824d4b75 ("net: conntrack events, support multiple registrant")
+---
+ include/net/netns/conntrack.h       | 2 +-
+ net/netfilter/nf_conntrack_core.c   | 8 +++++++-
+ net/netfilter/nf_conntrack_ecache.c | 8 ++++----
+ 3 files changed, 12 insertions(+), 6 deletions(-)
+
+--- a/include/net/netns/conntrack.h
++++ b/include/net/netns/conntrack.h
+@@ -119,7 +119,7 @@ struct netns_ct {
+ 	struct ct_pcpu __percpu *pcpu_lists;
+ 	struct ip_conntrack_stat __percpu *stat;
+ #ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
+-	struct atomic_notifier_head nf_conntrack_chain;
++	struct atomic_notifier_head *nf_conntrack_chain;
+ #else
+ 	struct nf_ct_event_notifier __rcu *nf_conntrack_event_cb;
+ #endif
+--- a/net/netfilter/nf_conntrack_core.c
++++ b/net/netfilter/nf_conntrack_core.c
+@@ -2427,6 +2427,9 @@ i_see_dead_people:
+ 		nf_conntrack_expect_pernet_fini(net);
+ 		free_percpu(net->ct.stat);
+ 		free_percpu(net->ct.pcpu_lists);
++#ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
++		kfree(net->ct.nf_conntrack_chain);
++#endif
+ 	}
+ }
+ 
+@@ -2730,7 +2733,10 @@ int nf_conntrack_init_net(struct net *ne
+ 	nf_conntrack_proto_pernet_init(net);
+ 
+ #ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
+-	ATOMIC_INIT_NOTIFIER_HEAD(&net->ct.nf_conntrack_chain);
++	net->ct.nf_conntrack_chain = kzalloc(sizeof(*net->ct.nf_conntrack_chain), GFP_KERNEL);
++	if (!net->ct.nf_conntrack_chain)
++		goto err_expect;
++	ATOMIC_INIT_NOTIFIER_HEAD(net->ct.nf_conntrack_chain);
+ #endif
+ 	return 0;
+ 
+--- a/net/netfilter/nf_conntrack_ecache.c
++++ b/net/netfilter/nf_conntrack_ecache.c
+@@ -155,7 +155,7 @@ int nf_conntrack_eventmask_report(unsign
+ 		if (!((eventmask | missed) & e->ctmask))
+ 			return 0;
+ 
+-		atomic_notifier_call_chain(&net->ct.nf_conntrack_chain, eventmask | missed, &item);
++		atomic_notifier_call_chain(net->ct.nf_conntrack_chain, eventmask | missed, &item);
+ 	}
+ 
+ 	return 0;
+@@ -249,7 +249,7 @@ void nf_ct_deliver_cached_events(struct
+ 	item.portid = 0;
+ 	item.report = 0;
+ 
+-	atomic_notifier_call_chain(&net->ct.nf_conntrack_chain,
++	atomic_notifier_call_chain(net->ct.nf_conntrack_chain,
+ 			events | missed,
+ 			&item);
+ 
+@@ -348,7 +348,7 @@ out_unlock:
+ int nf_conntrack_register_notifier(struct net *net,
+ 				   struct notifier_block *nb)
+ {
+-        return atomic_notifier_chain_register(&net->ct.nf_conntrack_chain, nb);
++        return atomic_notifier_chain_register(net->ct.nf_conntrack_chain, nb);
+ }
+ #else
+ int nf_conntrack_register_notifier(struct net *net,
+@@ -377,7 +377,7 @@ EXPORT_SYMBOL_GPL(nf_conntrack_register_
+ #ifdef CONFIG_NF_CONNTRACK_CHAIN_EVENTS
+ int nf_conntrack_unregister_notifier(struct net *net, struct notifier_block *nb)
+ {
+-	return atomic_notifier_chain_unregister(&net->ct.nf_conntrack_chain, nb);
++	return atomic_notifier_chain_unregister(net->ct.nf_conntrack_chain, nb);
+ }
+ #else
+ void nf_conntrack_unregister_notifier(struct net *net,
