@@ -269,6 +269,16 @@ $(call Device/rk3566)
 endef
 TARGET_DEVICES += panther_x2
 
+define Device/le_hes30
+$(call Device/rk3566)
+  DEVICE_VENDOR := LE
+  DEVICE_MODEL := HES30
+  DEVICE_DTS := rk3566-hes30
+  SUPPORTED_DEVICES += le,hes30
+  DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan
+endef
+TARGET_DEVICES += le_hes30
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
