@@ -229,9 +229,9 @@
 };
 
 &mdio1 {
-	rgmii_phy1: phy@0 {
+	rgmii_phy1: phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
-		reg = <0x3>;
+		reg = <0x1>;
 	};
 };
 
