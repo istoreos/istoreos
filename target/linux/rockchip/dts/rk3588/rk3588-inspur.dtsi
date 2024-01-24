@@ -213,6 +213,34 @@
 	status = "okay";
 };
 
+&gmac0 {
+	phy-mode = "rgmii-rxid";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio0 RK_PB7 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	phy-handle = <&rgmii_phy>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac0_miim
+		     &gmac0_tx_bus2
+		     &gmac0_rx_bus2
+		     &gmac0_rgmii_clk
+		     &gmac0_rgmii_bus>;
+
+	tx_delay = <0x44>;
+	status = "okay";
+};
+
+&mdio0 {
+	rgmii_phy: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x3>;
+	};
+};
+
 &gmac1 {
 	/* Use rgmii-rxid mode to disable rx delay inside Soc */
 	phy-mode = "rgmii-rxid";
@@ -771,11 +799,11 @@
 				/* hdd1 pwr */
 				<0 RK_PC5 RK_FUNC_GPIO &pcfg_output_high>,
 				/* hdd2 pwr */
-				<0 RK_PC6 RK_FUNC_GPIO &pcfg_output_high>,
+				<0 RK_PC6 RK_FUNC_GPIO &pcfg_output_high>;
 				/* hdd3 pwr */
-				<0 RK_PB7 RK_FUNC_GPIO &pcfg_output_high>,
+				// <0 RK_PB7 RK_FUNC_GPIO &pcfg_output_high>,
 				/* hdd4 pwr */
-				<0 RK_PD3 RK_FUNC_GPIO &pcfg_output_high>;
+				// <0 RK_PD3 RK_FUNC_GPIO &pcfg_output_high>;
 		};
 	};
 

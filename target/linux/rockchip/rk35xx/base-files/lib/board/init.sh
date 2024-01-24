@@ -152,11 +152,20 @@ board_fixup_iface_name() {
 			rename_iface wan eth0
 		fi
 		;;
+	inspur,ihec301)
+		device="$(get_iface_device eth1)"
+		if [[ "$device" = "fe1b0000.ethernet" ]]; then
+			rename_iface eth0 lan
+			rename_iface eth1 eth0
+			rename_iface lan eth1
+		fi
+		;;
 	esac
 }
 
 board_set_iface_smp_affinity() {
 	case $(board_name) in
+	inspur,ihec301|\
 	firefly,rk3568-roc-pc)
 		set_iface_cpumask 2 eth0
 		set_iface_cpumask 4 eth1
