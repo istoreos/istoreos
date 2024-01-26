@@ -91,6 +91,7 @@ rockchip_setup_macs()
 	hinlink,opc-h68k|\
 	hinlink,opc-h66k|\
 	hinlink,hnas|\
+	inspur,ihec301|\
 	jsy,h1|\
 	yyy,h1|\
 	idiskk,h1|\
