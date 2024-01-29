@@ -4819,6 +4819,7 @@
 
 		snps,mixed-burst;
 		snps,tso;
+		snps,no-vlhash;
 
 		snps,axi-config = <&gmac1_stmmac_axi_setup>;
 		snps,mtl-rx-config = <&gmac1_mtl_rx_setup>;
