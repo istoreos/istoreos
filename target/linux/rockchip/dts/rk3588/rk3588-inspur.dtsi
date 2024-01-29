@@ -157,15 +157,6 @@
 		pinctrl-0 = <&sata_pwr_pins>;
 	};
 
-	gphy0_reset: gphy0-reset {
-		compatible = "regulator-fixed";
-		regulator-name = "gphy0_reset";
-		regulator-always-on;
-		regulator-boot-on;
-		pinctrl-names = "default";
-		pinctrl-0 = <&gphy0_reset_pins>;
-	};
-
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
@@ -756,12 +747,6 @@
 				<3 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>,
 				/* gmac1_mdio */
 				<3 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
-	gphy {
-		gphy0_reset_pins: gphy0-reset-pins {
-			rockchip,pins =
-				<0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 	hym8563 {
