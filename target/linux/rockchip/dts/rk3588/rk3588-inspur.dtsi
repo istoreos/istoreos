@@ -25,6 +25,7 @@
 		led-failsafe = &led_work;
 		led-running = &led_work;
 		led-upgrade = &led_work;
+		lcd-backlight = &lcd_backlight;
 	};
 
 	vcc12v_dcin: vcc12v-dcin {
@@ -148,7 +149,7 @@
 		vin-supply = <&vcc3v3>;
 	};
 
-	sata_power: sata-power {
+	sata-power {
 		compatible = "regulator-fixed";
 		regulator-name = "sata_power";
 		regulator-always-on;
@@ -157,14 +158,31 @@
 		pinctrl-0 = <&sata_pwr_pins>;
 	};
 
+	lcd-power {
+		compatible = "regulator-fixed";
+		regulator-name = "lcd_power";
+		regulator-always-on;
+		regulator-boot-on;
+		pinctrl-names = "default";
+		pinctrl-0 = <&lcd_pwr_pins>;
+	};
+
+	lcd_backlight: lcd-backlight {
+		compatible = "gpio-backlight";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&lcd_backlight_pins>;
+		gpios = <&gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
+	};
+
 	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 =
-			<&led_red_en>;
+			<&led_green_en>;
 
 		led_work: led-power {
-			gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
 			label = "rgb:power";
 			default-state = "on";
 		};
@@ -217,7 +235,8 @@
 	phy-mode = "rgmii-rxid";
 	clock_in_out = "output";
 
-	snps,reset-gpio = <&gpio0 RK_PB7 GPIO_ACTIVE_LOW>;
+	snps,no-vlhash;
+	snps,reset-gpio = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	/* Reset time is 20ms, 100ms for rtl8211f */
 	snps,reset-delays-us = <0 20000 100000>;
@@ -806,12 +825,17 @@
 				// <0 RK_PD3 RK_FUNC_GPIO &pcfg_output_high>;
 		};
 	};
-
-	leds {
-		led_red_en: led-red-en {
+	lcd {
+		lcd_backlight_pins: lcd-backlight-pins {
 			rockchip,pins =
-				<4 RK_PB4 RK_FUNC_GPIO &pcfg_pull_none>;
+				<0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
+		lcd_pwr_pins: lcd-pwr-pins {
+			rockchip,pins =
+				<1 RK_PA5 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
+	leds {
 		led_green_en: led-green-en {
 			rockchip,pins =
 				<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
