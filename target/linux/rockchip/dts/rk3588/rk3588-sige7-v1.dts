@@ -468,15 +468,12 @@
 	status = "okay";
 };
 
-&u2phy2 {
-	status = "okay";
-};
-
 &u2phy3 {
 	status = "okay";
 };
 
 &u2phy0_otg {
+	rockchip,typec-vbus-det;
 	status = "okay";
 };
 
@@ -484,19 +481,7 @@
 	status = "okay";
 };
 
-&u2phy2_host {
-	status = "okay";
-};
-
 &u2phy3_host {
-	status = "okay";
-};
-
-&usb_host0_ehci {
-	status = "okay";
-};
-
-&usb_host0_ohci {
 	status = "okay";
 };
 
@@ -505,10 +490,6 @@
 };
 
 &usb_host1_ohci {
-	status = "okay";
-};
-
-&usbdp_phy0 {
 	status = "okay";
 };
 
@@ -525,7 +506,7 @@
 };
 
 &usbdp_phy1_dp {
-	status = "okay";
+	status = "disabled";
 };
 
 &usbdp_phy1_u3 {
@@ -533,11 +514,6 @@
 };
 
 &usbdrd3_0 {
-	status = "okay";
-};
-
-&usbdrd_dwc3_0 {
-	dr_mode = "otg";
 	status = "okay";
 };
 
@@ -616,7 +592,9 @@
 	connect = <&vp2_out_dp0>;
 };
 
-
+&spdif_tx2 {
+	status = "okay";
+};
 
 &hdmi0 {
 	status = "okay";
@@ -702,7 +680,7 @@
 };
 
 &i2c4 {
-	status = "disabled";
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c4m1_xfer>;
 
@@ -844,6 +822,10 @@
 };
 
 &combphy1_ps {
+	status = "okay";
+};
+
+&combphy2_psu {
 	status = "okay";
 };
 
@@ -1045,9 +1027,11 @@
 
 &u2phy0_otg {
 	rockchip,typec-vbus-det;
+	status = "okay";
 };
 
 &usbdp_phy0 {
+	status = "okay";
 	orientation-switch;
 	svid = <0xff01>;
 	sbu1-dc-gpios = <&gpio4 RK_PA6 GPIO_ACTIVE_HIGH>;
@@ -1073,6 +1057,7 @@
 };
 
 &usbdrd_dwc3_0 {
+	status = "okay";
 	dr_mode = "otg";
 	usb-role-switch;
 	port {
@@ -1084,19 +1069,6 @@
 		};
 	};
 };
-
-&usbdp_phy0_dp {
-	status = "okay";
-};
-
-&usbhost3_0 {
-	status = "disabled";
-};
-
-&usbhost_dwc3_0 {
-	status = "disabled";
-};
-
 &soc_thermal {
 	trips {
 		cpu_warm: cpu_warm {
