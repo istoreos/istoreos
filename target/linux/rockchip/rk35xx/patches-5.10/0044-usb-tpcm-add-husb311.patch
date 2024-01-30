@@ -1,0 +1,79 @@
+From 798f98df258cf4efd4ac7b223e11905b0e296782 Mon Sep 17 00:00:00 2001
+From: Wang Jie <dave.wang@rock-chips.com>
+Date: Wed, 28 Jul 2021 17:25:49 +0800
+Subject: [PATCH] usb: typec: tcpm: add husb311 driver
+
+At present, there is no requirement for PD3.0 PPS function,
+the driver has not verified this function.
+
+Change-Id: Ib78bf1f96f806cca4a20567db2a7cbaf0fba01af
+Signed-off-by: Wang Jie <dave.wang@rock-chips.com>
+Signed-off-by: Frank Wang <frank.wang@rock-chips.com>
+---
+ drivers/usb/typec/tcpm/Kconfig         |   7 +
+ drivers/usb/typec/tcpm/Makefile        |   1 +
+ drivers/usb/typec/tcpm/tcpci_husb311.c | 199 +++++++++++++++++++++++++
+ 3 files changed, 207 insertions(+)
+ create mode 100644 drivers/usb/typec/tcpm/tcpci_husb311.c
+
+diff --git a/drivers/usb/typec/tcpm/Kconfig b/drivers/usb/typec/tcpm/Kconfig
+index 557f392fe24da..e16952bb7a3bd 100644
+--- a/drivers/usb/typec/tcpm/Kconfig
++++ b/drivers/usb/typec/tcpm/Kconfig
+@@ -20,6 +20,13 @@ config TYPEC_TCPCI
+ 
+ if TYPEC_TCPCI
+ 
++config TYPEC_HUSB311
++	tristate "Hynetek HUSB311 Type-C chip driver"
++	help
++	  Hynetek HUSB311 Type-C chip driver that works with
++	  Type-C Port Controller Manager to provide USB PD and USB
++	  Type-C functionalities.
++
+ config TYPEC_RT1711H
+ 	tristate "Richtek RT1711H Type-C chip driver"
+ 	help
+diff --git a/drivers/usb/typec/tcpm/Makefile b/drivers/usb/typec/tcpm/Makefile
+index 7d499f3569fde..d2ca41aea9703 100644
+--- a/drivers/usb/typec/tcpm/Makefile
++++ b/drivers/usb/typec/tcpm/Makefile
+@@ -4,6 +4,7 @@ obj-$(CONFIG_TYPEC_FUSB302)		+= fusb302.o
+ obj-$(CONFIG_TYPEC_WCOVE)		+= typec_wcove.o
+ typec_wcove-y				:= wcove.o
+ obj-$(CONFIG_TYPEC_TCPCI)		+= tcpci.o
++obj-$(CONFIG_TYPEC_HUSB311)		+= tcpci_husb311.o
+ obj-$(CONFIG_TYPEC_RT1711H)		+= tcpci_rt1711h.o
+ obj-$(CONFIG_TYPEC_MT6360)		+= tcpci_mt6360.o
+ obj-$(CONFIG_TYPEC_TCPCI_MAXIM)		+= tcpci_maxim.o
+diff --git a/drivers/usb/typec/tcpm/tcpci_husb311.c b/drivers/usb/typec/tcpm/tcpci_husb311.c
+index 72a524b5cc98f..46e07a8f0323b 100644
+--- a/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ b/drivers/usb/typec/tcpm/tcpci_husb311.c
+@@ -13,9 +13,10 @@
+ #include <linux/module.h>
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
+-#include <linux/usb/tcpci.h>
+ #include <linux/usb/tcpm.h>
+ 
++#include "tcpci.h"
++
+ #define HUSB311_VID		0x2E99
+ #define HUSB311_PID		0x0311
+ #define HUSB311_TCPC_POWER	0x90
+@@ -204,11 +205,13 @@ static int husb311_probe(struct i2c_clie
+ 	return 0;
+ }
+ 
+-static void husb311_remove(struct i2c_client *client)
++static int husb311_remove(struct i2c_client *client)
+ {
+ 	struct husb311_chip *chip = i2c_get_clientdata(client);
+ 
+ 	tcpci_unregister_port(chip->tcpci);
++
++	return 0;
+ }
+ 
+ static int husb311_pm_suspend(struct device *dev)
