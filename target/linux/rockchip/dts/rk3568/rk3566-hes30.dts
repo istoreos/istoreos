@@ -166,10 +166,10 @@
 			linux,default-trigger = "heartbeat";
 		};
 		net_led: led-1 {
-			label = "green:net";
-			gpios = <&gpio0 RK_PC7 GPIO_ACTIVE_LOW>;
-			default-state = "off";
-		};		
+			label = "green:power";
+			gpios = <&gpio0 RK_PC7 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
 	};
 
 #ifdef HES30_FAN_GPIO
