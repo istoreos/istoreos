@@ -478,10 +478,12 @@
 };
 
 &u2phy1_otg {
+	phy-supply = <&vcc5v0_host>;
 	status = "okay";
 };
 
 &u2phy3_host {
+	phy-supply = <&vcc5v0_host>;
 	status = "okay";
 };
 
@@ -1018,16 +1020,6 @@
 	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart6m1_xfer &uart6m1_ctsn>;
-};
-
-
-&u2phy0 {
-	status = "okay";
-};
-
-&u2phy0_otg {
-	rockchip,typec-vbus-det;
-	status = "okay";
 };
 
 &usbdp_phy0 {
