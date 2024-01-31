@@ -1,0 +1,27 @@
+From 288357383507ac59559552825289d69ce0e7fc4f Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 31 Jan 2024 14:48:45 +0800
+Subject: [PATCH] bcmdhd: fix macaddress on cfg80211 phy
+
+---
+ rkwifi/bcmdhd/wl_cfg80211.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/rkwifi/bcmdhd/wl_cfg80211.c b/rkwifi/bcmdhd/wl_cfg80211.c
+index 2f7f329..831926a 100644
+--- a/rkwifi/bcmdhd/wl_cfg80211.c
++++ b/rkwifi/bcmdhd/wl_cfg80211.c
+@@ -15954,6 +15954,10 @@ wl_cfg80211_net_attach(struct net_device *primary_ndev)
+ 		WL_ERR(("cfg null\n"));
+ 		return BCME_ERROR;
+ 	}
++
++	(void)memcpy_s(primary_ndev->ieee80211_ptr->wiphy->perm_addr, ETHER_ADDR_LEN,
++		primary_ndev->perm_addr, ETHER_ADDR_LEN);
++
+ #ifdef WL_STATIC_IF
+ 	/* Register dummy n/w iface. FW init will happen only from dev_open */
+ #ifdef WLDWDS
+-- 
+2.41.0
+
