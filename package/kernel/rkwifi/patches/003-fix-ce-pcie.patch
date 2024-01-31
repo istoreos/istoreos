@@ -1,0 +1,49 @@
+From 9b8cd7c9a6466d318073a2987d3747cd641f2136 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 31 Jan 2024 11:17:14 +0800
+Subject: [PATCH] bcmdhd: fix CE for pcie
+
+---
+ rkwifi/bcmdhd/rk_dhd_pcie_linux.h | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/rkwifi/bcmdhd/rk_dhd_pcie_linux.h b/rkwifi/bcmdhd/rk_dhd_pcie_linux.h
+index c6fedf9..0d7c012 100644
+--- a/rkwifi/bcmdhd/rk_dhd_pcie_linux.h
++++ b/rkwifi/bcmdhd/rk_dhd_pcie_linux.h
+@@ -12,11 +12,14 @@
+ #include <sbchipc.h>
+ #include <pcie_core.h>
+ #include <dhd_pcie.h>
++#ifdef CONFIG_PCIEASPM_EXT
+ #include <linux/aspm_ext.h>
++#endif
+ 
+ static inline void
+ rk_dhd_bus_l1ss_enable_rc_ep(dhd_bus_t *bus, bool enable)
+ {
++#ifdef CONFIG_PCIEASPM_EXT
+ 	if (!bus->rc_ep_aspm_cap || !bus->rc_ep_l1ss_cap) {
+ 		pr_err("%s: NOT L1SS CAPABLE rc_ep_aspm_cap: %d rc_ep_l1ss_cap: %d\n",
+ 		       __func__, bus->rc_ep_aspm_cap, bus->rc_ep_l1ss_cap);
+@@ -25,12 +28,17 @@ rk_dhd_bus_l1ss_enable_rc_ep(dhd_bus_t *bus, bool enable)
+ 
+ 	/* Disable ASPM of RC and EP */
+ 	pcie_aspm_ext_l1ss_enable(bus->dev, bus->rc_dev, enable);
++#endif
+ }
+ 
+ static inline bool
+ rk_dhd_bus_is_rc_ep_l1ss_capable(dhd_bus_t *bus)
+ {
++#ifdef CONFIG_PCIEASPM_EXT
+ 	return pcie_aspm_ext_is_rc_ep_l1ss_capable(bus->dev, bus->rc_dev);
++#else
++	return false;
++#endif
+ }
+ 
+ #endif /* __RK_DHD_PCIE_LINUX_H__ */
+-- 
+2.41.0
+
