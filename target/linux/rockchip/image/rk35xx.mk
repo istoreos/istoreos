@@ -73,7 +73,7 @@ $(call Device/rk3588)
   DEVICE_MODEL := sige7
   SUPPORTED_DEVICES += armsom,sige7-v1
   DEVICE_DTS := rk3588-sige7-v1-1 rk3588-sige7-v1
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-hwmon-pwmfan kmod-thermal
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-hwmon-pwmfan kmod-thermal kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
   IMAGE/sysupgrade.img.gz := boot-combined | boot-script rk3588 | pine64-img | gzip | append-metadata
 endef
 TARGET_DEVICES += armsom_sige7-v1
