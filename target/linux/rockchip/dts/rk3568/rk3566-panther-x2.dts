@@ -435,7 +435,7 @@
 				regulator-max-microvolt = <3300000>;
 
 				regulator-state-mem {
-					regulator-off-in-suspend;
+					regulator-on-in-suspend;
 				};
 			};
 
@@ -503,7 +503,7 @@
 				regulator-always-on;
 				regulator-name = "vcc3v3_sd";
 				regulator-state-mem {
-					regulator-off-in-suspend;
+					regulator-on-in-suspend;
 				};
 			};
 		};
@@ -549,6 +549,7 @@
 	rgmii_phy1: ethernet-phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x1>;
+		status = "okay";
 	};
 };
 
@@ -635,38 +636,55 @@
 
 &sdhci {
 	bus-width = <8>;
+	max-frequency = <200000000>;
+	no-sdio;
+	no-sd;
 	mmc-hs200-1_8v;
+	supports-emmc;
 	non-removable;
 	status = "okay";
 };
 
 &sdmmc0 {
 	bus-width = <4>;
+	max-frequency = <150000000>;
 	cap-mmc-highspeed;
 	cap-sd-highspeed;
 	supports-sd;
 	disable-wp;
-	sd-uhs-sdr50;
-	sd-uhs-sdr104;
 	pinctrl-names = "default";
-	pinctrl-0 = <&sdmmc0_bus4 &sdmmc0_cmd &sdmmc0_clk>;
+	pinctrl-0 = <&sdmmc0_bus4 &sdmmc0_clk &sdmmc0_cmd &sdmmc0_det>;
 	vmmc-supply = <&vcc3v3_sd>;
 	vqmmc-supply = <&vccio_sd>;
 	status = "okay";
 };
 
 &sdmmc1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	bus-width = <4>;
+	max-frequency = <150000000>;
 	cap-sd-highspeed;
 	cap-sdio-irq;
 	disable-wp;
-	non-removable;
 	supports-sdio;
+	non-removable;
+	sd-uhs-sdr104;
 	keep-power-in-suspend;
 	mmc-pwrseq = <&sdio_pwrseq>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
 	status = "okay";
+
+	brcmf: wifi@1 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <1>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <RK_PB2 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_host_wake_h>;
+	};
 };
 
 &sata2 {
