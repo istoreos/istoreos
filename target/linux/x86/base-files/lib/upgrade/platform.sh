@@ -55,6 +55,18 @@ platform_check_image() {
 	fi
 }
 
+platform_pre_upgrade() {
+	rm -f /tmp/grub_bak.tar
+	[ -n "$UPGRADE_BACKUP" ] || return 0
+	[ -f /boot/grub/grub.cfg ] || {
+		v "/boot/grub/grub.cfg not found"
+		return 0
+	}
+	[ -f /boot/grub/grub.ext.cfg -o -f /boot/grub/grubenv ] || return 0
+	tar -C /boot -cf /tmp/grub_bak.tar grub/grub.ext.cfg grub/grubenv 2>/dev/null
+	return 0
+}
+
 platform_do_bootloader_upgrade() {
 	local bootpart parttable=msdos
 	local diskdev="$1"
@@ -64,6 +76,8 @@ platform_do_bootloader_upgrade() {
 		mount -o rw,noatime "/dev/$bootpart" /tmp/boot
 		echo "(hd0) /dev/$diskdev" > /tmp/device.map
 		part_magic_efi "/dev/$diskdev" && parttable=gpt
+
+		[ -f /tmp/grub_bak.tar ] && tar -C /tmp/boot/boot -xf /tmp/grub_bak.tar
 
 		v "Upgrading bootloader on /dev/$diskdev..."
 		grub-bios-setup \

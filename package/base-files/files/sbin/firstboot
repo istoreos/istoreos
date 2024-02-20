@@ -70,6 +70,11 @@ do_reset()
     do_reset_nofs
     do_reset_ext_overlay
   fi
+  if [ -f /lib/upgrade/keep.d/grub ]; then
+    cat /lib/upgrade/keep.d/grub | while read; do
+      rm -f "$REPLY"
+    done
+  fi
   [ "$REBOOT" = "y" ] && reboot
   exit 0
 }
