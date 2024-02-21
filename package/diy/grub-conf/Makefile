@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=grub-conf
 PKG_VERSION:=1.0.0
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_FLAGS:=hold nonshared
 
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
