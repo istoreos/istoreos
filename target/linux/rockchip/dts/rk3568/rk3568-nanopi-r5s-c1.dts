@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyelec.com)
+ */
+
+/dts-v1/;
+#include "rk3568-nanopi-r5s.dts"
+
+/ {
+	model = "FriendlyElec NanoPi R5S C1";
+	compatible = "friendlyelec,nanopi-r5s-c1", "rockchip,rk3568";
+
+	m2-wlan-radio {
+		compatible = "rfkill-gpio";
+		type = "wlan";
+		shutdown-gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&mach {
+	hwrev = <7>;
+	model = "NanoPi R5S C1";
+};
+
+/delete-node/ &r8125_2;
+
+&pcie3x1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&m2_w_disable_pin>;
+	reset-gpios = <&gpio0 RK_PC3 GPIO_ACTIVE_HIGH>;
+};
+
+&pcie3x2 {
+	max-link-speed = <3>;
+};
+
+&pinctrl {
+	m2-pins {
+		m2_w_disable_pin: m2-w-disable-pin {
+			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
+};
+
+&spi1 {
+	status = "okay";
+
+	spi_oled091: oled091@0 {
+		status = "okay";
+		compatible = "solomon,ssd1306";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		dc-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 RK_PC4 GPIO_ACTIVE_LOW>;
+		width = <128>;
+		height = <32>;
+		buswidth = <8>;
+		fps = <30>;
+		rotate = <0>;
+	};
+};
+
+&uart5 {
+	pinctrl-0 = <&uart5m1_xfer>;
+	status = "disabled";
+};
+
+&uart7 {
+	pinctrl-0 = <&uart7m1_xfer>;
+	status = "disabled";
+};

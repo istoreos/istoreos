@@ -1,4 +1,6 @@
 # friendlyelec rk3568 combined image, board detected by ADC
+# https://github.com/friendlyarm/uboot-rockchip/blob/nanopi5-v2017.09/board/rockchip/nanopi5/hwrev.c
+# R5S < 151 < R5C < 343 < R5S LTS < 478 < R5S C1
 
 env delete hwrev
 env delete adc_value
@@ -8,7 +10,13 @@ env delete adc_value
 adc single saradc@fe720000 1 adc_value
 
 if test -n "$adc_value"; then
-    if test "$adc_value" -ge 151; then
+    if test "$adc_value" -ge 478; then
+        echo board rev07
+        setenv hwrev 11
+    elif test "$adc_value" -ge 343; then
+        echo board rev05
+        setenv hwrev 10
+    elif test "$adc_value" -ge 151; then
         echo board rev02
         setenv hwrev 1
     fi

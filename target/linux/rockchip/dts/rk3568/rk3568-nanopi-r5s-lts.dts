@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyelec.com)
+ */
+
+/dts-v1/;
+#include "rk3568-nanopi-r5s.dts"
+
+/ {
+	model = "FriendlyElec NanoPi R5S LTS";
+	compatible = "friendlyelec,nanopi-r5s", "rockchip,rk3568";
+};
+
+&mach {
+	hwrev = <5>;
+	model = "NanoPi R5S LTS";
+};
+
+&pcie3x2 {
+	max-link-speed = <3>;
+};
+
+&pwm7 {
+	compatible = "rockchip,remotectl-pwm";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm7_pins>;
+	remote_pwm_id = <7>;
+	handle_cpu_id = <1>;
+	remote_support_psci = <0>;
+	status = "okay";
+
+	ir_key1 {
+		rockchip,usercode = <0xc43b>;
+		rockchip,key_table =
+			<0xff	KEY_POWER>,
+			<0xef	KEY_LEFT>,
+			<0xed	KEY_RIGHT>,
+			<0xf2	KEY_UP>,
+			<0xea	KEY_DOWN>,
+			<0xee	KEY_ENTER>,
+			<0xe9	KEY_MUTE>,
+			<0xf1	KEY_VOLUMEDOWN>,
+			<0xf3	KEY_VOLUMEUP>,
+			<0xae	KEY_MENU>,
+			<0xeb	KEY_LEFTMETA>,
+			<0xaf	KEY_BACK>,
+			<0xf7	KEY_MODE>,
+			<0xe5	KEY_SYSRQ>,
+			<0xf5	KEY_ESC>;
+	};
+};

@@ -51,6 +51,7 @@ preinit_otg() {
 		# default host mode, nothing to do
 		;;
 	friendlyelec,nanopi-r5s|\
+	friendlyelec,nanopi-r5s-c1|\
 	friendlyelec,nanopi-r5c)
 		# auto switch role
 		;;

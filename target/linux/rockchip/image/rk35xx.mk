@@ -141,8 +141,8 @@ $(call Device/rk3568)
 $(call Device/rk3568_combined_friendlyelec)
   DEVICE_VENDOR := FriendlyARM
   DEVICE_MODEL := NanoPi R5S/R5C combined
-  SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyarm,nanopi-r5s friendlyelec,nanopi-r5c
-  DEVICE_DTS := rk3568-nanopi-r5s rk3568-nanopi-r5c
+  SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyarm,nanopi-r5s friendlyelec,nanopi-r5c friendlyelec,nanopi-r5s-c1
+  DEVICE_DTS := rk3568-nanopi-r5s rk3568-nanopi-r5c rk3568-nanopi-r5s-lts rk3568-nanopi-r5s-c1
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r5s
