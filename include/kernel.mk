@@ -216,6 +216,7 @@ define KernelPackage
     EXTRA_DEPENDS:=kernel (=$(LINUX_VERSION)~$(LINUX_VERMAGIC)-r$(LINUX_RELEASE))
     VERSION:=$(LINUX_VERSION)$(if $(PKG_VERSION),.$(PKG_VERSION))-r$(if $(PKG_RELEASE),$(PKG_RELEASE),$(LINUX_RELEASE))
     PKGFLAGS:=$(PKGFLAGS)
+    PKG_FLAGS:=hold
     $(call KernelPackage/$(1))
     $(call KernelPackage/$(1)/$(BOARD))
     $(call KernelPackage/$(1)/$(BOARD)/$(SUBTARGET))
