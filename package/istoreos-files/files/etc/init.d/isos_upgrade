@@ -73,6 +73,14 @@ is_overlayed() {
 	[ -e "/overlay/upper$1" -o -e "/ext_overlay/upper$1" ]
 }
 
+upgrade_opkg_distfeeds() {
+	local newrelease=$(grep -m1 '/base$' /rom/etc/opkg/distfeeds.conf | grep -Eo '/releases/[^/]+/')
+	local oldrelease=$(grep -m1 '/base$' /etc/opkg/distfeeds.conf | grep -Eo '/releases/[^/]+/')
+	[ -z "$newrelease" -o -z "$oldrelease" ] && return 0
+	[ "$newrelease" = "$oldrelease" ] && return 0
+	sed -i -e 's#'"$oldrelease"'#'"$newrelease"'#g' /etc/opkg/distfeeds.conf
+}
+
 boot() {
 	[ -f /.recovery_mode ] && return 0
 
@@ -86,9 +94,9 @@ boot() {
 		is_overlayed /etc/config/luci && {
 			clean_themes
 		}
-
-		rm -f /overlay/upper/etc/opkg/distfeeds.conf
-		rm -f /ext_overlay/upper/etc/opkg/distfeeds.conf
+		is_overlayed /etc/opkg/distfeeds.conf && {
+			upgrade_opkg_distfeeds
+		}
 	fi
 	rm -f /overlay/upper/.upgrading
 }
