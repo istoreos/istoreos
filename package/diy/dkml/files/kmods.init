@@ -16,7 +16,7 @@ disable_kmod() {
 }
 
 boot() {
-	local info kmod action p1
+	local info kmod action p1 ignore
 	local enable="$( uci -q get kmods.kmods.enable )"
 	ls /etc/modules-pending.d/ 2>/dev/null | while read info; do
 		if echo "$enable" | grep -qFw "$info" ; then
@@ -25,7 +25,7 @@ boot() {
 			action=disable_kmod
 		fi
 		echo "$action.group $info" >>/dev/kmsg
-		while read p1; do
+		while read p1 ignore; do
 			kmod=$(echo "$p1" | grep -o '^[^#]*')
 			if [[ -n "$kmod" ]]; then
 				echo "$action $kmod" >>/dev/kmsg
