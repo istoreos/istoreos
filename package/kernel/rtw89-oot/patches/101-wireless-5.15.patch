@@ -1,0 +1,265 @@
+diff --git a/core.c b/core.c
+index a279ca4..3ab6c42 100644
+--- a/core.c
++++ b/core.c
+@@ -3239,7 +3239,7 @@ static void rtw89_track_work(struct work_struct *work)
+ 	rtw89_phy_antdiv_track(rtwdev);
+ 	rtw89_phy_ul_tb_ctrl_track(rtwdev);
+ 	rtw89_phy_edcca_track(rtwdev);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	rtw89_tas_track(rtwdev);
+ #endif
+ 	rtw89_chanctx_track(rtwdev);
+@@ -3827,7 +3827,7 @@ static void rtw89_init_he_cap(struct rtw89_dev *rtwdev,
+ 			mac_cap_info[1] = IEEE80211_HE_MAC_CAP1_TF_MAC_PAD_DUR_16US;
+ 		mac_cap_info[2] = IEEE80211_HE_MAC_CAP2_ALL_ACK |
+ 				  IEEE80211_HE_MAC_CAP2_BSR;
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 		mac_cap_info[3] = IEEE80211_HE_MAC_CAP3_MAX_AMPDU_LEN_EXP_VHT_2;
+ #else
+ 		mac_cap_info[3] = IEEE80211_HE_MAC_CAP3_MAX_AMPDU_LEN_EXP_EXT_2;
+@@ -3835,7 +3835,7 @@ static void rtw89_init_he_cap(struct rtw89_dev *rtwdev,
+ 		if (i == NL80211_IFTYPE_AP)
+ 			mac_cap_info[3] |= IEEE80211_HE_MAC_CAP3_OMI_CONTROL;
+ 		mac_cap_info[4] = IEEE80211_HE_MAC_CAP4_OPS |
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 				  IEEE80211_HE_MAC_CAP4_AMDSU_IN_AMPDU;
+ #else
+ 				  IEEE80211_HE_MAC_CAP4_AMSDU_IN_AMPDU;
+@@ -3858,20 +3858,20 @@ static void rtw89_init_he_cap(struct rtw89_dev *rtwdev,
+ 				  IEEE80211_HE_PHY_CAP2_STBC_TX_UNDER_80MHZ |
+ 				  IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ |
+ 				  IEEE80211_HE_PHY_CAP2_DOPPLER_TX;
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 		phy_cap_info[3] = IEEE80211_HE_PHY_CAP3_RX_HE_MU_PPDU_FROM_NON_AP_STA;
+ #else
+ 		phy_cap_info[3] = IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_16_QAM;
+ #endif
+ 		if (i == NL80211_IFTYPE_STATION)
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 			phy_cap_info[3] |= IEEE80211_HE_PHY_CAP3_RX_HE_MU_PPDU_FROM_NON_AP_STA |
+ #else
+ 			phy_cap_info[3] |= IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_TX_16_QAM |
+ #endif
+ 					   IEEE80211_HE_PHY_CAP3_DCM_MAX_TX_NSS_2;
+ 		if (i == NL80211_IFTYPE_AP)
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 			phy_cap_info[3] |= IEEE80211_HE_PHY_CAP3_RX_HE_MU_PPDU_FROM_NON_AP_STA;
+ #else
+ 			phy_cap_info[3] |= IEEE80211_HE_PHY_CAP3_RX_PARTIAL_BW_SU_IN_20MHZ_MU;
+@@ -3885,13 +3885,13 @@ static void rtw89_init_he_cap(struct rtw89_dev *rtwdev,
+ 				  IEEE80211_HE_PHY_CAP5_NG16_MU_FEEDBACK;
+ 		phy_cap_info[6] = IEEE80211_HE_PHY_CAP6_CODEBOOK_SIZE_42_SU |
+ 				  IEEE80211_HE_PHY_CAP6_CODEBOOK_SIZE_75_MU |
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 				  IEEE80211_HE_PHY_CAP6_TRIG_SU_BEAMFORMER_FB |
+ #else
+ 				  IEEE80211_HE_PHY_CAP6_TRIG_SU_BEAMFORMING_FB |
+ #endif
+ 				  IEEE80211_HE_PHY_CAP6_PARTIAL_BW_EXT_RANGE;
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5,13,0) && !defined(BUILD_OPENWRT)
+ 		phy_cap_info[7] = IEEE80211_HE_PHY_CAP7_POWER_BOOST_FACTOR_AR |
+ #else
+ 		phy_cap_info[7] = IEEE80211_HE_PHY_CAP7_POWER_BOOST_FACTOR_SUPP |
+@@ -4141,7 +4141,7 @@ int rtw89_core_start(struct rtw89_dev *rtwdev)
+ 	rtw89_mac_cfg_ppdu_status(rtwdev, RTW89_MAC_0, true);
+ 	rtw89_mac_update_rts_threshold(rtwdev, RTW89_MAC_0);
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	rtw89_tas_reset(rtwdev);
+ #endif
+ 
+@@ -4263,7 +4263,7 @@ int rtw89_core_init(struct rtw89_dev *rtwdev)
+ 
+ 	rtw89_ser_init(rtwdev);
+ 	rtw89_entity_init(rtwdev);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	rtw89_tas_init(rtwdev);
+ #endif
+ 
+@@ -4556,7 +4556,7 @@ static int rtw89_core_register_hw(struct rtw89_dev *rtwdev)
+ 		goto err_free_supported_band;
+ 	}
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	hw->wiphy->sar_capa = &rtw89_sar_capa;
+ #endif
+ 
+diff --git a/core.h b/core.h
+index db68263..12cb7b0 100644
+--- a/core.h
++++ b/core.h
+@@ -4755,7 +4755,7 @@ struct rtw89_mcc_policy {
+ 	u8 sw_retry_count;
+ };
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0) && !defined(BUILD_OPENWRT)
+ #define BITS_TO_BYTES(nr)       __KERNEL_DIV_ROUND_UP(nr, BITS_PER_TYPE(char))
+ #endif
+ struct rtw89_mcc_role {
+diff --git a/debug.c b/debug.c
+index eacbc83..d1cc4e7 100644
+--- a/debug.c
++++ b/debug.c
+@@ -836,7 +836,7 @@ static int rtw89_debug_priv_txpwr_table_get(struct seq_file *m, void *v)
+ 	seq_puts(m, "[Regulatory] ");
+ 	__print_regd(m, rtwdev, chan);
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	seq_puts(m, "[SAR]\n");
+ 	rtw89_print_sar(m, rtwdev, chan->freq);
+ 
+diff --git a/fw.h b/fw.h
+index 8207cac..715e519 100644
+--- a/fw.h
++++ b/fw.h
+@@ -3187,7 +3187,7 @@ struct rtw89_fw_c2h_log_fmt {
+ 	__le16 line_num;
+ 	u8 argc;
+ 	union {
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0)
++#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0) || defined(BUILD_OPENWRT)
+ 		DECLARE_FLEX_ARRAY(u8, raw);
+ 		DECLARE_FLEX_ARRAY(__le32, argv);
+ #else
+diff --git a/mac80211.c b/mac80211.c
+index 07372cd..1645713 100644
+--- a/mac80211.c
++++ b/mac80211.c
+@@ -677,7 +677,7 @@ static int rtw89_ops_ampdu_action(struct ieee80211_hw *hw,
+ 
+ 	switch (params->action) {
+ 	case IEEE80211_AMPDU_TX_START:
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 		return IEEE80211_AMPDU_TX_START_IMMEDIATE;
+ #else
+ 		ieee80211_start_tx_ba_cb_irqsafe(vif, sta->addr, tid);
+@@ -1177,7 +1177,7 @@ const struct ieee80211_ops rtw89_ops = {
+ #endif	
+ 	.remain_on_channel		= rtw89_ops_remain_on_channel,
+ 	.cancel_remain_on_channel	= rtw89_ops_cancel_remain_on_channel,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	.set_sar_specs		= rtw89_ops_set_sar_specs,
+ #endif
+ 	.sta_rc_update		= rtw89_ops_sta_rc_update,
+diff --git a/phy.c b/phy.c
+index 8542080..99bb376 100644
+--- a/phy.c
++++ b/phy.c
+@@ -1901,7 +1901,7 @@ s8 rtw89_phy_read_txpwr_limit(struct rtw89_dev *rtwdev, u8 band,
+ 	u8 ch_idx = rtw89_channel_to_idx(rtwdev, band, ch);
+ 	u8 regd = rtw89_regd_get(rtwdev, band);
+ 	u8 reg6 = regulatory->reg_6ghz_power;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	s8 lmt = 0, sar;
+ #else
+ 	s8 lmt = 0;
+@@ -1937,7 +1937,7 @@ s8 rtw89_phy_read_txpwr_limit(struct rtw89_dev *rtwdev, u8 band,
+ 	}
+ 
+ 	lmt = rtw89_phy_txpwr_rf_to_mac(rtwdev, lmt);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	sar = rtw89_query_sar(rtwdev, freq);
+ 
+ 	return min(lmt, sar);
+@@ -2168,7 +2168,7 @@ s8 rtw89_phy_read_txpwr_limit_ru(struct rtw89_dev *rtwdev, u8 band,
+ 	u8 ch_idx = rtw89_channel_to_idx(rtwdev, band, ch);
+ 	u8 regd = rtw89_regd_get(rtwdev, band);
+ 	u8 reg6 = regulatory->reg_6ghz_power;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	s8 lmt_ru = 0, sar;
+ #else
+ 	s8 lmt_ru = 0;
+@@ -2204,7 +2204,7 @@ s8 rtw89_phy_read_txpwr_limit_ru(struct rtw89_dev *rtwdev, u8 band,
+ 	}
+ 
+ 	lmt_ru = rtw89_phy_txpwr_rf_to_mac(rtwdev, lmt_ru);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ 	sar = rtw89_query_sar(rtwdev, freq);
+ 
+ 	return min(lmt_ru, sar);
+diff --git a/regd.c b/regd.c
+index 68c47e9..eea8d00 100644
+--- a/regd.c
++++ b/regd.c
+@@ -319,7 +319,7 @@ static u8 rtw89_regd_get_index(const struct rtw89_regd *regd)
+ 	return regd - rtw89_regd_map;
+ }
+ 
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0)
++#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0) || defined(BUILD_OPENWRT)
+ static u8 rtw89_regd_get_index_by_name(const char *alpha2)
+ {
+ 	const struct rtw89_regd *regd;
+@@ -390,7 +390,7 @@ bottom:
+ 	sband->n_channels -= 3;
+ }
+ 
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0)
++#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0) || defined(BUILD_OPENWRT)
+ static void __rtw89_regd_setup_policy_6ghz(struct rtw89_dev *rtwdev, bool block,
+ 					   const char *alpha2)
+ {
+@@ -525,7 +525,7 @@ int rtw89_regd_setup(struct rtw89_dev *rtwdev)
+ 		return -EINVAL;
+ 
+ 	rtw89_regd_setup_unii4(rtwdev, wiphy);
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0)
++#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0) || defined(BUILD_OPENWRT)
+ 	rtw89_regd_setup_6ghz(rtwdev, wiphy);
+ #endif
+ 
+@@ -637,7 +637,7 @@ exit:
+ 	mutex_unlock(&rtwdev->mutex);
+ }
+ 
+-#if LINUX_VERSION_CODE > KERNEL_VERSION(5, 15, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+ static void __rtw89_reg_6ghz_power_recalc(struct rtw89_dev *rtwdev)
+ {
+ 	struct rtw89_regulatory_info *regulatory = &rtwdev->regulatory;
+diff --git a/sar.c b/sar.c
+index 5fabd45..fca12d6 100644
+--- a/sar.c
++++ b/sar.c
+@@ -4,7 +4,7 @@
+ 
+ #include <linux/version.h>
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ #include "acpi.h"
+ #include "debug.h"
+ #include "phy.h"
+diff --git a/sar.h b/sar.h
+index b100e3f..d43dcfc 100644
+--- a/sar.h
++++ b/sar.h
+@@ -10,7 +10,7 @@
+ #define RTW89_SAR_TXPWR_MAC_MAX S8_MAX
+ #define RTW89_SAR_TXPWR_MAC_MIN S8_MIN
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0) || defined(BUILD_OPENWRT)
+ struct rtw89_sar_handler {
+ 	const char *descr_sar_source;
+ 	u8 txpwr_factor_sar;
