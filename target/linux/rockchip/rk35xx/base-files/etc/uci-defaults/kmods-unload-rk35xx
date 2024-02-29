@@ -1,0 +1,21 @@
+#!/bin/sh
+
+[ -f /etc/config/kmods ] || exit 0
+
+uci -q batch <<-EOF >/dev/null
+
+	delete kmods.mwifiex
+	set kmods.mwifiex=auto_unload
+	set kmods.mwifiex.function=mwifiex_pcie
+	set kmods.mwifiex.support=mwifiex
+	delete kmods.ath10k
+	set kmods.ath10k=auto_unload
+	set kmods.ath10k.function=ath10k_pci
+	set kmods.ath10k.support=ath10k_core
+
+	delete kmods.rk35xx_others
+	set kmods.rk35xx_others=auto_unload
+	set kmods.rk35xx_others.function="r8168 r8125"
+
+	commit kmods
+EOF
