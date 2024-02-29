@@ -7,6 +7,15 @@ check_driver_bond() {
 	ls /sys/module/$kmod/drivers/*/ | grep -Fq :
 }
 
+rmmod_r() {
+	local kmod="$1"
+	local holder
+	for holder in `ls /sys/module/$kmod/holders/`; do
+		rmmod $holder
+	done
+	rmmod $kmod
+}
+
 auto_unload() {
 	local function support keep kmod
 	config_get function "$1" function
@@ -19,7 +28,7 @@ auto_unload() {
 				keep=1
 			else
 				echo "auto rmmod $kmod" >>/dev/kmsg
-				rmmod $kmod
+				rmmod_r $kmod
 			fi
 		done
 	fi
