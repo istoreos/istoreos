@@ -13,6 +13,7 @@ define Package/dkml
   SECTION:=utils
   CATEGORY:=Base system
   TITLE:=iStoreOS DKML
+  DEPENDS:=+ubox
 endef
 
 define Package/dkml/description
