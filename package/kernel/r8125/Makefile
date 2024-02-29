@@ -34,14 +34,14 @@ define KernelPackage/r8125/description
   This package contains a driver for Realtek r8125 chipsets.
 endef
 
-define KernelPackage/r8125/install
-ifeq ($(CONFIG_TARGET_x86),y)
+define KernelPackage/r8125/install/x86
 	$(INSTALL_DIR) $(1)/etc/modules-pending.d
 	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
-else
-	true
-endif
 endef
+
+ifeq ($(CONFIG_TARGET_x86),y)
+KernelPackage/r8125/install = $(KernelPackage/r8125/install/x86)
+endif
 
 define Package/kmod-r8125/postinst
 #!/bin/sh

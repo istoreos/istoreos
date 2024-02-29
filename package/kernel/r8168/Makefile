@@ -23,14 +23,14 @@ define KernelPackage/r8168/description
   This package contains a driver for Realtek RTL8168/RTL8111/RTL8411 PCIe GBE Family Controller.
 endef
 
-define KernelPackage/r8168/install
-ifeq ($(CONFIG_TARGET_x86),y)
+define KernelPackage/r8168/install/x86
 	$(INSTALL_DIR) $(1)/etc/modules-pending.d
 	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
-else
-	true
-endif
 endef
+
+ifeq ($(CONFIG_TARGET_x86),y)
+KernelPackage/r8168/install = $(KernelPackage/r8168/install/x86)
+endif
 
 define Package/kmod-r8168/postinst
 #!/bin/sh
