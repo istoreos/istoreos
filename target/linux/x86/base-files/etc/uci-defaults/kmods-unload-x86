@@ -24,7 +24,7 @@ uci -q batch <<-EOF >/dev/null
 
 	delete kmods.x86_others
 	set kmods.x86_others=auto_unload
-	set kmods.x86_others.function="bnx2x mlx5_core i40e mpt3sas ixgbe"
+	set kmods.x86_others.function="bnx2x mlx5_core mlx4_core i40e mpt3sas ixgbe"
 
 	commit kmods
 EOF
