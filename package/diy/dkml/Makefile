@@ -1,8 +1,8 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dkml
-PKG_VERSION:=1.0.1
-PKG_RELEASE:=2
+PKG_VERSION:=1.0.2
+PKG_RELEASE:=1
 PKG_FLAGS:=hold essential nonshared
 
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
@@ -32,6 +32,7 @@ endef
 define Package/dkml/install
 	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/kmods.init $(1)/etc/init.d/kmods
+	$(INSTALL_BIN) ./files/kmods-unload.init $(1)/etc/init.d/kmods-unload
 	$(INSTALL_DATA) ./files/kmods.config $(1)/etc/config/kmods
 endef
 
