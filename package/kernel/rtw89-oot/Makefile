@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rtw89-oot
 PKG_VERSION:=2024-01-19
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE_VERSION:=ebe87ac234a72a63a1b2ede911a874f1b7a6fe43
 PKG_HASH:=54d70235dd2208673c0380f5ea9b9cec53a0f08b4f6e7892181cedd30a61b18e
@@ -50,6 +50,11 @@ endef
 
 define KernelPackage/rtw89-oot/description
   This package contains a driver for Realtek RTL8851BE/RTL8852AE/RTL8852BE/RTL8852CE Family Controller.
+endef
+
+define KernelPackage/rtw89-oot/install
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_DATA) ./files/kmods-unload.default $(1)/etc/uci-defaults/kmods-unload-rtw89
 endef
 
 NOSTDINC_FLAGS := \
