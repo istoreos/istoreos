@@ -1,6 +1,17 @@
 #!/bin/sh
 # Copyright (C) 2023 jjm2473@gmail.com
 
+if [ -f /etc/config/kmods ]; then
+	uci -q batch <<-EOF >/dev/null
+	delete kmods.iwlwifi
+	set kmods.iwlwifi=auto_unload
+	set kmods.iwlwifi.function=iwlwifi
+
+	commit kmods
+EOF
+
+fi
+
 [ -f /lib/wifi/mac80211.sh ] || exit 0
 
 . /lib/functions.sh
