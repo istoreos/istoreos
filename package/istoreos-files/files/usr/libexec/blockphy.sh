@@ -13,21 +13,49 @@ getdisk() {
         echo usb`echo "$usb" | sed 's/[-.]/_/g'`
         return 0
     fi
-    local sata=`echo "$path" | grep -oE '/ata\d+/host\d+/target\d+:[^:]+'`
+    case "$DISK" in
+        mmcblk*)
+            echo "$path" | grep -oE '/mmc\d+/'
+			return 0
+			;;
+        nvme*)
+            echo "/$DISK/"
+			return 0
+			;;
+    esac
+	# sata
+    local sata=`echo "$path" | grep -oE '/ata\d+/host\d+/target\d+:\d+'`
     if [ -n "$sata" ]; then
-        sata=`echo "$sata" | sed -r 's#/ata(\d+)/host\d+/target\d+:(.+)#sata\1.\2#'`
+        sata=`echo "$sata" | sed -r 's#/ata(\d+)/host\d+/target\d+:(\d+)#sata\1.\2#'`
         sata=${sata%%.0}
         echo "/$sata/"
         return 0
     fi
-    case "$DISK" in
-        sd*)
-            echo "$path" | grep -oE '/ata[0-9]+/' | sed 's/ata/sata/g' ;;
-        mmcblk*)
-            echo "$path" | grep -oE '/mmc[0-9]+/' ;;
-        nvme*)
-            echo "/$DISK/" ;;
-    esac
+	# virtio
+    sata=`echo "$path" | grep -oE '/virtio\d+/host\d+/target\d+:\d+:\d+'`
+    if [ -n "$sata" ]; then
+        sata=`echo "$sata" | sed -r 's#/virtio(\d+)/host\d+/target\d+:\d+:(\d+)#vio\1.\2#'`
+        sata=${sata%%.0}
+        echo "/$sata/"
+        return 0
+    fi
+	# sas
+    sata=`echo "$path" | grep -oE '/host\d+/port-\d+:\d+'`
+    if [ -n "$sata" ]; then
+        sata=`echo "$sata" | sed -r 's#/host(\d+)/port-\d+:(\d+)#sas\1.\2#'`
+        sata=${sata%%.0}
+        echo "/$sata/"
+        return 0
+    fi
+	# scsi
+    sata=`echo "$path" | grep -oE '/host\d+/target\d+:\d+:\d+'`
+    if [ -n "$sata" ]; then
+        sata=`echo "$sata" | sed -r 's#/host(\d+)/target\d+:\d+:(\d+)#scsi\1.\2#'`
+        sata=${sata%%.0}
+        echo "/$sata/"
+        return 0
+    fi
+    echo "$path" | grep -oE '/host\d+/' | sed 's/host/sata/g'
     return 0
 }
 
