@@ -193,21 +193,6 @@
 		regulator-max-microvolt = <5000000>;
 		vin-supply = <&vcc5v0_usb>;
 	};
-
-	hdmi_sound: hdmi-sound {
-		compatible = "simple-audio-card";
-		simple-audio-card,format = "i2s";
-		simple-audio-card,mclk-fs = <128>;
-		simple-audio-card,name = "rockchip,hdmi";
-		status = "disabled";
-
-		simple-audio-card,cpu {
-				sound-dai = <&i2s0_8ch>;
-		};
-		simple-audio-card,codec {
-				sound-dai = <&hdmi>;
-		};
-	};
 };
 
 &cpu0 {
@@ -232,39 +217,7 @@
 };
 
 &hdmi {
-	assigned-clocks = <&cru CLK_HDMI_CEC>;
-	assigned-clock-rates = <32768>;
-	avdd-0v9-supply = <&vdda_0v9>;
-	avdd-1v8-supply = <&vcca_1v8>;
-	status = "okay";
-};
-
-#ifdef DTS_NO_LEGACY
-&hdmi_in {
-	hdmi_in_vp0: endpoint {
-		remote-endpoint = <&vp0_out_hdmi>;
-	};
-};
-
-&hdmi_out {
-	hdmi_out_con: endpoint {
-		remote-endpoint = <&hdmi_con_in>;
-	};
-};
-#else
-&hdmi_in_vp0 {
-	status = "okay";
-};
-
-&hdmi_in_vp1 {
 	status = "disabled";
-};
-#endif
-
-
-
-&hdmi_sound {
-	status = "okay";
 };
 
 &i2c0 {
@@ -748,15 +701,6 @@
 	status = "okay";
 };
 
-#ifdef DTS_NO_LEGACY
-&vp0 {
-	vp0_out_hdmi: endpoint@ROCKCHIP_VOP2_EP_HDMI0 {
-		reg = <ROCKCHIP_VOP2_EP_HDMI0>;
-		remote-endpoint = <&hdmi_in_vp0>;
-	};
-};
-#endif
-
 &vepu {
 	status = "okay";
 };
@@ -848,6 +792,7 @@
 
 &usbdrd_dwc3 {
 	dr_mode = "host";
+	extcon = <&usb2phy0>;
 	status = "okay";
 };
 
