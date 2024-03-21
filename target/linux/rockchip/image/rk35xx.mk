@@ -282,6 +282,14 @@ $(call Device/rk3566)
 endef
 TARGET_DEVICES += le_hes30
 
+define Device/mangopi_m28k
+$(call Device/hinlink_rk3528)
+  DEVICE_VENDOR := MangoPi
+  DEVICE_MODEL := M28K
+  SUPPORTED_DEVICES := mangopi,m28k
+endef
+TARGET_DEVICES += mangopi_m28k
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
