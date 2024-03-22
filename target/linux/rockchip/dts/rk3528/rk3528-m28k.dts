@@ -12,7 +12,6 @@
 #include <dt-bindings/input/rk-input.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include "rk3528-linux.dtsi"
-#include "../rockchip-drm-vvop.dtsi"
 
 / {
 	model = "MangoPi M28K";
