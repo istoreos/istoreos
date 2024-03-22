@@ -260,6 +260,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 4 "eth4" "eth4-16"
 		fi
 		;;
+	mangopi,m28k|\
 	hlink,h28k)
 		set_iface_cpumask 5 eth0
 		set_iface_cpumask b eth1
