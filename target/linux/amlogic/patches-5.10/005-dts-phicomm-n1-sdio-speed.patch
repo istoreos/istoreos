@@ -1,0 +1,28 @@
+From 45ad4994a41d96e612dfe0a2775aad4e57c483f7 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 26 Mar 2024 15:04:50 +0800
+Subject: [PATCH] dts: amlogic meson-gxl-s905d-phicomm-n1 sdio speed
+
+---
+ arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+index e24c5d8f7..c3840c434 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+@@ -45,6 +45,11 @@ &usb {
+ 	dr_mode = "host";
+ };
+ 
++&sd_emmc_a {
++	max-frequency = <80000000>;
++	sd-uhs-ddr50;
++};
++
+ &sd_emmc_b {
+ 	status = "disabled";
+ };
+-- 
+2.41.0
+

@@ -1,0 +1,43 @@
+From 242335daf59d50d323b9234cca083774a30f340d Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 26 Mar 2024 13:15:11 +0800
+Subject: [PATCH] dts: amlogic meson-gxl-s905d-phicomm-n1 aliases node
+
+---
+ .../boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+index 56e88df8c..99311bee0 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+@@ -11,6 +11,17 @@ / {
+ 	compatible = "phicomm,n1", "amlogic,s905d", "amlogic,meson-gxl";
+ 	model = "Phicomm N1";
+ 
++	aliases {
++		mmc0 = &sd_emmc_b;
++		mmc1 = &sd_emmc_c;
++		mmc2 = &sd_emmc_a;
++
++		led-boot = &led_work;
++		led-failsafe = &led_work;
++		led-running = &led_work;
++		led-upgrade = &led_work;
++	};
++
+ 	cvbs-connector {
+ 		status = "disabled";
+ 	};
+@@ -18,7 +29,7 @@ cvbs-connector {
+ 	leds {
+ 		compatible = "gpio-leds";
+ 
+-		led {
++		led_work: led {
+ 			label = "n1:white:status";
+ 			gpios = <&gpio_ao GPIOAO_9 GPIO_ACTIVE_HIGH>;
+ 			default-state = "on";
+-- 
+2.41.0
+

@@ -1,0 +1,27 @@
+From fcfbb0e2df465d3dba479735438e548aa6702f86 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 26 Mar 2024 11:17:51 +0800
+Subject: [PATCH] arm64: dts: amlogic meson-gxl-s905d-phicomm-n1 improve ethmac
+ stability
+
+---
+ arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+index 393d3cb33..56e88df8c 100644
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+@@ -33,3 +33,9 @@ &cvbs_vdac_port {
+ &usb {
+ 	dr_mode = "host";
+ };
++
++&ethmac {
++	snps,aal;
++	snps,txpbl = <0x8>;
++	snps,rxpbl = <0x8>;
++};
+-- 
+2.41.0
+
