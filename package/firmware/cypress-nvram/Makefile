@@ -91,7 +91,6 @@ define Package/cypress-nvram-43455-sdio-rpi-4b
   $(Package/cypress-nvram-default)
   TITLE:=CYW43455 NVRAM for Raspberry Pi 4B
   DEPENDS:=@TARGET_bcm27xx
-  PROVIDES:=brcmfmac-firmware-43455-sdio-rpi-4b
   CONFLICTS:=brcmfmac-firmware-43455-sdio-rpi-4b
 endef
 
