@@ -15,7 +15,7 @@ for l_devtype in "sd usb mmc" ; do
 	for devnum in ${l_mmc} ; do
 		if test -e ${devtype} ${devnum}:1 /boot.scr; then
 			part uuid ${devtype} ${devnum}:2 uuid
-			setenv bootargs "console=ttyAML0,115200n8 root=PARTUUID=${uuid} rw rootwait"
+			setenv bootargs "console=tty0 no_console_suspend consoleblank=0 console=ttyAML0,115200n8 root=PARTUUID=${uuid} rw rootwait"
 			if printenv mac; then
 				setenv bootargs ${bootargs} mac=${mac}
 			elif printenv eth_mac; then
