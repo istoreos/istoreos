@@ -421,7 +421,7 @@ $(eval $(call KernelPackage,drm-imx-ldb))
 define KernelPackage/drm-lima
   SUBMENU:=$(VIDEO_MENU)
   TITLE:=DRM support for ARM Mali 400/450 GPU
-  DEPENDS:=@TARGET_rockchip +kmod-drm-sched
+  DEPENDS:=@(TARGET_rockchip||TARGET_amlogic) +kmod-drm-sched
   KCONFIG:=CONFIG_DRM_LIMA
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/lima/lima.ko
   AUTOLOAD:=$(call AutoProbe,lima)
