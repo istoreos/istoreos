@@ -516,6 +516,10 @@
 			spk-ctl-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
 			status = "okay";
 		};
+
+		rtc {
+			status = "disabled";
+		};
 	};
 };
 

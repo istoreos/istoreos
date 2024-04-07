@@ -576,6 +576,10 @@
 			mic-in-differential;
 			status = "okay";
 		};
+
+		rtc {
+			status = "disabled";
+		};
 	};
 };
 
