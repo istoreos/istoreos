@@ -68,5 +68,12 @@ preinit_otg() {
 	esac
 }
 
+preinit_rtc() {
+	if [ -e /sys/class/rtc/rtc1/device/modalias ]; then
+		grep -q 'rk808-rtc' /sys/class/rtc/rtc1/device/modalias || ln -s rtc1 /dev/rtc
+	fi
+}
+
 boot_hook_add preinit_main preinit_gpio
 boot_hook_add preinit_main preinit_otg
+boot_hook_add preinit_main preinit_rtc
