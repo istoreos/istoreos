@@ -372,8 +372,8 @@
 				regulator-name = "vccio_acodec";
 				regulator-always-on;
 				regulator-boot-on;
-				regulator-min-microvolt = <3000000>;
-				regulator-max-microvolt = <3000000>;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
 
 				regulator-state-mem {
 					regulator-off-in-suspend;
@@ -472,7 +472,7 @@
 };
 
 &gmac1 {
-	snps,reset-gpio = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
+	snps,reset-gpio = <&gpio3 RK_PA1 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	/* Reset time is 20ms, 100ms for rtl8211f */
 	snps,reset-delays-us = <0 20000 100000>;
@@ -486,10 +486,10 @@
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac1m0_miim
-			&gmac1m0_tx_bus2_level3
+			&gmac1m0_tx_bus2
 			&gmac1m0_rx_bus2
-			&gmac1m0_rgmii_clk_level2
-			&gmac1m0_rgmii_bus_level3>;
+			&gmac1m0_rgmii_clk
+			&gmac1m0_rgmii_bus>;
 
 	tx_delay = <0x41>;
 	rx_delay = <0x2e>;
@@ -773,7 +773,7 @@
 	status = "okay";
 };
 
-&rknpu {	
+&rknpu {
 	rknpu-supply = <&vdd_npu>;
 	status = "okay";
 };
@@ -806,4 +806,23 @@
 
 &usbhost30 {
     status = "okay";
+};
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <100000>;
+};
+
+&spi3 {
+	status = "okay";
+	//assigned-clock-rates = <200000000>; //默认不用配置，SPI 设备工作时钟
+	max-freq = <48000000>; /* spi internal clk, don't modify */
+	//dma-names = "tx","rx"; //使能DMA模式
+	//rx-sample-delay-ns = <10>; //默认不用配置，读采样延时
+	spi_dev@0 {
+		compatible = "rockchip,spidev";
+		reg = <0>;
+		spi-max-frequency = <12000000>;
+		spi-lsb-first;
+	};
 };
