@@ -1,4 +1,3 @@
-. /lib/functions.sh
 
 preinit_set_gpio() {
 	# ref package/base-files/files/etc/init.d/gpio_switch
