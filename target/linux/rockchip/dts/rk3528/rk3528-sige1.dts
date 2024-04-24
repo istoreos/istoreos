@@ -271,7 +271,7 @@
 };
 
 &dfi {
-	status = "okay";
+	status = "disabled";
 };
 
 &display_subsystem {
@@ -280,7 +280,7 @@
 
 &dmc {
 	center-supply = <&vdd_logic>;
-	status = "okay";
+	status = "disabled";
 };
 
 &gpu {
