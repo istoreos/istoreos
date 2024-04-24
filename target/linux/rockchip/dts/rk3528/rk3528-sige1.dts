@@ -57,7 +57,7 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-ramp-delay = <1001>;
-		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+		gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
 		vin-supply = <&vcc5v0_sys>;
 		states = <1800000 0x0
 			  3300000 0x1>;
