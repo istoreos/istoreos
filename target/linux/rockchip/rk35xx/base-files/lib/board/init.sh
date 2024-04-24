@@ -170,6 +170,7 @@ board_set_iface_smp_affinity() {
 		set_iface_cpumask 2 eth0
 		set_iface_cpumask 4 eth1
 		;;
+	armsom,sige1-v1|\
 	hinlink,opc-h69k|\
 	friendlyelec,nanopi-r5s|friendlyelec,nanopi-r5s-c1)
 		set_iface_cpumask 2 eth0

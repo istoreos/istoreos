@@ -67,6 +67,15 @@ $(call Device/rk3568)
   SOC := rk3566
 endef
 
+define Device/armsom_sige1
+$(call Device/rk3528)
+  DEVICE_VENDOR := ArmSoM
+  DEVICE_MODEL := sige1
+  SUPPORTED_DEVICES += armsom,sige1 armsom,sige1-v1 armsom,sige1-v1.0
+  DEVICE_PACKAGES := kmod-r8125 kmod-thermal
+endef
+TARGET_DEVICES += armsom_sige1
+
 define Device/armsom_sige7-v1
 $(call Device/rk3588)
   DEVICE_VENDOR := ArmSoM

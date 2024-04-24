@@ -11,6 +11,7 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
+	armsom,sige1-v1|\
 	armsom,sige7-v1|\
 	easepi,ars4|\
 	friendlyelec,nanopi-r5c|\
