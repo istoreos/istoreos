@@ -43,7 +43,7 @@ _getpartofdisk()
 		echo "$disk"
 	else
 		part="$disk"
-		echo "$part" | grep -q '^.*\d$' && part="${part}p"
+		echo "$part" | grep -q '^.*[0-9]$' && part="${part}p"
 		part="${part}"$(( ${offset} ))
 		if [ ! -b "/dev/$part" ]; then
 			# lvm

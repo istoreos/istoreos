@@ -53,7 +53,7 @@ function get_emmcs() {
 	local bootdisk=$1
 
 	index=1
-    for disk in `cd /sys/block && ls | grep '^mmcblk' | grep -Ev 'mmcblk\d+boot\d+'`; do
+    for disk in `cd /sys/block && ls | grep '^mmcblk' | grep -Ev 'mmcblk[0-9]+boot[0-9]+'`; do
         [[ "$bootdisk" = "$disk" ]] && continue
         [ -b /dev/$disk ] && [ "`cat /sys/block/$disk/size`" -gt 0 ] || continue
         local diskinfo="`parted -ms "/dev/$disk" unit GiB print 2>/dev/null | grep -m1 "^/dev/$disk:"`"
