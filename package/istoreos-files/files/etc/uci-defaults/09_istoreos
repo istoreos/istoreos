@@ -22,7 +22,7 @@ if [ ! -f /proc/device-tree/chosen/default-firewall ] || grep -qFw nas /proc/dev
 EOF
 
 if grep -qFw nas /proc/device-tree/chosen/default-firewall; then
-    WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
+    WAN_ZONE=`uci show firewall | grep -E '^firewall\.@zone\[[0-9]+\]\.name=' | grep wan | head -n1 | head -c -12`
     uci -q batch <<-EOF >/dev/null
         del_list dockerd.firewall.blocked_interfaces=wan
         set ${WAN_ZONE}.input=ACCEPT

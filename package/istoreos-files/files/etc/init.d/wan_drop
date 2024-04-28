@@ -8,7 +8,7 @@ start_service() {
 	local PROTO=`uci get network.wan.proto`
 	logger -t 'wan_drop' "current proto $PROTO"
 	if [ "$PROTO" = "pppoe" ]; then
-		WAN_ZONE=`uci show firewall | egrep '^firewall\.@zone\[\d+\]\.name=' | grep wan | head -n1 | head -c -12`
+		WAN_ZONE=`uci show firewall | grep -E '^firewall\.@zone\[[0-9]+\]\.name=' | grep wan | head -n1 | head -c -12`
 		if [ "`uci get ${WAN_ZONE}.input`" = "ACCEPT" ]; then
 			logger -t 'wan_drop' "set firewall drop input from wan"
 			uci -q batch <<-EOF >/dev/null

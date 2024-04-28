@@ -9,7 +9,7 @@ check_kernel() {
 }
 
 boot() {
-	if check_kernel `uname -r | grep -Eo '\d+\.\d+' | sed 's/\./ /g'`; then
+	if check_kernel `uname -r | grep -Eo '[0-9]+\.[0-9]+' | sed 's/\./ /g'`; then
 		if [ ! -f /usr/lib/samba/vfs/io_uring.so ]; then
 			if [ -f /usr/lib/samba/vfs/io_uring.so.bak ]; then
 				mv /usr/lib/samba/vfs/io_uring.so.bak /usr/lib/samba/vfs/io_uring.so
