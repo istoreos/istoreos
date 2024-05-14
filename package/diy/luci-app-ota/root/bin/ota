@@ -19,9 +19,7 @@ sha256() {
     sha256sum $1 | cut -d' ' -f1
 }
 
-fcurl() {
-    curl -L --fail --show-error "$@"
-}
+alias fcurl='curl -L --fail --show-error'
 
 download() {
     local img=$1
