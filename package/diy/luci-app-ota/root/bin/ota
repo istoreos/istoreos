@@ -11,6 +11,7 @@ if [ -z "$OTA_URL_BASE" ]; then
 fi
 
 WRLOCK=/var/lock/ota_background.lock
+STLOCK=/var/lock/ota_status.lock
 
 action=${1}
 shift
@@ -24,30 +25,40 @@ alias fcurl='curl -L --fail --show-error'
 download() {
     local img=$1
     local sum=$2
+    exec 300>$STLOCK
+    flock 300
     touch /tmp/firmware.img.part
     echo >/tmp/firmware.img.progress
     rm -f /tmp/firmware.img.sha256sum
+    flock -u 300
     if [ -f /tmp/firmware.img ]; then
         echo "Checking existed firmware.img..." >> /tmp/firmware.img.progress
         if [ "`sha256 /tmp/firmware.img`" = "$sum" ]; then
+            flock 300
             echo $sum > /tmp/firmware.img.sha256sum;
             rm -f /tmp/firmware.img.part
             rm -f /tmp/firmware.img.progress
+            flock -u 300
             return 0;
         else
             echo "Check failed, redownload" >> /tmp/firmware.img.progress
             rm -f /tmp/firmware.img
         fi
     fi
+    flock 300
+    echo "#=#=#" >> /tmp/firmware.img.progress
     fcurl --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
     local pid="$!"
     echo "$pid" > /var/run/ota/download.pid
+    flock -u 300
     if wait $pid; then
         rm -f /var/run/ota/download.pid
         echo "Checking new firmware.img.part..." > /tmp/firmware.img.progress
         if [ "`sha256 /tmp/firmware.img.part`" = "$sum" ]; then
+            flock 300
             mv /tmp/firmware.img.part /tmp/firmware.img && echo $sum > /tmp/firmware.img.sha256sum
             rm -f /tmp/firmware.img.progress
+            flock -u 300
             return 0
         else
             echo "Checksum failed!" >>/tmp/firmware.img.progress
@@ -137,8 +148,18 @@ do_progress() {
     [ -f /tmp/firmware.img.progress ] || { echo "download not in progress" >&2 ; return 254; }
     [ -f /tmp/firmware.img.part ] && { cat /tmp/firmware.img.progress | tr '\r' '\n' | tail -n1; return 1; }
     tail -1 /tmp/firmware.img.progress | grep -Fq 'Canceled!' && { echo "Canceled"; return 2; }
-    grep -v '\r' /tmp/firmware.img.progress >&2
+    cat /tmp/firmware.img.progress | tr '\r' '\n' | grep -v '^$' | tail -n1 >&2
     return 3
+}
+
+do_progress_locked() {
+    local ret
+    exec 300>$STLOCK
+    flock -s 300
+    do_progress
+    ret=$?
+    flock -u 300
+    return $ret
 }
 
 do_cancel() {
@@ -181,7 +202,7 @@ case $action in
         do_download
     ;;
     "progress")
-        do_progress
+        do_progress_locked
     ;;
     "cancel")
         do_cancel
