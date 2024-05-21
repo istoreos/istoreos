@@ -1,5 +1,20 @@
 #!/bin/sh
 # author jjm2473
+
+mirrors() {
+    local url="$1"
+    case "$url" in
+        https://fw0.koolcenter.com/iStoreOS/*|\
+        https://fw.koolcenter.com/iStoreOS/*)
+            local path=$(echo "$url" | sed -E 's#^https?://[^/]+/(.*)#\1#')
+            # echo "https://dl2.istoreos.com/$path"
+            echo "https://dl.istoreos.com/$path"
+        ;;
+    esac
+    echo "$url"
+    return 0
+}
+
 if [ -f /lib/upgrade/ota.sh ]; then
     . /lib/upgrade/ota.sh
     export_ota_url
@@ -45,25 +60,41 @@ download() {
             rm -f /tmp/firmware.img
         fi
     fi
-    flock 300
-    echo "#=#=#" >> /tmp/firmware.img.progress
-    fcurl --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$OTA_URL_BASE/$img" 2>/tmp/firmware.img.progress &
-    local pid="$!"
-    echo "$pid" > /var/run/ota/download.pid
-    flock -u 300
-    if wait $pid; then
-        rm -f /var/run/ota/download.pid
-        echo "Checking new firmware.img.part..." > /tmp/firmware.img.progress
-        if [ "`sha256 /tmp/firmware.img.part`" = "$sum" ]; then
-            flock 300
-            mv /tmp/firmware.img.part /tmp/firmware.img && echo $sum > /tmp/firmware.img.sha256sum
-            rm -f /tmp/firmware.img.progress
-            flock -u 300
-            return 0
+    local pid url
+    mirrors "$OTA_URL_BASE/$img" | while read; do
+        url="$REPLY"
+        echo "Try $url" >>/tmp/firmware.img.progress
+        flock 300
+        echo "#=#=#" >>/tmp/firmware.img.progress
+        fcurl --connect-timeout 5 --progress-bar -o /tmp/firmware.img.part "$url" 2>>/tmp/firmware.img.progress &
+        pid="$!"
+        echo "$pid" > /var/run/ota/download.pid
+        flock -u 300
+        if wait $pid; then
+            rm -f /var/run/ota/download.pid
+            echo "Checking new firmware.img.part..." > /tmp/firmware.img.progress
+            if [ "`sha256 /tmp/firmware.img.part`" = "$sum" ]; then
+                flock 300
+                mv /tmp/firmware.img.part /tmp/firmware.img && echo $sum > /tmp/firmware.img.sha256sum
+                rm -f /tmp/firmware.img.progress
+                flock -u 300
+                return 0
+            else
+                echo "Checksum failed!" >>/tmp/firmware.img.progress
+            fi
         else
-            echo "Checksum failed!" >>/tmp/firmware.img.progress
+            # on Terminated $? == 143, on Timeout $? == 28
+            local ecode=$?
+            echo >>/tmp/firmware.img.progress
+            if [ $ecode -eq 143 ]; then
+                echo "Canceled!" >> /tmp/firmware.img.progress
+                break
+            fi
         fi
-    fi
+        flock 300
+        sed -i '/\r/d' /tmp/firmware.img.progress
+        flock -u 300
+    done
     rm -f /var/run/ota/download.pid
     rm -f /tmp/firmware.img.part
     return 1
@@ -172,8 +203,6 @@ do_cancel() {
                     break
                 fi
             done
-            echo "" >> /tmp/firmware.img.progress
-            echo "Canceled!" >> /tmp/firmware.img.progress
         fi
     fi
     return 0
