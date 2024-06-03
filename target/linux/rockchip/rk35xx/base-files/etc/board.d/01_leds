@@ -51,6 +51,10 @@ lyt,t68m)
 nlnet,xgp)
 	ucidef_set_led_timer "sys" "SYS" "blue:sys" "200" "800"
 	;;
+radxa,e20c)
+	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth1"
+	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0"
+	;;
 armsom,p2pro)
 	ucidef_set_led_netdev "wlan" "WLAN" "blue:user" "wlan0"
 	;;

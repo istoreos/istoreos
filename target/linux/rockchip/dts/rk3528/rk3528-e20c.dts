@@ -17,12 +17,19 @@
 	model = "Radxa E20C";
 	compatible = "radxa,e20c", "rockchip,rk3528a";
 
-	/delete-node/ chosen;
-
 	aliases {
+		ethernet0 = &gmac1;
+		/delete-property/ ethernet1;
+		/* ethernet1 = &pcie-eth; */
+
 		mmc0 = &sdmmc;
 		mmc1 = &sdhci;
 		mmc2 = &sdio0;
+
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
 	};
 
 	vcc5v0_sys: vcc5v0-sys {
@@ -104,6 +111,7 @@
 		regulator-init-microvolt = <900000>;
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-ramp-delay = <6001>;
 		regulator-settling-time-up-us = <250>;
 		pwm-supply = <&vcc5v0_sys>;
 		status = "okay";
@@ -118,6 +126,7 @@
 		regulator-init-microvolt = <953000>;
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-ramp-delay = <6001>;
 		regulator-settling-time-up-us = <250>;
 		pwm-supply = <&vcc5v0_sys>;
 		status = "okay";
@@ -146,11 +155,10 @@
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&user_key>;
-		autorepeat;
 
 		user-key {
-			label = "KEY F15";
-			linux,code = <KEY_F15>;
+			label = "key user";
+			linux,code = <BTN_9>;
 			gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
 			debounce-interval = <100>;
 		};
@@ -159,19 +167,26 @@
 	gpio_leds: gpio-leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
+		pinctrl-0 =
+			<&led_lan_en>,
+			<&led_wan_en>,
+			<&led_sys_en>;
 
-		sys-led {
+		sys_led: sys-led {
 			gpios = <&gpio4 RK_PC1 GPIO_ACTIVE_LOW>;
+			label = "green:sys";
 			linux,default-trigger = "heartbeat";
 		};
 
 		wan-led {
 			gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_HIGH>;
+			label = "green:wan";
 			linux,default-trigger = "netdev";
 		};
 
 		lan-led {
 			gpios = <&gpio4 RK_PB5 GPIO_ACTIVE_HIGH>;
+			label = "green:lan";
 			linux,default-trigger = "netdev";
 		};
 	};
@@ -382,6 +397,7 @@
 };
 
 &combphy_pu {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
 	status = "okay";
 };
 
@@ -463,4 +479,21 @@
 			rockchip,pins = <0 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
+
+	leds {
+		led_lan_en: led-lan-en {
+			rockchip,pins =
+				<4 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_wan_en: led-wan-en {
+			rockchip,pins =
+				<4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_sys_en: led-sys-en {
+			rockchip,pins =
+				<4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
+
+#include "../rockchip-drm-vvop.dtsi"

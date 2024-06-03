@@ -298,6 +298,14 @@ $(call Device/rk3528_rtl8111h)
 endef
 TARGET_DEVICES += mangopi_m28k
 
+define Device/radxa_e20c
+$(call Device/rk3528_rtl8111h)
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E20C
+  SUPPORTED_DEVICES += radxa,e20c
+endef
+TARGET_DEVICES += radxa_e20c
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
