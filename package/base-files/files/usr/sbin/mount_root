@@ -144,9 +144,9 @@ clean_overlayfs_redundant_whiteout_marker()
 {
 	local line
 	cd "$1"
-	find upper ! -path 'upper/opt/*' -type c -perm 0 -user 0 -group 0 | sed 's#^upper/#/#g' | while read; do
+	find upper -xdev -path 'upper/opt' -prune ! -type d -o -type c -perm 0 -user 0 -group 0 | sed 's#^upper/#/#g' | while read; do
 		line="$REPLY"
-		[ ! -e "$line" -a \( -z "$2" -o ! -f "$2/upper$line" \) ] && \
+		[ ! -e "$line" -a \( -z "$2" -o ! -e "$2/upper$line" \) ] && \
 			busybox ls -l "upper$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
 			rm -f "upper$line"
 	done
@@ -158,9 +158,9 @@ clean_overlayfs_redundant_whiteout_marker_luci()
 	local line
 	[ -d "$1/upper/usr/lib/lua/luci" ] || return 0
 	cd "$1/upper/usr/lib/lua"
-	find luci -type c -perm 0 -user 0 -group 0 | while read; do
+	find luci -xdev -type c -perm 0 -user 0 -group 0 | while read; do
 		line="$REPLY"
-		[ ! -e "/usr/lib/lua/$line" -a \( -z "$2" -o ! -f "$2/upper/usr/lib/lua/$line" \) ] && \
+		[ ! -e "/usr/lib/lua/$line" -a \( -z "$2" -o ! -e "$2/upper/usr/lib/lua/$line" \) ] && \
 			busybox ls -l "$line" | grep -Fq 'c---------    1 root     root        0,   0 ' && \
 			rm -f "$line"
 	done
@@ -339,6 +339,8 @@ prepare_mnt()
 	else
 		rm -f "/overlay/.sandbox"
 	fi
+
+	sync
 
 	return 0
 }
