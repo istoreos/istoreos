@@ -4,6 +4,8 @@ type 'board_name' >/dev/null 2>/dev/null || . /lib/functions.sh
 export_ota_url() {
 	local board="$(board_name)"
 	case "$board" in
+	hlink,h28k|\
+	radxa,e20c|\
 	lyt,t68m)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
 		;;
@@ -31,9 +33,6 @@ export_ota_url() {
 	hinlink,h88k-*|\
 	hinlink,h88k)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/h88k"
-		;;
-	hlink,h28k)
-		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/h28k"
 		;;
 	*)
 		return 1
