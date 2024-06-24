@@ -167,6 +167,15 @@ clean_overlayfs_redundant_whiteout_marker_luci()
 	cd - >/dev/null 2>&1
 }
 
+clean_os_version_files()
+{
+	cd "$1"
+	rm -f upper/etc/openwrt_release \
+		upper/etc/openwrt_version \
+		upper/usr/lib/os-release
+	cd - >/dev/null 2>&1
+}
+
 clean_kmods()
 {
 	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
@@ -198,6 +207,7 @@ prepare_primary_overlay()
 	else
 		if [ -d /overlay/upper ] ; then
 			if update_overlay_lower_uuid /overlay || [ -f /overlay/.upgrading ] ; then
+				clean_os_version_files /overlay
 				is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
 				clean_overlayfs_redundant_whiteout_marker /overlay
 			else
@@ -271,6 +281,7 @@ prepare_ext_overlay()
 		fi
 		# should change to $newoverlaydir/.upgrading
 		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
+			clean_os_version_files "$newoverlaydir"
 			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
 		fi
 		if [ -f "$newoverlaydir/.commit" ]; then
