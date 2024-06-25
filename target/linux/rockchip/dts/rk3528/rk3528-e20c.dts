@@ -157,7 +157,7 @@
 
 		user-key {
 			label = "key user";
-			linux,code = <BTN_9>;
+			linux,code = <KEY_RESTART>;
 			gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
 			debounce-interval = <100>;
 		};
