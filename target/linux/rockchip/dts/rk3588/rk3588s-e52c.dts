@@ -23,13 +23,17 @@
 	model = "Radxa E52C";
 	compatible = "radxa,e52c", "rockchip,rk3588";
 
-	/delete-node/ chosen;
+	aliases {
+		ethernet0 = &rtl8125_1;
+		ethernet1 = &rtl8125_2;
 
-	fan0: pwm-fan {
-		compatible = "pwm-fan";
-		#cooling-cells = <2>;
-		cooling-levels = <0 64 128 192 255>;
-		pwms = <&pwm3 0 10000 0>;
+		mmc0 = &sdmmc;
+		mmc1 = &sdhci;
+
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
 	};
 
 	vcc5v0_sys: vcc5v0-sys {
@@ -87,21 +91,35 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		button@1 {
+			debounce-interval = <50>;
+			gpios = <&gpio4 RK_PB3 GPIO_ACTIVE_LOW>;
+			label = "user";
+			linux,code = <KEY_RESTART>;
+		};
+	};
+
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		sys-led {
+		sys_led: sys-led {
 			gpios = <&gpio3 RK_PC4 GPIO_ACTIVE_HIGH>;
+			label = "green:sys";
 			linux,default-trigger = "heartbeat";
 		};
 
 		wan-led {
 			gpios = <&gpio4 RK_PB4 GPIO_ACTIVE_LOW>;
+			label = "green:wan";
 			linux,default-trigger = "netdev";
 		};
 
 		lan-led {
 			gpios = <&gpio4 RK_PB2 GPIO_ACTIVE_LOW>;
+			label = "green:lan";
 			linux,default-trigger = "netdev";
 		};
 	};
@@ -496,48 +514,73 @@
 };
 
 /* PCIe */
+#define ETH_LED_SPEED_INDICATOR
 
 &combphy0_ps {
 	status = "okay";
 };
 
-&pcie2x1l2 {
+&pcie2x1l2 { // pcie@fe190000
 	status = "okay";
 	reset-gpios = <&gpio3 RK_PD1 GPIO_ACTIVE_HIGH>;
+	pcie@40 {
+		reg = <0x00400000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_2: pcie-eth@40,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			// LED0 => G+ , LED1 => G- , LED2 => Y-
+#ifndef ETH_LED_SPEED_INDICATOR
+			// Option 1
+			// LED0=High active, blink on every speed act
+			// LED1=Low active, always on every speed link
+			// LED2=LED1
+			realtek,led-data = <0x1200 0x2b 0x2b 0>;
+#else
+			// Option 2
+			// LED0=High active, blink on all act, always on 10/100/2500 link
+			// LED1=Low active, always on every speed link
+			// LED2=Low active, always on 1000/2500
+			realtek,led-data = <0x1223 0x2b 0x28 0>;
+			realtek,led-feature = /bits/ 8 <0xc1>;
+#endif
+		};
+	};
 };
 
 &combphy2_psu {
 	status = "okay";
 };
 
-&pcie2x1l1 {
+&pcie2x1l1 { // pcie@fe180000
 	status = "okay";
 	reset-gpios = <&gpio4 RK_PA2 GPIO_ACTIVE_HIGH>;
-};
+	pcie@30 {
+		reg = <0x00300000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
 
-&pwm3 {
-	status = "okay";
-	pinctrl-0 = <&pwm3m1_pins>;
-};
-
-&threshold {
-	temperature = <60000>;
-};
-
-&soc_thermal {
-	sustainable-power = <5000>; /* milliwatts */
-	cooling-maps {
-		map4 {
-			trip = <&target>;
-			cooling-device =
-				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-			contribution = <8192>;
-		};
-		map5 {
-			trip = <&threshold>;
-			cooling-device =
-				<&fan0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-			contribution = <8192>;
+		rtl8125_1: pcie-eth@30,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+			// LED0 => G+ , LED1 => G- , LED2 => Y-
+#ifndef ETH_LED_SPEED_INDICATOR
+			// Option 1
+			// LED0=High active, blink on every speed act
+			// LED1=Low active, always on every speed link
+			// LED2=LED1
+			realtek,led-data = <0x1200 0x2b 0x2b 0>;
+#else
+			// Option 2
+			// LED0=High active, blink on all act, always on 10/100/2500 link
+			// LED1=Low active, always on every speed link
+			// LED2=Low active, always on 1000/2500
+			realtek,led-data = <0x1223 0x2b 0x28 0>;
+			realtek,led-feature = /bits/ 8 <0xc1>;
+#endif
 		};
 	};
 };
@@ -639,8 +682,4 @@
 			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-};
-
-&fiq_debugger {
-	rockchip,baudrate = <115200>;  /* Only 115200 and 1500000 */
 };

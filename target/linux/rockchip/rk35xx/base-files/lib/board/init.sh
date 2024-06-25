@@ -152,6 +152,14 @@ board_fixup_iface_name() {
 			rename_iface wan eth0
 		fi
 		;;
+	radxa,e52c)
+		device="$(get_iface_device eth0)"
+		if [[ "$device" = "0004:41:00.0" ]]; then
+			rename_iface eth1 wan
+			rename_iface eth0 eth1
+			rename_iface wan eth0
+		fi
+		;;
 	inspur,ihec301)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "fe1b0000.ethernet" ]]; then
@@ -236,6 +244,19 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 8 "eth2" "eth2-0" f0 && \
 			set_iface_cpumask 8 "eth2" "eth2-18" && \
 			set_iface_cpumask 1 "eth2" "eth2-16"
+		fi
+		;;
+	radxa,e52c)
+		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
+			set_iface_cpumask 4 "eth0"
+			set_iface_cpumask 8 "eth1"
+		else
+			set_iface_cpumask 4 "eth0" "eth0-0" 30 && \
+			set_iface_cpumask 4 "eth0" "eth0-16" && \
+			set_iface_cpumask 2 "eth0" "eth0-18" && \
+			set_iface_cpumask 8 "eth1" "eth1-0" 30 && \
+			set_iface_cpumask 8 "eth1" "eth1-18" && \
+			set_iface_cpumask 1 "eth1" "eth1-16"
 		fi
 		;;
 	hinlink,h88k-*|\

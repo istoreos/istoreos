@@ -31,6 +31,14 @@ define Device/rk3568_combined_nlnet
   IMAGES := combined.img.gz
 endef
 
+define Device/rk3582
+  SOC := rk3588s
+  DEVICE_DTS_DIR := ../dts/rk3588
+  DEVICE_DTS = $$(SOC)-$$(lastword $$(subst _, ,$$(DEVICE_NAME)))
+  UBOOT_DEVICE_NAME := easepi-rk3588
+  IMAGE/sysupgrade.img.gz := boot-common | boot-script rk3588 | pine64-img | gzip | append-metadata
+endef
+
 define Device/rk3588
   SOC := rk3588
   DEVICE_DTS_DIR := ../dts/rk3588
@@ -305,6 +313,13 @@ $(call Device/rk3528_rtl8111h)
   SUPPORTED_DEVICES += radxa,e20c
 endef
 TARGET_DEVICES += radxa_e20c
+
+define Device/radxa_e52c
+$(call Device/rk3582)
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E52C
+endef
+TARGET_DEVICES += radxa_e52c
 
 define Device/nlnet_xgp
 $(call Device/rk3568)

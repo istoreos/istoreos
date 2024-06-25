@@ -55,6 +55,10 @@ radxa,e20c)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth1"
 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0"
 	;;
+radxa,e52c)
+	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
+	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth1"
+	;;
 armsom,p2pro)
 	ucidef_set_led_netdev "wlan" "WLAN" "blue:user" "wlan0"
 	;;

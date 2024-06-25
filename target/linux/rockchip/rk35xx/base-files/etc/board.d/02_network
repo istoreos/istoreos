@@ -23,6 +23,7 @@ rockchip_setup_interfaces()
 	hinlink,hnas|\
 	jsy,h1|\
 	nlnet,xgp|\
+	radxa,e52c|\
 	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
 		;;
@@ -105,6 +106,7 @@ rockchip_setup_macs()
 	mangopi,m28k|\
 	nlnet,xgp|\
 	radxa,e20c|\
+	radxa,e52c|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)
