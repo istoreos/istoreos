@@ -30,6 +30,10 @@
 	};
 };
 
+&otp {
+	u-boot,dm-spl;
+};
+
 &gmac1 {
 	u-boot,dm-spl;
 	/* Use rgmii-rxid mode to disable rx delay inside Soc */
