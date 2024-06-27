@@ -1,0 +1,25 @@
+From 0d8057dbd51cb0a46e9ac62a7e1625b4add4ff94 Mon Sep 17 00:00:00 2001
+From: Chuanhong Guo <gch981213@gmail.com>
+Date: Wed, 4 Jan 2023 14:33:38 +0800
+Subject: [PATCH] wifi: mt76: mt7921u: add support for Comfast CF-952AX
+
+Comfast CF-952AX is a MT7921 based USB WiFi dongle with custom
+VID/PID. Add an entry for it.
+
+Signed-off-by: Chuanhong Guo <gch981213@gmail.com>
+Signed-off-by: Felix Fietkau <nbd@nbd.name>
+---
+ mt7921/usb.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/mt7921/usb.c
++++ b/mt7921/usb.c
+@@ -14,6 +14,8 @@
+ 
+ static const struct usb_device_id mt7921u_device_table[] = {
+ 	{ USB_DEVICE_AND_INTERFACE_INFO(0x0e8d, 0x7961, 0xff, 0xff, 0xff) },
++	/* Comfast CF-952AX */
++	{ USB_DEVICE_AND_INTERFACE_INFO(0x3574, 0x6211, 0xff, 0xff, 0xff) },
+ 	{ },
+ };
+ 
