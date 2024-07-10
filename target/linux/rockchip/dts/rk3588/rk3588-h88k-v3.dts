@@ -34,3 +34,37 @@
 	reset-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
+
+// lcd
+&spi4 {
+	status = "okay";
+	pinctrl-0 = <&spi4m2_cs0 &spi4m2_out_pins>;
+	spidev@0 {
+		compatible = "rockchip,spidev";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi_lcd_pins>;
+	};
+};
+
+&pinctrl {
+	spi4 {
+		/omit-if-no-ref/
+		spi4m2_out_pins: spi4m2-out-pins {
+			rockchip,pins =
+				/* spi4_clk_m2 */
+				<1 RK_PA2 8 &pcfg_pull_up_drv_level_6>,
+				/* spi4_mosi_m2 */
+				<1 RK_PA1 8 &pcfg_pull_up_drv_level_6>;
+		};
+	};
+	lcd {
+		/omit-if-no-ref/
+		spi_lcd_pins: spi-lcd-pins {
+			rockchip,pins =
+				<1 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
