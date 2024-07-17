@@ -35,13 +35,13 @@ define KernelPackage/r8126/description
   This package contains a driver for Realtek r8126 chipsets.
 endef
 
-define KernelPackage/r8126/install/x86
+define KernelPackage/r8126/install/dkml
 	$(INSTALL_DIR) $(1)/etc/modules-pending.d
 	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
 endef
 
-ifeq ($(CONFIG_TARGET_x86),y)
-KernelPackage/r8126/install = $(KernelPackage/r8126/install/x86)
+ifeq ($(call version_filter,y@ge6.6),y)
+KernelPackage/r8126/install = $(KernelPackage/r8126/install/dkml)
 endif
 
 define Package/kmod-r8126/postinst
