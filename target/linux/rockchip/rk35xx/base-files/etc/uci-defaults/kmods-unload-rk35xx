@@ -15,7 +15,7 @@ uci -q batch <<-EOF >/dev/null
 
 	delete kmods.rk35xx_others
 	set kmods.rk35xx_others=auto_unload
-	set kmods.rk35xx_others.function="r8168 r8125"
+	set kmods.rk35xx_others.function="r8168 r8125 r8126"
 
 	commit kmods
 EOF
