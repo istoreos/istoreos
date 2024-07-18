@@ -9,11 +9,9 @@ Subject: [PATCH] 100-add-LED-configuration-from-OF
  src/r8125_n.c | 53 +++++++++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 58 insertions(+)
 
-diff --git a/src/r8125.h b/src/r8125.h
-index 0c6a2f9..40d68d1 100755
 --- a/src/r8125.h
 +++ b/src/r8125.h
-@@ -1265,6 +1265,7 @@ enum RTL8125_registers {
+@@ -1273,6 +1273,7 @@ enum RTL8125_registers {
          CounterAddrLow      = 0x10,
          CounterAddrHigh     = 0x14,
          CustomLED       = 0x18,
@@ -21,7 +19,7 @@ index 0c6a2f9..40d68d1 100755
          TxDescStartAddrLow  = 0x20,
          TxDescStartAddrHigh = 0x24,
          TxHDescStartAddrLow = 0x28,
-@@ -1301,7 +1302,11 @@ enum RTL8125_registers {
+@@ -1309,7 +1310,11 @@ enum RTL8125_registers {
          INT_CFG1_8125   = 0x7A,
          EPHY_RXER_NUM   = 0x7C,
          EPHYAR          = 0x80,
@@ -33,8 +31,6 @@ index 0c6a2f9..40d68d1 100755
          OCPDR           = 0xB0,
          MACOCP          = 0xB0,
          OCPAR           = 0xB4,
-diff --git a/src/r8125_n.c b/src/r8125_n.c
-index 5c0621e..1cd506e 100755
 --- a/src/r8125_n.c
 +++ b/src/r8125_n.c
 @@ -43,6 +43,7 @@
@@ -45,8 +41,8 @@ index 5c0621e..1cd506e 100755
  #include <linux/if_vlan.h>
  #include <linux/crc32.h>
  #include <linux/interrupt.h>
-@@ -14818,6 +14819,56 @@ rtl8125_setup_mqs_reg(struct rtl8125_private *tp)
-         }
+@@ -13626,6 +13627,56 @@ rtl8125_setup_mqs_reg(struct rtl8125_pri
+                 tp->imr_reg[i] = (u16)(IMR1_8125 + (i - 1) * 4);
  }
  
 +/*
@@ -102,15 +98,12 @@ index 5c0621e..1cd506e 100755
  static void
  rtl8125_init_software_variable(struct net_device *dev)
  {
-@@ -15384,6 +15435,8 @@ rtl8125_init_software_variable(struct net_device *dev)
-         if (tp->InitRxDescType == RX_DESC_RING_TYPE_3)
-                 tp->rtl8125_rx_config |= EnableRxDescV3;
+@@ -14260,6 +14311,8 @@ rtl8125_init_software_variable(struct ne
+         else if (tp->InitRxDescType == RX_DESC_RING_TYPE_4)
+                 tp->rtl8125_rx_config &= ~EnableRxDescV4_1;
  
 +        rtl8125_led_configuration(tp);
 +
          tp->NicCustLedValue = RTL_R16(tp, CustomLED);
  
          tp->wol_opts = rtl8125_get_hw_wol(tp);
--- 
-2.41.0
-

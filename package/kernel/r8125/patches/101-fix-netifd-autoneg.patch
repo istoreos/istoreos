@@ -11,7 +11,7 @@ so we report 2500baseX instead
 
 --- a/src/r8125_n.c
 +++ b/src/r8125_n.c
-@@ -6336,14 +6336,10 @@ static void rtl8125_gset_xmii(struct net
+@@ -6749,14 +6749,10 @@ static void rtl8125_gset_xmii(struct net
                                                  lpa_adv);
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,0,0)
          if (supported & SUPPORTED_2500baseX_Full) {
