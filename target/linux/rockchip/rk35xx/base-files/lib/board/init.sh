@@ -298,7 +298,12 @@ board_set_iface_smp_affinity() {
 	mangopi,m28k|\
 	hlink,h28k)
 		set_iface_cpumask 5 eth0
-		set_iface_cpumask b eth1
+		# eth1 is rtl8111h, driven by r8169 or r8168
+		if ethtool -i eth1 | grep -Fq 'driver: r8169'; then
+			set_iface_cpumask b eth1
+		else
+			set_iface_cpumask 5 eth1 eth1-0 a
+		fi
 		;;
 	ynn,nas|\
 	le,hes30|\
