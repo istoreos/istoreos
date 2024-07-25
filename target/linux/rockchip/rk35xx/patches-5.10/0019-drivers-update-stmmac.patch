@@ -1696,7 +1696,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  MODULE_DEVICE_TABLE(of, rk_gmac_dwmac_match);
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
-@@ -215,9 +215,6 @@ static void dwmac4_map_mtl_dma(struct ma
+@@ -237,9 +237,6 @@ static void dwmac4_map_mtl_dma(struct ma
  	if (queue == 0 || queue == 4) {
  		value &= ~MTL_RXQ_DMA_Q04MDMACH_MASK;
  		value |= MTL_RXQ_DMA_Q04MDMACH(chan);
@@ -1706,7 +1706,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	} else {
  		value &= ~MTL_RXQ_DMA_QXMDMACH_MASK(queue);
  		value |= MTL_RXQ_DMA_QXMDMACH(chan, queue);
-@@ -665,8 +662,6 @@ static void dwmac4_flow_ctrl(struct mac_
+@@ -687,8 +684,6 @@ static void dwmac4_flow_ctrl(struct mac_
  	if (fc & FLOW_RX) {
  		pr_debug("\tReceive Flow-Control ON\n");
  		flow |= GMAC_RX_FLOW_CTRL_RFE;
@@ -1715,7 +1715,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	}
  	writel(flow, ioaddr + GMAC_RX_FLOW_CTRL);
  
-@@ -1093,6 +1088,7 @@ static int dwmac4_config_l4_filter(struc
+@@ -1115,6 +1110,7 @@ static int dwmac4_config_l4_filter(struc
  	return 0;
  }
  
@@ -1723,7 +1723,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  const struct stmmac_ops dwmac4_ops = {
  	.core_init = dwmac4_core_init,
  	.set_mac = stmmac_set_mac,
-@@ -1133,6 +1129,7 @@ const struct stmmac_ops dwmac4_ops = {
+@@ -1155,6 +1151,7 @@ const struct stmmac_ops dwmac4_ops = {
  	.del_hw_vlan_rx_fltr = dwmac4_del_hw_vlan_rx_fltr,
  	.restore_hw_vlan_rx_fltr = dwmac4_restore_hw_vlan_rx_fltr,
  };
@@ -1731,7 +1731,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  const struct stmmac_ops dwmac410_ops = {
  	.core_init = dwmac4_core_init,
-@@ -1163,7 +1160,9 @@ const struct stmmac_ops dwmac410_ops = {
+@@ -1185,7 +1182,9 @@ const struct stmmac_ops dwmac410_ops = {
  	.pcs_get_adv_lp = dwmac4_get_adv_lp,
  	.debug = dwmac4_debug,
  	.set_filter = dwmac4_set_filter,
@@ -1741,7 +1741,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	.set_mac_loopback = dwmac4_set_mac_loopback,
  	.update_vlan_hash = dwmac4_update_vlan_hash,
  	.sarc_configure = dwmac4_sarc_configure,
-@@ -1171,13 +1170,16 @@ const struct stmmac_ops dwmac410_ops = {
+@@ -1193,13 +1192,16 @@ const struct stmmac_ops dwmac410_ops = {
  	.set_arp_offload = dwmac4_set_arp_offload,
  	.config_l3_filter = dwmac4_config_l3_filter,
  	.config_l4_filter = dwmac4_config_l4_filter,
@@ -1758,7 +1758,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  const struct stmmac_ops dwmac510_ops = {
  	.core_init = dwmac4_core_init,
  	.set_mac = stmmac_dwmac4_set_mac,
-@@ -1225,6 +1227,7 @@ const struct stmmac_ops dwmac510_ops = {
+@@ -1247,6 +1249,7 @@ const struct stmmac_ops dwmac510_ops = {
  	.del_hw_vlan_rx_fltr = dwmac4_del_hw_vlan_rx_fltr,
  	.restore_hw_vlan_rx_fltr = dwmac4_restore_hw_vlan_rx_fltr,
  };
@@ -2105,7 +2105,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	netif_carrier_off(dev);
  
  	stmmac_release_ptp(priv);
-@@ -3696,6 +3686,10 @@ static inline void stmmac_rx_refill(stru
+@@ -3693,6 +3683,10 @@ static inline void stmmac_rx_refill(stru
  	struct stmmac_rx_queue *rx_q = &priv->rx_queue[queue];
  	int len, dirty = stmmac_rx_dirty(priv, queue);
  	unsigned int entry = rx_q->dirty_rx;
@@ -2116,7 +2116,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  	len = DIV_ROUND_UP(priv->dma_buf_sz, PAGE_SIZE) * PAGE_SIZE;
  
-@@ -3710,30 +3704,20 @@ static inline void stmmac_rx_refill(stru
+@@ -3707,30 +3701,20 @@ static inline void stmmac_rx_refill(stru
  			p = rx_q->dma_rx + entry;
  
  		if (!buf->page) {
@@ -2149,16 +2149,16 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		stmmac_set_desc_addr(priv, p, buf->addr);
  		if (priv->sph)
  			stmmac_set_desc_sec_addr(priv, p, buf->sec_addr, true);
-@@ -3863,7 +3847,7 @@ static int stmmac_rx(struct stmmac_priv
- 			len = 0;
+@@ -3861,7 +3845,7 @@ static int stmmac_rx(struct stmmac_priv
  		}
  
+ read_again:
 -		if (count >= limit)
 +		if ((count >= limit - 1) && limit > 1)
  			break;
  
- read_again:
-@@ -4908,6 +4892,12 @@ static void stmmac_napi_add(struct net_d
+ 		buf1_len = 0;
+@@ -4905,6 +4889,12 @@ static void stmmac_napi_add(struct net_d
  
  	for (queue = 0; queue < maxq; queue++) {
  		struct stmmac_channel *ch = &priv->channel[queue];
@@ -2171,7 +2171,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  
  		ch->priv_data = priv;
  		ch->index = queue;
-@@ -4915,12 +4905,11 @@ static void stmmac_napi_add(struct net_d
+@@ -4912,12 +4902,11 @@ static void stmmac_napi_add(struct net_d
  
  		if (queue < priv->plat->rx_queues_to_use) {
  			netif_napi_add(dev, &ch->rx_napi, stmmac_napi_poll_rx,
@@ -2186,7 +2186,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		}
  	}
  }
-@@ -5057,6 +5046,10 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5054,6 +5043,10 @@ int stmmac_dvr_probe(struct device *devi
  			reset_control_reset(priv->plat->stmmac_rst);
  	}
  
@@ -2197,7 +2197,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	/* Init MAC and get the capabilities */
  	ret = stmmac_hw_init(priv);
  	if (ret)
-@@ -5082,10 +5075,12 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5079,10 +5072,12 @@ int stmmac_dvr_probe(struct device *devi
  		dev_info(priv->device, "TSO feature enabled\n");
  	}
  
@@ -2213,7 +2213,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	}
  
  	/* The current IP register MAC_HW_Feature1[ADDR64] only define
-@@ -5215,6 +5210,14 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5212,6 +5207,14 @@ int stmmac_dvr_probe(struct device *devi
  		goto error_netdev_register;
  	}
  
@@ -2228,7 +2228,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  #ifdef CONFIG_DEBUG_FS
  	stmmac_init_fs(ndev);
  #endif
-@@ -5226,6 +5229,8 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5223,6 +5226,8 @@ int stmmac_dvr_probe(struct device *devi
  
  	return ret;
  
@@ -2237,7 +2237,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  error_netdev_register:
  	phylink_destroy(priv->phylink);
  error_phy_setup:
-@@ -5265,6 +5270,7 @@ int stmmac_dvr_remove(struct device *dev
+@@ -5262,6 +5267,7 @@ int stmmac_dvr_remove(struct device *dev
  	phylink_destroy(priv->phylink);
  	if (priv->plat->stmmac_rst)
  		reset_control_assert(priv->plat->stmmac_rst);
@@ -2245,7 +2245,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	pm_runtime_put(dev);
  	pm_runtime_disable(dev);
  	if (priv->hw->pcs != STMMAC_PCS_TBI &&
-@@ -5324,6 +5330,9 @@ int stmmac_suspend(struct device *dev)
+@@ -5321,6 +5327,9 @@ int stmmac_suspend(struct device *dev)
  		rtnl_lock();
  		if (device_may_wakeup(priv->device))
  			phylink_speed_down(priv->phylink, false);
@@ -2255,7 +2255,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		phylink_stop(priv->phylink);
  		rtnl_unlock();
  		mutex_lock(&priv->lock);
-@@ -5397,6 +5406,9 @@ int stmmac_resume(struct device *dev)
+@@ -5394,6 +5403,9 @@ int stmmac_resume(struct device *dev)
  		/* reset the phy so that it's ready */
  		if (priv->mii)
  			stmmac_mdio_reset(priv->mii);
@@ -2331,7 +2331,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  		plat->force_sf_dma_mode = 0;
  		dev_warn(&pdev->dev,
  			 "force_sf_dma_mode is ignored if force_thresh_dma_mode is set.\n");
-@@ -586,7 +590,7 @@ stmmac_probe_config_dt(struct platform_d
+@@ -589,7 +593,7 @@ stmmac_probe_config_dt(struct platform_d
  		clk_prepare_enable(plat->stmmac_clk);
  	}
  
@@ -2340,7 +2340,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	if (IS_ERR(plat->pclk)) {
  		if (PTR_ERR(plat->pclk) == -EPROBE_DEFER)
  			goto error_pclk_get;
-@@ -616,6 +620,12 @@ stmmac_probe_config_dt(struct platform_d
+@@ -619,6 +623,12 @@ stmmac_probe_config_dt(struct platform_d
  		plat->stmmac_rst = NULL;
  	}
  
@@ -2353,7 +2353,7 @@ Subject: [PATCH 19/42] drivers: update stmmac
  	return plat;
  
  error_hw_init:
-@@ -814,13 +824,7 @@ static int __maybe_unused stmmac_pltfr_n
+@@ -817,13 +827,7 @@ static int __maybe_unused stmmac_pltfr_n
  		if (ret)
  			return ret;
  

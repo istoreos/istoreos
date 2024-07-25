@@ -47,7 +47,6 @@ Subject: [PATCH] rkr4 patches
  .../phy/rockchip/phy-rockchip-inno-dsidphy.c  | 510 ++++++++++++---
  drivers/phy/rockchip/phy-rockchip-inno-usb2.c | 293 ++++++++-
  drivers/phy/rockchip/phy-rockchip-typec.c     | 195 +++---
- drivers/pinctrl/pinctrl-rockchip.c            | 603 +++++++++++++++---
  drivers/regulator/fan53555.c                  | 405 +++++-------
  drivers/soc/rockchip/Kconfig                  |  13 +-
  drivers/soc/rockchip/Makefile                 |   2 +-
@@ -1891,7 +1890,7 @@ Subject: [PATCH] rkr4 patches
  
  	return val;
  }
-@@ -3922,8 +3932,6 @@ static void its_vpe_schedule(struct its_
+@@ -3926,8 +3936,6 @@ static void its_vpe_schedule(struct its_
  	val |= vpe->idai ? GICR_VPENDBASER_IDAI : 0;
  	val |= GICR_VPENDBASER_Valid;
  	gicr_write_vpendbaser(val, vlpi_base + GICR_VPENDBASER);
@@ -1900,7 +1899,7 @@ Subject: [PATCH] rkr4 patches
  }
  
  static void its_vpe_deschedule(struct its_vpe *vpe)
-@@ -3971,6 +3979,10 @@ static int its_vpe_set_vcpu_affinity(str
+@@ -3975,6 +3983,10 @@ static int its_vpe_set_vcpu_affinity(str
  		its_vpe_deschedule(vpe);
  		return 0;
  
@@ -1911,7 +1910,7 @@ Subject: [PATCH] rkr4 patches
  	case INVALL_VPE:
  		its_vpe_invall(vpe);
  		return 0;
-@@ -4124,8 +4136,6 @@ static void its_vpe_4_1_schedule(struct
+@@ -4128,8 +4140,6 @@ static void its_vpe_4_1_schedule(struct
  	val |= FIELD_PREP(GICR_VPENDBASER_4_1_VPEID, vpe->vpe_id);
  
  	gicr_write_vpendbaser(val, vlpi_base + GICR_VPENDBASER);
@@ -1920,7 +1919,7 @@ Subject: [PATCH] rkr4 patches
  }
  
  static void its_vpe_4_1_deschedule(struct its_vpe *vpe,
-@@ -4200,6 +4210,10 @@ static int its_vpe_4_1_set_vcpu_affinity
+@@ -4204,6 +4214,10 @@ static int its_vpe_4_1_set_vcpu_affinity
  		its_vpe_4_1_deschedule(vpe, info);
  		return 0;
  
@@ -3669,7 +3668,7 @@ Subject: [PATCH] rkr4 patches
  #endif
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac4_core.c
-@@ -215,6 +215,9 @@ static void dwmac4_map_mtl_dma(struct ma
+@@ -237,6 +237,9 @@ static void dwmac4_map_mtl_dma(struct ma
  	if (queue == 0 || queue == 4) {
  		value &= ~MTL_RXQ_DMA_Q04MDMACH_MASK;
  		value |= MTL_RXQ_DMA_Q04MDMACH(chan);
@@ -3679,7 +3678,7 @@ Subject: [PATCH] rkr4 patches
  	} else {
  		value &= ~MTL_RXQ_DMA_QXMDMACH_MASK(queue);
  		value |= MTL_RXQ_DMA_QXMDMACH(chan, queue);
-@@ -662,6 +665,8 @@ static void dwmac4_flow_ctrl(struct mac_
+@@ -684,6 +687,8 @@ static void dwmac4_flow_ctrl(struct mac_
  	if (fc & FLOW_RX) {
  		pr_debug("\tReceive Flow-Control ON\n");
  		flow |= GMAC_RX_FLOW_CTRL_RFE;
@@ -3785,7 +3784,7 @@ Subject: [PATCH] rkr4 patches
  	netif_carrier_off(dev);
  
  	stmmac_release_ptp(priv);
-@@ -5075,7 +5095,7 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5072,7 +5092,7 @@ int stmmac_dvr_probe(struct device *devi
  		dev_info(priv->device, "TSO feature enabled\n");
  	}
  
@@ -3794,7 +3793,7 @@ Subject: [PATCH] rkr4 patches
  		ndev->hw_features |= NETIF_F_GRO;
  		if (!priv->plat->sph_disable) {
  			priv->sph = true;
-@@ -5210,14 +5230,6 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5207,14 +5227,6 @@ int stmmac_dvr_probe(struct device *devi
  		goto error_netdev_register;
  	}
  
@@ -3809,7 +3808,7 @@ Subject: [PATCH] rkr4 patches
  #ifdef CONFIG_DEBUG_FS
  	stmmac_init_fs(ndev);
  #endif
-@@ -5229,8 +5241,6 @@ int stmmac_dvr_probe(struct device *devi
+@@ -5226,8 +5238,6 @@ int stmmac_dvr_probe(struct device *devi
  
  	return ret;
  
@@ -3875,7 +3874,7 @@ Subject: [PATCH] rkr4 patches
  
  	plat->bus_id = of_alias_get_id(np, "ethernet");
  	if (plat->bus_id < 0)
-@@ -620,12 +619,6 @@ stmmac_probe_config_dt(struct platform_d
+@@ -623,12 +622,6 @@ stmmac_probe_config_dt(struct platform_d
  		plat->stmmac_rst = NULL;
  	}
  
@@ -3888,7 +3887,7 @@ Subject: [PATCH] rkr4 patches
  	return plat;
  
  error_hw_init:
-@@ -824,7 +817,13 @@ static int __maybe_unused stmmac_pltfr_n
+@@ -827,7 +820,13 @@ static int __maybe_unused stmmac_pltfr_n
  		if (ret)
  			return ret;
  
@@ -5840,703 +5839,6 @@ Subject: [PATCH] rkr4 patches
  }
  
  static int rockchip_typec_phy_remove(struct platform_device *pdev)
---- a/drivers/pinctrl/pinctrl-rockchip.c
-+++ b/drivers/pinctrl/pinctrl-rockchip.c
-@@ -622,9 +622,9 @@ static struct rockchip_mux_recalced_data
- 		/* gpio3b3_sel_plus */
- 		.num = 3,
- 		.pin = 11,
--		.reg = 0x68,
--		.bit = 6,
--		.mask = 0x3
-+		.reg = 0x610,
-+		.bit = 4,
-+		.mask = 0x7
- 	}, {
- 		/* gpio3b4_sel */
- 		.num = 3,
-@@ -1223,6 +1223,19 @@ static int rockchip_set_mux(struct rockc
- 	if (bank->recalced_mask & BIT(pin))
- 		rockchip_get_recalced_mux(bank, pin, &reg, &bit, &mask);
- 
-+	/* rk3562 force jtag m1 */
-+	if (ctrl->type == RK3562) {
-+		if (bank->bank_num == 1) {
-+			if ((pin == RK_PB5) || (pin == RK_PB6)) {
-+				if (mux == 1) {
-+					regmap_update_bits(regmap, 0x504, 0x10001, 0x10001);
-+				} else {
-+					regmap_update_bits(regmap, 0x504, 0x10001, 0x10000);
-+				}
-+			}
-+		}
-+	}
-+
- 	if (ctrl->type == RK3588) {
- 		if (bank->bank_num == 0) {
- 			if ((pin >= RK_PB4) && (pin <= RK_PD7)) {
-@@ -2271,6 +2284,295 @@ static int rk3399_calc_drv_reg_and_bit(s
- 	return 0;
- }
- 
-+#define RK3528_DRV_BITS_PER_PIN		8
-+#define RK3528_DRV_PINS_PER_REG		2
-+#define RK3528_DRV_GPIO0_OFFSET		0x100
-+#define RK3528_DRV_GPIO1_OFFSET		0x20120
-+#define RK3528_DRV_GPIO2_OFFSET		0x30160
-+#define RK3528_DRV_GPIO3_OFFSET		0x20190
-+#define RK3528_DRV_GPIO4_OFFSET		0x101C0
-+
-+static int rk3528_calc_drv_reg_and_bit(struct rockchip_pin_bank *bank,
-+				       int pin_num, struct regmap **regmap,
-+				       int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3528_DRV_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3528_DRV_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3528_DRV_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3528_DRV_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3528_DRV_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3528_DRV_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3528_DRV_PINS_PER_REG;
-+	*bit *= RK3528_DRV_BITS_PER_PIN;
-+
-+	return 0;
-+}
-+
-+#define RK3528_PULL_BITS_PER_PIN		2
-+#define RK3528_PULL_PINS_PER_REG		8
-+#define RK3528_PULL_GPIO0_OFFSET		0x200
-+#define RK3528_PULL_GPIO1_OFFSET		0x20210
-+#define RK3528_PULL_GPIO2_OFFSET		0x30220
-+#define RK3528_PULL_GPIO3_OFFSET		0x20230
-+#define RK3528_PULL_GPIO4_OFFSET		0x10240
-+
-+static int rk3528_calc_pull_reg_and_bit(struct rockchip_pin_bank *bank,
-+					int pin_num, struct regmap **regmap,
-+					int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3528_PULL_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3528_PULL_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3528_PULL_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3528_PULL_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3528_PULL_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3528_PULL_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3528_PULL_PINS_PER_REG;
-+	*bit *= RK3528_PULL_BITS_PER_PIN;
-+
-+	return 0;
-+}
-+
-+#define RK3528_SMT_BITS_PER_PIN		1
-+#define RK3528_SMT_PINS_PER_REG		8
-+#define RK3528_SMT_GPIO0_OFFSET		0x400
-+#define RK3528_SMT_GPIO1_OFFSET		0x20410
-+#define RK3528_SMT_GPIO2_OFFSET		0x30420
-+#define RK3528_SMT_GPIO3_OFFSET		0x20430
-+#define RK3528_SMT_GPIO4_OFFSET		0x10440
-+
-+static int rk3528_calc_schmitt_reg_and_bit(struct rockchip_pin_bank *bank,
-+					   int pin_num,
-+					   struct regmap **regmap,
-+					   int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3528_SMT_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3528_SMT_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3528_SMT_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3528_SMT_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3528_SMT_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3528_SMT_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3528_SMT_PINS_PER_REG;
-+	*bit *= RK3528_SMT_BITS_PER_PIN;
-+	return 0;
-+}
-+
-+#define RK3562_DRV_BITS_PER_PIN		8
-+#define RK3562_DRV_PINS_PER_REG		2
-+#define RK3562_DRV_GPIO0_OFFSET		0x20070
-+#define RK3562_DRV_GPIO1_OFFSET		0x200
-+#define RK3562_DRV_GPIO2_OFFSET		0x240
-+#define RK3562_DRV_GPIO3_OFFSET		0x10280
-+#define RK3562_DRV_GPIO4_OFFSET		0x102C0
-+
-+static int rk3562_calc_drv_reg_and_bit(struct rockchip_pin_bank *bank,
-+				       int pin_num, struct regmap **regmap,
-+				       int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3562_DRV_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3562_DRV_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3562_DRV_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3562_DRV_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3562_DRV_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3562_DRV_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3562_DRV_PINS_PER_REG;
-+	*bit *= RK3562_DRV_BITS_PER_PIN;
-+
-+	return 0;
-+}
-+
-+#define RK3562_PULL_BITS_PER_PIN		2
-+#define RK3562_PULL_PINS_PER_REG		8
-+#define RK3562_PULL_GPIO0_OFFSET		0x20020
-+#define RK3562_PULL_GPIO1_OFFSET		0x80
-+#define RK3562_PULL_GPIO2_OFFSET		0x90
-+#define RK3562_PULL_GPIO3_OFFSET		0x100A0
-+#define RK3562_PULL_GPIO4_OFFSET		0x100B0
-+
-+static int rk3562_calc_pull_reg_and_bit(struct rockchip_pin_bank *bank,
-+					int pin_num, struct regmap **regmap,
-+					int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3562_PULL_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3562_PULL_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3562_PULL_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3562_PULL_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3562_PULL_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3562_PULL_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3562_PULL_PINS_PER_REG;
-+	*bit *= RK3562_PULL_BITS_PER_PIN;
-+
-+	return 0;
-+}
-+
-+#define RK3562_SMT_BITS_PER_PIN		2
-+#define RK3562_SMT_PINS_PER_REG		8
-+#define RK3562_SMT_GPIO0_OFFSET		0x20030
-+#define RK3562_SMT_GPIO1_OFFSET		0xC0
-+#define RK3562_SMT_GPIO2_OFFSET		0xD0
-+#define RK3562_SMT_GPIO3_OFFSET		0x100E0
-+#define RK3562_SMT_GPIO4_OFFSET		0x100F0
-+
-+static int rk3562_calc_schmitt_reg_and_bit(struct rockchip_pin_bank *bank,
-+					   int pin_num,
-+					   struct regmap **regmap,
-+					   int *reg, u8 *bit)
-+{
-+	struct rockchip_pinctrl *info = bank->drvdata;
-+
-+	*regmap = info->regmap_base;
-+	switch (bank->bank_num) {
-+	case 0:
-+		*reg = RK3562_SMT_GPIO0_OFFSET;
-+		break;
-+
-+	case 1:
-+		*reg = RK3562_SMT_GPIO1_OFFSET;
-+		break;
-+
-+	case 2:
-+		*reg = RK3562_SMT_GPIO2_OFFSET;
-+		break;
-+
-+	case 3:
-+		*reg = RK3562_SMT_GPIO3_OFFSET;
-+		break;
-+
-+	case 4:
-+		*reg = RK3562_SMT_GPIO4_OFFSET;
-+		break;
-+
-+	default:
-+		dev_err(info->dev, "unsupported bank_num %d\n", bank->bank_num);
-+		break;
-+	}
-+
-+	*reg += ((pin_num / RK3562_SMT_PINS_PER_REG) * 4);
-+	*bit = pin_num % RK3562_SMT_PINS_PER_REG;
-+	*bit *= RK3562_SMT_BITS_PER_PIN;
-+
-+	return 0;
-+}
-+
- #define RK3568_SR_PMU_OFFSET		0x60
- #define RK3568_SR_GRF_OFFSET		0x0180
- #define RK3568_SR_BANK_STRIDE		0x10
-@@ -2371,108 +2673,108 @@ static int rk3568_calc_drv_reg_and_bit(s
- 	return 0;
- }
- 
--#define RK3588_PMU1_IOC_REG		0x0000
--#define RK3588_PMU2_IOC_REG		0x4000
--#define RK3588_BUS_IOC_REG		0x8000
--#define RK3588_VCCIO1_4_IOC_REG		0x9000
--#define RK3588_VCCIO3_5_IOC_REG		0xA000
--#define RK3588_VCCIO2_IOC_REG		0xB000
--#define RK3588_VCCIO6_IOC_REG		0xC000
--#define RK3588_EMMC_IOC_REG		0xD000
-+#define RK3588_PMU1_IOC_REG		(0x0000)
-+#define RK3588_PMU2_IOC_REG		(0x4000)
-+#define RK3588_BUS_IOC_REG		(0x8000)
-+#define RK3588_VCCIO1_4_IOC_REG		(0x9000)
-+#define RK3588_VCCIO3_5_IOC_REG		(0xA000)
-+#define RK3588_VCCIO2_IOC_REG		(0xB000)
-+#define RK3588_VCCIO6_IOC_REG		(0xC000)
-+#define RK3588_EMMC_IOC_REG		(0xD000)
- 
- static const u32 rk3588_ds_regs[][2] = {
--	{ RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0010 },
--	{ RK_GPIO0_A4, RK3588_PMU1_IOC_REG + 0x0014 },
--	{ RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0018 },
--	{ RK_GPIO0_B4, RK3588_PMU2_IOC_REG + 0x0014 },
--	{ RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x0018 },
--	{ RK_GPIO0_C4, RK3588_PMU2_IOC_REG + 0x001C },
--	{ RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0020 },
--	{ RK_GPIO0_D4, RK3588_PMU2_IOC_REG + 0x0024 },
--	{ RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0020 },
--	{ RK_GPIO1_A4, RK3588_VCCIO1_4_IOC_REG + 0x0024 },
--	{ RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0028 },
--	{ RK_GPIO1_B4, RK3588_VCCIO1_4_IOC_REG + 0x002C },
--	{ RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0030 },
--	{ RK_GPIO1_C4, RK3588_VCCIO1_4_IOC_REG + 0x0034 },
--	{ RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x0038 },
--	{ RK_GPIO1_D4, RK3588_VCCIO1_4_IOC_REG + 0x003C },
--	{ RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0040 },
--	{ RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0044 },
--	{ RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0048 },
--	{ RK_GPIO2_B4, RK3588_VCCIO3_5_IOC_REG + 0x004C },
--	{ RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0050 },
--	{ RK_GPIO2_C4, RK3588_VCCIO3_5_IOC_REG + 0x0054 },
--	{ RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x0058 },
--	{ RK_GPIO2_D4, RK3588_EMMC_IOC_REG + 0x005C },
--	{ RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0060 },
--	{ RK_GPIO3_A4, RK3588_VCCIO3_5_IOC_REG + 0x0064 },
--	{ RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0068 },
--	{ RK_GPIO3_B4, RK3588_VCCIO3_5_IOC_REG + 0x006C },
--	{ RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0070 },
--	{ RK_GPIO3_C4, RK3588_VCCIO3_5_IOC_REG + 0x0074 },
--	{ RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x0078 },
--	{ RK_GPIO3_D4, RK3588_VCCIO3_5_IOC_REG + 0x007C },
--	{ RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0080 },
--	{ RK_GPIO4_A4, RK3588_VCCIO6_IOC_REG + 0x0084 },
--	{ RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0088 },
--	{ RK_GPIO4_B4, RK3588_VCCIO6_IOC_REG + 0x008C },
--	{ RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0090 },
--	{ RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0090 },
--	{ RK_GPIO4_C4, RK3588_VCCIO3_5_IOC_REG + 0x0094 },
--	{ RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x0098 },
-+	{RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0010},
-+	{RK_GPIO0_A4, RK3588_PMU1_IOC_REG + 0x0014},
-+	{RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0018},
-+	{RK_GPIO0_B4, RK3588_PMU2_IOC_REG + 0x0014},
-+	{RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x0018},
-+	{RK_GPIO0_C4, RK3588_PMU2_IOC_REG + 0x001C},
-+	{RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0020},
-+	{RK_GPIO0_D4, RK3588_PMU2_IOC_REG + 0x0024},
-+	{RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0020},
-+	{RK_GPIO1_A4, RK3588_VCCIO1_4_IOC_REG + 0x0024},
-+	{RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0028},
-+	{RK_GPIO1_B4, RK3588_VCCIO1_4_IOC_REG + 0x002C},
-+	{RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0030},
-+	{RK_GPIO1_C4, RK3588_VCCIO1_4_IOC_REG + 0x0034},
-+	{RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x0038},
-+	{RK_GPIO1_D4, RK3588_VCCIO1_4_IOC_REG + 0x003C},
-+	{RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0040},
-+	{RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0044},
-+	{RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0048},
-+	{RK_GPIO2_B4, RK3588_VCCIO3_5_IOC_REG + 0x004C},
-+	{RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0050},
-+	{RK_GPIO2_C4, RK3588_VCCIO3_5_IOC_REG + 0x0054},
-+	{RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x0058},
-+	{RK_GPIO2_D4, RK3588_EMMC_IOC_REG + 0x005C},
-+	{RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0060},
-+	{RK_GPIO3_A4, RK3588_VCCIO3_5_IOC_REG + 0x0064},
-+	{RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0068},
-+	{RK_GPIO3_B4, RK3588_VCCIO3_5_IOC_REG + 0x006C},
-+	{RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0070},
-+	{RK_GPIO3_C4, RK3588_VCCIO3_5_IOC_REG + 0x0074},
-+	{RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x0078},
-+	{RK_GPIO3_D4, RK3588_VCCIO3_5_IOC_REG + 0x007C},
-+	{RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0080},
-+	{RK_GPIO4_A4, RK3588_VCCIO6_IOC_REG + 0x0084},
-+	{RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0088},
-+	{RK_GPIO4_B4, RK3588_VCCIO6_IOC_REG + 0x008C},
-+	{RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0090},
-+	{RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0090},
-+	{RK_GPIO4_C4, RK3588_VCCIO3_5_IOC_REG + 0x0094},
-+	{RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x0098},
- };
- 
- static const u32 rk3588_p_regs[][2] = {
--	{ RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0020 },
--	{ RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0024 },
--	{ RK_GPIO0_B5, RK3588_PMU2_IOC_REG + 0x0028 },
--	{ RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x002C },
--	{ RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0030 },
--	{ RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0110 },
--	{ RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0114 },
--	{ RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0118 },
--	{ RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x011C },
--	{ RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0120 },
--	{ RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0120 },
--	{ RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0124 },
--	{ RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0128 },
--	{ RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x012C },
--	{ RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0130 },
--	{ RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0134 },
--	{ RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0138 },
--	{ RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x013C },
--	{ RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0140 },
--	{ RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0144 },
--	{ RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0148 },
--	{ RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0148 },
--	{ RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x014C },
-+	{RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0020},
-+	{RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0024},
-+	{RK_GPIO0_B5, RK3588_PMU2_IOC_REG + 0x0028},
-+	{RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x002C},
-+	{RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0030},
-+	{RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0110},
-+	{RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0114},
-+	{RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0118},
-+	{RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x011C},
-+	{RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0120},
-+	{RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0120},
-+	{RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0124},
-+	{RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0128},
-+	{RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x012C},
-+	{RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0130},
-+	{RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0134},
-+	{RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0138},
-+	{RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x013C},
-+	{RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0140},
-+	{RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0144},
-+	{RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0148},
-+	{RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0148},
-+	{RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x014C},
- };
- 
- static const u32 rk3588_smt_regs[][2] = {
--	{ RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0030 },
--	{ RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0034 },
--	{ RK_GPIO0_B5, RK3588_PMU2_IOC_REG + 0x0040 },
--	{ RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x0044 },
--	{ RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0048 },
--	{ RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0210 },
--	{ RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0214 },
--	{ RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0218 },
--	{ RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x021C },
--	{ RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0220 },
--	{ RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0220 },
--	{ RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0224 },
--	{ RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0228 },
--	{ RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x022C },
--	{ RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0230 },
--	{ RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0234 },
--	{ RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0238 },
--	{ RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x023C },
--	{ RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0240 },
--	{ RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0244 },
--	{ RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0248 },
--	{ RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0248 },
--	{ RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x024C },
-+	{RK_GPIO0_A0, RK3588_PMU1_IOC_REG + 0x0030},
-+	{RK_GPIO0_B0, RK3588_PMU1_IOC_REG + 0x0034},
-+	{RK_GPIO0_B5, RK3588_PMU2_IOC_REG + 0x0040},
-+	{RK_GPIO0_C0, RK3588_PMU2_IOC_REG + 0x0044},
-+	{RK_GPIO0_D0, RK3588_PMU2_IOC_REG + 0x0048},
-+	{RK_GPIO1_A0, RK3588_VCCIO1_4_IOC_REG + 0x0210},
-+	{RK_GPIO1_B0, RK3588_VCCIO1_4_IOC_REG + 0x0214},
-+	{RK_GPIO1_C0, RK3588_VCCIO1_4_IOC_REG + 0x0218},
-+	{RK_GPIO1_D0, RK3588_VCCIO1_4_IOC_REG + 0x021C},
-+	{RK_GPIO2_A0, RK3588_EMMC_IOC_REG + 0x0220},
-+	{RK_GPIO2_A4, RK3588_VCCIO3_5_IOC_REG + 0x0220},
-+	{RK_GPIO2_B0, RK3588_VCCIO3_5_IOC_REG + 0x0224},
-+	{RK_GPIO2_C0, RK3588_VCCIO3_5_IOC_REG + 0x0228},
-+	{RK_GPIO2_D0, RK3588_EMMC_IOC_REG + 0x022C},
-+	{RK_GPIO3_A0, RK3588_VCCIO3_5_IOC_REG + 0x0230},
-+	{RK_GPIO3_B0, RK3588_VCCIO3_5_IOC_REG + 0x0234},
-+	{RK_GPIO3_C0, RK3588_VCCIO3_5_IOC_REG + 0x0238},
-+	{RK_GPIO3_D0, RK3588_VCCIO3_5_IOC_REG + 0x023C},
-+	{RK_GPIO4_A0, RK3588_VCCIO6_IOC_REG + 0x0240},
-+	{RK_GPIO4_B0, RK3588_VCCIO6_IOC_REG + 0x0244},
-+	{RK_GPIO4_C0, RK3588_VCCIO6_IOC_REG + 0x0248},
-+	{RK_GPIO4_C2, RK3588_VCCIO3_5_IOC_REG + 0x0248},
-+	{RK_GPIO4_D0, RK3588_VCCIO2_IOC_REG + 0x024C},
- };
- 
- #define RK3588_PULL_BITS_PER_PIN		2
-@@ -2686,7 +2988,10 @@ static int rockchip_set_drive_perpin(str
- 		rmask_bits = RV1126_DRV_BITS_PER_PIN;
- 		ret = strength;
- 		goto config;
--	} else if (ctrl->type == RV1106 || ctrl->type == RK3568) {
-+	} else if (ctrl->type == RV1106 ||
-+		   ctrl->type == RK3528 ||
-+		   ctrl->type == RK3562 ||
-+		   ctrl->type == RK3568) {
- 		rmask_bits = RK3568_DRV_BITS_PER_PIN;
- 		ret = (1 << (strength + 1)) - 1;
- 		goto config;
-@@ -2858,6 +3163,8 @@ static int rockchip_get_pull(struct rock
- 	case RK3308:
- 	case RK3368:
- 	case RK3399:
-+	case RK3528:
-+	case RK3562:
- 	case RK3568:
- 	case RK3588:
- 		pull_type = bank->pull_type[pin_num / 8];
-@@ -2910,6 +3217,8 @@ static int rockchip_set_pull(struct rock
- 	case RK3308:
- 	case RK3368:
- 	case RK3399:
-+	case RK3528:
-+	case RK3562:
- 	case RK3568:
- 	case RK3588:
- 		pull_type = bank->pull_type[pin_num / 8];
-@@ -3020,6 +3329,7 @@ static int rockchip_get_schmitt(struct r
- 
- 	data >>= bit;
- 	switch (ctrl->type) {
-+	case RK3562:
- 	case RK3568:
- 		return data & ((1 << RK3568_SCHMITT_BITS_PER_PIN) - 1);
- 	default:
-@@ -3049,6 +3359,7 @@ static int rockchip_set_schmitt(struct r
- 
- 	/* enable the write to the equivalent lower bits */
- 	switch (ctrl->type) {
-+	case RK3562:
- 	case RK3568:
- 		data = ((1 << RK3568_SCHMITT_BITS_PER_PIN) - 1) << (bit + 16);
- 		rmask = data | (data >> 16);
-@@ -3244,6 +3555,8 @@ static bool rockchip_pinconf_pull_valid(
- 	case RK3308:
- 	case RK3368:
- 	case RK3399:
-+	case RK3528:
-+	case RK3562:
- 	case RK3568:
- 	case RK3588:
- 		return (pull != PIN_CONFIG_BIAS_PULL_PIN_DEFAULT);
-@@ -4532,6 +4845,92 @@ static struct rockchip_pin_ctrl rk3399_p
- 		.drv_calc_reg		= rk3399_calc_drv_reg_and_bit,
- };
- 
-+static struct rockchip_pin_bank rk3528_pin_banks[] = {
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(0, 32, "gpio0",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0, 0, 0, 0),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(1, 32, "gpio1",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x20020, 0x20028, 0x20030, 0x20038),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(2, 32, "gpio2",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x30040, 0, 0, 0),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(3, 32, "gpio3",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x20060, 0x20068, 0x20070, 0),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(4, 32, "gpio4",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x10080, 0x10088, 0x10090, 0x10098),
-+};
-+
-+static struct rockchip_pin_ctrl rk3528_pin_ctrl __maybe_unused = {
-+	.pin_banks		= rk3528_pin_banks,
-+	.nr_banks		= ARRAY_SIZE(rk3528_pin_banks),
-+	.label			= "RK3528-GPIO",
-+	.type			= RK3528,
-+	.pull_calc_reg		= rk3528_calc_pull_reg_and_bit,
-+	.drv_calc_reg		= rk3528_calc_drv_reg_and_bit,
-+	.schmitt_calc_reg	= rk3528_calc_schmitt_reg_and_bit,
-+};
-+
-+static struct rockchip_pin_bank rk3562_pin_banks[] = {
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(0, 32, "gpio0",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x20000, 0x20008, 0x20010, 0x20018),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(1, 32, "gpio1",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0, 0x08, 0x10, 0x18),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(2, 32, "gpio2",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x20, 0, 0, 0),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(3, 32, "gpio3",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0x10040, 0x10048, 0x10050, 0x10058),
-+	PIN_BANK_IOMUX_FLAGS_OFFSET(4, 16, "gpio4",
-+				    IOMUX_WIDTH_4BIT,
-+				    IOMUX_WIDTH_4BIT,
-+				    0,
-+				    0,
-+				    0x10060, 0x10068, 0, 0),
-+};
-+
-+static struct rockchip_pin_ctrl rk3562_pin_ctrl __maybe_unused = {
-+	.pin_banks		= rk3562_pin_banks,
-+	.nr_banks		= ARRAY_SIZE(rk3562_pin_banks),
-+	.label			= "RK3562-GPIO",
-+	.type			= RK3562,
-+	.pull_calc_reg		= rk3562_calc_pull_reg_and_bit,
-+	.drv_calc_reg		= rk3562_calc_drv_reg_and_bit,
-+	.schmitt_calc_reg	= rk3562_calc_schmitt_reg_and_bit,
-+};
-+
- static struct rockchip_pin_bank rk3568_pin_banks[] = {
- 	PIN_BANK_IOMUX_FLAGS(0, 32, "gpio0", IOMUX_SOURCE_PMU | IOMUX_WIDTH_4BIT,
- 					     IOMUX_SOURCE_PMU | IOMUX_WIDTH_4BIT,
-@@ -4662,6 +5061,14 @@ static const struct of_device_id rockchi
- 	{ .compatible = "rockchip,rk3399-pinctrl",
- 		.data = &rk3399_pin_ctrl },
- #endif
-+#ifdef CONFIG_CPU_RK3528
-+	{ .compatible = "rockchip,rk3528-pinctrl",
-+		.data = &rk3528_pin_ctrl },
-+#endif
-+#ifdef CONFIG_CPU_RK3562
-+	{ .compatible = "rockchip,rk3562-pinctrl",
-+		.data = &rk3562_pin_ctrl },
-+#endif
- #ifdef CONFIG_CPU_RK3568
- 	{ .compatible = "rockchip,rk3568-pinctrl",
- 		.data = &rk3568_pin_ctrl },
 --- a/drivers/regulator/fan53555.c
 +++ b/drivers/regulator/fan53555.c
 @@ -21,23 +21,17 @@
@@ -9002,18 +8304,7 @@ Subject: [PATCH] rkr4 patches
  #define V4L2_PIX_FMT_H264     v4l2_fourcc('H', '2', '6', '4') /* H264 with start codes */
  #define V4L2_PIX_FMT_H264_NO_SC v4l2_fourcc('A', 'V', 'C', '1') /* H264 without start codes */
  #define V4L2_PIX_FMT_H264_MVC v4l2_fourcc('M', '2', '6', '4') /* H264 MVC */
-@@ -978,7 +979,9 @@ struct v4l2_requestbuffers {
-  *			descriptor associated with this plane
-  * @data_offset:	offset in the plane to the start of data; usually 0,
-  *			unless there is a header in front of the data
-- *
-+ * @reserved:		few userspace clients and drivers use reserved fields
-+ *			and it is up to them how these fields are used. v4l2
-+ *			simply copy reserved fields between them.
-  * Multi-planar buffers consist of one or more planes, e.g. an YCbCr buffer
-  * with two planes can have one plane for Y, and another for interleaved CbCr
-  * components. Each plane can reside in a separate memory buffer, or even in
-@@ -993,6 +996,7 @@ struct v4l2_plane {
+@@ -995,6 +996,7 @@ struct v4l2_plane {
  		__s32		fd;
  	} m;
  	__u32			data_offset;
@@ -9021,7 +8312,7 @@ Subject: [PATCH] rkr4 patches
  	__u32			reserved[11];
  };
  
-@@ -1778,6 +1782,16 @@ enum v4l2_ctrl_type {
+@@ -1785,6 +1787,16 @@ enum v4l2_ctrl_type {
  	V4L2_CTRL_TYPE_U16	     = 0x0101,
  	V4L2_CTRL_TYPE_U32	     = 0x0102,
  	V4L2_CTRL_TYPE_AREA          = 0x0106,
