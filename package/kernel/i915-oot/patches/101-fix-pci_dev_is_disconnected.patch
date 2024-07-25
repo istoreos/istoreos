@@ -1,0 +1,44 @@
+From fbf6f79d492e30545371275de1778b741f5bb892 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 25 Jul 2024 16:21:54 +0800
+Subject: [PATCH] openwrt: fix pci_dev_is_disconnected redefine on 5.10.221
+
+---
+ backport-include/backport/backport_macro.h | 3 +++
+ drivers/pci/pci.h                          | 2 ++
+ 2 files changed, 5 insertions(+)
+
+diff --git a/backport-include/backport/backport_macro.h b/backport-include/backport/backport_macro.h
+index f4bafaf..d1b39aa 100644
+--- a/backport-include/backport/backport_macro.h
++++ b/backport-include/backport/backport_macro.h
+@@ -634,6 +634,9 @@
+ #define BPM_IS_COW_MAPPING_NOT_PRESENT
+ #define BPM_SWIOTLB_NR_TBL_NO_ARG_PRESENT
+ #define BPM_DRM_DP_MST_TOPOLOGY_MGR_INIT_NO_LANE_PRESENT
++#if LINUX_VERSION_IS_LESS(5,10,214)
++#define PCI_DEV_IS_DISCONNECTED_NOT_PRESENT
++#endif
+ #endif
+ 
+ #endif /* _BP_LINUX_BACKPORT_MACRO_H */
+diff --git a/drivers/pci/pci.h b/drivers/pci/pci.h
+index b017b8b..57498f9 100644
+--- a/drivers/pci/pci.h
++++ b/drivers/pci/pci.h
+@@ -403,10 +403,12 @@ static inline int pci_dev_set_disconnected(struct pci_dev *dev, void *unused)
+ 	return 0;
+ }
+ 
++#ifdef PCI_DEV_IS_DISCONNECTED_NOT_PRESENT
+ static inline bool pci_dev_is_disconnected(const struct pci_dev *dev)
+ {
+ 	return dev->error_state == pci_channel_io_perm_failure;
+ }
++#endif
+ 
+ /* pci_dev priv_flags */
+ #define PCI_DEV_ADDED 0
+-- 
+2.41.0
+
