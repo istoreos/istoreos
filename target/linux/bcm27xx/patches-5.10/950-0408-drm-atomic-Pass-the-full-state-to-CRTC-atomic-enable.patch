@@ -567,7 +567,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/845aa10ef171fc0ea060495efef1
  	unsigned int var;
 --- a/drivers/gpu/drm/mediatek/mtk_drm_crtc.c
 +++ b/drivers/gpu/drm/mediatek/mtk_drm_crtc.c
-@@ -520,7 +520,7 @@ void mtk_drm_crtc_async_update(struct dr
+@@ -522,7 +522,7 @@ void mtk_drm_crtc_async_update(struct dr
  }
  
  static void mtk_drm_crtc_atomic_enable(struct drm_crtc *crtc,
@@ -576,7 +576,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/845aa10ef171fc0ea060495efef1
  {
  	struct mtk_drm_crtc *mtk_crtc = to_mtk_crtc(crtc);
  	struct mtk_ddp_comp *comp = mtk_crtc->ddp_comp[0];
-@@ -545,7 +545,7 @@ static void mtk_drm_crtc_atomic_enable(s
+@@ -547,7 +547,7 @@ static void mtk_drm_crtc_atomic_enable(s
  }
  
  static void mtk_drm_crtc_atomic_disable(struct drm_crtc *crtc,
@@ -667,7 +667,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/845aa10ef171fc0ea060495efef1
  {
  	struct mdp4_crtc *mdp4_crtc = to_mdp4_crtc(crtc);
  	struct mdp4_kms *mdp4_kms = get_kms(crtc);
-@@ -284,7 +284,7 @@ static void mdp4_crtc_atomic_disable(str
+@@ -293,7 +293,7 @@ static void mdp4_crtc_atomic_disable(str
  }
  
  static void mdp4_crtc_atomic_enable(struct drm_crtc *crtc,
@@ -779,7 +779,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/845aa10ef171fc0ea060495efef1
  	struct rcar_du_device *rcdu = rcrtc->dev;
 --- a/drivers/gpu/drm/rockchip/rockchip_drm_vop.c
 +++ b/drivers/gpu/drm/rockchip/rockchip_drm_vop.c
-@@ -693,7 +693,7 @@ static void rockchip_drm_set_win_enabled
+@@ -701,7 +701,7 @@ static void rockchip_drm_set_win_enabled
  }
  
  static void vop_crtc_atomic_disable(struct drm_crtc *crtc,
@@ -788,7 +788,7 @@ Link: https://patchwork.freedesktop.org/patch/msgid/845aa10ef171fc0ea060495efef1
  {
  	struct vop *vop = to_vop(crtc);
  
-@@ -1261,8 +1261,10 @@ static void vop_crtc_atomic_begin(struct
+@@ -1269,8 +1269,10 @@ static void vop_crtc_atomic_begin(struct
  }
  
  static void vop_crtc_atomic_enable(struct drm_crtc *crtc,

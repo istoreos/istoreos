@@ -42,7 +42,7 @@
  	} while (word != stop);
  
  	return csum_fold(csum);
-@@ -180,73 +184,6 @@ static inline __sum16 ip_compute_csum(co
+@@ -180,74 +184,6 @@ static inline __sum16 ip_compute_csum(co
  	return csum_fold(csum_partial(buff, len, 0));
  }
  
@@ -108,7 +108,8 @@
 -	"	.set	pop"
 -	: "=&r" (sum), "=&r" (tmp)
 -	: "r" (saddr), "r" (daddr),
--	  "0" (htonl(len)), "r" (htonl(proto)), "r" (sum));
+-	  "0" (htonl(len)), "r" (htonl(proto)), "r" (sum)
+-	: "memory");
 -
 -	return csum_fold(sum);
 -}
@@ -214,7 +215,7 @@
  #include <linux/uaccess.h>
  #include <linux/ipv6.h>
  #include <linux/icmpv6.h>
-@@ -927,10 +928,10 @@ static void tcp_v6_send_response(const s
+@@ -929,10 +930,10 @@ static void tcp_v6_send_response(const s
  	topt = (__be32 *)(t1 + 1);
  
  	if (tsecr) {
@@ -292,7 +293,7 @@
  #endif /* _LINUX_TYPES_H */
 --- a/net/ipv4/af_inet.c
 +++ b/net/ipv4/af_inet.c
-@@ -1471,8 +1471,8 @@ struct sk_buff *inet_gro_receive(struct
+@@ -1483,8 +1483,8 @@ struct sk_buff *inet_gro_receive(struct
  	if (unlikely(ip_fast_csum((u8 *)iph, 5)))
  		goto out_unlock;
  
@@ -545,15 +546,15 @@
  		 * XXX skbs on the gro_list have all been parsed and pulled
 --- a/include/net/addrconf.h
 +++ b/include/net/addrconf.h
-@@ -47,7 +47,7 @@ struct prefix_info {
+@@ -52,7 +52,7 @@ struct prefix_info {
  	__be32			reserved2;
  
  	struct in6_addr		prefix;
 -};
 +} __attribute__((packed, aligned(2)));
  
- #include <linux/ipv6.h>
- #include <linux/netdevice.h>
+ /* rfc4861 4.6.2: IPv6 PIO is 32 bytes in size */
+ static_assert(sizeof(struct prefix_info) == 32);
 --- a/include/net/inet_ecn.h
 +++ b/include/net/inet_ecn.h
 @@ -140,9 +140,9 @@ static inline int IP6_ECN_set_ce(struct
@@ -706,7 +707,7 @@
  EXPORT_SYMBOL(xfrm_parse_spi);
 --- a/net/ipv4/tcp_input.c
 +++ b/net/ipv4/tcp_input.c
-@@ -4147,14 +4147,16 @@ static bool tcp_parse_aligned_timestamp(
+@@ -4151,14 +4151,16 @@ static bool tcp_parse_aligned_timestamp(
  {
  	const __be32 *ptr = (const __be32 *)(th + 1);
  
