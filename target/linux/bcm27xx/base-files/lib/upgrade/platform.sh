@@ -98,3 +98,15 @@ platform_do_upgrade() {
 	echo "Writing new UUID to /dev/$diskdev..."
 	get_image "$@" | dd of="/dev/$diskdev" bs=1 skip=440 count=4 seek=440 conv=fsync
 }
+
+platform_copy_config() {
+	local partdev
+
+	if export_partdevice partdev 1; then
+		mkdir -p /boot
+		[ -f /boot/kernel.img ] || mount -t vfat -o rw,noatime "/dev/$partdev" /boot
+		tar -C / -zxvf "$UPGRADE_BACKUP" boot/cmdline.txt boot/config.txt
+		sync
+		umount /boot
+	fi
+}
