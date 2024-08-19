@@ -6,6 +6,7 @@ export_ota_url() {
 	case "$board" in
 	hlink,h28k|\
 	radxa,e20c|\
+	easepi,ars4|\
 	lyt,t68m)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
 		;;
