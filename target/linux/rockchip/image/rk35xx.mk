@@ -209,13 +209,13 @@ $(call Device/rk3588_combined_hinlink)
 endef
 TARGET_DEVICES += hinlink_h88k
 
-define Device/cyber3588-aib
+define Device/cyber3588_aib
 $(call Device/rk3588)
   DEVICE_MODEL := cyber3588-aib
   SUPPORTED_DEVICES += cyber,cyber3588-aib
   DEVICE_DTS := rk3588-cyber3588-aib
 endef
-TARGET_DEVICES += cyber3588-aib
+TARGET_DEVICES += cyber3588_aib
 
 define Device/rk3528_rtl8111h
 $(call Device/rk3528)
