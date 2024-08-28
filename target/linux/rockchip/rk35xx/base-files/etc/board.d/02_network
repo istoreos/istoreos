@@ -53,6 +53,10 @@ rockchip_setup_interfaces()
 	cyber,cyber3588-aib)
 		ucidef_set_interfaces_lan_wan "eth0" "eth1"
 		;;
+	radxa,e54c)
+		ucidef_add_switch "switch0" \
+			"0:wan" "1:lan" "2:lan" "3:lan" "6t@eth0"
+		;;
 	*)
 		ucidef_set_interface_lan 'eth0' 'dhcp'
 		;;
@@ -108,6 +112,7 @@ rockchip_setup_macs()
 	nlnet,xgp|\
 	radxa,e20c|\
 	radxa,e52c|\
+	radxa,e54c|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)

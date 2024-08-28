@@ -7,7 +7,7 @@
 
 /dts-v1/;
 
-#include "dt-bindings/usb/pd.h"
+#include <dt-bindings/usb/pd.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pwm/pwm.h>
@@ -24,7 +24,18 @@
 	model = "Radxa E54C";
 	compatible = "radxa,e54c", "rockchip,rk3588";
 
-	/delete-node/ chosen;
+	aliases {
+		ethernet0 = &gmac1;
+		/delete-property/ ethernet1;
+
+		mmc0 = &sdmmc;
+		mmc1 = &sdhci;
+
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
+	};
 
 	fan0: pwm-fan {
 		compatible = "pwm-fan";
@@ -123,38 +134,43 @@
 		autorepeat;
 
 		user-key {
-			label = "KEY F15";
-			linux,code = <KEY_F15>;
 			gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
 			debounce-interval = <50>;
+			label = "user";
+			linux,code = <KEY_RESTART>;
 		};
 	};
 
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		sys-led {
+		sys_led: sys-led {
 			gpios = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+			label = "green:sys";
 			linux,default-trigger = "heartbeat";
 		};
 
 		wan-led {
 			gpios = <&gpio3 RK_PC4 GPIO_ACTIVE_LOW>;
+			label = "green:wan";
 			linux,default-trigger = "netdev";
 		};
 
 		lan1-led {
 			gpios = <&gpio0 RK_PD3 GPIO_ACTIVE_LOW>;
+			label = "green:lan:1";
 			linux,default-trigger = "netdev";
 		};
 
 		lan2-led {
 			gpios = <&gpio1 RK_PB6 GPIO_ACTIVE_LOW>;
+			label = "green:lan:2";
 			linux,default-trigger = "netdev";
 		};
 
 		lan3-led {
 			gpios = <&gpio1 RK_PB7 GPIO_ACTIVE_LOW>;
+			label = "green:lan:3";
 			linux,default-trigger = "netdev";
 		};
 	};
@@ -250,7 +266,7 @@
 &gpu {
 	mali-supply = <&vdd_gpu_s0>;
 	mem-supply = <&vdd_gpu_mem_s0>;
-	status = "disabled";
+	status = "okay";
 };
 
 /* NPU */
@@ -261,11 +277,11 @@
 };
 
 &dfi {
-	status = "disabled";
+	status = "okay";
 };
 
 &dmc {
-	status = "disabled";
+	status = "okay";
 	center-supply = <&vdd_ddr_s0>;
 	mem-supply = <&vdd_log_s0>;
 };
@@ -769,25 +785,32 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&rtl8367rb_power_en>;
 	};
+
+	rtl8367rb {
+		compatible = "realtek,rtl8367c", "realtek,rtl8367b";
+		cpu_port = <6>;
+		cpu-port = <6>;
+		realtek,extif1 = <1 0 1 1 1 1 1 1 2>;
+		mii-bus = <&mdio1>;
+		phy_id = <29>;
+		phy-id = <29>;
+	};
 };
 
 /* Ethernet */
 &mdio1 {
-	rgmii_phy1: phy@0 {
-		compatible = "ethernet-phy-ieee802.3-c22";
-		reg = <0x0>;
-	};
+
 };
 
 &gmac1 {
 	status = "okay";
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-rxid";
 	clock_in_out = "output";
 
 	snps,reset-gpio = <&gpio3 RK_PB7 GPIO_ACTIVE_LOW>;
 	snps,reset-active-low;
 	// Reset time is 20ms, 100ms for rtl8211f
-	snps,reset-delays-us = <0 1000000 2000000>;
+	snps,reset-delays-us = <0 20000 100000>;
 
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac1_miim
@@ -797,9 +820,15 @@
 		     &gmac1_rgmii_bus>;
 
 	tx_delay = <0>;
-	rx_delay = <0>;
+	// rx_delay = <0>;
 
-	phy-handle = <&rgmii_phy1>;
+	snps,no-vlhash;
+
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+		pause;
+	};
 };
 
 // &i2c8 {

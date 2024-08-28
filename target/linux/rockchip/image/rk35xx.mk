@@ -329,6 +329,14 @@ $(call Device/rk3582)
 endef
 TARGET_DEVICES += radxa_e52c
 
+define Device/radxa_e54c
+$(call Device/rk3582)
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E54C
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+endef
+TARGET_DEVICES += radxa_e54c
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
