@@ -614,25 +614,25 @@
 	status = "okay";
 };
 
-/* M.2 M-KEY PCIe */
-// &combphy0_ps {
-// 	status = "okay";
-// };
 
-// &pcie2x1l2 {
-// 	status = "okay";
-// 	reset-gpios = <&gpio3 RK_PD1 GPIO_ACTIVE_HIGH>;
-// };
-
-/* M.2 M-KEY SATA */
+/* M.2 M-KEY */
 &combphy0_ps {
 	status = "okay";
 };
 
+#ifndef E54C_M2_SATA
+/* M.2 M-KEY PCIe */
+&pcie2x1l2 {
+	status = "okay";
+	reset-gpios = <&gpio3 RK_PD1 GPIO_ACTIVE_HIGH>;
+};
+
+#else
+/* M.2 M-KEY SATA */
 &sata0 {
 	status = "okay";
 };
-
+#endif
 
 /* PWM Fan */
 &pwm3 {
