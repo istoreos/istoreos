@@ -36,8 +36,9 @@ set_iface_cpumask() {
 	[[ -z "${device}" ]] && device="$interface"
 
 	for seconds in $(seq 0 1); do
+		[[ ${seconds} = 0 ]] || sleep 1
 		irq=$(grep -m1 " ${device}\$" /proc/interrupts | sed -n -e 's/^ *\([^ :]\+\):.*$/\1/p')
-		if [ -n "${irq}" ]; then
+		if [[ -n "${irq}" ]]; then
 			echo "${core_mask}" > /proc/irq/${irq}/smp_affinity
 			if [[ -z "${mq}" ]]; then
 				echo "${queue_mask}" > /sys/class/net/$interface/queues/rx-0/rps_cpus
@@ -52,8 +53,9 @@ set_iface_cpumask() {
 				# done
 			fi
 			return 0
+		elif [[ -n "${mq}" && "${device}" != "${interface}-0" ]]; then
+			break
 		fi
-		sleep 1
 	done
 	return 1
 }
@@ -214,7 +216,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 4 "eth2" "eth2-0" && \
 			set_iface_cpumask 4 "eth2" "eth2-16" && \
-			set_iface_cpumask 2 "eth2" "eth2-18" && \
+			set_iface_cpumask 2 "eth2" "eth2-18"
 			set_iface_cpumask 8 "eth3" "eth3-0" && \
 			set_iface_cpumask 8 "eth3" "eth3-18" && \
 			set_iface_cpumask 1 "eth3" "eth3-16"
