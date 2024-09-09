@@ -30,37 +30,37 @@
 		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 rootpart=mmcblk1p3 rw rootwait autoresize=mmcblk1p4";
 	};
 
-    adc_keys: adc-keys {
-        compatible = "adc-keys";
-        io-channels = <&saradc 0>;
-        io-channel-names = "buttons";
-        keyup-threshold-microvolt = <1800000>;
-        poll-interval = <100>;
+	adc_keys: adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1800000>;
+		poll-interval = <100>;
 
-        vol-up-key {
-            label = "volume up";
-            linux,code = <KEY_VOLUMEUP>;
-            press-threshold-microvolt = <1750>;
-        };
+		vol-up-key {
+			label = "volume up";
+			linux,code = <KEY_VOLUMEUP>;
+			press-threshold-microvolt = <1750>;
+		};
 
-        vol-down-key {
-            label = "volume down";
-            linux,code = <KEY_VOLUMEDOWN>;
-            press-threshold-microvolt = <297500>;
-        };
+		vol-down-key {
+			label = "volume down";
+			linux,code = <KEY_VOLUMEDOWN>;
+			press-threshold-microvolt = <297500>;
+		};
 
-        menu-key {
-            label = "menu";
-            linux,code = <KEY_MENU>;
-            press-threshold-microvolt = <980000>;
-        };
+		menu-key {
+			label = "menu";
+			linux,code = <KEY_MENU>;
+			press-threshold-microvolt = <980000>;
+		};
 
-        back-key {
-            label = "back";
-            linux,code = <KEY_BACK>;
-            press-threshold-microvolt = <1305500>;
-        };
-    };
+		back-key {
+			label = "back";
+			linux,code = <KEY_BACK>;
+			press-threshold-microvolt = <1305500>;
+		};
+	};
 
 	fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
@@ -68,7 +68,7 @@
 		rockchip,wake-irq = <0>;
 		/* If enable uart uses irq instead of fiq */
 		rockchip,irq-mode-enable = <1>;
-		rockchip,baudrate = <115200>;  /* Only 115200 and 1500000 */
+		rockchip,baudrate = <1500000>;  /* Only 115200 and 1500000 */
 		interrupts = <GIC_SPI 252 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&uart2m0_xfer>;
@@ -111,15 +111,6 @@
 		simple-audio-card,codec {
 			sound-dai = <&hdmi>;
 		};
-	};
-
-	mach: board {
-		compatible = "friendlyelec,board";
-		machine = "NANOPI5";
-		hwrev = <255>;
-		model = "NanoPi 5 Series";
-		nvmem-cells = <&otp_id>, <&otp_cpu_version>;
-		nvmem-cell-names = "id", "cpu-version";
 	};
 
 	pdmics: dummy-codec {
@@ -264,45 +255,45 @@
 		};
 	};
 
-    sdio_pwrseq: sdio-pwrseq {
-        compatible = "mmc-pwrseq-simple";
-        clocks = <&rk809 1>;
-        clock-names = "ext_clock";
-        pinctrl-names = "default";
-        pinctrl-0 = <&wifi_enable_h>;
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		clocks = <&rk809 1>;
+		clock-names = "ext_clock";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_enable_h>;
 
-        /*
-         * On the module itself this is one of these (depending
-         * on the actual card populated):
-         * - SDIO_RESET_L_WL_REG_ON
-         * - PDN (power down when low)
-         */
-        post-power-on-delay-ms = <200>;
-        reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
-    };
+		/*
+		* On the module itself this is one of these (depending
+		* on the actual card populated):
+		* - SDIO_RESET_L_WL_REG_ON
+		* - PDN (power down when low)
+		*/
+		post-power-on-delay-ms = <200>;
+		reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
+	};
 
-    wireless_wlan: wireless-wlan {
-        compatible = "wlan-platdata";
-        rockchip,grf = <&grf>;
-        wifi_chip_type = "ap6398s";
-        WIFI,poweren_gpio = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
-        status = "okay";
-    };
+	wireless_wlan: wireless-wlan {
+		compatible = "wlan-platdata";
+		rockchip,grf = <&grf>;
+		wifi_chip_type = "ap6398s";
+		WIFI,poweren_gpio = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
 
-    wireless_bluetooth: wireless-bluetooth {
-        compatible = "bluetooth-platdata";
-        clocks = <&rk809 1>;
-        clock-names = "ext_clock";
-        //wifi-bt-power-toggle;
-        uart_rts_gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
-        pinctrl-names = "default", "rts_gpio";
-        pinctrl-0 = <&uart8m0_rtsn>;
-        pinctrl-1 = <&uart8_gpios>;
-        BT,reset_gpio    = <&gpio3 RK_PA0 GPIO_ACTIVE_HIGH>;
-        BT,wake_gpio     = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
-        BT,wake_host_irq = <&gpio3 RK_PA2 GPIO_ACTIVE_HIGH>;
-        status = "okay";
-    };
+	wireless_bluetooth: wireless-bluetooth {
+		compatible = "bluetooth-platdata";
+		clocks = <&rk809 1>;
+		clock-names = "ext_clock";
+		//wifi-bt-power-toggle;
+		uart_rts_gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default", "rts_gpio";
+		pinctrl-0 = <&uart8m0_rtsn>;
+		pinctrl-1 = <&uart8_gpios>;
+		BT,reset_gpio    = <&gpio3 RK_PA0 GPIO_ACTIVE_HIGH>;
+		BT,wake_gpio     = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
+		BT,wake_host_irq = <&gpio3 RK_PA2 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+	};
 
 	leds {
 		compatible = "gpio-leds";
@@ -786,22 +777,22 @@
 		};
 	};
 
-    wireless-wlan {
-        wifi_host_wake_irq: wifi-host-wake-irq {
-            rockchip,pins = <3 RK_PD4 RK_FUNC_GPIO &pcfg_pull_down>;
-        };
-    };
+	wireless-wlan {
+		wifi_host_wake_irq: wifi-host-wake-irq {
+			rockchip,pins = <3 RK_PD4 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
 
-    sdio-pwrseq {
-        wifi_enable_h: wifi-enable-h {
-            rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
-        };
-    };
-    wireless-bluetooth {
-        uart8_gpios: uart8-gpios {
-            rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
-        };
-    };
+	sdio-pwrseq {
+		wifi_enable_h: wifi-enable-h {
+			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	wireless-bluetooth {
+		uart8_gpios: uart8-gpios {
+			rockchip,pins = <2 RK_PB1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 
 };
 
@@ -944,7 +935,7 @@
 
 &u2phy0_otg {
 	vbus-supply = <&vcc5v0_otg>;
-	status = "disabled";
+	status = "okay";
 };
 
 &u2phy1_host {
@@ -982,17 +973,17 @@
 };
 
 &usbdrd_dwc3 {
-	dr_mode = "host";
+	dr_mode = "peripheral";
 	extcon = <&usb2phy0>;
 	phys = <&u2phy0_otg>; /* only USB2.0 */
 	phy-names = "usb2-phy"; /* only USB2.0 */
 	maximum-speed = "high-speed"; /* only USB2.0 */
 	snps,dis_u2_susphy_quirk; /* only USB2.0 */
-	status = "disabled";
+	status = "okay";
 };
 
 &usbdrd30 {
-	status = "disabled";
+	status = "okay";
 };
 
 &usbhost_dwc3 {
@@ -1021,7 +1012,7 @@
 };
 
 &pcie3x2 {
-	 compatible = "rockchip,rk3568-pcie", "snps,dw-pcie";
+	rockchip,bifurcation;
 	vpcie3v3-supply = <&vcc3v3_pcie>;
 	status = "okay";
 };
