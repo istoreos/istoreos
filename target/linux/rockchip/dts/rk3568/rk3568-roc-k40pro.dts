@@ -1,0 +1,181 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2022 Flippy <flippy@sina.com>
+ */
+
+/dts-v1/;
+
+#include "rk3568-roc-k40pro.dtsi"
+
+/ {
+   	compatible = "ROCEOS,K40PRO","rockchip,rk3568","gmac_1v8";
+	model = "ROCEOS,K40PRO";
+   	is_testing = "1";
+    modified_time = "2024/08/02 11:02:10";
+    eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0002:21:00.0,0001:11:00.0";
+    kdebug = "0";
+	hwmodel_id = "K40PRO";
+    r8168_led = <0x438>;
+    hw_support = "hdmi";
+
+	aliases {
+		ethernet0 = &gmac0;
+		ethernet1 = &gmac1;
+	};
+
+};
+
+&gmac0 {
+	phy-mode = "rgmii";
+	clock_in_out = "input";
+
+	snps,reset-gpio = <&gpio2 RK_PD3 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>, <&cru CLK_MAC0_2TOP>;
+	assigned-clock-rates = <0>, <125000000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac0_miim
+		     &gmac0_tx_bus2
+		     &gmac0_rx_bus2
+		     &gmac0_rgmii_clk
+		     &gmac0_rgmii_bus>;
+
+	tx_delay = <0x3c>;
+	rx_delay = <0x2f>;
+
+	phy-handle = <&rgmii_phy0>;
+	status = "okay";
+};
+
+&gmac1 {
+	phy-mode = "rgmii";
+	clock_in_out = "input";
+
+	snps,reset-gpio = <&gpio2 RK_PD1 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&cru CLK_MAC1_2TOP>;
+	assigned-clock-rates = <0>, <125000000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac1m1_miim
+		     &gmac1m1_tx_bus2
+		     &gmac1m1_rx_bus2
+		     &gmac1m1_rgmii_clk
+		     &gmac1m1_rgmii_bus>;
+
+	tx_delay = <0x4f>;
+	rx_delay = <0x26>;
+
+	phy-handle = <&rgmii_phy1>;
+	status = "okay";
+};
+
+&mdio0 {
+	rgmii_phy0: phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+	};
+};
+
+&mdio1 {
+	rgmii_phy1: phy@0 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+	};
+};
+
+
+&sata0 {
+    status = "disabled";
+};
+
+//配置WL_REG_ON引脚
+&sdio_pwrseq {
+    status = "okay";
+    reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
+    post-power-on-delay-ms = <200>;
+};
+
+// 配置WL_HOST_WAKE引脚，OOB模式时，该引脚必须配置
+&wireless_wlan {
+    pinctrl-names = "default";
+    pinctrl-0 = <&wifi_host_wake_irq>;
+    WIFI,host_wake_irq = <&gpio3 RK_PD4 GPIO_ACTIVE_HIGH>;
+    wifi_chip_type = "ap6255";
+    status = "okay";
+};
+
+&wireless_bluetooth {
+    compatible = "bluetooth-platdata";
+    clocks = <&rk809 1>;
+    clock-names = "ext_clock";
+    //wifi-bt-power-toggle;
+    uart_rts_gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
+    pinctrl-names = "default", "rts_gpio";
+    pinctrl-0 = <&uart8m0_rtsn>;
+    pinctrl-1 = <&uart8_gpios>;
+    BT,reset_gpio    = <&gpio4 RK_PC4 GPIO_ACTIVE_HIGH>;
+    BT,wake_gpio     = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+    BT,wake_host_irq = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+    status = "okay";
+};
+
+// wifi
+&sdmmc2 {
+    max-frequency = <150000000>;
+    supports-sdio;
+    bus-width = <4>;
+    disable-wp;
+    cap-sd-highspeed;
+    cap-sdio-irq;
+    keep-power-in-suspend;
+    mmc-pwrseq = <&sdio_pwrseq>;
+    non-removable;
+    pinctrl-names = "default";
+    pinctrl-0 = <&sdmmc2m0_bus4 &sdmmc2m0_cmd &sdmmc2m0_clk>;
+    sd-uhs-sdr104;
+    status = "okay";
+};
+
+/* fix mali warning */
+&gpu {
+    power-off-delay-ms = <200>;
+};
+
+&pcie2x1 {
+    reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
+    status = "okay";
+};
+
+&pcie3x1 {
+    reset-gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
+    status = "okay";
+
+};
+
+&pcie3x2 {
+    reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
+    status = "okay";
+};
+
+
+&pmu_io_domains {
+    status = "okay";
+    pmuio2-supply = <&vcc3v3_pmu>;
+    vccio1-supply = <&vccio_acodec>;
+    vccio3-supply = <&vccio_sd>;
+    vccio4-supply = <&vcc_1v8>;
+    vccio5-supply = <&vcc_3v3>;
+    vccio6-supply = <&vcc_1v8>;
+    vccio7-supply = <&vcc_3v3>;
+};
