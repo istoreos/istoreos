@@ -7,7 +7,7 @@ include $(INCLUDE_DIR)/trusted-firmware-a.mk
 
 PKG_NAME:=rkbin
 PKG_VERSION:=linux-5.10-gen-rkr4
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.bz2
 PKG_SOURCE_URL:=https://gitlab.com/rk3588_linux/rk/rkbin/-/archive/$(PKG_VERSION)/
