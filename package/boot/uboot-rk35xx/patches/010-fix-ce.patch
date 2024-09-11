@@ -7,8 +7,6 @@ Subject: [PATCH] fix CE without RKIMG_BOOTLOADER
  common/image-android.c | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/common/image-android.c b/common/image-android.c
-index a77c0f3..493b7f7 100644
 --- a/common/image-android.c
 +++ b/common/image-android.c
 @@ -39,6 +39,7 @@ DECLARE_GLOBAL_DATA_PTR;
@@ -34,6 +32,3 @@ index a77c0f3..493b7f7 100644
  	/*
  	 * get android os version:
  	 *
--- 
-2.31.0
-

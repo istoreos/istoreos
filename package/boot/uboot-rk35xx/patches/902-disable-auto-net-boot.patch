@@ -1,8 +1,6 @@
-Index: u-boot-2017.09/include/configs/rockchip-common.h
-===================================================================
---- u-boot-2017.09.orig/include/configs/rockchip-common.h
-+++ u-boot-2017.09/include/configs/rockchip-common.h
-@@ -106,9 +106,7 @@
+--- a/include/configs/rockchip-common.h
++++ b/include/configs/rockchip-common.h
+@@ -108,9 +108,7 @@
  	BOOT_TARGET_MMC(func) \
  	BOOT_TARGET_MTD(func) \
  	BOOT_TARGET_RKNAND(func) \

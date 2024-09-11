@@ -1,7 +1,5 @@
-Index: u-boot-2017.09/drivers/adc/adc-uclass.c
-===================================================================
---- u-boot-2017.09.orig/drivers/adc/adc-uclass.c
-+++ u-boot-2017.09/drivers/adc/adc-uclass.c
+--- a/drivers/adc/adc-uclass.c
++++ b/drivers/adc/adc-uclass.c
 @@ -7,6 +7,7 @@
  
  #include <common.h>
@@ -41,10 +39,8 @@ Index: u-boot-2017.09/drivers/adc/adc-uclass.c
  
  static int adc_vdd_platdata_set(struct udevice *dev)
  {
-Index: u-boot-2017.09/include/adc.h
-===================================================================
---- u-boot-2017.09.orig/include/adc.h
-+++ u-boot-2017.09/include/adc.h
+--- a/include/adc.h
++++ b/include/adc.h
 @@ -297,4 +297,14 @@ int adc_vss_value(struct udevice *dev, i
   */
  int adc_stop(struct udevice *dev);

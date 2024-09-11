@@ -8,9 +8,6 @@ Subject: [PATCH] support gcc 8 compiler
  1 file changed, 292 insertions(+)
  create mode 100644 include/linux/compiler-gcc8.h
 
-diff --git a/include/linux/compiler-gcc8.h b/include/linux/compiler-gcc8.h
-new file mode 100644
-index 0000000000..72b9d303b0
 --- /dev/null
 +++ b/include/linux/compiler-gcc8.h
 @@ -0,0 +1,292 @@
@@ -306,6 +303,3 @@ index 0000000000..72b9d303b0
 +#else
 +#define __diag_GCC_8(s)
 +#endif
--- 
-2.23.0
-

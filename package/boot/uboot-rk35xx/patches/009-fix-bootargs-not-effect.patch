@@ -7,19 +7,17 @@ Subject: [PATCH] fix boorargs not in effect
  arch/arm/mach-rockchip/board.c | 2 ++
  1 file changed, 2 insertions(+)
 
-diff --git a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
-index 9ffb017..1db4711 100644
 --- a/arch/arm/mach-rockchip/board.c
 +++ b/arch/arm/mach-rockchip/board.c
-@@ -1115,6 +1115,7 @@ void board_quiesce_devices(void *images)
- #endif
+@@ -1159,6 +1159,7 @@ int board_rng_seed(struct abuf *buf)
+ 	return 0;
  }
  
 +#ifdef CONFIG_CMD_BOOT_ANDROID
- char *board_fdt_chosen_bootargs(void *fdt)
- {
- 	/* bootargs_ext is used when dtbo is applied. */
-@@ -1240,6 +1241,7 @@ char *board_fdt_chosen_bootargs(void *fdt)
+ /*
+  * Pass fwver when any available.
+  */
+@@ -1384,6 +1385,7 @@ char *board_fdt_chosen_bootargs(void *fd
  
  	return (char *)bootargs;
  }
@@ -27,6 +25,3 @@ index 9ffb017..1db4711 100644
  
  int ft_verify_fdt(void *fdt)
  {
--- 
-2.31.0
-

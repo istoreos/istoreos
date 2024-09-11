@@ -7,8 +7,6 @@ Subject: [PATCH] disable pcie and usb3.0 on rk3568
  arch/arm/dts/rk3568-u-boot.dtsi | 15 +++++----------
  1 file changed, 5 insertions(+), 10 deletions(-)
 
-diff --git a/arch/arm/dts/rk3568-u-boot.dtsi b/arch/arm/dts/rk3568-u-boot.dtsi
-index a0678e3..99cf95d 100644
 --- a/arch/arm/dts/rk3568-u-boot.dtsi
 +++ b/arch/arm/dts/rk3568-u-boot.dtsi
 @@ -67,6 +67,11 @@
@@ -38,8 +36,5 @@ index a0678e3..99cf95d 100644
 -};
 -
  &pinctrl {
- 	u-boot,dm-pre-reloc;
+ 	u-boot,dm-spl;
  	status = "okay";
--- 
-2.31.0
-

@@ -7,11 +7,9 @@ Subject: [PATCH] fix efi detection
  disk/part_efi.c | 6 +++---
  1 file changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/disk/part_efi.c b/disk/part_efi.c
-index d4d03de..b803d17 100644
 --- a/disk/part_efi.c
 +++ b/disk/part_efi.c
-@@ -351,7 +351,7 @@ int part_get_info_efi(struct blk_desc *dev_desc, int part,
+@@ -351,7 +351,7 @@ int part_get_info_efi(struct blk_desc *d
  	return 0;
  }
  
@@ -20,7 +18,7 @@ index d4d03de..b803d17 100644
  #if defined(CONFIG_SPL_KERNEL_BOOT) || !defined(CONFIG_SPL_BUILD)
  static void gpt_entry_modify(struct blk_desc *dev_desc,
  			     gpt_entry *gpt_pte,
-@@ -452,7 +452,7 @@ static int part_test_efi(struct blk_desc *dev_desc)
+@@ -452,7 +452,7 @@ static int part_test_efi(struct blk_desc
  		|| (is_pmbr_valid(legacymbr) != 1)) {
  		return -1;
  	}
@@ -29,7 +27,7 @@ index d4d03de..b803d17 100644
  #if defined(CONFIG_SPL_KERNEL_BOOT) || !defined(CONFIG_SPL_BUILD)
  	gpt_entry *h_gpt_pte = NULL;
  	gpt_header *h_gpt_head = NULL;
-@@ -1084,7 +1084,7 @@ static int is_pmbr_valid(legacy_mbr * mbr)
+@@ -1084,7 +1084,7 @@ static int is_pmbr_valid(legacy_mbr * mb
  {
  	int i = 0;
  
@@ -38,6 +36,3 @@ index d4d03de..b803d17 100644
  	/*
  	 * In sd-update card, we use RKPARM partition in bootloader to load
  	 * firmware, and use MS-DOS partition in recovery to update system.
--- 
-2.31.0
-

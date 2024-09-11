@@ -8,11 +8,9 @@ Subject: [PATCH] fix source cmd bug introduced by rk
  cmd/source.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/cmd/source.c b/cmd/source.c
-index 6b1c8b7..cf820c0 100644
 --- a/cmd/source.c
 +++ b/cmd/source.c
-@@ -87,7 +87,7 @@ source (ulong addr, const char *fit_uname)
+@@ -87,7 +87,7 @@ source (ulong addr, const char *fit_unam
  		 * past the zero-terminated sequence of image lengths to get
  		 * to the actual image data
  		 */
@@ -21,6 +19,3 @@ index 6b1c8b7..cf820c0 100644
  		break;
  #endif
  #if defined(CONFIG_FIT)
--- 
-2.31.0
-

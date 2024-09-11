@@ -7,11 +7,9 @@ Subject: [PATCH] supports legacy image
  include/configs/rockchip-common.h | 2 ++
  1 file changed, 2 insertions(+)
 
-diff --git a/include/configs/rockchip-common.h b/include/configs/rockchip-common.h
-index c35b7db..b695a7d 100644
 --- a/include/configs/rockchip-common.h
 +++ b/include/configs/rockchip-common.h
-@@ -179,6 +179,8 @@
+@@ -180,6 +180,8 @@
  	"run distro_bootcmd;"
  #endif
  
@@ -20,6 +18,3 @@ index c35b7db..b695a7d 100644
  #endif /* CONFIG_SPL_BUILD */
  
  #define CONFIG_DISPLAY_BOARDINFO_LATE
--- 
-2.31.0
-

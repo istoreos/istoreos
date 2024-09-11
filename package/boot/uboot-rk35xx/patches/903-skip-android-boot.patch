@@ -7,11 +7,9 @@ Subject: [PATCH] skip android boot when cmd disabled
  include/configs/rockchip-common.h | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/include/configs/rockchip-common.h b/include/configs/rockchip-common.h
-index 002dcd6..c35b7db 100644
 --- a/include/configs/rockchip-common.h
 +++ b/include/configs/rockchip-common.h
-@@ -168,12 +168,15 @@
+@@ -170,12 +170,15 @@
  #elif defined(CONFIG_FIT_SIGNATURE)
  #define RKIMG_BOOTCOMMAND			\
  	"boot_fit;"
@@ -27,7 +25,4 @@ index 002dcd6..c35b7db 100644
 +	"run distro_bootcmd;"
  #endif
  
- #endif /* CONFIG_SPL_BUILD */
--- 
-2.31.0
-
+ #define CONFIG_IMAGE_FORMAT_LEGACY /* enable also legacy image format */

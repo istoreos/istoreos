@@ -7,8 +7,6 @@ Subject: [PATCH] rk3308: tftp speed
  include/configs/evb_rk3308.h | 11 +++++++++++
  1 file changed, 11 insertions(+)
 
-diff --git a/include/configs/evb_rk3308.h b/include/configs/evb_rk3308.h
-index 5e87e59..a58db31 100644
 --- a/include/configs/evb_rk3308.h
 +++ b/include/configs/evb_rk3308.h
 @@ -22,4 +22,15 @@
@@ -27,6 +25,3 @@ index 5e87e59..a58db31 100644
 +#define CONFIG_TFTP_BLOCKSIZE		1468
 +
  #endif
--- 
-2.31.0
-

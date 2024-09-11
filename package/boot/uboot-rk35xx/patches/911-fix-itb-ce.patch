@@ -7,11 +7,9 @@ Subject: [PATCH] fix itb ce
  Makefile | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
-diff --git a/Makefile b/Makefile
-index a336c05..d015093 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -1014,7 +1014,7 @@ U_BOOT_ITS = $(subst ",,$(CONFIG_SPL_FIT_SOURCE))
+@@ -1021,7 +1021,7 @@ U_BOOT_ITS = $(subst ",,$(CONFIG_SPL_FIT
  else
  ifneq ($(CONFIG_SPL_FIT_GENERATOR),"")
  U_BOOT_ITS := u-boot.its
@@ -20,7 +18,7 @@ index a336c05..d015093 100644
  	$(srctree)/$(CONFIG_SPL_FIT_GENERATOR) \
  	$(patsubst %,arch/$(ARCH)/dts/%.dtb,$(subst ",,$(CONFIG_OF_LIST))) > $@
  endif
-@@ -1052,7 +1052,7 @@ u-boot-dtb.img u-boot.img u-boot.kwb u-boot.pbl u-boot-ivt.img: \
+@@ -1059,7 +1059,7 @@ u-boot-dtb.img u-boot.img u-boot.kwb u-b
  		$(if $(CONFIG_SPL_LOAD_FIT),u-boot-nodtb.bin dts/dt.dtb,u-boot.bin) FORCE
  	$(call if_changed,mkimage)
  
@@ -29,6 +27,3 @@ index a336c05..d015093 100644
  	$(call if_changed,mkfitimage)
  
  u-boot-spl.kwb: u-boot.img spl/u-boot-spl.bin FORCE
--- 
-2.31.0
-
