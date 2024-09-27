@@ -13,7 +13,7 @@
 	model = "ROCEOS,K40PRO";
    	is_testing = "1";
     modified_time = "2024/08/02 11:02:10";
-    eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0002:21:00.0,0001:11:00.0";
+    eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0000:01:00.0,0001:11:00.0";
     kdebug = "0";
 	hwmodel_id = "K40PRO";
     r8168_led = <0x438>;
@@ -24,6 +24,13 @@
 		ethernet1 = &gmac1;
 	};
 
+	pwr-net-25g {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwr_25g_en>;
+		regulator-name = "vcc-pwr-25g";
+		regulator-always-on;
+	};
 };
 
 &gmac0 {
@@ -101,7 +108,7 @@
 
 //配置WL_REG_ON引脚
 &sdio_pwrseq {
-    status = "okay";
+    status = "disabled";
     reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
     post-power-on-delay-ms = <200>;
 };
@@ -112,7 +119,7 @@
     pinctrl-0 = <&wifi_host_wake_irq>;
     WIFI,host_wake_irq = <&gpio3 RK_PD4 GPIO_ACTIVE_HIGH>;
     wifi_chip_type = "ap6255";
-    status = "okay";
+    status = "disabled";
 };
 
 &wireless_bluetooth {
@@ -127,7 +134,7 @@
     BT,reset_gpio    = <&gpio4 RK_PC4 GPIO_ACTIVE_HIGH>;
     BT,wake_gpio     = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
     BT,wake_host_irq = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
-    status = "okay";
+    status = "disabled";
 };
 
 // wifi
@@ -144,7 +151,7 @@
     pinctrl-names = "default";
     pinctrl-0 = <&sdmmc2m0_bus4 &sdmmc2m0_cmd &sdmmc2m0_clk>;
     sd-uhs-sdr104;
-    status = "okay";
+    status = "disabled";
 };
 
 /* fix mali warning */
@@ -153,7 +160,7 @@
 };
 
 &pcie2x1 {
-    reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
+    reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
     status = "okay";
 };
 
@@ -164,7 +171,7 @@
 };
 
 &pcie3x2 {
-    reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
+    reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
     status = "okay";
 };
 
@@ -178,4 +185,12 @@
     vccio5-supply = <&vcc_3v3>;
     vccio6-supply = <&vcc_1v8>;
     vccio7-supply = <&vcc_3v3>;
+};
+
+&pinctrl {
+	pwr-25g {
+		pwr_25g_en: pwr-25g-en {
+			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
 };
