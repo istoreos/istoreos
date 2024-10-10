@@ -321,6 +321,7 @@ board_set_iface_smp_affinity() {
 	le,hes30|\
 	jp,tvbox|\
 	panther,x2|\
+	dg,nas-lite|\
 	hsa,bh2)
 		set_iface_cpumask 2 "eth0"
 		;;

@@ -108,6 +108,7 @@ rockchip_setup_macs()
 	idiskk,h1|\
 	jp,tvbox|\
 	panther,x2|\
+	dg,nas-lite|\
 	lyt,t68m|\
 	mangopi,m28k|\
 	nlnet,xgp|\
