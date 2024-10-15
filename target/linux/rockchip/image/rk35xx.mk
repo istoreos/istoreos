@@ -268,6 +268,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += idiskk_h1
 
+define Device/dg_nas-lite
+$(call Device/rk3568)
+  DEVICE_VENDOR := DG
+  DEVICE_MODEL := NAS LITE
+  DEVICE_DTS := rk3568-dg-nas-lite
+  SUPPORTED_DEVICES += dg,nas-lite
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += dg_nas-lite
+
 define Device/ynn_ynnnas
   $(call Device/rk3566)
   DEVICE_VENDOR := YingNiuNiu
