@@ -171,7 +171,7 @@
 };
 
 &pcie3x2 {
-    reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
+    reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
     status = "okay";
 };
 
