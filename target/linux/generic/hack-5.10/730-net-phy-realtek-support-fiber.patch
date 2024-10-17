@@ -1,0 +1,375 @@
+From 01769b49c825399828844ad4f34176f6d5c9ae77 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Wed, 16 Oct 2024 17:43:55 +0800
+Subject: [PATCH] net: phy: realtek: supports fiber
+
+---
+ drivers/net/phy/realtek.c | 293 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 287 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/net/phy/realtek.c b/drivers/net/phy/realtek.c
+index b4879306b..1c4b0626a 100644
+--- a/drivers/net/phy/realtek.c
++++ b/drivers/net/phy/realtek.c
+@@ -8,6 +8,7 @@
+  * Copyright (c) 2004 Freescale Semiconductor, Inc.
+  */
+ #include <linux/bitops.h>
++#include <linux/of.h>
+ #include <linux/phy.h>
+ #include <linux/module.h>
+ #include <linux/delay.h>
+@@ -62,6 +63,139 @@ MODULE_DESCRIPTION("Realtek PHY driver");
+ MODULE_AUTHOR("Johnson Leung");
+ MODULE_LICENSE("GPL");
+ 
++struct reg_t {
++	u16 id;
++	u16 reg;
++	u16 page;
++};
++
++typedef enum __reg_idx_e {
++	UTP_BMCR,
++	UTP_BMSR,
++	UTP_PHYID1,
++	UTP_PHYID2,
++	UTP_ANAR,
++	UTP_ANLPAR, // 5
++	UTP_ANER,
++	UTP_ANNPTR,
++	UTP_ANNPRR,
++	UTP_GBCR,
++	UTP_GBSR, // 10
++	UTP_RSVD1,
++	UTP_RSVD2,
++	UTP_MACR,
++	UTP_MAADR,
++	UTP_GBESR, // 15
++	UTP_RSVD3,
++	UTP_RSVD4,
++	UTP_INER,
++	UTP_RSVD5,
++	UTP_RSVD6, // 20
++	UTP_RSVD7,
++	UTP_RSVD8,
++	UTP_RSVD9,
++	UTP_PHYCR1,
++	UTP_PHYCR2, // 25
++	UTP_PHYSR,
++	UTP_RSVD10,
++	UTP_RSVD11,
++	UTP_INSR,
++	UTP_RSVD12, // 30
++	UTP_PAGSR,
++	UTP_PHYSCR,
++	UTP_LCR,
++	UTP_EEELCR,
++	UTP_FLCR, // 35
++	UTP_MIICR,
++	UTP_INTBCR,
++	FIBER_BMCR,
++	FIBER_BMSR,
++	FIBER_PHYID1, // 40
++	FIBER_PHYID2,
++	FIBER_ANAR,
++	FIBER_ANLPAR,
++	FIBER_RSVD1,
++	FIBER_RSVD2, // 45
++	FIBER_RSVD3,
++	FIBER_RSVD4,
++	FIBER_RSVD5,
++	FIBER_RSVD6,
++	FIBER_RSVD7, // 50
++	FIBER_RSVD8,
++	FIBER_RSVD9,
++	FIBER_ESR,
++	FIBER_SSR,
++} reg_idx_e; 
++
++struct reg_t reg[] = {
++	// Standard Register 0~15
++	{0,0x00,0x00},
++	{1,0x01,0x00},
++	{2,0x02,0x00},
++	{3,0x03,0x00},
++	{4,0x04,0x00},
++	{5,0x05,0x00},
++	{6,0x06,0x00},
++	{7,0x07,0x00},
++	{8,0x08,0x00},
++	{9,0x09,0x00},
++	{10,0x0a,0x00},
++	{11,0x0b,0x00},
++	{12,0x0c,0x00},
++	{13,0x0d,0x00},
++	{14,0x0e,0x00},
++	{15,0x0f,0x00},
++
++	{16,0x10,0xa42},
++	{17,0x11,0xa42},
++	{18,0x12,0xa42},
++	{19,0x13,0xa42},
++	{20,0x14,0xa42},
++	{21,0x15,0xa42},
++	{22,0x16,0xa42},
++	{23,0x17,0xa42},
++	{24,0x18,0xa43},
++	{25,0x19,0xa43},
++	{26,0x1a,0xa43},
++	{27,0x1b,0xa43},
++	{28,0x1c,0xa43},
++	{29,0x1d,0xa43},
++	{30,0x1e,0xa43},
++	{31,0x1f,0xa43},
++
++	{32,0x14,0xa46},
++	{33,0x10,0xd04},
++	{34,0x11,0xd04},
++	{35,0x12,0xd04},
++	{36,0x15,0xd08},
++	{37,0x16,0xd40},
++
++	{38,0x10,0xdc0},
++	{39,0x11,0xdc0},
++	{40,0x12,0xdc0},
++	{41,0x13,0xdc0},
++	{42,0x14,0xdc0},
++	{43,0x15,0xdc0},
++	{44,0x16,0xdc0},
++	{45,0x17,0xdc0},
++	{46,0x18,0xdc1},
++	{47,0x19,0xdc1},
++	{48,0x1a,0xdc1},
++	{49,0x1b,0xdc1},
++	{50,0x1c,0xdc1},
++	{51,0x1d,0xdc1},
++	{52,0x1e,0xdc1},
++	{53,0x1f,0xdc1},
++	{54,0x10,0xdf0},	
++
++};
++
++struct rtl821x_priv {
++	u8  fiber_enabled;
++	u8  utp_link;
++	u8  fiber_link;
++};
++
+ static int rtl821x_read_page(struct phy_device *phydev)
+ {
+ 	return __phy_read(phydev, RTL821x_PAGE_SELECT);
+@@ -72,6 +206,25 @@ static int rtl821x_write_page(struct phy_device *phydev, int page)
+ 	return __phy_write(phydev, RTL821x_PAGE_SELECT, page);
+ }
+ 
++static int rtl821x_probe(struct phy_device *phydev)
++{
++	struct device *dev = &phydev->mdio.dev;
++	struct rtl821x_priv *priv;
++
++	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
++	if (!priv)
++		return -ENOMEM;
++
++	if (of_property_read_bool(dev->of_node, "realtek,fiber")) {
++		priv->fiber_enabled = 1;
++		phydev_info(phydev, "Enable RTL8211FS Fiber Mode by DT.\n");
++	}
++
++	phydev->priv = priv;
++
++	return 0;
++}
++
+ static int rtl8201_ack_interrupt(struct phy_device *phydev)
+ {
+ 	int err;
+@@ -178,13 +331,35 @@ static int rtl8211c_config_init(struct phy_device *phydev)
+ 			    CTL1000_ENABLE_MASTER | CTL1000_AS_MASTER);
+ }
+ 
++static int rtl8211f_led_init(struct phy_device *phydev)
++{
++	int oldpage;
++	/*switch to extension page 0xd04*/
++	oldpage = phy_select_page(phydev, 0x0d04);
++
++	if (oldpage >= 0) {
++		// disable ieee led config
++		__phy_write(phydev, reg[UTP_EEELCR].reg, 0x00);
++		// __phy_write(phydev, reg[UTP_FLCR].reg, 0xd3e9);
++		// __phy_write(phydev, reg[UTP_LCR].reg, 0x8910);
++		__phy_write(phydev, reg[UTP_LCR].reg, 0x616b);
++	}
++	phy_restore_page(phydev, oldpage, 0);
++
++	return 0;
++}
++
+ static int rtl8211f_config_init(struct phy_device *phydev)
+ {
+ 	struct device *dev = &phydev->mdio.dev;
++	struct rtl821x_priv *priv = phydev->priv;
+ 	u16 val_txdly, val_rxdly;
+ 	u16 val;
+ 	int ret;
+ 
++	if (priv->fiber_enabled)
++		rtl8211f_led_init(phydev);
++
+ 	val = RTL8211F_ALDPS_ENABLE | RTL8211F_ALDPS_PLL_OFF | RTL8211F_ALDPS_XTAL_OFF;
+ 	phy_modify_paged_changed(phydev, 0xa43, RTL8211F_PHYCR1, val, val);
+ 
+@@ -248,17 +423,45 @@ static int rtl8211f_config_init(struct phy_device *phydev)
+ 
+ static int rtl821x_resume(struct phy_device *phydev)
+ {
+-	int ret;
++	int ret, value;
++	struct rtl821x_priv *priv = phydev->priv;
+ 
+-	ret = genphy_resume(phydev);
+-	if (ret < 0)
+-		return ret;
++	if (!priv->fiber_enabled || priv->utp_link) {
++		ret = genphy_resume(phydev);
++		if (ret < 0)
++			return ret;
++	}
++
++	if (priv->fiber_enabled && priv->fiber_link) {
++		value = phy_read_paged(phydev, reg[FIBER_BMCR].page, reg[FIBER_BMCR].reg);
++		value &= ~BMCR_PDOWN;
++		phy_write_paged(phydev, reg[FIBER_BMCR].page, reg[FIBER_BMCR].reg, value);
++	}
+ 
+ 	msleep(20);
+ 
+ 	return 0;
+ }
+ 
++static int rtl8211f_suspend(struct phy_device *phydev)
++{
++	int ret,value;
++	struct rtl821x_priv *priv = phydev->priv;
++
++	if (!priv->fiber_enabled || priv->utp_link) {
++		ret = genphy_suspend(phydev);
++		if (ret < 0)
++			return ret;
++	}
++
++	if (priv->fiber_enabled && priv->fiber_link) {
++		value = phy_read_paged(phydev, reg[FIBER_BMCR].page, reg[FIBER_BMCR].reg);
++		value |= BMCR_PDOWN;
++		phy_write_paged(phydev, reg[FIBER_BMCR].page, reg[FIBER_BMCR].reg, value);
++	}
++	return 0;
++}
++
+ static int rtl8211e_config_init(struct phy_device *phydev)
+ {
+ 	int ret = 0, oldpage;
+@@ -335,6 +538,82 @@ static int rtl8366rb_config_init(struct phy_device *phydev)
+ 	return ret;
+ }
+ 
++static int rtl8211f_update_link(struct phy_device *phydev)
++{
++	int val;
++	int led_cfg;
++	struct rtl821x_priv *priv = phydev->priv;
++
++	priv->fiber_link = 0;
++	priv->utp_link = 0;
++
++	//led cfg
++	led_cfg = phy_read_paged(phydev,  reg[UTP_FLCR].page, reg[UTP_FLCR].reg);
++	//serdes SSR
++	val = phy_read_paged(phydev,  reg[FIBER_SSR].page, reg[FIBER_SSR].reg);
++	if (val & BIT(12)) {
++		priv->fiber_link = 1;
++		phydev->port = PORT_FIBRE;
++		led_cfg &= ~(0x03f << 10);
++	 	led_cfg |= BIT(12)|BIT(15);
++	} else {
++		val = phy_read_paged(phydev, reg[UTP_PHYSR].page, reg[UTP_PHYSR].reg);
++		if(val & BIT(2)){
++			priv->utp_link = 1;
++			phydev->port = PORT_TP;
++
++			//switch led to utp
++			led_cfg &= ~(0x03f << 10);
++			led_cfg |= BIT(13);
++		}
++	}
++
++	if (priv->fiber_link || priv->utp_link) {
++		phy_write_paged(phydev, reg[UTP_FLCR].page, reg[UTP_FLCR].reg, led_cfg);
++	}
++	return 0;
++}
++
++static int rtl8211f_fiber_read_status(struct phy_device *phydev)
++{
++	int bmcr;
++
++	bmcr = phy_read_paged(phydev,  reg[FIBER_BMCR].page, reg[FIBER_BMCR].reg);
++
++	if (bmcr < 0)
++		return bmcr;
++
++	if (bmcr & BMCR_FULLDPLX)
++		phydev->duplex = DUPLEX_FULL;
++	else
++		phydev->duplex = DUPLEX_HALF;
++
++	if (bmcr & BMCR_SPEED1000)
++		phydev->speed = SPEED_1000;
++	else if (bmcr & BMCR_SPEED100)
++		phydev->speed = SPEED_100;
++	else
++		phydev->speed = SPEED_10;
++
++	phydev->pause = 0;
++	phydev->asym_pause = 0;
++
++	return 0;
++}
++
++static int rtl8211f_read_status(struct phy_device *phydev)
++{
++	struct rtl821x_priv *priv = phydev->priv;
++	if (priv->fiber_enabled) {
++		rtl8211f_update_link(phydev);
++		if (priv->fiber_link) {
++			phydev->link = 1;
++			return rtl8211f_fiber_read_status(phydev);
++		}
++	}
++	return genphy_read_status(phydev);
++}
++
+ /* get actual speed to cover the downshift case */
+ static int rtlgen_get_speed(struct phy_device *phydev)
+ {
+@@ -632,11 +911,13 @@ static struct phy_driver realtek_drvs[] = {
+ 		.write_page	= rtl821x_write_page,
+ 	}, {
+ 		PHY_ID_MATCH_EXACT(0x001cc916),
+-		.name		= "RTL8211F Gigabit Ethernet",
++		.name		= "RTL8211F(S) Gigabit Ethernet",
++		.probe		= rtl821x_probe,
+ 		.config_init	= &rtl8211f_config_init,
+ 		.ack_interrupt	= &rtl8211f_ack_interrupt,
++		.read_status	= &rtl8211f_read_status,
+ 		.config_intr	= &rtl8211f_config_intr,
+-		.suspend	= genphy_suspend,
++		.suspend	= rtl8211f_suspend,
+ 		.resume		= rtl821x_resume,
+ 		.read_page	= rtl821x_read_page,
+ 		.write_page	= rtl821x_write_page,
+-- 
+2.41.0
+
