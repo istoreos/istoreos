@@ -116,6 +116,7 @@ board_fixup_iface_name() {
 		fi
 		;;
 	roceos,k40pro|\
+	roceos,k50s|\
 	hinlink,opc-h68k)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "fe010000.ethernet" ]]; then
@@ -205,6 +206,7 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	roceos,k40pro|\
+	roceos,k50s|\
 	lyt,t68m|\
 	fastrhino,r68s|\
 	hinlink,opc-h68k)

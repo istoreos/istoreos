@@ -38,6 +38,9 @@ rockchip_setup_interfaces()
 	hinlink,opc-h68k)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
+	roceos,k50s)
+		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3 eth4' 'eth0'
+		;;
 	friendlyelec,nanopi-r6s)
 		ucidef_set_interfaces_lan_wan 'eth2 eth0' 'eth1'
 		;;
@@ -116,6 +119,7 @@ rockchip_setup_macs()
 	radxa,e52c|\
 	radxa,e54c|\
 	roceos,k40pro|\
+	roceos,k50s|\
 	fastrhino,r66s|\
 	fastrhino,r68s)
 		wan_mac=$(generate_mac_from_mmc)

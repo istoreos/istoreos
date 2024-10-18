@@ -292,6 +292,33 @@ endef
 $(eval $(call KernelPackage,iscsi-initiator))
 
 
+define KernelPackage/libfc
+  TITLE:=LibFC module
+  DEPENDS:=+kmod-scsi-core
+  KCONFIG:= \
+	CONFIG_LIBFC \
+	CONFIG_SCSI_FC_ATTRS=y
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/drivers/scsi/libfc/libfc.ko
+endef
+
+$(eval $(call KernelPackage,libfc))
+
+
+define KernelPackage/libfcoe
+  TITLE:=LibFCoE module
+  DEPENDS:=+kmod-libfc
+  KCONFIG:= \
+	CONFIG_LIBFCOE
+  HIDDEN:=1
+  FILES:= \
+	$(LINUX_DIR)/drivers/scsi/fcoe/libfcoe.ko
+endef
+
+$(eval $(call KernelPackage,libfcoe))
+
+
 define KernelPackage/md-mod
   SUBMENU:=$(BLOCK_MENU)
   TITLE:=MD RAID
@@ -544,6 +571,20 @@ define KernelPackage/nvme/description
 endef
 
 $(eval $(call KernelPackage,nvme))
+
+
+define KernelPackage/qedf
+  SUBMENU:=$(BLOCK_MENU)
+  TITLE:=QLogic QEDF 25/40/100Gb FCoE Initiator Driver Support
+  DEPENDS:=@PCI_SUPPORT +kmod-qed +kmod-libfcoe
+  KCONFIG:= \
+	CONFIG_QEDF
+  FILES:= \
+	$(LINUX_DIR)/drivers/scsi/qedf/qedf.ko
+  AUTOLOAD:=$(call AutoProbe,qedf)
+endef
+
+$(eval $(call KernelPackage,qedf))
 
 
 define KernelPackage/scsi-core
