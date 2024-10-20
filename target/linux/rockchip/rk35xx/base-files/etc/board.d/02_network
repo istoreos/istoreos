@@ -14,6 +14,7 @@ rockchip_setup_interfaces()
 	armsom,sige1-v1|\
 	armsom,sige7-v1|\
 	easepi,ars4|\
+	friendlyelec,nanopi-r3s|\
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r6c|\
 	fastrhino,r66s|\
@@ -93,6 +94,7 @@ rockchip_setup_macs()
 	armsom,sige7-v1|\
 	easepi,ars4|\
 	firefly,rk3568-roc-pc|\
+	friendlyelec,nanopi-r3s|\
 	friendlyelec,nanopi-r5s|\
 	friendlyelec,nanopi-r5s-c1|\
 	friendlyelec,nanopi-r5c|\

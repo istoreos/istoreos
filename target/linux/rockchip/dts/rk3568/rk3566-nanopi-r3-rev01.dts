@@ -1,0 +1,353 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 FriendlyElec Computer Tech. Co., Ltd.
+ * (http://www.friendlyarm.com)
+ *
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3566.dtsi"
+#include "rk3568-nanopi5-common.dtsi"
+
+/ {
+	model = "FriendlyElec NanoPi R3S";
+	compatible = "friendlyelec,nanopi-r3s", "rockchip,rk3568";
+
+	aliases {
+		ethernet0 = &gmac1;
+		ethernet1 = &r8169;
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
+	};
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key1_pin>;
+
+		button@1 {
+			debounce-interval = <50>;
+			gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_LOW>;
+			label = "K1";
+			linux,code = <BTN_1>;
+			wakeup-source;
+		};
+	};
+
+	gpio_leds: gpio-leds {
+		compatible = "gpio-leds";
+
+		sys_led: led-0 {
+			gpios = <&gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
+			label = "sys_led";
+			linux,default-trigger = "heartbeat";
+			pinctrl-names = "default";
+			pinctrl-0 = <&sys_led_pin>;
+		};
+
+		wan_led: led-1 {
+			gpios = <&gpio3 RK_PC3 GPIO_ACTIVE_HIGH>;
+			label = "wan_led";
+			pinctrl-names = "default";
+			pinctrl-0 = <&wan_led_pin>;
+		};
+
+		lan_led: led-2 {
+			gpios = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
+			label = "lan_led";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lan_led_pin>;
+		};
+	};
+
+	pwm_backlight: pwm-backlight {
+		status = "disabled";
+		compatible = "pwm-backlight";
+	};
+};
+
+&combphy1_usq {
+	status = "okay";
+};
+
+&combphy2_psq {
+	status = "okay";
+};
+
+&dfi {
+	status = "okay";
+};
+
+&dmc {
+	center-supply = <&vdd_logic>;
+	status = "okay";
+};
+
+&gmac1 {
+	phy-mode = "rgmii";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 15000 50000>;
+
+	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&cru CLK_MAC1_2TOP>;
+	assigned-clock-rates = <0>, <125000000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac1m0_miim
+		     &gmac1m0_tx_bus2_level3
+		     &gmac1m0_rx_bus2
+		     &gmac1m0_rgmii_clk_level2
+		     &gmac1m0_rgmii_bus_level3>;
+
+	tx_delay = <0x3c>;
+	rx_delay = <0x2f>;
+
+	phy-handle = <&rgmii_phy1>;
+	status = "okay";
+};
+
+&mach {
+	hwrev = <1>;
+	model = "NanoPi R3S";
+	machine = "NANOPI-R3";
+};
+
+&mdio1 {
+	rgmii_phy1: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <RK_PC3 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&gmac_int>;
+		realtek,ledsel = <0xae00>;
+	};
+};
+
+&i2c1 {
+	status = "okay";
+
+	hym8563: hym8563@51 {
+		compatible = "haoyu,hym8563";
+		reg = <0x51>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&rtc_int>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PD3 IRQ_TYPE_LEVEL_LOW>;
+		wakeup-source;
+	};
+};
+
+dsi1_i2c: &i2c2 {
+	clock-frequency = <200000>;
+	status = "disabled";
+};
+
+&i2c5 {
+	status = "disabled";
+};
+
+&pcie2x1 {
+	num-viewport = <4>;
+	reset-gpios = <&gpio4 RK_PC6 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	pcie@0,0 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		r8169: pcie@1,0 {
+			reg = <0x000000 0 0 0 0>;
+			local-mac-address = [ 00 00 00 00 00 00 ];
+			realtek,ledsel = <0x870>;
+		};
+	};
+};
+
+&pinctrl {
+	gpio-key {
+		key1_pin: key1-pin {
+			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	gpio-leds {
+		sys_led_pin: sys-led-pin {
+			rockchip,pins =
+				<0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		wan_led_pin: wan-led-pin {
+			rockchip,pins =
+				<3 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		lan_led_pin: lan-led-pin {
+			rockchip,pins =
+				<3 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	gmac {
+		gmac_int: gmac-int {
+			rockchip,pins =
+				<4 RK_PC3 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	lcd {
+		/omit-if-no-ref/
+		lcd_rst1_gpio: lcd-rst1-gpio {
+			rockchip,pins = <0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		/omit-if-no-ref/
+		touch_dsi1_gpio: touch-dsi1-gpio {
+			rockchip,pins =
+				<0 RK_PC6 RK_FUNC_GPIO &pcfg_pull_up>,
+				<0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	rtc {
+		rtc_int: rtc-int {
+			rockchip,pins =
+				<0 RK_PD3 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+};
+
+&pmu_io_domains {
+	status = "okay";
+	pmuio2-supply = <&vcc3v3_pmu>;
+	vccio2-supply = <&vcc_1v8>;
+	vccio3-supply = <&vccio_sd>;
+	vccio4-supply = <&vcc_3v3>;
+	vccio5-supply = <&vcc_1v8>;
+	vccio6-supply = <&vcc_3v3>;
+	vccio7-supply = <&vcc_3v3>;
+};
+
+&pwm0 {
+	status = "disabled";
+	/* connected with sys_led */
+};
+
+dsi1_pwm: &pwm4 {
+	status = "disabled";
+};
+
+&sata1 {
+	status = "disabled";
+};
+
+&sata2 {
+	status = "disabled";
+};
+
+&sfc {
+	status = "disabled";
+};
+
+&u2phy0_host {
+	phy-supply = <&vcc5v0_host>;
+	status = "okay";
+};
+
+&u2phy0_otg {
+	/delete-property/ phy-supply;
+	status = "okay";
+};
+
+&u2phy1_host {
+	status = "disabled";
+};
+
+&u2phy1_otg {
+	status = "disabled";
+};
+
+&usb2phy0 {
+	status = "okay";
+};
+
+&usb2phy1 {
+	status = "disabled";
+};
+
+&usb_host0_ehci {
+	status = "disabled";
+};
+
+&usb_host0_ohci {
+	status = "disabled";
+};
+
+&usb_host1_ehci {
+	status = "disabled";
+};
+
+&usb_host1_ohci {
+	status = "disabled";
+};
+
+&usbdrd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&usb2phy0>;
+	status = "okay";
+};
+
+&usbdrd30 {
+	status = "okay";
+};
+
+&usbhost_dwc3 {
+	status = "okay";
+};
+
+&usbhost30 {
+	status = "okay";
+};
+
+&vop {
+	disable-win-move;
+};
+
+&vp0 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER0>;
+	/delete-property/ cursor-win-id;
+};
+
+&vp1 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_ESMART0 | 1 << ROCKCHIP_VOP2_SMART0)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+	cursor-win-id = <ROCKCHIP_VOP2_SMART0>;
+};
+
+&vp2 {
+	/delete-property/ rockchip,plane-mask;
+	/delete-property/ rockchip,primary-plane;
+	status = "disabled";
+};
+
+&route_hdmi {
+	status = "okay";
+};
+
+&hdmi_in_vp0 {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
