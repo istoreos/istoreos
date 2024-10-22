@@ -153,6 +153,14 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += easepi_ars4
 
+define Device/friendlyelec_nanopi-r3s
+$(call Device/rk3566)
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R3S
+  DEVICE_PACKAGES := kmod-r8168
+endef
+TARGET_DEVICES += friendlyelec_nanopi-r3s
+
 define Device/friendlyarm_nanopi-r5s
 $(call Device/rk3568)
 $(call Device/rk3568_combined_friendlyelec)
