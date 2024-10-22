@@ -157,7 +157,6 @@ define Device/friendlyelec_nanopi-r3s
 $(call Device/rk3566)
   DEVICE_VENDOR := FriendlyARM
   DEVICE_MODEL := NanoPi R3S
-  DEVICE_DTS := rk3566-nanopi-r3-rev01
   DEVICE_PACKAGES := kmod-r8168
 endef
 TARGET_DEVICES += friendlyelec_nanopi-r3s

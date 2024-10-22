@@ -228,7 +228,6 @@ board_set_iface_smp_affinity() {
 	yyy,h1|\
 	armsom,sige1-v1|\
 	easepi,ars4|\
-	friendlyelec,nanopi-r3s|\
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s|\
 	hinlink,hnas|\
@@ -309,6 +308,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 4 "eth4" "eth4-16"
 		fi
 		;;
+	friendlyelec,nanopi-r3s|\
 	radxa,e20c|\
 	mangopi,m28k|\
 	hlink,h28k)
