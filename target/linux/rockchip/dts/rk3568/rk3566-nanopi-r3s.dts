@@ -32,35 +32,33 @@
 		button@1 {
 			debounce-interval = <50>;
 			gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_LOW>;
-			label = "K1";
-			linux,code = <BTN_1>;
+			label = "USER";
+			linux,code = <KEY_RESTART>;
 			wakeup-source;
 		};
 	};
 
 	gpio_leds: gpio-leds {
 		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sys_led_pin>,
+			<&wan_led_pin>,
+			<&lan_led_pin>;
 
 		sys_led: led-0 {
 			gpios = <&gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
 			label = "sys_led";
 			linux,default-trigger = "heartbeat";
-			pinctrl-names = "default";
-			pinctrl-0 = <&sys_led_pin>;
 		};
 
 		wan_led: led-1 {
 			gpios = <&gpio3 RK_PC3 GPIO_ACTIVE_HIGH>;
 			label = "wan_led";
-			pinctrl-names = "default";
-			pinctrl-0 = <&wan_led_pin>;
 		};
 
 		lan_led: led-2 {
 			gpios = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
 			label = "lan_led";
-			pinctrl-names = "default";
-			pinctrl-0 = <&lan_led_pin>;
 		};
 	};
 
@@ -265,8 +263,11 @@ dsi1_pwm: &pwm4 {
 
 &u2phy0_otg {
 	/delete-property/ phy-supply;
+	/delete-property/ vbus-supply;
 	status = "okay";
 };
+
+/delete-node/ &vcc5v0_otg;
 
 &u2phy1_host {
 	status = "disabled";
