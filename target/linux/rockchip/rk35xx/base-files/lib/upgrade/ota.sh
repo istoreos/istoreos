@@ -15,6 +15,9 @@ export_ota_url() {
 	fastrhino,r68s)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/r6xs"
 		;;
+	friendlyelec,nanopi-r3s)
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/r3s"
+		;;
 	friendlyelec,nanopi-r5c|\
 	friendlyelec,nanopi-r5s-c1|\
 	friendlyelec,nanopi-r5s)
