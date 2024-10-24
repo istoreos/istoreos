@@ -45,6 +45,19 @@ endef
 $(eval $(call KernelPackage,alx))
 
 
+define KernelPackage/atlantic
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=aQuantia AQtion(tm) Ethernet card support
+  DEPENDS:=@PCI_SUPPORT @TARGET_x86_64 +kmod-ptp +kmod-macsec
+  KCONFIG:= \
+	CONFIG_AQTION
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/aquantia/atlantic/atlantic.ko
+  AUTOLOAD:=$(call AutoProbe,atlantic)
+endef
+
+$(eval $(call KernelPackage,atlantic))
+
+
 define KernelPackage/atl2
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Atheros L2 Fast Ethernet support
