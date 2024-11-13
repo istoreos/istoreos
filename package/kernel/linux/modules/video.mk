@@ -736,6 +736,23 @@ endef
 
 $(eval $(call KernelPackage,drm-radeon))
 
+define KernelPackage/drm-udl
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=DisplayLink
+  DEPENDS:=+kmod-drm +kmod-backlight +kmod-drm-kms-helper +kmod-drm-shmem-helper
+  KCONFIG:=CONFIG_DRM_UDL
+  FILES:=$(LINUX_DIR)/drivers/gpu/drm/udl/udl.ko
+  AUTOLOAD:=$(call AutoProbe,udl)
+  $(call AddDepends/usb)
+endef
+
+define KernelPackage/drm-udl/description
+  This is a KMS driver for the USB displaylink video adapters.
+endef
+
+$(eval $(call KernelPackage,drm-udl))
+
+
 #
 # Video Capture
 #
