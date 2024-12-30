@@ -12,6 +12,7 @@ BOOTFS="$2"
 ROOTFS="$3"
 BOOTFSSIZE="$4"
 ROOTFSSIZE="$5"
+USERDATASIZE="2048"
 
 align=4096
 head=4
@@ -19,10 +20,11 @@ kernel_type=c
 rootfs_type=83
 sect=63
 
-set $(ptgen -o $OUTPUT -h $head -s $sect -l $align -t $kernel_type -p ${BOOTFSSIZE}M -t $rootfs_type -p ${ROOTFSSIZE}M ${SIGNATURE:+-S 0x$SIGNATURE})
+set $(ptgen -o $OUTPUT -h $head -s $sect -l $align -t $kernel_type -p ${BOOTFSSIZE}M -t $rootfs_type -p ${ROOTFSSIZE}M -p ${USERDATASIZE}M ${SIGNATURE:+-S 0x$SIGNATURE})
 
 BOOTOFFSET="$(($1 / 512))"
 ROOTFSOFFSET="$(($3 / 512))"
+USERDATAOFFSET="$(($5 / 512))"
 
 # In most cases, the rootfs image size is smaller than the total space
 # available in the rootfs. OpenWrt will use the remaining space for storing
@@ -55,3 +57,5 @@ dd bs=512 if="$ROOTFS" of="$OUTPUT" seek="$ROOTFSOFFSET" conv=notrunc,sync
 if [ "$ROOTFSPADDINGSIZE" -gt 0 ]; then
   dd bs=512 if=/dev/zero of="$OUTPUT" seek="$ROOTFSPADDINGOFFSET" count="$ROOTFSPADDINGSIZE" conv=notrunc
 fi
+
+echo "RESET000" | dd of="$OUTPUT" bs=512 seek="$USERDATAOFFSET" conv=notrunc,sync count=1
