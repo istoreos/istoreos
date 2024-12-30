@@ -1,3 +1,12 @@
+iStoreOS 是入门级的路由系统，也是入门级的 NAS 系统，
+基于原版 OpenWRT，在 ARS2 上经过长期迭代，最终开放适配到多个硬件平台
+
+更多信息请参阅 https://github.com/istoreos
+
+
+以下是 OpenWRT 原始的 README
+--------
+
 ![OpenWrt logo](include/logo.png)
 
 OpenWrt Project is a Linux operating system targeting embedded devices. Instead
