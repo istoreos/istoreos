@@ -8,5 +8,5 @@ include $(INCLUDE_DIR)/default-packages.mk
 
 export TARGET_BUILD=1
 
-prereq clean download prepare compile install oldconfig menuconfig nconfig xconfig update refresh dtb: FORCE
+prereq clean download prepare compile install oldconfig menuconfig nconfig xconfig update refresh dtb image: FORCE
 	@+$(NO_TRACE_MAKE) -C $(firstword $(wildcard feeds/$(BOARD) $(BOARD))) $@
