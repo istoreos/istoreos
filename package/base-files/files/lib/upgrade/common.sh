@@ -67,6 +67,7 @@ _v() {
 
 v() {
 	_v "$(date) upgrade: $@"
+	[ "$SAVE_LOG" = "1" ] && echo "$@" >>/overlay/upgrade.log
 	logger -p info -t upgrade "$@"
 }
 
@@ -168,6 +169,17 @@ part_magic_fat() {
 export_bootdevice() {
 	local cmdline uuid blockdev uevent line class
 	local MAJOR MINOR DEVNAME DEVTYPE DISKSEQ PARTN
+	if [ -f /tmp/.bootdisk ]; then
+		while read line; do
+			export -n "$line"
+		done < /tmp/.bootdisk
+		export BOOTDEV_DISKSEQ=$DISKSEQ
+		export BOOTDEV_MAJOR=$MAJOR
+		export BOOTDEV_MINOR=$MINOR
+		export BOOTDEV_DEVNAME=$DEVNAME
+		return 0
+	fi
+
 	local rootpart="$(cmdline_get_var root)"
 
 	case "$rootpart" in
@@ -217,6 +229,9 @@ export_bootdevice() {
 			export -n "$line"
 		done < "$uevent"
 		export BOOTDEV_DISKSEQ=$DISKSEQ
+		export BOOTDEV_MAJOR=$MAJOR
+		export BOOTDEV_MINOR=$MINOR
+		export BOOTDEV_DEVNAME=$DEVNAME
 		return 0
 	fi
 
@@ -224,20 +239,27 @@ export_bootdevice() {
 }
 
 export_partdevice() {
-	local var="$1" partn="$2"
-	local uevent line MAJOR MINOR DEVNAME DEVTYPE DISKSEQ PARTN
-
-	for uevent in /sys/class/block/*/uevent; do
-		while read line; do
-			export -n "$line"
-		done < "$uevent"
-		if [ "$BOOTDEV_DISKSEQ" = "$DISKSEQ" -a -b "/dev/$DEVNAME" ]; then
-			if [ "$PARTN" = "$partn" -a "$DEVTYPE" = "partition" ] || [ "$partn" = "0" -a "$DEVTYPE" = "disk" ]; then
-				export "$var=$DEVNAME"
+	local var="$1" offset="$2" part
+	offset=$(( ${offset} ))
+	if [[ "$offset" = 0 ]]; then
+		export "$var=$BOOTDEV_DEVNAME"
+		return 0
+	else
+		part="$BOOTDEV_DEVNAME"
+		echo "$part" | grep -q '^.*[0-9]$' && part="${part}p"
+		part="${part}${offset}"
+		if [ -b "/dev/$part" ]; then
+			export "$var=$part"
+			return 0
+		else
+			# ventoy
+			local devpath="`readlink /sys/dev/block/$BOOTDEV_MAJOR:$(($BOOTDEV_MINOR + $offset))`"
+			[ -n "$devpath" ] && {
+				export "$var=${devpath##*/}"
 				return 0
-			fi
+			}
 		fi
-	done
+	fi
 
 	return 1
 }

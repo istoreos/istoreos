@@ -8,6 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=fstools
+PKG_FLAGS:=hold
 PKG_RELEASE:=1
 
 PKG_SOURCE_PROTO:=git
@@ -95,10 +96,8 @@ endef
 define Package/fstools/install
 	$(INSTALL_DIR) $(1)/sbin $(1)/lib
 
-	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/{mount_root,factoryreset} $(1)/sbin/
+	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/usr/sbin/mount_root $(1)/sbin/
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/libfstools.so $(1)/lib/
-	$(LN) factoryreset $(1)/sbin/jffs2mark
-	$(LN) factoryreset $(1)/sbin/jffs2reset
 endef
 
 define Package/snapshot-tool/install

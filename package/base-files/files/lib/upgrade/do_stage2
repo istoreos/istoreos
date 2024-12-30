@@ -16,6 +16,12 @@ if [ -n "$UPGRADE_BACKUP" ] && type 'platform_copy_config' >/dev/null 2>/dev/nul
 fi
 
 v "Upgrade completed"
+
+grep /overlay /proc/mounts > /dev/null && {
+	/bin/mount -o noatime,remount,ro /overlay
+	/usr/bin/umount -R -d -l /overlay 2>/dev/null || /bin/umount -l /overlay
+}
+
 sleep 1
 
 v "Rebooting system..."
