@@ -18,17 +18,21 @@ include /lib/upgrade
 
 supivot() { # <new_root> <old_root>
 	/bin/mount | grep "on $1 type" 2>&- 1>&- || /bin/mount -o bind $1 $1
-	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay && \
-	/bin/mount -o noatime,move /proc $1/proc && \
+	mkdir -p $1$2 $1/proc $1/sys $1/dev $1/tmp $1/overlay $1/ext_overlay && \
+	/bin/mount -o noatime,rbind /proc $1/proc && \
 	pivot_root $1 $1$2 || {
 		/bin/umount -l $1 $1
 		return 1
 	}
 
-	/bin/mount -o noatime,move $2/sys /sys
-	/bin/mount -o noatime,move $2/dev /dev
-	/bin/mount -o noatime,move $2/tmp /tmp
+	/bin/mount -o noatime,move $2/sys /sys || /bin/mount -o noatime,rbind $2/sys /sys
+	/bin/mount -o noatime,move $2/dev /dev || /bin/mount -o noatime,rbind $2/dev /dev
+	/bin/mount -o noatime,move $2/tmp /tmp || /bin/mount -o noatime,bind $2/tmp /tmp
 	/bin/mount -o noatime,move $2/overlay /overlay 2>&-
+	/bin/mount -o noatime,move $2/ext_overlay /ext_overlay 2>&-
+	/bin/umount -l $2/proc $2/sys $2/dev $2/tmp $2/overlay $2/ext_overlay 2>&-
+	/bin/umount -l $2/boot 2>&-
+	/bin/umount -l $2/boot 2>&- # some platforms like x86 have rebinded /boot
 	return 0
 }
 
@@ -47,6 +51,7 @@ switch_to_ramfs() {
 		ubidetach ubirsvol ubirmvol ubimkvol			\
 		snapshot snapshot_tool date logger			\
 		/usr/sbin/fw_printenv /usr/bin/fwtool			\
+		/usr/bin/umount \
 		$RAMFS_COPY_LOSETUP $RAMFS_COPY_LVM			\
 		$RAMFS_COPY_BIN
 	do
@@ -62,13 +67,21 @@ switch_to_ramfs() {
 
 	[ -L "/lib64" ] && ln -s /lib $RAM_ROOT/lib64
 
+	# avoid shared rootfs, which makes `/bin/mount -o noatime,move * *` fail
+	# https://github.com/istoreos/istoreos/issues/1200
+	mount --make-private / 2>&-
+	mount --make-private /tmp 2>&-
+	mount --make-private /mnt 2>&-
+	mount --make-private /overlay 2>&-
+	mount --make-private /ext_overlay 2>&-
+
 	supivot $RAM_ROOT /mnt || {
 		v "Failed to switch over to ramfs. Please reboot."
 		exit 1
 	}
 
 	/bin/mount -o remount,ro /mnt
-	/bin/umount -l /mnt
+	/usr/bin/umount -R -d -l /mnt 2>&- || /bin/umount -l /mnt
 
 	grep -e "^/dev/dm-.*" -e "^/dev/loop.*" /proc/mounts | while read bdev mp _r; do
 		umount $mp
@@ -78,11 +91,6 @@ switch_to_ramfs() {
 	[ "$RAMFS_COPY_LVM" ] && {
 		mkdir -p /tmp/lvm/cache
 		$RAMFS_COPY_LVM vgchange -aln --ignorelockingfailure
-	}
-
-	grep /overlay /proc/mounts > /dev/null && {
-		/bin/mount -o noatime,remount,ro /overlay
-		/bin/umount -l /overlay
 	}
 }
 
@@ -132,7 +140,55 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 	done
 }
 
+istoreos_pre_upgrade() {
+	if [ -n "$UPGRADE_BACKUP" ]; then
+		local running_ver=$(grep 'DISTRIB_RELEASE=' /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | sed -E "s/.*='(.+)'.*/\1/")
+		touch /usr/lib/opkg/.upgrading 2>/dev/null && sync /
+		# reset rom uuid in ext_overlay
+		if [ -e /ext_overlay/etc ]; then
+			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] || {
+				rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
+				mkdir -p /ext_overlay/upper/usr/lib/opkg
+				touch /ext_overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+			}
+			echo "$running_ver" >/ext_overlay/.upgrading
+			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] && rm -f /ext_overlay/etc/.extroot-uuid
+			sync /ext_overlay
+		fi
+		echo "$running_ver" >/overlay/.upgrading
+		[ -f /overlay/upper/usr/lib/opkg/.upgrading ] || {
+			rm -f /overlay/upper/usr/lib/opkg/.upgrading
+			mkdir -p /overlay/upper/usr/lib/opkg
+			touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+		}
+		sync /overlay
+	fi
+}
+
+istoreos_show_new_firmware_version() {
+	local dist version revision
+	json_load "$(cat /tmp/sysupgrade.meta)" || {
+		return 1
+	}
+	json_select "version"
+	json_get_var dist "dist"
+	json_get_var version "version"
+	json_get_var revision "revision"
+
+	v "Flashing Version: '$dist $version $revision'"
+}
+
+date '+%Y-%m-%d %H:%M:%S' >/overlay/upgrade.log
+export SAVE_LOG=1
+v "Running Version: $(grep DISTRIB_DESCRIPTION= /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | cut -d= -f2)"
+if [ -s /tmp/sysupgrade.meta ]; then
+	(istoreos_show_new_firmware_version)
+fi
+
 indicate_upgrade
+
+# hide icons/loading.svg, so frontend thinks we're offline
+[ -f /www/luci-static/resources/icons/loading.svg ] && mount --bind /dev/full /www/luci-static/resources/icons/loading.svg
 
 while read -r a b c; do
 	case "$a" in
@@ -156,19 +212,40 @@ killall -9 ash 2>/dev/null
 
 kill_remaining TERM
 sleep 4
+sync
 kill_remaining KILL 1
 
 sleep 6
 
+# web server stopped now, we can safely unmount the loading icon
+umount /www/luci-static/resources/icons/loading.svg 2>/dev/null
+
 echo 3 > /proc/sys/vm/drop_caches
+
+[ -n "$IMAGE" ] && istoreos_pre_upgrade
 
 if [ -n "$IMAGE" ] && type 'platform_pre_upgrade' >/dev/null 2>/dev/null; then
 	platform_pre_upgrade "$IMAGE"
 fi
 
-if [ -n "$(rootfs_type)" ]; then
+ROOTFS_TYPE=$(rootfs_type)
+if [ -n "$ROOTFS_TYPE" -a "$ROOTFS_TYPE" != "tmpfs" -a "$ROOTFS_TYPE" != "rootfs" ]; then
+	date '+%Y-%m-%d %H:%M:%S' >>/overlay/upgrade.log
+
 	v "Switching to ramdisk..."
 	switch_to_ramfs
+fi
+
+grep /ext_overlay /proc/mounts > /dev/null && {
+	/bin/mount -o noatime,remount,ro /ext_overlay
+	/usr/bin/umount -R -d -l /ext_overlay 2>/dev/null || /bin/umount -l /ext_overlay
+}
+
+if [ -z "$UPGRADE_BACKUP" ]; then
+grep /overlay /proc/mounts > /dev/null && {
+	/bin/mount -o noatime,remount,ro /overlay
+	/usr/bin/umount -R -d -l /overlay 2>/dev/null || /bin/umount -l /overlay
+}
 fi
 
 # Exec new shell from ramfs
