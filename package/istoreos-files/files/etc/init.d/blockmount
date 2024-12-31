@@ -1,0 +1,27 @@
+#!/bin/sh /etc/rc.common
+
+START=11
+
+USE_PROCD=1
+
+auto_mount() {
+	[ "`uci -q get fstab.@global[0].port_mount`" = "1" ] && /usr/libexec/blockmount.sh
+	return 0
+}
+
+boot() {
+	auto_mount
+    start "$@"
+}
+
+service_triggers() {
+	procd_add_reload_trigger "fstab"
+}
+
+reload_service() {
+	auto_mount
+}
+
+start_service() {
+	return 0
+}
