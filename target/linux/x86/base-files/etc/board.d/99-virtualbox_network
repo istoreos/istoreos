@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Copyright © 2017 OpenWrt.org
+#
+
+. /lib/functions/system.sh
+. /lib/functions/uci-defaults.sh
+
+board_config_update
+
+case "$(board_name)" in
+innotek-gmbh-virtualbox)
+	ETHNUM=$(ls /sys/class/net/ | grep eth | wc -l)
+	[ $ETHNUM -gt 1 ] && ucidef_set_interface "lan" ipaddr "192.168.56.2"
+	;;
+esac
+
+board_config_flush
+
+exit 0

@@ -104,6 +104,9 @@ traverse-technologies-geos)
 	macaddr="$(cat /sys/class/net/eth0/address)" 2>/dev/null
 	[ -n "$macaddr" ] && ucidef_set_interface_macaddr "wan" "$macaddr"
 	;;
+tencent-cloud-cvm)
+	ucidef_set_interface_lan "eth0" "dhcp"
+	;;
 silicom-80500-0214-*)
         ucidef_set_network_device_path "wan0" "pci0000:00/0000:00:16.0/0000:03:00.0"
         ucidef_set_network_device_path "wan1" "pci0000:00/0000:00:16.0/0000:03:00.1"
