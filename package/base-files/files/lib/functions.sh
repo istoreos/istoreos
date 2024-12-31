@@ -346,6 +346,7 @@ default_postinst() {
 	local filelist="${root}/usr/lib/opkg/info/${pkgname}.list"
 	[ -f "$root/lib/apk/packages/${pkgname}.list" ] && filelist="$root/lib/apk/packages/${pkgname}.list"
 	local ret=0
+	local ucitrack_before
 
 	if [ -e "${root}/usr/lib/opkg/info/${pkgname}.list" ]; then
 		filelist="${root}/usr/lib/opkg/info/${pkgname}.list"
@@ -356,6 +357,9 @@ default_postinst() {
 		filelist="${root}/lib/apk/packages/${pkgname}.list"
 		update_alternatives install "${pkgname}"
 	fi
+
+	[ -z "$root" ] && grep -m1 -q -s "^/etc/uci-defaults/" "$filelist" && \
+		ucitrack_before=`{ md5sum /etc/config/ucitrack 2>/dev/null || echo "empty"; } | cut -d ' ' -f 1`
 
 	if [ -d "$root/rootfs-overlay" ]; then
 		cp -R $root/rootfs-overlay/. $root/
@@ -371,7 +375,7 @@ default_postinst() {
 			/etc/init.d/sysctl restart
 		fi
 
-		if grep -m1 -q -s "^/etc/uci-defaults/" "$filelist"; then
+		if [ -n "$ucitrack_before" ]; then
 			[ -d /tmp/.uci ] || mkdir -p /tmp/.uci
 			for i in $(grep -s "^/etc/uci-defaults/" "$filelist"); do
 				( [ -f "$i" ] && cd "$(dirname $i)" && . "$i" ) && rm -f "$i"
@@ -379,7 +383,17 @@ default_postinst() {
 			uci commit
 		fi
 
-		rm -f /tmp/luci-indexcache
+		if grep -m1 -q -s "^/usr/share/rpcd/acl\\.d/" "$filelist"; then
+			/etc/init.d/rpcd reload
+		fi
+
+		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
+			if grep -m1 -q -s "^/usr/lib/lua/luci/i18n/" "$filelist"; then
+				/etc/init.d/fix_luci_lang boot
+				touch /tmp/luci-i18n-mtime
+			fi
+			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-indexcache.*
+		fi
 	fi
 
 	if [ -f "$root/usr/lib/opkg/info/${pkgname}.postinst-pkg" ]; then
@@ -398,6 +412,13 @@ default_postinst() {
 			"$i" start
 		fi
 	done
+
+	if [ -n "$ucitrack_before" ]; then
+		local after=`{ md5sum /etc/config/ucitrack 2>/dev/null || echo "empty"; } | cut -d ' ' -f 1`
+		if [ "x$after" != "x$ucitrack_before" ]; then
+			/etc/init.d/ucitrack_compat reload
+		fi
+	fi
 
 	return $ret
 }
