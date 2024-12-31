@@ -1,0 +1,103 @@
+#!/bin/sh
+# Copyright (C) 2022 jjm2473
+
+if [ ! -f /etc/config/fstab ]; then
+    /usr/libexec/blockmount.sh detect 2>/dev/null
+fi
+
+uci -q batch <<-EOF >/dev/null
+    set system.@system[-1].zonename='Asia/Shanghai'
+    commit system
+EOF
+
+uci set dockerd.globals.data_root=/overlay/upper/opt/docker
+WAN_ZONE=
+if grep -qFw nas /proc/device-tree/chosen/default-firewall; then
+    WAN_ZONE=`uci show firewall | grep -E '^firewall\.@zone\[[0-9]+\]\.name='"'wan'" | head -n1 | head -c -12`
+    uci -q batch <<-EOF >/dev/null
+        del_list dockerd.firewall.blocked_interfaces=wan
+        set ${WAN_ZONE}.input=ACCEPT
+        commit firewall
+EOF
+
+    uci -q batch <<-EOF >/dev/null
+        delete ucitrack.@wan_drop[-1]
+        add ucitrack wan_drop
+        set ucitrack.@wan_drop[-1].init=wan_drop
+        commit ucitrack
+EOF
+else
+    /etc/init.d/wan_drop disable
+    if grep -qFw dual /proc/device-tree/chosen/default-firewall; then
+        # firewall.allow_wan_input will auto enabled by /etc/hotplug.d/iface/19-fw-wan-input
+        uci -q batch <<-EOF >/dev/null
+            set firewall.allow_wan_input=rule
+            set firewall.allow_wan_input.name='Allow-WAN-Input'
+            set firewall.allow_wan_input.proto='all'
+            set firewall.allow_wan_input.src='wan'
+            set firewall.allow_wan_input.target='ACCEPT'
+            set firewall.allow_wan_input.enabled='0'
+            commit firewall
+EOF
+    fi
+fi
+
+WWAN_PROTO=`uci -q get network.wwan.proto`
+if [ "none" = "$WWAN_PROTO" ]; then
+    uci -q batch <<-EOF >/dev/null
+        set network.wwan.proto='dhcp'
+        commit network
+EOF
+fi
+
+if [ -n "$WWAN_PROTO" ]; then
+    [ -n "$WAN_ZONE" ] || WAN_ZONE=`uci show firewall | grep -E '^firewall\.@zone\[[0-9]+\]\.name='"'wan'" | head -n1 | head -c -12`
+    uci -q batch <<-EOF >/dev/null
+        add_list ${WAN_ZONE}.network='wwan'
+        commit firewall
+EOF
+fi
+
+if ! grep -qFw router /proc/device-tree/chosen/default-firewall; then
+
+    WAN_IF=`jsonfilter -i /etc/board.json -e '@.network.wan.device'`
+    if [ -n "$WAN_IF" -a -e /etc/config/minidlna ]; then
+        uci -q batch <<-EOF >/dev/null
+            set minidlna.@minidlna[0].interface='br-lan,$WAN_IF'
+            commit minidlna
+EOF
+    fi
+    if [ -e /etc/config/ttyd ]; then
+        uci -q batch <<-EOF >/dev/null
+            delete ttyd.@ttyd[0].interface
+            commit ttyd
+EOF
+    fi
+    for samba in samba4 samba ; do
+        if [ -e /etc/config/$samba ]; then
+            uci -q batch <<-EOF >/dev/null
+                set $samba.@samba[0].interface='lan wan'
+                commit $samba
+EOF
+        fi
+    done
+fi
+
+uci -q batch <<-EOF >/dev/null
+    commit dockerd
+EOF
+
+uci -q batch <<-EOF >/dev/null
+    set luci.apply.rollback=30
+    set luci.apply.holdoff=2
+    commit luci
+EOF
+
+if [ -f /etc/config/argon ]; then
+    uci -q batch <<-EOF >/dev/null
+        set argon.@global[0].mode=light
+        commit argon
+EOF
+fi
+
+exit 0

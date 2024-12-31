@@ -1,0 +1,58 @@
+#!/bin/sh
+
+[ "$ACTION" = ifup -o "$ACTION" = ifupdate ] || exit 0
+[ "$ACTION" = ifupdate -a -z "$IFUPDATE_ADDRESSES" -a -z "$IFUPDATE_DATA" ] && exit 0
+[ "$INTERFACE" = wan ] || exit 0
+
+uci -q get firewall.allow_wan_input || exit 0
+
+is_private_ipv4() {
+	local ADDRESS="$1"
+	local MASK="$2"
+	local IP NETMASK BROADCAST NETWORK PREFIX
+	if [ "$MASK" -ge 8 ]; then
+		NETWORK=
+		eval $(ipcalc.sh "$ADDRESS/8")
+		[ "$NETWORK" = "10.0.0.0" ] && return 0
+	fi
+	if [ "$MASK" -ge 12 ]; then
+		NETWORK=
+		eval $(ipcalc.sh "$ADDRESS/12")
+		[ "$NETWORK" = "172.16.0.0" ] && return 0
+	fi
+	if [ "$MASK" -ge 16 ]; then
+		NETWORK=
+		eval $(ipcalc.sh "$ADDRESS/16")
+		[ "$NETWORK" = "192.168.0.0" ] && return 0
+	fi
+	return 1
+}
+
+WAN_IS_PRIVATE=false
+(
+	ADDRESS=
+	MASK=
+	PROTO=
+	UP=
+
+	eval $(ifstatus wan | jsonfilter \
+		-e 'ADDRESS=@["ipv4-address"][0].address' \
+		-e 'MASK=@["ipv4-address"][0].mask' \
+		-e 'PROTO=@.proto' \
+		-e 'UP=@.up'
+	)
+
+	logger -t allow_wan_input "WAN up:$UP proto:$PROTO ip:$ADDRESS mask:$MASK"
+	[ "$PROTO" = dhcp ] || exit 1
+	[ -n "$ADDRESS" -a -n "$MASK" ] || exit 1
+	is_private_ipv4 "$ADDRESS" "$MASK"
+) && WAN_IS_PRIVATE=true
+
+if $WAN_IS_PRIVATE ; then
+	logger -t allow_wan_input "Enable allow_wan_input rule for private address"
+	uci delete firewall.allow_wan_input.enabled
+else
+	logger -t allow_wan_input "Disable allow_wan_input rule for public address"
+	uci set firewall.allow_wan_input.enabled=0
+fi
+uci commit firewall

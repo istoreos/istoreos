@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# 2022 jjm2473
+
+START=99
+
+boot() {
+	# tune printk level after success boot, avoid noise in console
+	echo '4 5 1 7' > /proc/sys/kernel/printk
+
+	# notify console system is ready
+	sleep 1
+	local pids=`pgrep -P 1 askfirst 2>/dev/null`
+	if [ -n "$pids" ]; then
+		local pid
+		for pid in $pids; do
+			echo "iStoreOS is ready!" >/proc/$pid/fd/1
+			echo "Please press Enter to activate this console." >/proc/$pid/fd/1
+		done
+	fi
+}

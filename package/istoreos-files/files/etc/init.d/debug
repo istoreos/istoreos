@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+STOP=00
+
+shutdown() {
+	local message="System Shutting Down"
+	echo '7 4 1 7' > /proc/sys/kernel/printk
+	logger -s -t "DEBUG" "$message"
+	logger -t "DEBUG" "$message"
+
+	local consoles console
+	[ -e /.dockerenv ] || consoles="$(cat /sys/class/tty/console/active)"
+	[ -n "$consoles" ] || consoles=console
+	consoles="$consoles kmsg"
+	for console in $consoles; do
+		[ -c "/dev/$console" ] && echo "$message" >"/dev/$console"
+	done
+
+	# blink led
+	. /etc/diag.sh
+	[ -n "$running" ] && {
+		status_led="$running"
+		status_led_blink_preinit_regular
+	}
+}

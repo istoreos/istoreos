@@ -1,0 +1,22 @@
+#!/bin/sh /etc/rc.common
+
+START=34
+STOP=86
+
+BACKUP_FILE="/etc/odhcpd-piofolder-backup.tar.gz"
+
+boot() {
+	[ -s "$BACKUP_FILE" ] || return 0
+	tar -xzf "$BACKUP_FILE" -C /
+	rm -f "$BACKUP_FILE"
+}
+
+shutdown() {
+	local piofolder=$(uci -q get dhcp.odhcpd.piofolder)
+	[ -n "$piofolder" ] || return 0
+	# only backup if piofolder is in /tmp/
+	[ -z "${piofolder##/tmp/*}" ] || return 0
+	[ -d "$piofolder" ] || return 0
+
+	tar -czf "$BACKUP_FILE" -C / "$piofolder" || rm -f "$BACKUP_FILE"
+}

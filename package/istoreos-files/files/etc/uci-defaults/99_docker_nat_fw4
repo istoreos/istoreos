@@ -1,0 +1,15 @@
+#!/bin/sh
+
+uci -q batch <<-EOF
+	set firewall.docker_nat=nat
+	set firewall.docker_nat.name='DockerNAT'
+	set firewall.docker_nat.family='ipv4'
+	set firewall.docker_nat.proto='all'
+	set firewall.docker_nat.src='lan'
+	set firewall.docker_nat.target='MASQUERADE'
+	set firewall.docker_nat.extra='-i docker0'
+	set firewall.docker_nat.src_ip='172.16.0.0/12'
+	commit firewall
+EOF
+
+exit 0
