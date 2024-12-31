@@ -49,6 +49,8 @@ boot() {
 
 	/sbin/kmodloader
 
+	[ -x /lib/board/init.sh ] && /lib/board/init.sh
+
 	uci_apply_defaults
 	sync
 
