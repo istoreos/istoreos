@@ -1,0 +1,90 @@
+From b7d96a5103502f8e57f886d42b19d764d9432dbf Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 6 Jan 2025 21:02:39 +0800
+Subject: [PATCH] bcm fullcone nat
+
+---
+ extensions/libxt_NAT.c | 25 ++++++++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/extensions/libxt_NAT.c b/extensions/libxt_NAT.c
+index 2a63439..6a10388 100644
+--- a/extensions/libxt_NAT.c
++++ b/extensions/libxt_NAT.c
+@@ -39,6 +39,7 @@ enum {
+ 	O_TO_SRC,
+ 	O_TO_PORTS,
+ 	O_RANDOM,
++	O_MODE,
+ 	O_RANDOM_FULLY,
+ 	O_PERSISTENT,
+ };
+@@ -61,7 +62,9 @@ static void MASQUERADE_help(void)
+ " --random\n"
+ "				Randomize source port.\n"
+ " --random-fully\n"
+-"				Fully randomize source port.\n");
++"				Fully randomize source port.\n"
++" --mode <fullcone|symmetric>\n"
++"				NAT mode.\n");
+ }
+ 
+ static void DNAT_help(void)
+@@ -104,6 +107,7 @@ static const struct xt_option_entry MASQUERADE_opts[] = {
+ 	{.name = "to-ports", .id = O_TO_PORTS, .type = XTTYPE_STRING},
+ 	{.name = "random", .id = O_RANDOM, .type = XTTYPE_NONE},
+ 	{.name = "random-fully", .id = O_RANDOM_FULLY, .type = XTTYPE_NONE},
++	{.name = "mode", .id = O_MODE, .type = XTTYPE_STRING},
+ 	XTOPT_TABLEEND,
+ };
+ 
+@@ -280,6 +284,16 @@ static void __NAT_parse(struct xt_option_call *cb, __u16 proto,
+ 	case O_RANDOM_FULLY:
+ 		range->flags |= NF_NAT_RANGE_PROTO_RANDOM_FULLY;
+ 		break;
++	case O_MODE:
++		range->min_addr.ip = 0;
++		if (strcasecmp(cb->arg, "fullcone") == 0)
++			range->min_addr.ip = 1;
++		else if (strcasecmp(cb->arg, "symmetric") == 0)
++			range->min_addr.ip = 0;
++		else
++			xtables_error(PARAMETER_PROBLEM,
++				   "Unknown mode %s", cb->arg);
++		break;
+ 	}
+ }
+ 
+@@ -306,6 +320,9 @@ static void NAT_parse(struct xt_option_call *cb)
+ 	case O_RANDOM_FULLY:
+ 		mr->range->flags |= range.flags;
+ 		break;
++	case O_MODE:
++		mr->range->min_ip = range.min_addr.ip;
++		break;
+ 	}
+ }
+ 
+@@ -400,6 +417,9 @@ static void __NAT_print(const struct nf_nat_range2 *r, int family,
+ {
+ 	char *range_str = sprint_range(r, family);
+ 
++	if (r->min_addr.ip == 1)
++		printf(" %smode fullcone", flag_pfx);
++
+ 	if (strlen(range_str)) {
+ 		if (range_str[0] == ':' && skip_colon)
+ 			range_str++;
+@@ -425,6 +445,9 @@ __NAT_xlate(struct xt_xlate *xl, const struct nf_nat_range2 *r,
+ 		return 0;
+ 
+ 	xt_xlate_add(xl, "%s", tgt);
++	if (strcasecmp(tgt, "masquerade") == 0 && r->min_addr.ip == 1) {
++		xt_xlate_add(xl, " fullcone");
++	}
+ 	if (strlen(range_str))
+ 		xt_xlate_add(xl, " to %s", range_str);
+ 	if (r->flags & NF_NAT_RANGE_PROTO_RANDOM) {
+-- 
+2.46.0
+
