@@ -1,0 +1,321 @@
+From 25df8cc346c857d88eb0986f353861b2e187c7e9 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Tue, 7 Jan 2025 12:04:08 +0800
+Subject: [PATCH] src: masq supports fullcone flag
+
+---
+ include/expression.h      |  4 ++++
+ include/json.h            |  1 +
+ src/evaluate.c            |  2 ++
+ src/expression.c          | 46 +++++++++++++++++++++++++++++++++++++++
+ src/json.c                | 11 +++++++++-
+ src/netlink_delinearize.c |  5 +++++
+ src/netlink_linearize.c   |  3 +++
+ src/parser_bison.y        | 11 +++++++++-
+ src/parser_json.c         |  9 +++++++-
+ src/scanner.l             |  1 +
+ src/statement.c           |  9 +++++---
+ 11 files changed, 96 insertions(+), 6 deletions(-)
+
+diff --git a/include/expression.h b/include/expression.h
+index 8982110c..ba7ea866 100644
+--- a/include/expression.h
++++ b/include/expression.h
+@@ -25,6 +25,7 @@
+  * @EXPR_VALUE:		literal numeric or string expression
+  * @EXPR_PREFIX:	prefixed expression
+  * @EXPR_RANGE:		literal range
++ * @EXPR_FULLCONE:	fullcone-nat for masquerade
+  * @EXPR_PAYLOAD:	payload expression
+  * @EXPR_EXTHDR:	exthdr expression
+  * @EXPR_META:		meta expression
+@@ -57,6 +58,7 @@ enum expr_types {
+ 	EXPR_VALUE,
+ 	EXPR_PREFIX,
+ 	EXPR_RANGE,
++	EXPR_FULLCONE,
+ 	EXPR_PAYLOAD,
+ 	EXPR_EXTHDR,
+ 	EXPR_META,
+@@ -488,6 +490,8 @@ extern struct expr *range_expr_alloc(const struct location *loc,
+ 				     struct expr *low, struct expr *high);
+ struct expr *range_expr_to_prefix(struct expr *range);
+ 
++extern struct expr *fullcone_expr_alloc(const struct location *loc);
++
+ extern struct expr *compound_expr_alloc(const struct location *loc,
+ 					enum expr_types etypes);
+ extern void compound_expr_add(struct expr *compound, struct expr *expr);
+diff --git a/include/json.h b/include/json.h
+index 39be8928..5556f4e3 100644
+--- a/include/json.h
++++ b/include/json.h
+@@ -30,6 +30,7 @@ json_t *binop_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *relational_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *flagcmp_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *range_expr_json(const struct expr *expr, struct output_ctx *octx);
++json_t *fullcone_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *meta_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *payload_expr_json(const struct expr *expr, struct output_ctx *octx);
+ json_t *ct_expr_json(const struct expr *expr, struct output_ctx *octx);
+diff --git a/src/evaluate.c b/src/evaluate.c
+index 593a0140..ef26bfb1 100644
+--- a/src/evaluate.c
++++ b/src/evaluate.c
+@@ -2981,6 +2981,8 @@ static int expr_evaluate(struct eval_ctx *ctx, struct expr **expr)
+ 		return expr_evaluate_prefix(ctx, expr);
+ 	case EXPR_RANGE:
+ 		return expr_evaluate_range(ctx, expr);
++	case EXPR_FULLCONE:
++		return 0;
+ 	case EXPR_UNARY:
+ 		return expr_evaluate_unary(ctx, expr);
+ 	case EXPR_BINOP:
+diff --git a/src/expression.c b/src/expression.c
+index c0cb7f22..39d2821a 100644
+--- a/src/expression.c
++++ b/src/expression.c
+@@ -803,6 +803,51 @@ struct expr *range_expr_alloc(const struct location *loc,
+ 	return expr;
+ }
+ 
++static void fullcone_expr_print(const struct expr *expr, struct output_ctx *octx)
++{
++	nft_print(octx, "fullcone");
++}
++
++static void fullcone_expr_clone(struct expr *new, const struct expr *expr)
++{
++	new->left  = expr_clone(expr->left);
++	new->right = expr_clone(expr->right);
++}
++
++static void fullcone_expr_destroy(struct expr *expr)
++{
++	expr_free(expr->left);
++	expr_free(expr->right);
++}
++
++static const struct expr_ops fullcone_expr_ops = {
++	.type		= EXPR_FULLCONE,
++	.name		= "fullcone",
++	.print		= fullcone_expr_print,
++	.json		= fullcone_expr_json,
++	.clone		= fullcone_expr_clone,
++	.destroy	= fullcone_expr_destroy,
++};
++
++struct expr *fullcone_expr_alloc(const struct location *loc)
++{
++	struct expr *expr;
++	int one = 1;
++	int zero = 0;
++
++	expr = expr_alloc(loc, EXPR_FULLCONE, &ipaddr_type,
++			  BYTEORDER_HOST_ENDIAN, 0);
++	expr->left  = constant_expr_alloc(loc, &integer_type,
++								BYTEORDER_HOST_ENDIAN,
++								sizeof(int) *
++								BITS_PER_BYTE, &one);
++	expr->right = constant_expr_alloc(loc, &integer_type,
++								BYTEORDER_HOST_ENDIAN,
++								sizeof(int) *
++								BITS_PER_BYTE, &zero);;
++	return expr;
++}
++
+ struct expr *compound_expr_alloc(const struct location *loc,
+ 				 enum expr_types etype)
+ {
+@@ -1513,6 +1558,7 @@ static const struct expr_ops *__expr_ops_by_type(enum expr_types etype)
+ 	case EXPR_VALUE: return &constant_expr_ops;
+ 	case EXPR_PREFIX: return &prefix_expr_ops;
+ 	case EXPR_RANGE: return &range_expr_ops;
++	case EXPR_FULLCONE: return &fullcone_expr_ops;
+ 	case EXPR_PAYLOAD: return &payload_expr_ops;
+ 	case EXPR_EXTHDR: return &exthdr_expr_ops;
+ 	case EXPR_META: return &meta_expr_ops;
+diff --git a/src/json.c b/src/json.c
+index b1531ff3..0788c4ab 100644
+--- a/src/json.c
++++ b/src/json.c
+@@ -594,6 +594,11 @@ json_t *range_expr_json(const struct expr *expr, struct output_ctx *octx)
+ 	return root;
+ }
+ 
++json_t *fullcone_expr_json(const struct expr *expr, struct output_ctx *octx)
++{
++	return json_pack("{s:n}", "fullcone");
++}
++
+ json_t *meta_expr_json(const struct expr *expr, struct output_ctx *octx)
+ {
+ 	return json_pack("{s:{s:s}}", "meta",
+@@ -1437,6 +1442,10 @@ json_t *nat_stmt_json(const struct stmt *stmt, struct output_ctx *octx)
+ 	json_t *root = json_object();
+ 	json_t *array = nat_flags_json(stmt->nat.flags);
+ 
++	if (NFT_NAT_MASQ == stmt->nat.type && stmt->nat.addr && stmt->nat.addr->etype == EXPR_FULLCONE) {
++		json_object_set_new(root, "fullcone", json_true());
++	}
++
+ 	switch (stmt->nat.family) {
+ 	case NFPROTO_IPV4:
+ 	case NFPROTO_IPV6:
+@@ -1445,7 +1454,7 @@ json_t *nat_stmt_json(const struct stmt *stmt, struct output_ctx *octx)
+ 		break;
+ 	}
+ 
+-	if (stmt->nat.addr)
++	if (NFT_NAT_MASQ != stmt->nat.type && stmt->nat.addr)
+ 		json_object_set_new(root, "addr",
+ 				    expr_print_json(stmt->nat.addr, octx));
+ 
+diff --git a/src/netlink_delinearize.c b/src/netlink_delinearize.c
+index e3d9cfbb..7416429b 100644
+--- a/src/netlink_delinearize.c
++++ b/src/netlink_delinearize.c
+@@ -1435,6 +1435,10 @@ static void netlink_parse_masq(struct netlink_parse_ctx *ctx,
+ 	stmt = nat_stmt_alloc(loc, NFT_NAT_MASQ);
+ 	stmt->nat.flags = flags;
+ 
++	if (nftnl_expr_is_set(nle, NFTNL_EXPR_MASQ_REG_FULLCONE))
++		if (nftnl_expr_get_u8(nle, NFTNL_EXPR_MASQ_REG_FULLCONE))
++			stmt->nat.addr = fullcone_expr_alloc(loc);
++
+ 	reg1 = netlink_parse_register(nle, NFTNL_EXPR_MASQ_REG_PROTO_MIN);
+ 	if (reg1) {
+ 		proto = netlink_get_register(ctx, loc, reg1);
+@@ -2912,6 +2916,7 @@ static void expr_postprocess(struct rule_pp_ctx *ctx, struct expr **exprp)
+ 	case EXPR_EXTHDR:
+ 		exthdr_dependency_kill(&dl->pdctx, expr, dl->pctx.family);
+ 		break;
++	case EXPR_FULLCONE:
+ 	case EXPR_SET_REF:
+ 	case EXPR_META:
+ 	case EXPR_RT:
+diff --git a/src/netlink_linearize.c b/src/netlink_linearize.c
+index 77bc5149..13f50e9b 100644
+--- a/src/netlink_linearize.c
++++ b/src/netlink_linearize.c
+@@ -1241,6 +1241,9 @@ static void netlink_gen_nat_stmt(struct netlink_linearize_ctx *ctx,
+ 	if (stmt->nat.flags != 0)
+ 		nftnl_expr_set_u32(nle, nftnl_flag_attr, stmt->nat.flags);
+ 
++	if (stmt->nat.addr && stmt->nat.addr->etype == EXPR_FULLCONE) {
++		nftnl_expr_set_u8(nle, NFTNL_EXPR_MASQ_REG_FULLCONE, 1);
++	} else
+ 	if (stmt->nat.addr) {
+ 		amin_reg = get_register(ctx, NULL);
+ 		registers++;
+diff --git a/src/parser_bison.y b/src/parser_bison.y
+index e2936d10..6923b3f4 100644
+--- a/src/parser_bison.y
++++ b/src/parser_bison.y
+@@ -643,6 +643,7 @@ int nft_lex(void *, void *, void *);
+ %token SNAT			"snat"
+ %token DNAT			"dnat"
+ %token MASQUERADE		"masquerade"
++%token FULLCONE		"fullcone"
+ %token REDIRECT			"redirect"
+ %token RANDOM			"random"
+ %token FULLY_RANDOM		"fully-random"
+@@ -3988,13 +3989,21 @@ nat_stmt_args		:	stmt_expr
+ 			}
+ 			;
+ 
+-masq_stmt		:	masq_stmt_alloc		masq_stmt_args
++masq_stmt		:	masq_stmt_alloc		masq_stmt_fullcone	masq_stmt_args
++			| 	masq_stmt_alloc		masq_stmt_fullcone
++			|	masq_stmt_alloc		masq_stmt_args
+ 			|	masq_stmt_alloc
+ 			;
+ 
+ masq_stmt_alloc		:	MASQUERADE	{ $$ = nat_stmt_alloc(&@$, NFT_NAT_MASQ); }
+ 			;
+ 
++masq_stmt_fullcone	:	FULLCONE
++			{
++				$<stmt>0->nat.addr = fullcone_expr_alloc(&@$);
++			}
++			;
++
+ masq_stmt_args		:	TO 	COLON	stmt_expr
+ 			{
+ 				$<stmt>0->nat.proto = $3;
+diff --git a/src/parser_json.c b/src/parser_json.c
+index bbe3b1c5..e1720686 100644
+--- a/src/parser_json.c
++++ b/src/parser_json.c
+@@ -2242,6 +2242,7 @@ static struct stmt *json_parse_nat_stmt(struct json_ctx *ctx,
+ 					const char *key, json_t *value)
+ {
+ 	int type, familyval;
++	int fullcone = 0;
+ 	struct stmt *stmt;
+ 	json_t *tmp;
+ 
+@@ -2258,7 +2259,13 @@ static struct stmt *json_parse_nat_stmt(struct json_ctx *ctx,
+ 	stmt = nat_stmt_alloc(int_loc, type);
+ 	stmt->nat.family = familyval;
+ 
+-	if (!json_unpack(value, "{s:o}", "addr", &tmp)) {
++	if (NFT_NAT_MASQ == type && !json_unpack(value, "{s:b}", "fullcone", &fullcone)) {
++		if (fullcone) {
++			stmt->nat.addr = fullcone_expr_alloc(int_loc);
++		}
++	}
++
++	if (NFT_NAT_MASQ != type && !json_unpack(value, "{s:o}", "addr", &tmp)) {
+ 		stmt->nat.addr = json_parse_stmt_expr(ctx, tmp);
+ 		if (!stmt->nat.addr) {
+ 			json_error(ctx, "Invalid nat addr.");
+diff --git a/src/scanner.l b/src/scanner.l
+index c825fa79..e99f9620 100644
+--- a/src/scanner.l
++++ b/src/scanner.l
+@@ -463,6 +463,7 @@ addrstring	({macaddr}|{ip4addr}|{ip6addr})
+ "dnat"			{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return DNAT; }
+ "masquerade"		{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return MASQUERADE; }
+ "redirect"		{ scanner_push_start_cond(yyscanner, SCANSTATE_STMT_NAT); return REDIRECT; }
++"fullcone"		{ return FULLCONE; }
+ "random"		{ return RANDOM; }
+ <SCANSTATE_STMT_NAT>{
+ 	"fully-random"		{ return FULLY_RANDOM; }
+diff --git a/src/statement.c b/src/statement.c
+index 551cd13f..c6edb675 100644
+--- a/src/statement.c
++++ b/src/statement.c
+@@ -683,7 +683,10 @@ const char *nat_etype2str(enum nft_nat_etypes type)
+ static void nat_stmt_print(const struct stmt *stmt, struct output_ctx *octx)
+ {
+ 	nft_print(octx, "%s", nat_etype2str(stmt->nat.type));
+-	if (stmt->nat.addr || stmt->nat.proto) {
++	if (NFT_NAT_MASQ == stmt->nat.type && stmt->nat.addr && stmt->nat.addr->etype == EXPR_FULLCONE) {
++		nft_print(octx, " fullcone");
++	}
++	if ((NFT_NAT_MASQ != stmt->nat.type && stmt->nat.addr) || stmt->nat.proto) {
+ 		switch (stmt->nat.family) {
+ 		case NFPROTO_IPV4:
+ 			nft_print(octx, " ip");
+@@ -699,7 +702,7 @@ static void nat_stmt_print(const struct stmt *stmt, struct output_ctx *octx)
+ 		nft_print(octx, " to");
+ 	}
+ 
+-	if (stmt->nat.addr) {
++	if (NFT_NAT_MASQ != stmt->nat.type && stmt->nat.addr) {
+ 		nft_print(octx, " ");
+ 		if (stmt->nat.proto) {
+ 			if (stmt->nat.addr->etype == EXPR_VALUE &&
+@@ -723,7 +726,7 @@ static void nat_stmt_print(const struct stmt *stmt, struct output_ctx *octx)
+ 	}
+ 
+ 	if (stmt->nat.proto) {
+-		if (!stmt->nat.addr)
++		if (!stmt->nat.addr || NFT_NAT_MASQ == stmt->nat.type)
+ 			nft_print(octx, " ");
+ 		nft_print(octx, ":");
+ 		expr_print(stmt->nat.proto, octx);
+-- 
+2.46.0
+

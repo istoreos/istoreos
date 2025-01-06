@@ -1,0 +1,121 @@
+From 300f597bd52b02efc78d39c76dca5c097c4869aa Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 7 Jan 2025 14:09:53 +0800
+Subject: [PATCH] expr: masq: supports fullcone flag
+
+---
+ include/libnftnl/expr.h             |  1 +
+ include/linux/netfilter/nf_tables.h |  1 +
+ src/expr/masq.c                     | 23 +++++++++++++++++++++++
+ 3 files changed, 25 insertions(+)
+
+diff --git a/include/libnftnl/expr.h b/include/libnftnl/expr.h
+index fba1210..5fd5a4a 100644
+--- a/include/libnftnl/expr.h
++++ b/include/libnftnl/expr.h
+@@ -268,6 +268,7 @@ enum {
+ 	NFTNL_EXPR_MASQ_FLAGS		= NFTNL_EXPR_BASE,
+ 	NFTNL_EXPR_MASQ_REG_PROTO_MIN,
+ 	NFTNL_EXPR_MASQ_REG_PROTO_MAX,
++	NFTNL_EXPR_MASQ_REG_FULLCONE,
+ 	__NFTNL_EXPR_MASQ_MAX
+ };
+ 
+diff --git a/include/linux/netfilter/nf_tables.h b/include/linux/netfilter/nf_tables.h
+index c48b193..76ad10e 100644
+--- a/include/linux/netfilter/nf_tables.h
++++ b/include/linux/netfilter/nf_tables.h
+@@ -1459,6 +1459,7 @@ enum nft_masq_attributes {
+ 	NFTA_MASQ_FLAGS,
+ 	NFTA_MASQ_REG_PROTO_MIN,
+ 	NFTA_MASQ_REG_PROTO_MAX,
++	NFTA_MASQ_REG_FULLCONE,
+ 	__NFTA_MASQ_MAX
+ };
+ #define NFTA_MASQ_MAX		(__NFTA_MASQ_MAX - 1)
+diff --git a/src/expr/masq.c b/src/expr/masq.c
+index e0565db..0b169e5 100644
+--- a/src/expr/masq.c
++++ b/src/expr/masq.c
+@@ -24,6 +24,7 @@ struct nftnl_expr_masq {
+ 	uint32_t		flags;
+ 	enum nft_registers	sreg_proto_min;
+ 	enum nft_registers	sreg_proto_max;
++	uint8_t			fullcone;
+ };
+ 
+ static int
+@@ -42,6 +43,9 @@ nftnl_expr_masq_set(struct nftnl_expr *e, uint16_t type,
+ 	case NFTNL_EXPR_MASQ_REG_PROTO_MAX:
+ 		memcpy(&masq->sreg_proto_max, data, data_len);
+ 		break;
++	case NFTNL_EXPR_MASQ_REG_FULLCONE:
++		memcpy(&masq->fullcone, data, data_len);
++		break;
+ 	}
+ 	return 0;
+ }
+@@ -62,6 +66,9 @@ nftnl_expr_masq_get(const struct nftnl_expr *e, uint16_t type,
+ 	case NFTNL_EXPR_MASQ_REG_PROTO_MAX:
+ 		*data_len = sizeof(masq->sreg_proto_max);
+ 		return &masq->sreg_proto_max;
++	case NFTNL_EXPR_MASQ_REG_FULLCONE:
++		*data_len = sizeof(masq->fullcone);
++		return &masq->fullcone;
+ 	}
+ 	return NULL;
+ }
+@@ -81,6 +88,10 @@ static int nftnl_expr_masq_cb(const struct nlattr *attr, void *data)
+ 		if (mnl_attr_validate(attr, MNL_TYPE_U32) < 0)
+ 			abi_breakage();
+ 		break;
++	case NFTA_MASQ_REG_FULLCONE:
++		if (mnl_attr_validate(attr, MNL_TYPE_U8) < 0)
++			abi_breakage();
++		break;
+ 	}
+ 
+ 	tb[type] = attr;
+@@ -100,6 +111,8 @@ nftnl_expr_masq_build(struct nlmsghdr *nlh, const struct nftnl_expr *e)
+ 	if (e->flags & (1 << NFTNL_EXPR_MASQ_REG_PROTO_MAX))
+ 		mnl_attr_put_u32(nlh, NFTA_MASQ_REG_PROTO_MAX,
+ 				 htobe32(masq->sreg_proto_max));
++	if (e->flags & (1 << NFTNL_EXPR_MASQ_REG_FULLCONE))
++		mnl_attr_put_u8(nlh, NFTA_MASQ_REG_FULLCONE, masq->fullcone);
+ }
+ 
+ static int
+@@ -125,6 +138,10 @@ nftnl_expr_masq_parse(struct nftnl_expr *e, struct nlattr *attr)
+ 			be32toh(mnl_attr_get_u32(tb[NFTA_MASQ_REG_PROTO_MAX]));
+ 		e->flags |= (1 << NFTNL_EXPR_MASQ_REG_PROTO_MAX);
+ 	}
++	if (tb[NFTA_MASQ_REG_FULLCONE]) {
++		masq->fullcone = mnl_attr_get_u8(tb[NFTA_MASQ_REG_FULLCONE]);
++		e->flags |= (1 << NFTNL_EXPR_MASQ_REG_FULLCONE);
++	}
+ 
+ 	return 0;
+ }
+@@ -145,6 +162,11 @@ static int nftnl_expr_masq_snprintf(char *buf, size_t remain,
+ 			       masq->sreg_proto_max);
+ 		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
+ 	}
++	if (e->flags & (1 << NFTNL_EXPR_MASQ_REG_FULLCONE)) {
++		ret = snprintf(buf + offset, remain, "fullcone reg %u ",
++			       masq->fullcone);
++		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
++	}
+ 	if (e->flags & (1 << NFTNL_EXPR_MASQ_FLAGS)) {
+ 		ret = snprintf(buf + offset, remain, "flags 0x%x ", masq->flags);
+ 		SNPRINTF_BUFFER_SIZE(ret, remain, offset);
+@@ -157,6 +179,7 @@ static struct attr_policy masq_attr_policy[__NFTNL_EXPR_MASQ_MAX] = {
+ 	[NFTNL_EXPR_MASQ_FLAGS]         = { .maxlen = sizeof(uint32_t) },
+ 	[NFTNL_EXPR_MASQ_REG_PROTO_MIN] = { .maxlen = sizeof(uint32_t) },
+ 	[NFTNL_EXPR_MASQ_REG_PROTO_MAX] = { .maxlen = sizeof(uint32_t) },
++	[NFTNL_EXPR_MASQ_REG_FULLCONE] = { .maxlen = sizeof(uint8_t) },
+ };
+ 
+ struct expr_ops expr_ops_masq = {
+-- 
+2.46.0
+
