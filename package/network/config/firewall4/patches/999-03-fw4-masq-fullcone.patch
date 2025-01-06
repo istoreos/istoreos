@@ -1,0 +1,105 @@
+From 1a949329dae39c0edb7e031b4aa6eda5b3c10074 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 19 Dec 2024 13:08:28 +0800
+Subject: [PATCH] fw4: masq fullcone flag
+
+---
+ root/usr/share/firewall4/templates/ruleset.uc |  4 +--
+ .../share/firewall4/templates/zone-masq.uc    |  4 ++-
+ root/usr/share/ucode/fw4.uc                   | 25 ++++++++++++++++++-
+ 3 files changed, 29 insertions(+), 4 deletions(-)
+
+diff --git a/root/usr/share/firewall4/templates/ruleset.uc b/root/usr/share/firewall4/templates/ruleset.uc
+index 2bec4d9..8cd403e 100644
+--- a/root/usr/share/firewall4/templates/ruleset.uc
++++ b/root/usr/share/firewall4/templates/ruleset.uc
+@@ -340,14 +340,14 @@ table inet fw4 {
+ {%   if (zone.masq): %}
+ {%    for (let saddrs in zone.masq4_src_subnets): %}
+ {%     for (let daddrs in zone.masq4_dest_subnets): %}
+-		{%+ include("zone-masq.uc", { fw4, zone, family: 4, saddrs, daddrs }) %}
++		{%+ include("zone-masq.uc", { fw4, zone, family: 4, saddrs, daddrs, fullcone: zone.dflags.fullcone }) %}
+ {%     endfor %}
+ {%    endfor %}
+ {%   endif %}
+ {%   if (zone.masq6): %}
+ {%    for (let saddrs in zone.masq6_src_subnets): %}
+ {%     for (let daddrs in zone.masq6_dest_subnets): %}
+-		{%+ include("zone-masq.uc", { fw4, zone, family: 6, saddrs, daddrs }) %}
++		{%+ include("zone-masq.uc", { fw4, zone, family: 6, saddrs, daddrs, fullcone: false }) %}
+ {%     endfor %}
+ {%    endfor %}
+ {%   endif %}
+diff --git a/root/usr/share/firewall4/templates/zone-masq.uc b/root/usr/share/firewall4/templates/zone-masq.uc
+index c3e66d8..2dcdd07 100644
+--- a/root/usr/share/firewall4/templates/zone-masq.uc
++++ b/root/usr/share/firewall4/templates/zone-masq.uc
+@@ -10,4 +10,6 @@ meta nfproto {{ fw4.nfproto(family) }} {%+ if (saddrs && saddrs[0]): -%}
+ 	{{ fw4.ipproto(family) }} daddr != {{ fw4.set(map(daddrs[1], fw4.cidr)) }} {%+ endif -%}
+ {%+ for (let a in (daddrs ? daddrs[2] : [])): -%}
+ 	{{ fw4.ipproto(family) }} daddr & {{ a.mask }} {{ a.invert ? '!=' : '==' }} {{ a.addr }} {%+ endfor -%}
+-masquerade comment "!fw4: Masquerade {{ fw4.nfproto(family, true) }} {{ zone.name }} traffic"
++masquerade {%+ if (fullcone): -%}
++fullcone {%+ endif -%}
++comment "!fw4: Masquerade {%+ if (fullcone): -%}(Fullcone) {%+ endif -%}{{ fw4.nfproto(family, true) }} {{ zone.name }} traffic"
+diff --git a/root/usr/share/ucode/fw4.uc b/root/usr/share/ucode/fw4.uc
+index 2d77146..ae7ba43 100644
+--- a/root/usr/share/ucode/fw4.uc
++++ b/root/usr/share/ucode/fw4.uc
+@@ -489,6 +489,20 @@ function nft_try_hw_offload(devices) {
+ 	return (rc == 0);
+ }
+ 
++function nft_try_masq_fullcone() {
++	let nft_test =
++		'add table inet fw4-masq-fullcone-test; ' +
++		'add chain inet fw4-masq-fullcone-test srcnat { ' +
++			'type nat hook postrouting priority -100; policy accept; ' +
++			'meta nfproto ipv4 masquerade fullcone; ' +
++		'}; ';
++	let cmd = sprintf("/usr/sbin/nft -c '%s' 2>/dev/null", replace(nft_test, "'", "'\\''"));
++	let ok = system(cmd) == 0;
++	if (!ok) {
++		warn("nft_try_masq_fullcone: cmd "+ cmd + "\n");
++	}
++	return ok;
++}
+ 
+ return {
+ 	read_kernel_version: function() {
+@@ -1946,6 +1960,7 @@ return {
+ 		}
+ 
+ 		let defs = this.parse_options(data, {
++			fullcone: [ "int", "0" ],
+ 			input: [ "policy", "drop" ],
+ 			output: [ "policy", "drop" ],
+ 			forward: [ "policy", "drop" ],
+@@ -1980,6 +1995,11 @@ return {
+ 
+ 		delete defs.syn_flood;
+ 
++		if (defs.fullcone == 2 && !nft_try_masq_fullcone()) {
++			delete defs.fullcone;
++			warn("nft_try_masq_fullcone failed, disable fullcone globally\n");
++		}
++
+ 		this.state.defaults = defs;
+ 	},
+ 
+@@ -2205,8 +2225,11 @@ return {
+ 		zone.related_subnets = related_subnets;
+ 		zone.related_physdevs = related_physdevs;
+ 
+-		if (zone.masq || zone.masq6)
++		if (zone.masq || zone.masq6) {
+ 			zone.dflags.snat = true;
++			if (this.state.defaults && this.state.defaults.fullcone == 2)
++				zone.dflags.fullcone = true;
++		}
+ 
+ 		if ((zone.auto_helper && !(zone.masq || zone.masq6)) || length(zone.helper)) {
+ 			zone.dflags.helper = true;
+-- 
+2.46.0
+
