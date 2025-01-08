@@ -38,7 +38,7 @@ define Package/opkg
   SECTION:=base
   CATEGORY:=Base system
   TITLE:=opkg package manager
-  DEPENDS:=+uclient-fetch +libpthread +libubox
+  DEPENDS:=+uclient-fetch +libpthread +libubox +curl
   DEFAULT:=y if !USE_APK
   URL:=$(PKG_SOURCE_URL)
   MENU:=1
