@@ -98,6 +98,10 @@ endif
 # Add device specific packages (here below to allow device type set from subtarget)
 DEFAULT_PACKAGES += $(DEFAULT_PACKAGES.$(DEVICE_TYPE))
 
+ifneq ($(filter aarch64 x86_64,$(ARCH)),)
+  DEFAULT_PACKAGES += luci-app-store
+endif
+
 ##@
 # @brief Filter out packages, prepended with `-`.
 #
