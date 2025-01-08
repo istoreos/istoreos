@@ -1223,7 +1223,7 @@ define KernelPackage/r8169
     CONFIG_R8169 \
     CONFIG_R8169_LEDS=y
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/realtek/r8169.ko
-  AUTOLOAD:=$(call AutoProbe,r8169,1)
+  AUTOLOAD:=$(call AutoLoad,35,r8169)
   DEFAULT_VARIANT:=1
 endef
 
@@ -1258,7 +1258,7 @@ define KernelPackage/e100
   DEPENDS:=@PCI_SUPPORT +kmod-mii +e100-firmware
   KCONFIG:=CONFIG_E100
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/e100.ko
-  AUTOLOAD:=$(call AutoProbe,e100)
+  AUTOLOAD:=$(call AutoLoad,35,e100)
 endef
 
 define KernelPackage/e100/description
@@ -1292,7 +1292,7 @@ define KernelPackage/e1000e
   DEPENDS:=@PCIE_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_E1000E
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/e1000e/e1000e.ko
-  AUTOLOAD:=$(call AutoProbe,e1000e,1)
+  AUTOLOAD:=$(call AutoLoad,35,e1000e)
   MODPARAMS.e1000e:= \
     IntMode=1 \
     InterruptThrottleRate=4,4,4,4,4,4,4,4
@@ -1350,7 +1350,7 @@ define KernelPackage/ixgbe
     CONFIG_IXGBE_DCA=n \
     CONFIG_IXGBE_DCB=y
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/ixgbe/ixgbe.ko
-  AUTOLOAD:=$(call AutoLoad,35,ixgbe)
+  AUTOLOAD:=$(call AutoLoad,36,ixgbe)
 endef
 
 define KernelPackage/ixgbe/description
@@ -1368,7 +1368,7 @@ define KernelPackage/ixgbevf
     CONFIG_IXGBE_HWMON=y \
     CONFIG_IXGBE_DCA=n
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/ixgbevf/ixgbevf.ko
-  AUTOLOAD:=$(call AutoLoad,35,ixgbevf)
+  AUTOLOAD:=$(call AutoLoad,36,ixgbevf)
 endef
 
 define KernelPackage/ixgbevf/description
@@ -1385,7 +1385,7 @@ define KernelPackage/i40e
   KCONFIG:=CONFIG_I40E \
     CONFIG_I40E_DCB=y
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/i40e/i40e.ko
-  AUTOLOAD:=$(call AutoLoad,36,i40e,1)
+  AUTOLOAD:=$(call AutoLoad,35,i40e)
 endef
 
 define KernelPackage/i40e/description
@@ -2146,7 +2146,7 @@ define KernelPackage/igc
   DEPENDS:=@PCI_SUPPORT +kmod-ptp
   KCONFIG:=CONFIG_IGC
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/intel/igc/igc.ko
-  AUTOLOAD:=$(call AutoLoad,34,igc,1)
+  AUTOLOAD:=$(call AutoLoad,35,igc,1)
 endef
 
 define KernelPackage/igc/description
