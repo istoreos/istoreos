@@ -8,6 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uhttpd
+PKG_FLAGS:=hold
 PKG_RELEASE:=4
 
 PKG_SOURCE_PROTO:=git
