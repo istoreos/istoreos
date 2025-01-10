@@ -81,7 +81,7 @@ define KernelPackage/vfio
   DEPENDS:=@TARGET_x86_64||TARGET_armsr_armv8
   KCONFIG:= \
 	CONFIG_VFIO \
-	CONFIG_VFIO_NOIOMMU=n \
+	CONFIG_VFIO_NOIOMMU=y \
 	CONFIG_VFIO_MDEV=n
   FILES:= \
 	$(LINUX_DIR)/drivers/vfio/vfio.ko \
