@@ -101,8 +101,7 @@ define KernelPackage/vfio-pci
   TITLE:=Generic VFIO support for any PCI device
   DEPENDS:=@TARGET_x86_64||TARGET_armsr_armv8 @PCI_SUPPORT +kmod-vfio +kmod-irqbypass
   KCONFIG:= \
-	CONFIG_VFIO_PCI \
-	CONFIG_VFIO_PCI_IGD=n
+	CONFIG_VFIO_PCI
   FILES:= \
 	$(LINUX_DIR)/drivers/vfio/pci/vfio-pci-core.ko \
 	$(LINUX_DIR)/drivers/vfio/pci/vfio-pci.ko
