@@ -465,7 +465,7 @@ define KernelPackage/drm-i915
   TITLE:=Intel i915 DRM support
   DEPENDS:=@(TARGET_x86_64||TARGET_x86_generic||TARGET_x86_legacy) \
 	@DISPLAY_SUPPORT +kmod-backlight +kmod-drm-ttm \
-	+kmod-drm-ttm-helper +kmod-drm-kms-helper +kmod-i2c-algo-bit +i915-firmware-dmc \
+	+kmod-drm-ttm-helper +kmod-drm-kms-helper +kmod-i2c-algo-bit +i915-firmware \
 	+kmod-drm-display-helper +kmod-drm-buddy +kmod-acpi-video \
 	+kmod-drm-exec +kmod-drm-suballoc-helper
   KCONFIG:=CONFIG_DRM_I915 \
@@ -495,6 +495,7 @@ define KernelPackage/drm-i915
 	CONFIG_FB_INTEL=n
   FILES:=$(LINUX_DIR)/drivers/gpu/drm/i915/i915.ko
   AUTOLOAD:=$(call AutoProbe,i915)
+  MODPARAMS.i915:=enable_guc=3
 endef
 
 define KernelPackage/drm-i915/description
