@@ -224,40 +224,82 @@ define Package/e100-firmware/install
 endef
 $(eval $(call BuildPackage,e100-firmware))
 
-i915_deps:=+i915-firmware-dmc +i915-firmware-guc +i915-firmware-huc +i915-firmware-gsc
+i915_deps:=+i915-firmware-dmc +i915-firmware-guc +i915-firmware-huc
 Package/i915-firmware = $(call Package/firmware-default,Intel I915 firmware \(meta package\),$(i915_deps),LICENSE.i915)
 define Package/i915-firmware/install
 	true
 endef
 $(eval $(call BuildPackage,i915-firmware))
 
+# grep -oE -e 'DMC_PATH\(.+\)$' -e 'DMC_LEGACY_PATH\(.+\)$' drivers/gpu/drm/i915/display/intel_dmc.c | sed 's/[[:space:]]\{1,\}//g' | \
+ sed -E -e 's/DMC_PATH\((.+)\)/\1_dmc.bin/g' \
+    -e 's/DMC_LEGACY_PATH\((.+),(.+),(.+)\)/\1_dmc_ver\2_\3.bin/g' | \
+ sort -u | xargs -rn1 sh -c 'echo "	\$(INSTALL_DATA) \$(PKG_BUILD_DIR)/i915/$0 \$(1)/lib/firmware/i915/"'
 Package/i915-firmware-dmc = $(call Package/firmware-default,Intel I915 DMC firmware,,LICENSE.i915)
 define Package/i915-firmware-dmc/install
 	$(INSTALL_DIR) $(1)/lib/firmware/i915
-	for f in $(PKG_BUILD_DIR)/i915/*_dmc*.bin; do                        \
-	  t=`echo $$$${f##*/} | cut -d_ -f2 | cut -d. -f1`;                  \
-	  if [ "$$$$t" = dmc ]; then $(CP) $$$$f $(1)/lib/firmware/i915/; fi \
-	done
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_dmc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_dmc_ver2_16.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adls_dmc_ver2_01.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_dmc_ver1_07.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg1_dmc_ver2_02.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg2_dmc_ver2_08.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_dmc_ver1_09.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_dmc_ver1_04.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/mtl_dmc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/rkl_dmc_ver2_03.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_dmc_ver1_27.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_dmc_ver2_12.bin $(1)/lib/firmware/i915/
 endef
 $(eval $(call BuildPackage,i915-firmware-dmc))
 
+# grep -oE -e 'guc_(maj|mmp)\([^)]+\)' drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c | sed 's/[[:space:]]\{1,\}//g' | \
+ sed -E -e 's/guc_maj\(([^,]+),([^,]+),.*\)/\1_guc_\2.bin/g' \
+    -e 's/guc_mmp\(([^,]+),([^,]+),([^,]+),([^,]+)\)/\1_guc_\2.\3.\4.bin/g' | \
+ sort -u | xargs -rn1 sh -c 'echo "	\$(INSTALL_DATA) \$(PKG_BUILD_DIR)/i915/$0 \$(1)/lib/firmware/i915/"'
 Package/i915-firmware-guc = $(call Package/firmware-default,Intel I915 GUC firmware,,LICENSE.i915)
 define Package/i915-firmware-guc/install
 	$(INSTALL_DIR) $(1)/lib/firmware/i915
-	for f in $(PKG_BUILD_DIR)/i915/*_guc*.bin; do                        \
-	  t=`echo $$$${f##*/} | cut -d_ -f2 | cut -d. -f1`;                  \
-	  if [ "$$$$t" = guc ]; then $(CP) $$$$f $(1)/lib/firmware/i915/; fi \
-	done
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_guc_69.0.3.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/adlp_guc_70.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg1_guc_70.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg2_guc_70.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/mtl_guc_70.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_69.0.3.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_70.1.1.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_guc_70.bin $(1)/lib/firmware/i915/
 endef
 $(eval $(call BuildPackage,i915-firmware-guc))
 
+# grep -oE -e 'huc_(gsc|raw|mmp)\([^)]+\)' drivers/gpu/drm/i915/gt/uc/intel_uc_fw.c | sed 's/[[:space:]]\{1,\}//g' | \
+ sed -E -e 's/huc_mmp\(([^,]+),([^,]+),([^,]+),([^,]+)\)/\1_huc_\2.\3.\4.bin/g' \
+    -e 's/huc_gsc\(([^,]+)\)/\1_huc_gsc.bin/g' \
+    -e 's/huc_raw\(([^,]+)\)/\1_huc.bin/g' | \
+ sort -u | xargs -rn1 sh -c 'echo "	\$(INSTALL_DATA) \$(PKG_BUILD_DIR)/i915/$0 \$(1)/lib/firmware/i915/"'
 Package/i915-firmware-huc = $(call Package/firmware-default,Intel I915 HUC firmware,,LICENSE.i915)
 define Package/i915-firmware-huc/install
 	$(INSTALL_DIR) $(1)/lib/firmware/i915
-	for f in $(PKG_BUILD_DIR)/i915/*_huc*.bin; do                        \
-	  t=`echo $$$${f##*/} | cut -d_ -f2 | cut -d. -f1`;                  \
-	  if [ "$$$$t" = huc ]; then $(CP) $$$$f $(1)/lib/firmware/i915/; fi \
-	done
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/bxt_huc_2.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/cml_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg1_huc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/dg2_huc_gsc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/ehl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/glk_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/icl_huc_9.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/kbl_huc_4.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/mtl_huc_gsc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/skl_huc_2.0.0.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_huc.bin $(1)/lib/firmware/i915/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/i915/tgl_huc_7.9.3.bin $(1)/lib/firmware/i915/
 endef
 $(eval $(call BuildPackage,i915-firmware-huc))
 
