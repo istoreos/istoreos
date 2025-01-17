@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-RAMFS_COPY_BIN="/usr/sbin/blkid"
+RAMFS_COPY_BIN="/usr/sbin/blkid readlink"
 
 platform_check_image() {
 	local board=$(board_name)
@@ -31,21 +31,6 @@ platform_check_image() {
 		ask_bool 0 "Abort" && exit 1
 		return 0
 	fi
-}
-
-platform_copy_config() {
-	local partdev parttype=ext4
-
-	if export_partdevice partdev 1; then
-		part_magic_fat "/dev/$partdev" && parttype=vfat
-		mount -t $parttype -o rw,noatime "/dev/$partdev" /mnt
-		cp -af "$UPGRADE_BACKUP" "/mnt/$BACKUP_FILE"
-		umount /mnt
-	else
-		v "ERROR: Unable to find partition to copy config data to"
-	fi
-
-	sleep 5
 }
 
 # To avoid writing over any firmware
@@ -97,16 +82,20 @@ platform_do_upgrade() {
 
 	sync
 
-	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" ]; then
-		get_partitions "/dev/$diskdev" bootdisk
+	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" -o -n "$UPGRADE_BACKUP" ]; then
+		[ -n "$UPGRADE_BACKUP" ] || get_partitions "/dev/$diskdev" bootdisk
 
 		v "Extract boot sector from the image"
 		get_image_dd "$1" of=/tmp/image.bs count=63 bs=512b
 
 		get_partitions /tmp/image.bs image
-
-		#compare tables
-		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
+		if [ -n "$UPGRADE_BACKUP" ]; then
+			#keep overlay partition when upgrade
+			diff=
+		else
+			#compare tables
+			diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
+		fi
 	else
 		diff=1
 	fi
@@ -131,11 +120,17 @@ platform_do_upgrade() {
 
 	#iterate over each partition from the image and write it to the boot disk
 	while read part start size; do
+		if [ -n "$UPGRADE_BACKUP" -a "$part" -ge 3 ]; then
+			v "Skip partition $part >= 3 when upgrading"
+			continue
+		fi
 		if export_partdevice partdev $part; then
 			v "Writing image to /dev/$partdev..."
 			if [ "$part" = "1" ]; then
 				platform_do_upgrade_efi_system_partition \
 					$1 $partdev $start $size || return 1
+			elif [ "$part" -eq 3 ]; then
+				echo "RESET000" | dd of="/dev/$partdev" bs=512 count=1 conv=sync,fsync 2>/dev/null
 			else
 				v "Normal partition, doing DD"
 				get_image_dd "$1" of="/dev/$partdev" ibs=512 obs=1M skip="$start" \
