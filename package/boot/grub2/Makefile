@@ -181,7 +181,7 @@ define Package/grub2-efi-arm/install
 		-c $(PKG_BUILD_DIR)/grub-early.cfg \
 		-o $(STAGING_DIR_IMAGE)/grub2/boot$(if $(CONFIG_aarch64),aa64,arm).efi \
 		boot chain configfile fat linux ls part_gpt part_msdos reboot search \
-		search_fs_uuid search_label serial efi_gop lsefi minicmd ext2
+		search_fs_uuid search_label serial test efi_gop lsefi minicmd ext2
 	$(STAGING_DIR_HOST)/bin/grub-mkimage \
 		-d $(PKG_BUILD_DIR)/grub-core \
 		-p /boot/grub \
