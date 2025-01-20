@@ -1,0 +1,28 @@
+#!/bin/sh
+
+[ -f /etc/config/kmods ] || exit 0
+
+uci -q batch <<-EOF >/dev/null
+	delete kmods.amdgpu
+	set kmods.amdgpu=auto_unload
+	set kmods.amdgpu.function=amdgpu
+	delete kmods.i915
+	set kmods.i915=auto_unload
+	set kmods.i915.function=i915
+	delete kmods.radeon
+	set kmods.radeon=auto_unload
+	set kmods.radeon.function=radeon
+
+	delete kmods.qed
+	set kmods.qed=auto_unload
+	set kmods.qed.function="qede qedf"
+	set kmods.qed.support=qed
+
+	delete kmods.x86_others
+	set kmods.x86_others=auto_unload
+	set kmods.x86_others.function="atlantic bnx2x i40e ixgbe mlx5_core mlx4_core mpt3sas qlcnic sfc sfc_falcon"
+
+	commit kmods
+EOF
+
+exit 0
