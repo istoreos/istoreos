@@ -491,6 +491,11 @@ define KernelPackage/rtw89-pci
   HIDDEN:=1
 endef
 
+define KernelPackage/rtw89-pci/install
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/rtw89-pci-unload.defaults $(1)/etc/uci-defaults/00-rtw89-pci-unload
+endef
+
 define KernelPackage/rtw89-8851be
   $(call KernelPackage/mac80211/Default)
   TITLE:=Realtek RTL8851BE support

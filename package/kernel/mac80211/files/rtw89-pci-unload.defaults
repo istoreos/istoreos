@@ -1,0 +1,14 @@
+#!/bin/sh
+
+[ -f /etc/config/kmods ] || exit 0
+
+uci -q batch <<-EOF >/dev/null
+	delete kmods.rtw89_pci
+	set kmods.rtw89_pci=auto_unload
+	set kmods.rtw89_pci.function="rtw89_8851be rtw89_8852ae rtw89_8852be rtw89_8852ce rtw89_8922ae"
+	set kmods.rtw89_pci.support="rtw89_8922a rtw89_8852c rtw89_8852b rtw89_8852b_common rtw89_8852a rtw89_8851b rtw89_pci rtw89_core"
+
+	commit kmods
+EOF
+
+exit 0
