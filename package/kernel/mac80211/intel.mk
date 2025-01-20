@@ -76,3 +76,8 @@ define KernelPackage/iwlwifi/config
   endif
 endef
 
+define KernelPackage/iwlwifi/install
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/iwlwifi.defaults $(1)/etc/uci-defaults/00-iwlwifi
+endef
+
