@@ -340,6 +340,12 @@ define U-Boot/rk358x/Default
   TPL:=rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.19.bin
 endef
 
+define U-Boot/easepi-rk3588
+  $(U-Boot/rk358x/Default)
+  NAME:=Easepi RK3588
+  DEFAULT:=y
+endef
+
 define U-Boot/generic-rk3588
   $(U-Boot/rk358x/Default)
   NAME:=Generic RK358x board
@@ -444,6 +450,7 @@ UBOOT_TARGETS := \
   rock-3b-rk3568 \
   generic-rk3576 \
   rock-4d-rk3576 \
+  easepi-rk3588 \
   generic-rk3588 \
   nanopc-t6-rk3588 \
   rock-5-itx-rk3588 \
