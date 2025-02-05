@@ -43,6 +43,27 @@ define Build/pine64-img
 	dd if="$(STAGING_DIR_IMAGE)"/$(UBOOT_DEVICE_NAME)-u-boot-rockchip.bin of="$@" seek=64 conv=notrunc
 endef
 
+### Legacy Image scripts ###
+define Build/boot-common-legacy
+	# This creates a new folder copies the dtbs (as rockchip*.dtb) 
+	# and the kernel image (as kernel.img)
+	rm -fR $@.boot
+	mkdir -p $@.boot
+
+	i=0; \
+	for dts in $(DEVICE_DTS); do \
+		$(CP) $(KDIR)/image-$${dts##*/}.dtb $@.boot/rockchip$$(perl -e 'printf "%b\n",'$$i).dtb || exit 1; \
+		let i+=1; \
+	done
+	$(LN) rockchip0.dtb $@.boot/rockchip.dtb
+	$(CP) $(IMAGE_KERNEL) $@.boot/kernel.img
+endef
+
+define Build/boot-script-legacy
+	# Make an U-boot image and copy it to the boot partition
+	mkimage -A arm -O linux -T script -C none -a 0 -e 0 -d legacy/$(if $(1),$(1),default).bootscript $@.boot/boot.scr
+endef
+
 ### Devices ###
 define Device/Default
   PROFILES := Default
@@ -52,6 +73,13 @@ define Device/Default
   IMAGE/sysupgrade.img.gz = boot-common | boot-script $$(BOOT_SCRIPT) | pine64-img | gzip | append-metadata
   DEVICE_DTS = rockchip/$$(SOC)-$(lastword $(subst _, ,$(1)))
   UBOOT_DEVICE_NAME = $(lastword $(subst _, ,$(1)))-$$(SOC)
+endef
+
+define Device/Legacy
+  KERNEL = kernel-bin
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_DTS = $$(SOC)/$$(SOC)-$(lastword $(subst _, ,$(1)))
+  IMAGE/sysupgrade.img.gz = boot-common-legacy | boot-script-legacy $$(BOOT_SCRIPT) | pine64-img | gzip | append-metadata
 endef
 
 include $(SUBTARGET).mk
