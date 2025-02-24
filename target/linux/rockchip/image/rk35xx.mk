@@ -385,6 +385,16 @@ $(call Device/rk3566)
 endef
 TARGET_DEVICES += panther_x2
 
+define Device/firefly_station-m2
+$(call Device/rk3566)
+  DEVICE_VENDOR := Firefly
+  DEVICE_MODEL := Station M2 / ROC PC
+  DEVICE_DTS := rk3566-firefly-roc-pc
+  SUPPORTED_DEVICES += firefly,rk3566-roc-pc firefly,station-m2
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core
+endef
+TARGET_DEVICES += firefly_station-m2
+
 define Device/le_hes30
 $(call Device/rk3566)
   DEVICE_VENDOR := LE
