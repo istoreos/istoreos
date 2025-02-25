@@ -1,0 +1,25 @@
+From c72baafdf98cb12fcb2056b007593b167e08bc7c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 25 Feb 2025 14:06:58 +0800
+Subject: [PATCH] rknpu: remove non in-tree linux/version_compat_defs.h
+
+unused in anywhere
+---
+ drivers/rknpu/rknpu_gem.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/drivers/rknpu/rknpu_gem.c b/drivers/rknpu/rknpu_gem.c
+index 136a2a6..a19c558 100644
+--- a/drivers/rknpu/rknpu_gem.c
++++ b/drivers/rknpu/rknpu_gem.c
+@@ -16,7 +16,6 @@
+ #include <linux/iommu.h>
+ #include <linux/pfn_t.h>
+ #include <linux/version.h>
+-#include <linux/version_compat_defs.h>
+ #include <asm/cacheflush.h>
+ #include <linux/vmalloc.h>
+ 
+-- 
+2.51.0
+

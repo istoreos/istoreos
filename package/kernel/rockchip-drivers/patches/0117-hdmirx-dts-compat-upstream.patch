@@ -1,0 +1,119 @@
+From 390d0c0f59ba05af295e59e3c76ffe5b8f1cb652 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 22 Jan 2026 12:13:35 +0800
+Subject: [PATCH] hdmirx: dts compat upstream
+
+---
+ .../platform/rockchip/hdmirx/rk_hdmirx.c      | 34 ++++++++++++-------
+ 1 file changed, 21 insertions(+), 13 deletions(-)
+
+diff --git a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+index 1a2a6c2..ab8695b 100644
+--- a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -3910,6 +3910,11 @@ static const struct hdmirx_cec_ops hdmirx_cec_ops = {
+ 	.read = hdmirx_readl,
+ };
+ 
++static void devm_hdmirx_of_reserved_mem_device_release(void *dev)
++{
++	of_reserved_mem_device_release(dev);
++}
++
+ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ {
+ 	struct device *dev = hdmirx_dev->dev;
+@@ -3925,25 +3930,25 @@ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ 	if (hdmirx_dev->num_clks < 1)
+ 		return -ENODEV;
+ 
+-	hdmirx_dev->rst_a = devm_reset_control_get(hdmirx_dev->dev, "rst_a");
++	hdmirx_dev->rst_a = devm_reset_control_get(hdmirx_dev->dev, "axi");
+ 	if (IS_ERR(hdmirx_dev->rst_a)) {
+ 		dev_err(dev, "failed to get rst_a control\n");
+ 		return PTR_ERR(hdmirx_dev->rst_a);
+ 	}
+ 
+-	hdmirx_dev->rst_p = devm_reset_control_get(hdmirx_dev->dev, "rst_p");
++	hdmirx_dev->rst_p = devm_reset_control_get(hdmirx_dev->dev, "apb");
+ 	if (IS_ERR(hdmirx_dev->rst_p)) {
+ 		dev_err(dev, "failed to get rst_p control\n");
+ 		return PTR_ERR(hdmirx_dev->rst_p);
+ 	}
+ 
+-	hdmirx_dev->rst_ref = devm_reset_control_get(hdmirx_dev->dev, "rst_ref");
++	hdmirx_dev->rst_ref = devm_reset_control_get(hdmirx_dev->dev, "ref");
+ 	if (IS_ERR(hdmirx_dev->rst_ref)) {
+ 		dev_err(dev, "failed to get rst_ref control\n");
+ 		return PTR_ERR(hdmirx_dev->rst_ref);
+ 	}
+ 
+-	hdmirx_dev->rst_biu = devm_reset_control_get(hdmirx_dev->dev, "rst_biu");
++	hdmirx_dev->rst_biu = devm_reset_control_get(hdmirx_dev->dev, "biu");
+ 	if (IS_ERR(hdmirx_dev->rst_biu)) {
+ 		dev_err(dev, "failed to get rst_biu control\n");
+ 		return PTR_ERR(hdmirx_dev->rst_biu);
+@@ -3951,7 +3956,7 @@ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ 
+ 
+ 	hdmirx_dev->hdmirx_det_gpio = devm_gpiod_get_optional(dev,
+-			"hdmirx-det", GPIOD_IN);
++			"hpd", GPIOD_IN);
+ 	if (IS_ERR(hdmirx_dev->hdmirx_det_gpio)) {
+ 		dev_err(dev, "failed to get hdmirx det gpio\n");
+ 		return PTR_ERR(hdmirx_dev->hdmirx_det_gpio);
+@@ -3964,16 +3969,14 @@ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ 	}
+ 
+ 	hdmirx_dev->vo1_grf = syscon_regmap_lookup_by_phandle(np,
+-			"rockchip,vo1_grf");
++			"rockchip,vo1-grf");
+ 	if (IS_ERR(hdmirx_dev->vo1_grf)) {
+-		dev_err(dev, "failed to get rockchip,vo1_grf\n");
++		dev_err(dev, "failed to get rockchip,vo1-grf\n");
+ 		return PTR_ERR(hdmirx_dev->vo1_grf);
+ 	}
+ 
+-	if (of_property_read_u32(np, "hpd-trigger-level",
+-					&hdmirx_dev->hpd_trigger_level)) {
++	if (!of_property_read_bool(np, "hpd-is-active-low")) {
+ 		hdmirx_dev->hpd_trigger_level = 1;
+-		dev_warn(dev, "failed to get hpd-trigger-level, set high as default\n");
+ 	}
+ 
+ 	if (of_property_read_bool(np, "hdcp1x-enable"))
+@@ -3988,6 +3991,13 @@ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ 	ret = of_reserved_mem_device_init(dev);
+ 	if (ret)
+ 		dev_warn(dev, "No reserved memory for HDMIRX, use default CMA\n");
++	else {
++		ret = devm_add_action_or_reset(dev,
++					       devm_hdmirx_of_reserved_mem_device_release,
++					       dev);
++		if (ret)
++			return ret;
++	}
+ 
+ 	return 0;
+ }
+@@ -4780,7 +4790,6 @@ static int hdmirx_probe(struct platform_device *pdev)
+ 	struct hdmirx_stream *stream;
+ 	struct v4l2_device *v4l2_dev;
+ 	struct v4l2_ctrl_handler *hdl;
+-	struct resource *res;
+ 	struct hdmirx_cec_data cec_data;
+ 	struct cpumask cpumask;
+ 	int ret, irq, cpu_aff;
+@@ -4798,8 +4807,7 @@ static int hdmirx_probe(struct platform_device *pdev)
+ 	if (ret)
+ 		return ret;
+ 
+-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "hdmirx_regs");
+-	hdmirx_dev->regs = devm_ioremap_resource(dev, res);
++	hdmirx_dev->regs = devm_platform_ioremap_resource(pdev, 0);
+ 	if (IS_ERR(hdmirx_dev->regs)) {
+ 		dev_err(dev, "failed to remap regs resource\n");
+ 		return PTR_ERR(hdmirx_dev->regs);
+-- 
+2.51.0
+

@@ -1,0 +1,37 @@
+From 34c54c246fce4bf043a70cf733878e584769cc72 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Sat, 8 Feb 2025 15:05:48 +0800
+Subject: [PATCH] Fix include path on OOT build
+
+---
+ drivers/video/rockchip/rga3/Makefile | 1 +
+ drivers/video/rockchip/rve/Makefile  | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/video/rockchip/rga3/Makefile b/drivers/video/rockchip/rga3/Makefile
+index 11f401d..1f7d373 100644
+--- a/drivers/video/rockchip/rga3/Makefile
++++ b/drivers/video/rockchip/rga3/Makefile
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: GPL-2.0
+ 
+ ccflags-y += -I$(srctree)/$(src)/include
++ccflags-y += -I$(src)/include
+ 
+ rga3-y	:= rga_drv.o rga_common.o rga3_reg_info.o rga_iommu.o rga_dma_buf.o rga_job.o rga_hw_config.o rga2_reg_info.o rga_policy.o rga_mm.o
+ rga3-$(CONFIG_ROCKCHIP_RGA_ASYNC) += rga_fence.o
+diff --git a/drivers/video/rockchip/rve/Makefile b/drivers/video/rockchip/rve/Makefile
+index e475b77..17677ff 100644
+--- a/drivers/video/rockchip/rve/Makefile
++++ b/drivers/video/rockchip/rve/Makefile
+@@ -1,6 +1,7 @@
+ # SPDX-License-Identifier: GPL-2.0
+ 
+ ccflags-y += -I$(srctree)/$(src)/include
++ccflags-y += -I$(src)/include
+ 
+ rve-y	:= rve_drv.o rve_job.o rve_reg.o
+ rve-$(CONFIG_ROCKCHIP_RVE_DEBUGGER) += rve_debugger.o
+-- 
+2.51.0
+

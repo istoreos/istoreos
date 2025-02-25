@@ -1,0 +1,25 @@
+From 05fad31c5d315ca80f2fd4e9350e0b21e68a2a34 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 22 Jan 2026 12:13:14 +0800
+Subject: [PATCH] hdmirx: fix include path
+
+---
+ drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+index afff5b3..1a2a6c2 100644
+--- a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -27,7 +27,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/regmap.h>
+ #include <linux/reset.h>
+-#include <linux/rk_hdmirx_config.h>
++#include <uapi/linux/rk_hdmirx_config.h>
+ #include <linux/rockchip/rockchip_sip.h>
+ #include <linux/seq_file.h>
+ #include <linux/sync_file.h>
+-- 
+2.51.0
+

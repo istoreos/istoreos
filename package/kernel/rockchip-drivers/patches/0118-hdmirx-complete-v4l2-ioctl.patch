@@ -1,0 +1,70 @@
+From 200a597760243a35e19f45808c1b4bb0183b2793 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 22 Apr 2026 22:34:09 +0800
+Subject: [PATCH] hdmirx: complete v4l2 ioctl
+
+copy from upstream https://github.com/torvalds/linux/blob/master/drivers/media/platform/synopsys/hdmirx/snps_hdmirx.c
+---
+ .../platform/rockchip/hdmirx/rk_hdmirx.c      | 30 +++++++++++++++++++
+ 1 file changed, 30 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+index ab8695b..be1525d 100644
+--- a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -1321,6 +1321,20 @@ static int hdmirx_get_edid(struct file *file, void *fh,
+ 	return 0;
+ }
+ 
++static int hdmirx_g_parm(struct file *file, void *priv,
++			 struct v4l2_streamparm *parm)
++{
++	struct hdmirx_stream *stream = video_drvdata(file);
++	struct rk_hdmirx_dev *hdmirx_dev = stream->hdmirx_dev;
++
++	if (parm->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
++		return -EINVAL;
++
++	parm->parm.capture.timeperframe = v4l2_calc_timeperframe(&hdmirx_dev->timings);
++
++	return 0;
++}
++
+ static int hdmirx_dv_timings_cap(struct file *file, void *fh,
+ 				   struct v4l2_dv_timings_cap *cap)
+ {
+@@ -1770,6 +1784,19 @@ static int hdmirx_enum_input(struct file *file, void *priv,
+ 	return 0;
+ }
+ 
++static int hdmirx_get_input(struct file *file, void *priv, unsigned int *i)
++{
++	*i = 0;
++	return 0;
++}
++
++static int hdmirx_set_input(struct file *file, void *priv, unsigned int i)
++{
++	if (i)
++		return -EINVAL;
++	return 0;
++}
++
+ static int fcc_xysubs(u32 fcc, u32 *xsubs, u32 *ysubs)
+ {
+ 	/* Note: cbcr plane bpp is 16 bit */
+@@ -2600,8 +2627,11 @@ static const struct v4l2_ioctl_ops hdmirx_v4l2_ioctl_ops = {
+ 	.vidioc_query_dv_timings = hdmirx_query_dv_timings,
+ 	.vidioc_dv_timings_cap = hdmirx_dv_timings_cap,
+ 	.vidioc_enum_input = hdmirx_enum_input,
++	.vidioc_g_input = hdmirx_get_input,
++	.vidioc_s_input = hdmirx_set_input,
+ 	.vidioc_g_edid = hdmirx_get_edid,
+ 	.vidioc_s_edid = hdmirx_set_edid,
++	.vidioc_g_parm = hdmirx_g_parm,
+ 
+ 	.vidioc_reqbufs = vb2_ioctl_reqbufs,
+ 	.vidioc_querybuf = vb2_ioctl_querybuf,
+-- 
+2.51.0
+

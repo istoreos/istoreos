@@ -1,0 +1,85 @@
+From 651333448f4b6ecf207e67de160d8e90f410a10e Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 10 Sep 2025 14:31:13 +0800
+Subject: [PATCH] rockchip_opp_select.h: remove is_use_pvtpll for abi
+ compatible
+
+is_use_pvtpll is only used by rv1126b_npu_opp_data
+---
+ drivers/rknpu/rknpu_devfreq.c              | 6 ++++++
+ include/soc/rockchip/rockchip_opp_select.h | 3 +--
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/rknpu/rknpu_devfreq.c b/drivers/rknpu/rknpu_devfreq.c
+index a271801..71df338 100644
+--- a/drivers/rknpu/rknpu_devfreq.c
++++ b/drivers/rknpu/rknpu_devfreq.c
+@@ -136,6 +136,7 @@ static int rk3588_npu_get_soc_info(struct device *dev, struct device_node *np,
+ 	return ret;
+ }
+ 
++#ifdef CONFIG_CPU_RV1126B
+ static int rv1126b_npu_get_soc_info(struct device *dev, struct device_node *np,
+ 				    int *bin, int *process)
+ {
+@@ -171,6 +172,7 @@ static int rv1126b_npu_get_soc_info(struct device *dev, struct device_node *np,
+ 
+ 	return ret;
+ }
++#endif
+ 
+ #if KERNEL_VERSION(6, 1, 0) <= LINUX_VERSION_CODE
+ static int rk3588_npu_set_soc_info(struct device *dev, struct device_node *np,
+@@ -303,6 +305,7 @@ static const struct rockchip_opp_data rk3588_npu_opp_data = {
+ #endif
+ };
+ 
++#ifdef CONFIG_CPU_RV1126B
+ static const struct rockchip_opp_data rv1126b_npu_opp_data = {
+ 	.is_use_pvtpll = true,
+ 	.get_soc_info = rv1126b_npu_get_soc_info,
+@@ -312,6 +315,7 @@ static const struct rockchip_opp_data rv1126b_npu_opp_data = {
+ 	.config_clks = npu_opp_config_clks,
+ #endif
+ };
++#endif
+ 
+ static const struct of_device_id rockchip_npu_of_match[] = {
+ 	{
+@@ -330,10 +334,12 @@ static const struct of_device_id rockchip_npu_of_match[] = {
+ 		.compatible = "rockchip,rk3588s",
+ 		.data = (void *)&rk3588_npu_opp_data,
+ 	},
++#ifdef CONFIG_CPU_RV1126B
+ 	{
+ 		.compatible = "rockchip,rv1126b",
+ 		.data = (void *)&rv1126b_npu_opp_data,
+ 	},
++#endif
+ 	{},
+ };
+ 
+diff --git a/include/soc/rockchip/rockchip_opp_select.h b/include/soc/rockchip/rockchip_opp_select.h
+index b54a4fe..28fe517 100644
+--- a/include/soc/rockchip/rockchip_opp_select.h
++++ b/include/soc/rockchip/rockchip_opp_select.h
+@@ -44,7 +44,6 @@ struct volt_rm_table {
+ struct rockchip_opp_data {
+ 	config_clks_t config_clks;
+ 	config_regulators_t config_regulators;
+-	bool is_use_pvtpll;
+ 
+ 	int (*get_soc_info)(struct device *dev, struct device_node *np,
+ 			    int *bin, int *process);
+@@ -146,7 +145,7 @@ struct rockchip_opp_info {
+ 
+ static inline bool rockchip_opp_is_use_pvtpll(struct rockchip_opp_info *info)
+ {
+-	return (info->is_scmi_clk || (info->data && info->data->is_use_pvtpll));
++	return (info->is_scmi_clk);
+ }
+ 
+ #if IS_ENABLED(CONFIG_ROCKCHIP_OPP)
+-- 
+2.51.0
+

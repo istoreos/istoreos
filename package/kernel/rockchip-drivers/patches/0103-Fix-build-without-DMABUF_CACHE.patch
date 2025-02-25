@@ -1,0 +1,45 @@
+From c47e6b5ae773c000d2993d293f5a9c45c2883b47 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Sat, 8 Feb 2025 15:16:45 +0800
+Subject: [PATCH] Fix build without DMABUF_CACHE
+
+---
+ drivers/video/rockchip/mpp/mpp_iommu.c       | 4 ++++
+ drivers/video/rockchip/rve/include/rve_drv.h | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/drivers/video/rockchip/mpp/mpp_iommu.c b/drivers/video/rockchip/mpp/mpp_iommu.c
+index ff93d7f..4782b8f 100644
+--- a/drivers/video/rockchip/mpp/mpp_iommu.c
++++ b/drivers/video/rockchip/mpp/mpp_iommu.c
+@@ -9,7 +9,11 @@
+  *
+  */
+ #include <linux/delay.h>
++#ifdef CONFIG_DMABUF_CACHE
+ #include <linux/dma-buf-cache.h>
++#else
++#include <linux/dma-buf.h>
++#endif
+ #include <linux/dma-mapping.h>
+ #include <linux/iommu.h>
+ #include <linux/of.h>
+diff --git a/drivers/video/rockchip/rve/include/rve_drv.h b/drivers/video/rockchip/rve/include/rve_drv.h
+index 9220b97..8ed9549 100644
+--- a/drivers/video/rockchip/rve/include/rve_drv.h
++++ b/drivers/video/rockchip/rve/include/rve_drv.h
+@@ -13,7 +13,11 @@
+ #include <linux/debugfs.h>
+ #include <linux/delay.h>
+ #include <linux/device.h>
++#ifdef CONFIG_DMABUF_CACHE
+ #include <linux/dma-buf-cache.h>
++#else
++#include <linux/dma-buf.h>
++#endif
+ #include <linux/dma-mapping.h>
+ #include <linux/err.h>
+ #include <linux/fb.h>
+-- 
+2.51.0
+

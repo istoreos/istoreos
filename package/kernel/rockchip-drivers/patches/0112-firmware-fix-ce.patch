@@ -1,0 +1,32 @@
+From 1b99fffe7ac54c304ac0805804f4069c78b28bda Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 10 Sep 2025 13:27:07 +0800
+Subject: [PATCH] firmware: fix ce
+
+---
+ drivers/firmware/rockchip_sip.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/firmware/rockchip_sip.c b/drivers/firmware/rockchip_sip.c
+index b6008d7..41a0ee4 100644
+--- a/drivers/firmware/rockchip_sip.c
++++ b/drivers/firmware/rockchip_sip.c
+@@ -207,6 +207,7 @@ struct arm_smccc_res sip_smc_bus_config(u32 arg0, u32 arg1, u32 arg2)
+ }
+ EXPORT_SYMBOL_GPL(sip_smc_bus_config);
+ 
++#ifdef ROCKCHIP_SIP_CONFIG_DRAM_ADDRMAP_GET
+ struct dram_addrmap_info *sip_smc_get_dram_map(void)
+ {
+ 	struct arm_smccc_res res;
+@@ -236,6 +237,7 @@ struct dram_addrmap_info *sip_smc_get_dram_map(void)
+ 	return map->bank_bit_first ? map : NULL;
+ }
+ EXPORT_SYMBOL_GPL(sip_smc_get_dram_map);
++#endif
+ 
+ struct arm_smccc_res sip_smc_lastlog_request(void)
+ {
+-- 
+2.51.0
+

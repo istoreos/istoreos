@@ -1,0 +1,409 @@
+From 13afc3ca32977b55e680a1c69ecc7b7aabb32612 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 17 Apr 2025 19:53:11 +0800
+Subject: [PATCH] all: fix build without wakelocks support
+
+---
+ drivers/video/rockchip/iep/iep_drv.c          | 14 ++++++++++++++
+ drivers/video/rockchip/rga/RGA_API.h          |  4 ++++
+ drivers/video/rockchip/rga/rga_drv.c          | 13 +++++++++++++
+ drivers/video/rockchip/rga/rga_reg_info.c     |  2 ++
+ drivers/video/rockchip/rga2/RGA2_API.h        |  4 ++++
+ drivers/video/rockchip/rga2/rga2_drv.c        | 12 ++++++++++++
+ drivers/video/rockchip/rga2/rga2_reg_info.c   |  2 ++
+ drivers/video/rockchip/rve/include/rve_drv.h  |  4 ++++
+ drivers/video/rockchip/rve/rve_drv.c          |  4 ++++
+ drivers/video/rockchip/vehicle/vehicle_gpio.c |  2 ++
+ drivers/video/rockchip/vehicle/vehicle_main.c | 10 ++++++++++
+ 11 files changed, 71 insertions(+)
+
+diff --git a/drivers/video/rockchip/iep/iep_drv.c b/drivers/video/rockchip/iep/iep_drv.c
+index 783cdee..5b8d884 100644
+--- a/drivers/video/rockchip/iep/iep_drv.c
++++ b/drivers/video/rockchip/iep/iep_drv.c
+@@ -24,7 +24,9 @@
+ #include <linux/poll.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/fb.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/of.h>
+ #include <linux/of_platform.h>
+ #include <linux/io.h>
+@@ -69,7 +71,9 @@ struct iep_drvdata {
+ 
+ 	/* clk enable or disable */
+ 	bool enable;
++#ifdef CONFIG_PM_WAKELOCKS
+ 	struct wake_lock wake_lock;
++#endif
+ 
+ 	atomic_t iep_int;
+ 	atomic_t mmu_page_fault;
+@@ -232,7 +236,9 @@ static void iep_power_on(void)
+ 	clk_prepare_enable(iep_drvdata1->hclk_iep);
+ #endif
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock(&iep_drvdata1->wake_lock);
++#endif
+ 
+ 	iep_iommu_attach(iep_service.iommu_info);
+ 
+@@ -269,7 +275,9 @@ static void iep_power_off(void)
+ 	pm_runtime_put(iep_drvdata1->dev);
+ #endif
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_unlock(&iep_drvdata1->wake_lock);
++#endif
+ 	iep_service.enable = false;
+ }
+ 
+@@ -954,7 +962,9 @@ static int iep_drv_probe(struct platform_device *pdev)
+ 
+ 	iep_service.enable = false;
+ 	INIT_DELAYED_WORK(&data->power_off_work, iep_power_off_work);
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_init(&data->wake_lock, WAKE_LOCK_SUSPEND, "iep");
++#endif
+ 
+ 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+ 
+@@ -1064,7 +1074,9 @@ err_misc_register:
+ 	free_irq(data->irq0, pdev);
+ err_irq:
+ err_ioremap:
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ #ifdef IEP_CLK_ENABLE
+ err_clock:
+ #endif
+@@ -1078,7 +1090,9 @@ static int iep_drv_remove(struct platform_device *pdev)
+ 	iep_iommu_info_destroy(iep_service.iommu_info);
+ 	iep_service.iommu_info = NULL;
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ 
+ 	misc_deregister(&(data->miscdev));
+ 	free_irq(data->irq0, &data->miscdev);
+diff --git a/drivers/video/rockchip/rga/RGA_API.h b/drivers/video/rockchip/rga/RGA_API.h
+index 96ca524..fe9c735 100644
+--- a/drivers/video/rockchip/rga/RGA_API.h
++++ b/drivers/video/rockchip/rga/RGA_API.h
+@@ -3,7 +3,9 @@
+ #define __RGA_API_H__
+ 
+ #include <linux/miscdevice.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ 
+ #include "rga_reg_info.h"
+ #include "rga.h"
+@@ -19,7 +21,9 @@ struct rga_drvdata {
+ 
+ 	struct delayed_work power_off_work;
+ 	void (*rga_irq_callback)(int rga_retval);   //callback function used by aync call
++#ifdef CONFIG_PM_WAKELOCKS
+ 	struct wake_lock wake_lock;
++#endif
+ 
+ 	struct clk *pd_rga;
+ 	struct clk *aclk_rga;
+diff --git a/drivers/video/rockchip/rga/rga_drv.c b/drivers/video/rockchip/rga/rga_drv.c
+index 42c4cc0..e2de869 100644
+--- a/drivers/video/rockchip/rga/rga_drv.c
++++ b/drivers/video/rockchip/rga/rga_drv.c
+@@ -41,7 +41,9 @@
+ #include <asm/cacheflush.h>
+ #include <linux/slab.h>
+ #include <linux/fb.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/version.h>
+ #include <linux/debugfs.h>
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+@@ -541,7 +543,9 @@ static void rga_power_on(void)
+ 		clk_prepare_enable(rga_drvdata->pd_rga);
+ #endif
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock(&rga_drvdata->wake_lock);
++#endif
+ 	rga_service.enable = true;
+ }
+ 
+@@ -572,7 +576,10 @@ static void rga_power_off(void)
+ 	clk_disable_unprepare(rga_drvdata->aclk_rga);
+ 	clk_disable_unprepare(rga_drvdata->hclk_rga);
+ #endif
++
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_unlock(&rga_drvdata->wake_lock);
++#endif
+ 	rga_service.enable = false;
+ }
+ 
+@@ -1839,7 +1846,9 @@ static int rga_drv_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	INIT_DELAYED_WORK(&data->power_off_work, rga_power_off_work);
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_init(&data->wake_lock, WAKE_LOCK_SUSPEND, "rga");
++#endif
+ 
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0))
+ 	data->pd_rga = devm_clk_get(&pdev->dev, "pd_rga");
+@@ -1911,7 +1920,9 @@ err_misc_register:
+ err_irq:
+ 	iounmap(data->rga_base);
+ err_ioremap:
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ 	//kfree(data);
+ 
+ 	return ret;
+@@ -1922,7 +1933,9 @@ static int rga_drv_remove(struct platform_device *pdev)
+ 	struct rga_drvdata *data = platform_get_drvdata(pdev);
+ 	DBG("%s [%d]\n",__FUNCTION__,__LINE__);
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ 	misc_deregister(&(data->miscdev));
+ 	free_irq(data->irq, &data->miscdev);
+ 	iounmap((void __iomem *)(data->rga_base));
+diff --git a/drivers/video/rockchip/rga/rga_reg_info.c b/drivers/video/rockchip/rga/rga_reg_info.c
+index 563eaab..d1b1257 100644
+--- a/drivers/video/rockchip/rga/rga_reg_info.c
++++ b/drivers/video/rockchip/rga/rga_reg_info.c
+@@ -30,7 +30,9 @@
+ #include <asm/cacheflush.h>
+ #include <linux/slab.h>
+ #include <linux/fb.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/version.h>
+ 
+ #include "rga_reg_info.h"
+diff --git a/drivers/video/rockchip/rga2/RGA2_API.h b/drivers/video/rockchip/rga2/RGA2_API.h
+index 88b68a3..d9e1957 100644
+--- a/drivers/video/rockchip/rga2/RGA2_API.h
++++ b/drivers/video/rockchip/rga2/RGA2_API.h
+@@ -3,7 +3,9 @@
+ #define __RGA_API_H__
+ 
+ #include <linux/miscdevice.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ 
+ #include "rga2_reg_info.h"
+ #include "rga2_debugger.h"
+@@ -35,7 +37,9 @@ struct rga2_drvdata_t {
+ 	int irq;
+ 
+ 	struct delayed_work power_off_work;
++#ifdef CONFIG_PM_WAKELOCKS
+ 	struct wake_lock wake_lock;
++#endif
+ 	void (*rga_irq_callback)(int rga_retval);
+ 
+ 	struct clk *aclk_rga2;
+diff --git a/drivers/video/rockchip/rga2/rga2_drv.c b/drivers/video/rockchip/rga2/rga2_drv.c
+index 87d1852..8ef59a2 100644
+--- a/drivers/video/rockchip/rga2/rga2_drv.c
++++ b/drivers/video/rockchip/rga2/rga2_drv.c
+@@ -39,7 +39,9 @@
+ #include <asm/cacheflush.h>
+ #include <linux/slab.h>
+ #include <linux/fb.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/scatterlist.h>
+ #include <linux/version.h>
+ 
+@@ -572,7 +574,9 @@ static void rga2_power_on(void)
+ 	clk_prepare_enable(rga2_drvdata->clk_rga2);
+ 	clk_prepare_enable(rga2_drvdata->aclk_rga2);
+ 	clk_prepare_enable(rga2_drvdata->hclk_rga2);
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock(&rga2_drvdata->wake_lock);
++#endif
+ 	rga2_service.enable = true;
+ }
+ 
+@@ -603,7 +607,9 @@ static void rga2_power_off(void)
+ 	clk_disable_unprepare(rga2_drvdata->pd_rga2);
+ #endif
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_unlock(&rga2_drvdata->wake_lock);
++#endif
+     first_RGA2_proc = 0;
+ 	rga2_service.enable = false;
+ }
+@@ -1787,7 +1793,9 @@ static int rga2_drv_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	INIT_DELAYED_WORK(&data->power_off_work, rga2_power_off_work);
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_init(&data->wake_lock, WAKE_LOCK_SUSPEND, "rga");
++#endif
+ 
+ 	data->clk_rga2 = devm_clk_get(&pdev->dev, "clk_rga");
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+@@ -1864,7 +1872,9 @@ err_misc_register:
+ err_irq:
+ 	iounmap(data->rga_base);
+ err_ioremap:
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ 	//kfree(data);
+ 
+ 	return ret;
+@@ -1879,7 +1889,9 @@ static int rga2_drv_remove(struct platform_device *pdev)
+ 	rga2_debugger_remove(&data->debugger);
+ #endif
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&data->wake_lock);
++#endif
+ 	misc_deregister(&(data->miscdev));
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+ 	free_irq(data->irq, &data->miscdev);
+diff --git a/drivers/video/rockchip/rga2/rga2_reg_info.c b/drivers/video/rockchip/rga2/rga2_reg_info.c
+index 1d5071d..c8a9d32 100644
+--- a/drivers/video/rockchip/rga2/rga2_reg_info.c
++++ b/drivers/video/rockchip/rga2/rga2_reg_info.c
+@@ -28,7 +28,9 @@
+ #include <asm/cacheflush.h>
+ #include <linux/slab.h>
+ #include <linux/fb.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/version.h>
+ 
+ #include "rga2_reg_info.h"
+diff --git a/drivers/video/rockchip/rve/include/rve_drv.h b/drivers/video/rockchip/rve/include/rve_drv.h
+index 8ed9549..ac4c0ea 100644
+--- a/drivers/video/rockchip/rve/include/rve_drv.h
++++ b/drivers/video/rockchip/rve/include/rve_drv.h
+@@ -46,7 +46,9 @@
+ #include <linux/uaccess.h>
+ #include <linux/version.h>
+ #include <linux/wait.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/pm_runtime.h>
+ #include <linux/sched/mm.h>
+ 
+@@ -293,7 +295,9 @@ struct rve_drvdata_t {
+ 	int num_of_scheduler;
+ 
+ 	struct delayed_work power_off_work;
++#ifdef CONFIG_PM_WAKELOCKS
+ 	struct wake_lock wake_lock;
++#endif
+ 
+ 	struct rve_mm *mm;
+ 
+diff --git a/drivers/video/rockchip/rve/rve_drv.c b/drivers/video/rockchip/rve/rve_drv.c
+index b4b4604..5010826 100644
+--- a/drivers/video/rockchip/rve/rve_drv.c
++++ b/drivers/video/rockchip/rve/rve_drv.c
+@@ -817,7 +817,9 @@ static int __init rve_init(void)
+ 
+ 	mutex_init(&rve_drvdata->lock);
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_init(&rve_drvdata->wake_lock, WAKE_LOCK_SUSPEND, "rve");
++#endif
+ 
+ 	ret = platform_driver_register(&rve_driver);
+ 	if (ret != 0) {
+@@ -865,7 +867,9 @@ static void __exit rve_exit(void)
+ 
+ 	rve_session_manager_remove(&rve_drvdata->session_manager);
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_destroy(&rve_drvdata->wake_lock);
++#endif
+ 
+ #ifdef CONFIG_SYNC_FILE
+ 	rve_fence_context_free(rve_drvdata->fence_ctx);
+diff --git a/drivers/video/rockchip/vehicle/vehicle_gpio.c b/drivers/video/rockchip/vehicle/vehicle_gpio.c
+index 519042b..2097a84 100644
+--- a/drivers/video/rockchip/vehicle/vehicle_gpio.c
++++ b/drivers/video/rockchip/vehicle/vehicle_gpio.c
+@@ -19,7 +19,9 @@
+ #include <linux/clk.h>
+ #include <linux/clkdev.h>
+ #include <linux/completion.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/gpio/consumer.h>
+ #include <linux/of_irq.h>
+ #include <linux/interrupt.h>
+diff --git a/drivers/video/rockchip/vehicle/vehicle_main.c b/drivers/video/rockchip/vehicle/vehicle_main.c
+index e306c40..ef6ee8e 100644
+--- a/drivers/video/rockchip/vehicle/vehicle_main.c
++++ b/drivers/video/rockchip/vehicle/vehicle_main.c
+@@ -24,7 +24,9 @@
+ #include <linux/clk.h>
+ #include <linux/clkdev.h>
+ #include <linux/completion.h>
++#ifdef CONFIG_PM_WAKELOCKS
+ #include <linux/wakelock.h>
++#endif
+ #include <linux/of_gpio.h>
+ #include <linux/of_address.h>
+ #include <linux/of_irq.h>
+@@ -55,7 +57,9 @@ struct vehicle {
+ 	struct device	*dev;
+ 	struct pinctrl *pinctrl;
+ 	struct pinctrl_state *pins_default;
++#ifdef CONFIG_PM_WAKELOCKS
+ 	struct wake_lock wake_lock;
++#endif
+ 	struct gpio_detect gpio_data;
+ 	struct vehicle_cif cif;
+ 	struct vehicle_ad_dev ad;
+@@ -339,7 +343,9 @@ static int vehicle_probe(struct platform_device *pdev)
+ 		return -EINVAL;
+ 	}
+ 
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_init(&vehicle_info->wake_lock, WAKE_LOCK_SUSPEND, "vehicle");
++#endif
+ 
+ 	dev_info(vehicle_info->dev, "vehicle driver probe success\n");
+ 
+@@ -399,7 +405,11 @@ static void vehicle_exit_complete_notify(struct vehicle *v)
+ 	status = kasprintf(GFP_KERNEL, "vehicle_exit=done");
+ 	envp[0] = status;
+ 	envp[1] = NULL;
++
++#ifdef CONFIG_PM_WAKELOCKS
+ 	wake_lock_timeout(&v->wake_lock, 5 * HZ);
++#endif
++
+ 	kobject_uevent_env(&v->dev->kobj, KOBJ_CHANGE, envp);
+ 
+ 	kfree(status);
+-- 
+2.51.0
+

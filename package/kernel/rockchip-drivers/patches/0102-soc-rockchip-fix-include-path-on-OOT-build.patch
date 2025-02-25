@@ -1,0 +1,47 @@
+From 40c12b79ce7f9ddd3e176df9735af0c5ebdcea50 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 8 Sep 2025 12:27:39 +0800
+Subject: [PATCH] soc/rockchip: fix include path on OOT build
+
+---
+ drivers/soc/rockchip/rockchip_opp_select.c     | 6 +++---
+ drivers/soc/rockchip/rockchip_system_monitor.c | 6 +++---
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/soc/rockchip/rockchip_opp_select.c b/drivers/soc/rockchip/rockchip_opp_select.c
+index 53d80ac..e419241 100644
+--- a/drivers/soc/rockchip/rockchip_opp_select.c
++++ b/drivers/soc/rockchip/rockchip_opp_select.c
+@@ -20,9 +20,9 @@
+ #include <linux/version.h>
+ #include <soc/rockchip/rockchip_opp_select.h>
+ 
+-#include "../../clk/rockchip/clk.h"
+-#include "../../opp/opp.h"
+-#include "../../devfreq/governor.h"
++#include <../drivers/clk/rockchip/clk.h>
++#include <../drivers/opp/opp.h>
++#include <../drivers/devfreq/governor.h>
+ 
+ #define MAX_PROP_NAME_LEN	6
+ #define SEL_TABLE_END		~1
+diff --git a/drivers/soc/rockchip/rockchip_system_monitor.c b/drivers/soc/rockchip/rockchip_system_monitor.c
+index aed56d9..7b19eb3 100644
+--- a/drivers/soc/rockchip/rockchip_system_monitor.c
++++ b/drivers/soc/rockchip/rockchip_system_monitor.c
+@@ -40,9 +40,9 @@
+ #include <linux/earlysuspend.h>
+ #endif
+ 
+-#include "../../opp/opp.h"
+-#include "../../regulator/internal.h"
+-#include "../../thermal/thermal_core.h"
++#include <../drivers/opp/opp.h>
++#include <../drivers/regulator/internal.h>
++#include <../drivers/thermal/thermal_core.h>
+ 
+ #define CPU_REBOOT_FREQ		816000 /* kHz */
+ #define VIDEO_1080P_SIZE	(1920 * 1080)
+-- 
+2.51.0
+
