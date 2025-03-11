@@ -1,0 +1,105 @@
+From 367514511901e3dd395fb4e22a0c7cf506e12a6f Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:46:00 +0800
+Subject: [PATCH] fix user_pages apis on linux 6.5.0+
+
+---
+ drivers/gpu/arm/bifrost/mali_kbase_mem.c       |  5 ++++-
+ drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c | 10 +++++++++-
+ drivers/gpu/arm/midgard/mali_kbase_mem.c       |  8 +++++++-
+ drivers/gpu/arm/midgard/mali_kbase_mem_linux.c |  6 +++++-
+ 4 files changed, 25 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_mem.c b/drivers/gpu/arm/bifrost/mali_kbase_mem.c
+index 1c94e9c..c037d46 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_mem.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_mem.c
+@@ -4997,9 +4997,12 @@ int kbase_jd_user_buf_pin_pages(struct kbase_context *kctx,
+ #elif KERNEL_VERSION(5, 9, 0) > LINUX_VERSION_CODE
+ 	pinned_pages = get_user_pages_remote(NULL, mm, address, alloc->imported.user_buf.nr_pages,
+ 					     write ? FOLL_WRITE : 0, pages, NULL, NULL);
+-#else
++#elif KERNEL_VERSION(6, 5, 0) > LINUX_VERSION_CODE
+ 	pinned_pages = pin_user_pages_remote(mm, address, alloc->imported.user_buf.nr_pages,
+ 					     write ? FOLL_WRITE : 0, pages, NULL, NULL);
++#else
++	pinned_pages = pin_user_pages_remote(mm, address, alloc->imported.user_buf.nr_pages,
++					     write ? FOLL_WRITE : 0, pages, NULL);
+ #endif
+ 
+ 	if (pinned_pages <= 0)
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+index f1251a4..00d70ab 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+@@ -1702,7 +1702,7 @@ static struct kbase_va_region *kbase_mem_from_user_buffer(
+ #if KERNEL_VERSION(5, 9, 0) > LINUX_VERSION_CODE
+ 	faulted_pages = get_user_pages(address, *va_pages,
+ 			write ? FOLL_WRITE : 0, pages, NULL);
+-#else
++#elif KERNEL_VERSION(6, 5, 0) > LINUX_VERSION_CODE
+ 	/* pin_user_pages function cannot be called with pages param NULL.
+ 	 * get_user_pages function will be used instead because it is safe to be
+ 	 * used with NULL pages param as long as it doesn't have FOLL_GET flag.
+@@ -1714,6 +1714,14 @@ static struct kbase_va_region *kbase_mem_from_user_buffer(
+ 		faulted_pages =
+ 			get_user_pages(address, *va_pages, write ? FOLL_WRITE : 0, pages, NULL);
+ 	}
++#else
++	if (pages != NULL) {
++		faulted_pages =
++			pin_user_pages(address, *va_pages, write ? FOLL_WRITE : 0, pages);
++	} else {
++		faulted_pages =
++			get_user_pages(address, *va_pages, write ? FOLL_WRITE : 0, pages);
++	}
+ #endif
+ 
+ 	up_read(kbase_mem_get_process_mmap_lock());
+diff --git a/drivers/gpu/arm/midgard/mali_kbase_mem.c b/drivers/gpu/arm/midgard/mali_kbase_mem.c
+index c411638..d3c2e03 100644
+--- a/drivers/gpu/arm/midgard/mali_kbase_mem.c
++++ b/drivers/gpu/arm/midgard/mali_kbase_mem.c
+@@ -2186,12 +2186,18 @@ static int kbase_jd_user_buf_map(struct kbase_context *kctx,
+ 			alloc->imported.user_buf.nr_pages,
+ 			reg->flags & KBASE_REG_GPU_WR ? FOLL_WRITE : 0,
+ 			pages, NULL, NULL);
+-#else
++#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
+ 	pinned_pages = get_user_pages_remote(mm,
+ 			address,
+ 			alloc->imported.user_buf.nr_pages,
+ 			reg->flags & KBASE_REG_GPU_WR ? FOLL_WRITE : 0,
+ 			pages, NULL, NULL);
++#else
++	pinned_pages = get_user_pages_remote(mm,
++			address,
++			alloc->imported.user_buf.nr_pages,
++			reg->flags & KBASE_REG_GPU_WR ? FOLL_WRITE : 0,
++			pages, NULL);
+ #endif
+ 
+ 	if (pinned_pages <= 0)
+diff --git a/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c b/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
+index 876c018..117811d 100644
+--- a/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
+@@ -1027,10 +1027,14 @@ static struct kbase_va_region *kbase_mem_from_user_buffer(
+ #elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+ 	faulted_pages = get_user_pages(address, *va_pages,
+ 			reg->flags & KBASE_REG_GPU_WR, 0, pages, NULL);
+-#else
++#elif LINUX_VERSION_CODE < KERNEL_VERSION(6, 5, 0)
+ 	faulted_pages = get_user_pages(address, *va_pages,
+ 			reg->flags & KBASE_REG_GPU_WR ? FOLL_WRITE : 0,
+ 			pages, NULL);
++#else
++	faulted_pages = get_user_pages(address, *va_pages,
++			reg->flags & KBASE_REG_GPU_WR ? FOLL_WRITE : 0,
++			pages);
+ #endif
+ 
+ 	up_read(&current->mm->mmap_lock);
+-- 
+2.46.0
+

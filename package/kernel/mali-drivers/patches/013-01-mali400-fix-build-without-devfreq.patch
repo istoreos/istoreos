@@ -1,0 +1,48 @@
+From c118de49c5040cc448f5b865db28969065ba2304 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 5 Aug 2025 09:50:46 +0800
+Subject: [PATCH] mali400: fix build without devfreq
+
+---
+ drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c | 2 ++
+ drivers/gpu/arm/mali400/mali/platform/rk/rk.c          | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+index ea7327b..c36db64 100755
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+@@ -202,8 +202,10 @@ extern int mali_platform_device_unregister(void);
+ #endif
+ #endif
+ 
++#ifdef CONFIG_MALI_DEVFREQ
+ extern int rk_platform_init_opp_table(struct mali_device *mdev);
+ extern void rk_platform_uninit_opp_table(struct mali_device *mdev);
++#endif
+ 
+ /* Linux power management operations provided by the Mali device driver */
+ #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 29))
+diff --git a/drivers/gpu/arm/mali400/mali/platform/rk/rk.c b/drivers/gpu/arm/mali400/mali/platform/rk/rk.c
+index 9027d68..25b8ee6 100644
+--- a/drivers/gpu/arm/mali400/mali/platform/rk/rk.c
++++ b/drivers/gpu/arm/mali400/mali/platform/rk/rk.c
+@@ -505,6 +505,7 @@ static void rk_platform_power_off_gpu(struct device *dev)
+ 	}
+ }
+ 
++#ifdef CONFIG_MALI_DEVFREQ
+ int rk_platform_init_opp_table(struct mali_device *mdev)
+ {
+ 	return rockchip_init_opp_table(mdev->dev, &mdev->opp_info,
+@@ -515,6 +516,7 @@ void rk_platform_uninit_opp_table(struct mali_device *mdev)
+ {
+ 	rockchip_uninit_opp_table(mdev->dev, &mdev->opp_info);
+ }
++#endif
+ 
+ static int mali_runtime_suspend(struct device *device)
+ {
+-- 
+2.46.0
+

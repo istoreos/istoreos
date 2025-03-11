@@ -1,0 +1,27 @@
+From 930625f17c3a9c005f6b755335fe171e34524453 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 18:33:09 +0800
+Subject: [PATCH] fix in_range macro break build
+
+---
+ drivers/gpu/arm/bifrost/mali_kbase_dummy_job_wa.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_dummy_job_wa.c b/drivers/gpu/arm/bifrost/mali_kbase_dummy_job_wa.c
+index 0e0dab9..9e64be1 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_dummy_job_wa.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_dummy_job_wa.c
+@@ -53,6 +53,10 @@ struct wa_blob {
+ 	u32 blob_offset;
+ } __packed;
+ 
++#ifdef in_range
++#undef in_range
++#endif
++
+ static bool in_range(const u8 *base, const u8 *end, off_t off, size_t sz)
+ {
+ 	return !(end - base - off < sz);
+-- 
+2.46.0
+

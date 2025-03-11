@@ -1,0 +1,257 @@
+From 591704a2d7777994c0f17f8aaa2e0c41f051d395 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:49:10 +0800
+Subject: [PATCH] fix vm_flags apis on linux 6.3.0+
+
+---
+ .../gpu/arm/bifrost/mali_kbase_mem_linux.c    | 22 +++++++++----------
+ .../gpu/arm/mali400/mali/linux/mali_memory.c  | 14 ++++++------
+ .../arm/mali400/mali/linux/mali_memory_cow.c  |  8 +++----
+ .../arm/mali400/ump/linux/ump_kernel_linux.c  |  2 +-
+ .../mali400/ump/linux/ump_osk_low_level_mem.c | 10 ++++-----
+ .../gpu/arm/midgard/mali_kbase_mem_linux.c    | 18 +++++++--------
+ 6 files changed, 37 insertions(+), 37 deletions(-)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+index af55970..7cdbcc4 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+@@ -2617,7 +2617,7 @@ static int kbase_cpu_mmap(struct kbase_context *kctx,
+ 	 * See MIDBASE-1057
+ 	 */
+ 
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO);
+ 	vma->vm_ops = &kbase_vm_ops;
+ 	vma->vm_private_data = map;
+ 
+@@ -2646,11 +2646,11 @@ static int kbase_cpu_mmap(struct kbase_context *kctx,
+ 	}
+ 
+ 	if (!kaddr) {
+-		vma->vm_flags |= VM_PFNMAP;
++		vm_flags_set(vma, VM_PFNMAP);
+ 	} else {
+ 		WARN_ON(aligned_offset);
+ 		/* MIXEDMAP so we can vfree the kaddr early and not track it after map time */
+-		vma->vm_flags |= VM_MIXEDMAP;
++		vm_flags_set(vma, VM_MIXEDMAP);
+ 		/* vmalloc remaping is easy... */
+ 		err = remap_vmalloc_range(vma, kaddr, 0);
+ 		WARN_ON(err);
+@@ -2864,9 +2864,9 @@ int kbase_context_mmap(struct kbase_context *const kctx,
+ 	dev_dbg(dev, "kbase_mmap\n");
+ 
+ 	if (!(vma->vm_flags & VM_READ))
+-		vma->vm_flags &= ~VM_MAYREAD;
++		vm_flags_clear(vma, VM_MAYREAD);
+ 	if (!(vma->vm_flags & VM_WRITE))
+-		vma->vm_flags &= ~VM_MAYWRITE;
++		vm_flags_clear(vma, VM_MAYWRITE);
+ 
+ 	if (nr_pages == 0) {
+ 		err = -EINVAL;
+@@ -3411,8 +3411,8 @@ static int kbase_tracking_page_setup(struct kbase_context *kctx, struct vm_area_
+ 		return -EINVAL;
+ 
+ 	/* no real access */
+-	vma->vm_flags &= ~(VM_READ | VM_MAYREAD | VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC);
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP | VM_IO;
++	vm_flags_clear(vma, (VM_READ | VM_MAYREAD | VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC));
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP | VM_IO);
+ 
+ 	return 0;
+ }
+@@ -3627,13 +3627,13 @@ static int kbase_csf_cpu_mmap_user_io_pages(struct kbase_context *kctx,
+ 	if (err)
+ 		goto map_failed;
+ 
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO);
+ 	/* TODO use VM_MIXEDMAP, since it is more appropriate as both types of
+ 	 * memory with and without "struct page" backing are being inserted here.
+ 	 * Hw Doorbell pages comes from the device register area so kernel does
+ 	 * not use "struct page" for them.
+ 	 */
+-	vma->vm_flags |= VM_PFNMAP;
++	vm_flags_set(vma, VM_PFNMAP);
+ 
+ 	vma->vm_ops = &kbase_csf_user_io_pages_vm_ops;
+ 	vma->vm_private_data = queue;
+@@ -3810,12 +3810,12 @@ static int kbase_csf_cpu_mmap_user_reg_page(struct kbase_context *kctx,
+ 	/* Map uncached */
+ 	vma->vm_page_prot = pgprot_device(vma->vm_page_prot);
+ 
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO);
+ 
+ 	/* User register page comes from the device register area so
+ 	 * "struct page" isn't available for it.
+ 	 */
+-	vma->vm_flags |= VM_PFNMAP;
++	vm_flags_set(vma, VM_PFNMAP);
+ 
+ 	kctx->csf.user_reg.vma = vma;
+ 
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_memory.c b/drivers/gpu/arm/mali400/mali/linux/mali_memory.c
+index dfc769e..73e233a 100755
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_memory.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_memory.c
+@@ -210,14 +210,14 @@ int mali_mmap(struct file *filp, struct vm_area_struct *vma)
+ 		 * that it's present and can never be paged out (see also previous
+ 		 * entry)
+ 		 */
+-		vma->vm_flags |= VM_IO;
+-		vma->vm_flags |= VM_DONTCOPY;
+-		vma->vm_flags |= VM_PFNMAP;
++		vm_flags_set(vma, VM_IO);
++		vm_flags_set(vma, VM_DONTCOPY);
++		vm_flags_set(vma, VM_PFNMAP);
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
+-		vma->vm_flags |= VM_RESERVED;
++		vm_flags_set(vma, VM_RESERVED);
+ #else
+-		vma->vm_flags |= VM_DONTDUMP;
+-		vma->vm_flags |= VM_DONTEXPAND;
++		vm_flags_set(vma, VM_DONTDUMP);
++		vm_flags_set(vma, VM_DONTEXPAND);
+ #endif
+ 	} else if (MALI_MEM_SWAP == mali_alloc->type) {
+ 		vma->vm_pgoff = mem_bkend->start_idx;
+@@ -232,7 +232,7 @@ int mali_mmap(struct file *filp, struct vm_area_struct *vma)
+ 	if (!(vma->vm_flags & VM_WRITE)) {
+ 		MALI_DEBUG_PRINT(4, ("mmap allocation with read only !\n"));
+ 		/* add VM_WRITE for do_page_fault will check this when a write fault */
+-		vma->vm_flags |= VM_WRITE | VM_READ;
++		vm_flags_set(vma, VM_WRITE | VM_READ);
+ 		vma->vm_page_prot = PAGE_READONLY;
+ 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+ 		mem_bkend->flags |= MALI_MEM_BACKEND_FLAG_COW_CPU_NO_WRITE;
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_memory_cow.c b/drivers/gpu/arm/mali400/mali/linux/mali_memory_cow.c
+index b9de93e..482f7f4 100644
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_memory_cow.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_memory_cow.c
+@@ -391,13 +391,13 @@ _mali_osk_errcode_t mali_memory_cow_modify_range(mali_mem_backend *backend,
+ 			}
+ 		} else {
+ 			/* used to trigger page fault for swappable cowed memory. */
+-			alloc->cpu_mapping.vma->vm_flags |= VM_PFNMAP;
+-			alloc->cpu_mapping.vma->vm_flags |= VM_MIXEDMAP;
++			vm_flags_set(alloc->cpu_mapping.vma, VM_PFNMAP);
++			vm_flags_set(alloc->cpu_mapping.vma, VM_MIXEDMAP);
+ 
+ 			zap_vma_ptes(alloc->cpu_mapping.vma, alloc->cpu_mapping.vma->vm_start + range_start, range_size);
+ 			/* delete this flag to let swappble is ummapped regard to stauct page not page frame. */
+-			alloc->cpu_mapping.vma->vm_flags &= ~VM_PFNMAP;
+-			alloc->cpu_mapping.vma->vm_flags &= ~VM_MIXEDMAP;
++			vm_flags_clear(alloc->cpu_mapping.vma, VM_PFNMAP);
++			vm_flags_clear(alloc->cpu_mapping.vma, VM_MIXEDMAP);
+ 		}
+ 	}
+ 
+diff --git a/drivers/gpu/arm/mali400/ump/linux/ump_kernel_linux.c b/drivers/gpu/arm/mali400/ump/linux/ump_kernel_linux.c
+index 71b3083..3f1102a 100755
+--- a/drivers/gpu/arm/mali400/ump/linux/ump_kernel_linux.c
++++ b/drivers/gpu/arm/mali400/ump/linux/ump_kernel_linux.c
+@@ -412,7 +412,7 @@ static int ump_file_mmap(struct file *filp, struct vm_area_struct *vma)
+ 	args.secure_id = vma->vm_pgoff;
+ 
+ 	/* By setting this flag, during a process fork; the child process will not have the parent UMP mappings */
+-	vma->vm_flags |= VM_DONTCOPY;
++	vm_flags_set(vma, VM_DONTCOPY);
+ 
+ 	DBG_MSG(4, ("UMP vma->flags: %x\n", vma->vm_flags));
+ 
+diff --git a/drivers/gpu/arm/mali400/ump/linux/ump_osk_low_level_mem.c b/drivers/gpu/arm/mali400/ump/linux/ump_osk_low_level_mem.c
+index e08bf25..f924dad 100755
+--- a/drivers/gpu/arm/mali400/ump/linux/ump_osk_low_level_mem.c
++++ b/drivers/gpu/arm/mali400/ump/linux/ump_osk_low_level_mem.c
+@@ -142,13 +142,13 @@ _mali_osk_errcode_t _ump_osk_mem_mapregion_init(ump_memory_allocation *descripto
+ 	}
+ 
+ 	vma->vm_private_data = vma_usage_tracker;
+-	vma->vm_flags |= VM_IO;
++	vm_flags_set(vma, VM_IO);
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0)
+-	vma->vm_flags |= VM_RESERVED;
++	vm_flags_set(vma, VM_RESERVED);
+ #else
+-	vma->vm_flags |= VM_DONTDUMP;
+-	vma->vm_flags |= VM_DONTEXPAND;
+-	vma->vm_flags |= VM_PFNMAP;
++	vm_flags_set(vma, VM_DONTDUMP);
++	vm_flags_set(vma, VM_DONTEXPAND);
++	vm_flags_set(vma, VM_PFNMAP);
+ #endif
+ 
+ 
+diff --git a/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c b/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
+index 117811d..5fe00db 100644
+--- a/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/midgard/mali_kbase_mem_linux.c
+@@ -1744,9 +1744,9 @@ static int kbase_cpu_mmap(struct kbase_va_region *reg, struct vm_area_struct *vm
+ 	 */
+ 
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTDUMP | VM_DONTEXPAND | VM_IO);
+ #else
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO);
+ #endif
+ 	vma->vm_ops = &kbase_vm_ops;
+ 	vma->vm_private_data = map;
+@@ -1769,7 +1769,7 @@ static int kbase_cpu_mmap(struct kbase_va_region *reg, struct vm_area_struct *vm
+ 		u64 start_off = vma->vm_pgoff - reg->start_pfn +
+ 			(aligned_offset>>PAGE_SHIFT);
+ 
+-		vma->vm_flags |= VM_PFNMAP;
++		vm_flags_set(vma, VM_PFNMAP);
+ 		for (i = 0; i < nr_pages; i++) {
+ 			unsigned long pfn = PFN_DOWN(page_array[i + start_off]);
+ 			vm_fault_t ret;
+@@ -1788,7 +1788,7 @@ static int kbase_cpu_mmap(struct kbase_va_region *reg, struct vm_area_struct *vm
+ 	} else {
+ 		WARN_ON(aligned_offset);
+ 		/* MIXEDMAP so we can vfree the kaddr early and not track it after map time */
+-		vma->vm_flags |= VM_MIXEDMAP;
++		vm_flags_set(vma, VM_MIXEDMAP);
+ 		/* vmalloc remaping is easy... */
+ 		err = remap_vmalloc_range(vma, kaddr, 0);
+ 		WARN_ON(err);
+@@ -1881,7 +1881,7 @@ static int kbase_trace_buffer_mmap(struct kbase_context *kctx, struct vm_area_st
+ 	*reg = new_reg;
+ 
+ 	/* map read only, noexec */
+-	vma->vm_flags &= ~(VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC);
++	vm_flags_clear(vma, (VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC));
+ 	/* the rest of the flags is added by the cpu_mmap handler */
+ 
+ 	dev_dbg(kctx->kbdev->dev, "%s done\n", __func__);
+@@ -2053,7 +2053,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
+ 	dev_dbg(dev, "kbase_mmap\n");
+ 
+ 	/* strip away corresponding VM_MAY% flags to the VM_% flags requested */
+-	vma->vm_flags &= ~((vma->vm_flags & (VM_READ | VM_WRITE)) << 4);
++	vm_flags_clear(vma, ((vma->vm_flags & (VM_READ | VM_WRITE)) << 4));
+ 
+ 	if (0 == nr_pages) {
+ 		err = -EINVAL;
+@@ -2456,11 +2456,11 @@ static int kbase_tracking_page_setup(struct kbase_context *kctx, struct vm_area_
+ 	spin_unlock(&kctx->mm_update_lock);
+ 
+ 	/* no real access */
+-	vma->vm_flags &= ~(VM_READ | VM_MAYREAD | VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC);
++	vm_flags_clear(vma, (VM_READ | VM_MAYREAD | VM_WRITE | VM_MAYWRITE | VM_EXEC | VM_MAYEXEC));
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 7, 0))
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTEXPAND | VM_DONTDUMP | VM_IO);
+ #else
+-	vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO;
++	vm_flags_set(vma, VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO);
+ #endif
+ 	vma->vm_ops = &kbase_vm_special_ops;
+ 	vma->vm_private_data = kctx;
+-- 
+2.46.0
+

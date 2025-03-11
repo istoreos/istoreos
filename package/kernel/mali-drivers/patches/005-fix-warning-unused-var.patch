@@ -1,0 +1,26 @@
+From d23ea983ca16089f587b0dcdc4078bbe18b21187 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:18:46 +0800
+Subject: [PATCH] fix unused var warning
+
+---
+ drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c b/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+index e0ac5b1..fe3378b 100644
+--- a/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
++++ b/drivers/gpu/arm/bifrost/backend/gpu/mali_kbase_devfreq.c
+@@ -566,7 +566,9 @@ int kbase_devfreq_init(struct kbase_device *kbdev)
+ 	struct devfreq_dev_profile *dp;
+ 	int err;
+ 	struct dev_pm_opp *opp;
++#if IS_ENABLED(CONFIG_DEVFREQ_THERMAL)
+ 	unsigned int dyn_power_coeff = 0;
++#endif
+ 	unsigned int i;
+ 	bool free_devfreq_freq_table = true;
+ 
+-- 
+2.46.0
+

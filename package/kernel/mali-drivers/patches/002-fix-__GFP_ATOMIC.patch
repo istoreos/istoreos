@@ -1,0 +1,27 @@
+From b5756fbdb4a8951bba0f9dc47674392b3fe6b92b Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:46:50 +0800
+Subject: [PATCH] fix __GFP_ATOMIC missing on linux 6.3.0+
+
+---
+ drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+index 00d70ab..af55970 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+@@ -681,7 +681,9 @@ unsigned long kbase_mem_evictable_reclaim_count_objects(struct shrinker *s,
+ 	struct kbase_context *kctx = container_of(s, struct kbase_context, reclaim);
+ 	int evict_nents = atomic_read(&kctx->evict_nents);
+ 	unsigned long nr_freeable_items;
+-
++#if KERNEL_VERSION(6, 3, 0) < LINUX_VERSION_CODE
++#define __GFP_ATOMIC __GFP_HIGH
++#endif
+ 	WARN((sc->gfp_mask & __GFP_ATOMIC),
+ 	     "Shrinkers cannot be called for GFP_ATOMIC allocations. Check kernel mm for problems. gfp_mask==%x\n",
+ 	     sc->gfp_mask);
+-- 
+2.46.0
+

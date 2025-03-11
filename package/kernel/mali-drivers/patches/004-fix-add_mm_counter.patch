@@ -1,0 +1,27 @@
+From a494c02ced709c85bdc321b59f91a43ea6eee0c5 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:01:02 +0800
+Subject: [PATCH] fix add_mm_counter
+
+---
+ drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+index 7cdbcc4..d96d38d 100644
+--- a/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
++++ b/drivers/gpu/arm/bifrost/mali_kbase_mem_linux.c
+@@ -3376,7 +3376,9 @@ KBASE_EXPORT_TEST_API(kbase_vunmap);
+ 
+ static void kbasep_add_mm_counter(struct mm_struct *mm, int member, long value)
+ {
+-#if (KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE)
++#if (KERNEL_VERSION(6, 2, 0) <= LINUX_VERSION_CODE)
++	percpu_counter_add(&mm->rss_stat[member], value);
++#elif (KERNEL_VERSION(4, 19, 0) <= LINUX_VERSION_CODE)
+ 	/* To avoid the build breakage due to an unexported kernel symbol
+ 	 * 'mm_trace_rss_stat' from later kernels, i.e. from V4.19.0 onwards,
+ 	 * we inline here the equivalent of 'add_mm_counter()' from linux
+-- 
+2.46.0
+

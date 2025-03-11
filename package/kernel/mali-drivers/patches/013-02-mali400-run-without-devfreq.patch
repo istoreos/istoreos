@@ -1,0 +1,59 @@
+From ab6525fdfdfad3998e507980ab3f7efa4f83d9e0 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 5 Aug 2025 13:38:11 +0800
+Subject: [PATCH] mali400: supports running without devfreq
+
+---
+ .../arm/mali400/mali/linux/mali_kernel_linux.c    | 15 ++++++++++-----
+ 1 file changed, 10 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+index c36db64..a9ae0db 100755
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+@@ -600,12 +600,13 @@ static int mali_probe(struct platform_device *pdev)
+ 	/* initilize pm metrics related */
+ 	if (mali_pm_metrics_init(mdev) < 0) {
+ 		MALI_DEBUG_PRINT(2, ("mali pm metrics init failed\n"));
+-		goto pm_metrics_init_failed;
++		//goto pm_metrics_init_failed;
+ 	}
+-
++	else
+ 	if (mali_devfreq_init(mdev) < 0) {
+ 		MALI_DEBUG_PRINT(2, ("mali devfreq init failed\n"));
+-		goto devfreq_init_failed;
++		mdev->devfreq = NULL;
++		//goto devfreq_init_failed;
+ 	}
+ 	clk_bulk_disable(mdev->num_clks, mdev->clks);
+ #endif
+@@ -639,10 +640,12 @@ static int mali_probe(struct platform_device *pdev)
+ 	}
+ 
+ #ifdef CONFIG_MALI_DEVFREQ
++	if (mdev->devfreq)
+ 	mali_devfreq_term(mdev);
+-devfreq_init_failed:
++//devfreq_init_failed:
++	if (mdev->mali_metrics.lock)
+ 	mali_pm_metrics_term(mdev);
+-pm_metrics_init_failed:
++//pm_metrics_init_failed:
+ 	clk_bulk_disable_unprepare(mdev->num_clks, mdev->clks);
+ clock_prepare_failed:
+ 	clk_bulk_put(mdev->num_clks, mdev->clks);
+@@ -679,8 +682,10 @@ static int mali_remove(struct platform_device *pdev)
+ 	_mali_osk_wq_term();
+ 
+ #ifdef CONFIG_MALI_DEVFREQ
++	if (mdev->devfreq)
+ 	mali_devfreq_term(mdev);
+ 
++	if (mdev->mali_metrics.lock)
+ 	mali_pm_metrics_term(mdev);
+ 
+ 	if (mdev->clock) {
+-- 
+2.46.0
+

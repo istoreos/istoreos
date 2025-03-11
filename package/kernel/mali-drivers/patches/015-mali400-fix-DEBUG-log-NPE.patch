@@ -1,0 +1,43 @@
+From d4e0ad6d5da33a8f1ce664c6ee26e35b066ec530 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 5 Aug 2025 13:36:33 +0800
+Subject: [PATCH] mali400: fix NPE on log on DEBUG enabled
+
+---
+ drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+index a9ae0db..b3017b3 100755
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+@@ -519,7 +519,7 @@ static int mali_probe(struct platform_device *pdev)
+ 	struct mali_device *mdev;
+ #endif
+ 
+-	MALI_DEBUG_PRINT(2, ("mali_probe(): Called for platform device %s\n", pdev->name));
++	MALI_DEBUG_PRINT(2, ("mali_probe(): Called for platform device %s\n", dev_name(&pdev->dev)));
+ 
+ 	if (NULL != mali_platform_device) {
+ 		/* Already connected to a device, return error */
+@@ -622,7 +622,7 @@ static int mali_probe(struct platform_device *pdev)
+ 				err = mali_sysfs_register(mali_dev_name);
+ 
+ 				if (0 == err) {
+-					MALI_DEBUG_PRINT(2, ("mali_probe(): Successfully initialized driver for platform device %s\n", pdev->name));
++					MALI_DEBUG_PRINT(2, ("mali_probe(): Successfully initialized driver for platform device %s\n", dev_name(&pdev->dev)));
+ 
+ 					return 0;
+ 				} else {
+@@ -675,7 +675,7 @@ static int mali_remove(struct platform_device *pdev)
+ 	struct mali_device *mdev = dev_get_drvdata(&pdev->dev);
+ #endif
+ 
+-	MALI_DEBUG_PRINT(2, ("mali_remove() called for platform device %s\n", pdev->name));
++	MALI_DEBUG_PRINT(2, ("mali_remove() called for platform device %s\n", dev_name(&pdev->dev)));
+ 	mali_sysfs_unregister();
+ 	mali_miscdevice_unregister();
+ 	mali_terminate_subsystems();
+-- 
+2.46.0
+

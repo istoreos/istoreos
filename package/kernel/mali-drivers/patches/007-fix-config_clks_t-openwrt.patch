@@ -1,0 +1,34 @@
+From c1a3a2f71febc47f492acb55b7c73350bf63ca7c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 17:28:15 +0800
+Subject: [PATCH] fix config_clks_t in include/linux/pm_opp.h changed by
+ openwrt
+
+---
+ drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+index c2b9fdf..dc37aa1 100755
+--- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
++++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+@@ -645,9 +645,16 @@ static int gpu_opp_config_regulators(struct device *dev,
+ 					      count, &kbdev->opp_info);
+ }
+ 
++#ifndef BUILD_OPENWRT
+ static int gpu_opp_config_clks(struct device *dev, struct opp_table *opp_table,
+ 			       struct dev_pm_opp *opp, void *data,
+ 			       bool scaling_down)
++#else
++static int gpu_opp_config_clks(struct device *dev, struct opp_table *opp_table,
++			       struct dev_pm_opp *old_opp,
++			       struct dev_pm_opp *opp, void *data,
++			       bool scaling_down)
++#endif
+ {
+ 	struct kbase_device *kbdev = dev_get_drvdata(dev);
+ 
+-- 
+2.46.0
+

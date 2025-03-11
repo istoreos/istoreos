@@ -1,0 +1,53 @@
+From 95facf639030d05ab0c65ba158f36a219d4f3faa Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 22 Oct 2025 15:56:32 +0800
+Subject: [PATCH] fix MIN,MAX redefined on linux 6.6.109+
+
+---
+ drivers/gpu/arm/bifrost/mali_malisw.h | 2 ++
+ drivers/gpu/arm/midgard/mali_malisw.h | 2 ++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/drivers/gpu/arm/bifrost/mali_malisw.h b/drivers/gpu/arm/bifrost/mali_malisw.h
+index d9db189..b9aaf8b 100644
+--- a/drivers/gpu/arm/bifrost/mali_malisw.h
++++ b/drivers/gpu/arm/bifrost/mali_malisw.h
+@@ -28,6 +28,7 @@
+ 
+ #include <linux/version.h>
+ 
++#if KERNEL_VERSION(6, 6, 109) > LINUX_VERSION_CODE
+ /**
+  * MIN - Return the lesser of two values.
+  * @x: value1
+@@ -51,6 +52,7 @@
+  * instead.
+  */
+ #define MAX(x, y)	((x) < (y) ? (y) : (x))
++#endif
+ 
+ /**
+  * CSTD_UNUSED - Function-like macro for suppressing unused variable warnings.
+diff --git a/drivers/gpu/arm/midgard/mali_malisw.h b/drivers/gpu/arm/midgard/mali_malisw.h
+index 9945293..670fb43 100644
+--- a/drivers/gpu/arm/midgard/mali_malisw.h
++++ b/drivers/gpu/arm/midgard/mali_malisw.h
+@@ -41,6 +41,7 @@
+ #define SIZE_MAX        (~(size_t)0)
+ #endif /* LINUX_VERSION_CODE */
+ 
++#if KERNEL_VERSION(6, 6, 109) > LINUX_VERSION_CODE
+ /**
+  * MIN - Return the lesser of two values.
+  *
+@@ -60,6 +61,7 @@
+  * instead.
+  */
+ #define MAX(x, y)	((x) < (y) ? (y) : (x))
++#endif
+ 
+ /**
+  * @hideinitializer
+-- 
+2.46.0
+

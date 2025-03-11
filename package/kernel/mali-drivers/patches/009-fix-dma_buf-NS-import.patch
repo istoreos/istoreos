@@ -1,0 +1,29 @@
+From 87e92c12faf59f7871a4260e1ae58ecead3ebdeb Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 11 Mar 2025 18:35:24 +0800
+Subject: [PATCH] fix dma_buf api NS not import
+
+```
+ERROR: modpost: module mali uses symbol dma_buf_attach from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module mali uses symbol dma_buf_map_attachment from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module mali uses symbol dma_buf_unmap_attachment from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module mali uses symbol dma_buf_get from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module mali uses symbol dma_buf_put from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module mali uses symbol dma_buf_detach from namespace DMA_BUF, but does not import it.
+```
+---
+ drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+index 10ee220..ea7327b 100755
+--- a/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
++++ b/drivers/gpu/arm/mali400/mali/linux/mali_kernel_linux.c
+@@ -1166,3 +1166,4 @@ module_exit(mali_module_exit);
+ MODULE_LICENSE(MALI_KERNEL_LINUX_LICENSE);
+ MODULE_AUTHOR("ARM Ltd.");
+ MODULE_VERSION(SVN_REV_STRING);
++MODULE_INFO(import_ns, "DMA_BUF");
+-- 
+2.46.0
+

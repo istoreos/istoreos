@@ -1,0 +1,27 @@
+From 69853e2c25b73c1ec9224fe898f805ef74a94929 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 17 Mar 2025 18:09:17 +0800
+Subject: [PATCH] supports upstream dts
+
+---
+ drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+index dc37aa1..15280bb 100755
+--- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
++++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+@@ -689,6 +689,10 @@ static const struct of_device_id rockchip_mali_of_match[] = {
+ 		.compatible = "rockchip,rk3588",
+ 		.data = (void *)&rk3588_gpu_opp_data,
+ 	},
++	{
++		.compatible = "rockchip,rk3588s",
++		.data = (void *)&rk3588_gpu_opp_data,
++	},
+ 	{},
+ };
+ 
+-- 
+2.46.0
+
