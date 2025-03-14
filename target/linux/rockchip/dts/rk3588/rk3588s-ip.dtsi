@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2025 jjm2473 <jjm2473@gmail.com>
+ */
+
+&otp {
+	specification_serial_number: specification-serial-number@6 {
+		reg = <0x06 0x1>;
+		bits = <0 5>;
+	};
+};
+
+#include "rk3588s-vpu.dtsi"
+#include "rk3588s-gpu.dtsi"
+#include "rk3588s-npu.dtsi"
+#include "rk3588s-crypto.dtsi"

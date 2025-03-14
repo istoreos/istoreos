@@ -6,6 +6,7 @@ include $(INCLUDE_DIR)/image.mk
 DEVICE_VARS += UBOOT_DEVICE_NAME
 
 define Build/Compile
+	(cd ../dts/rk3588 && ./check.sh)
 	$(CP) $(LINUX_DIR)/COPYING $(KDIR)/COPYING.linux
 endef
 
