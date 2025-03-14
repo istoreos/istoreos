@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ */
+
+/ {
+
+	crypto: crypto@fe370000 {
+		compatible = "rockchip,rk3588-crypto";
+		reg = <0x0 0xfe370000 0x0 0x2000>;
+		interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&scmi_clk SCMI_ACLK_SECURE_NS>, <&scmi_clk SCMI_HCLK_SECURE_NS>,
+			 <&scmi_clk SCMI_CRYPTO_CORE>, <&scmi_clk SCMI_CRYPTO_PKA>;
+		clock-names = "aclk", "hclk", "sclk", "pka";
+		resets = <&scmi_reset SRST_CRYPTO_CORE>;
+		reset-names = "crypto-rst";
+		status = "disabled";
+	};
+
+	rng: rng@fe378000 {
+		compatible = "rockchip,trngv1";
+		reg = <0x0 0xfe378000 0x0 0x200>;
+		interrupts = <GIC_SPI 400 IRQ_TYPE_LEVEL_HIGH 0>;
+		clocks = <&scmi_clk SCMI_HCLK_SECURE_NS>;
+		clock-names = "hclk_trng";
+		resets = <&scmi_reset SRST_H_TRNG_NS>;
+		reset-names = "reset";
+		status = "disabled";
+	};
+
+};
+
+&crypto {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
