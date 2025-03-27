@@ -14,6 +14,22 @@ $(call Device/Legacy/rk3568,$(1))
   DEVICE_DTS = rk3568/$$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
+define Device/friendlyarm_nanopi-r5c
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R5C
+  DEVICE_PACKAGES += kmod-r8169 kmod-rtw88-8822ce rtl8822ce-firmware wpad-basic-mbedtls
+endef
+
+define Device/friendlyarm_nanopi-r5s
+$(call Device/friendlyarm_nanopi-r5c,$(1))
+  DEVICE_MODEL := NanoPi R5S/R5C combined
+  SUPPORTED_DEVICES += friendlyarm,nanopi-r5s friendlyarm,nanopi-r5c
+  SUPPORTED_DEVICES += friendlyelec,nanopi-r5s friendlyelec,nanopi-r5c  friendlyelec,nanopi-r5s-c1
+  DEVICE_DTS := rk3568/rk3568-nanopi-r5s rk3568/rk3568-nanopi-r5c rk3568/rk3568-nanopi-r5s-lts rk3568/rk3568-nanopi-r5s-c1
+  BOOT_SCRIPT := rk3568-friendlyelec
+endef
+
 
 # RK3588
 

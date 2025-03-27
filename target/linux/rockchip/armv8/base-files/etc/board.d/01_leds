@@ -20,7 +20,7 @@ xunlong,orangepi-r1-plus-lts)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth1"
 	;;
-friendlyarm,nanopi-r5c)
+friendlyarm,nanopi-r5c|friendlyelec,nanopi-r5s-c1)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth1"
 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0"
 	ucidef_set_led_netdev "wlan" "WLAN" "green:wlan" "phy0-ap0"

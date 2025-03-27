@@ -1,0 +1,14 @@
+/dts-v1/;
+
+#include <rockchip/rk3568-nanopi-r5c.dts>
+#include "rk3568-ip.dtsi"
+#include "rk3568-ip-rk809.dtsi"
+
+/ {
+	aliases {
+		mmc0 = &sdmmc0;
+		mmc1 = &sdmmc1;
+		mmc2 = &sdhci;
+		mmc3 = &sdmmc2;
+	};
+};
