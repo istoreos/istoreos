@@ -1,0 +1,121 @@
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2025 jjm2473 <jjm2473@gmail.com>
+ */
+
+&otp {
+	gpu_leakage: gpu-leakage@1d {
+		reg = <0x1d 0x1>;
+	};
+	gpu_opp_info: gpu-opp-info@3c {
+		reg = <0x3c 0x6>;
+	};
+};
+
+/ {
+	
+	gpu_opp_table: opp-table-1 {
+		compatible = "operating-points-v2";
+
+		mbist-vmin = <825000 900000 950000>;
+		nvmem-cells = <&gpu_leakage>, <&core_pvtm>, <&mbist_vmin>, <&gpu_opp_info>,
+			      <&specification_serial_number>, <&remark_spec_serial_number>;
+		nvmem-cell-names = "leakage", "pvtm", "mbist-vmin", "opp-info",
+				   "specification_serial_number", "remark_spec_serial_number";
+		rockchip,supported-hw;
+		rockchip,max-volt = <1000000>;
+		rockchip,temp-hysteresis = <5000>;
+		rockchip,low-temp = <0>;
+		rockchip,low-temp-adjust-volt = <
+			/* MHz    MHz    uV */
+			   0      800    50000
+		>;
+		rockchip,pvtm-voltage-sel = <
+			0        84000   0
+			84001    87000   1
+			87001    91000   2
+			91001    100000  3
+		>;
+		rockchip,pvtm-ch = <0 5>;
+
+		/* RK3568 && RK3568M gpu OPPs */
+		opp-200000000 {
+			opp-supported-hw = <0xfb 0xffff>;
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+
+		opp-300000000 {
+			opp-supported-hw = <0xfb 0xffff>;
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+
+		opp-400000000 {
+			opp-supported-hw = <0xfb 0xffff>;
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+
+		opp-600000000 {
+			opp-supported-hw = <0xfb 0xffff>;
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <900000 900000 1000000>;
+			opp-microvolt-L0 = <900000 900000 1000000>;
+			opp-microvolt-L1 = <875000 875000 1000000>;
+			opp-microvolt-L2 = <850000 850000 1000000>;
+			opp-microvolt-L3 = <850000 850000 1000000>;
+		};
+
+		opp-700000000 {
+			opp-supported-hw = <0xfb 0xffff>;
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <950000 950000 1000000>;
+			opp-microvolt-L0 = <950000 950000 1000000>;
+			opp-microvolt-L1 = <925000 925000 1000000>;
+			opp-microvolt-L2 = <900000 900000 1000000>;
+			opp-microvolt-L3 = <875000 875000 1000000>;
+		};
+
+		opp-800000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <1000000 1000000 1000000>;
+			opp-microvolt-L0 = <1000000 1000000 1000000>;
+			opp-microvolt-L1 = <975000 975000 1000000>;
+			opp-microvolt-L2 = <950000 950000 1000000>;
+			opp-microvolt-L3 = <925000 925000 1000000>;
+		};
+	};
+
+	gpu: gpu@fde60000 {
+		compatible = "arm,mali-bifrost";
+		reg = <0x0 0xfde60000 0x0 0x4000>;
+
+		interrupts = <GIC_SPI 39 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "gpu", "mmu", "job";
+
+		upthreshold = <40>;
+		downdifferential = <10>;
+
+		clocks = <&scmi_clk 1>, <&cru CLK_GPU>;
+		clock-names = "gpu", "bus";
+		power-domains = <&power RK3568_PD_GPU>;
+		#cooling-cells = <2>;
+		operating-points-v2 = <&gpu_opp_table>;
+
+		status = "disabled";
+		gpu_power_model: power-model {
+			compatible = "simple-power-model";
+			leakage-range= <5 15>;
+			ls = <(-24002) 22823 0>;
+			static-coefficient = <100000>;
+			dynamic-coefficient = <953>;
+			ts = <(-108890) 63610 (-1355) 20>;
+			thermal-zone = "gpu-thermal";
+		};
+	};
+
+};

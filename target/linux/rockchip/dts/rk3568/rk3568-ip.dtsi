@@ -1,0 +1,49 @@
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2025 jjm2473 <jjm2473@gmail.com>
+ */
+
+/ {
+	rockchip_system_monitor: rockchip-system-monitor {
+		compatible = "rockchip,system-monitor";
+
+		rockchip,thermal-zone = "cpu-thermal";
+		status = "disabled";
+	};
+
+	otp: otp@fe38c000 {
+		compatible = "rockchip,rk3568-otp";
+		reg = <0x0 0xfe38c000 0x0 0x4000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		clocks = <&cru CLK_OTPC_NS_USR>, <&cru CLK_OTPC_NS_SBPI>,
+				<&cru PCLK_OTPC_NS>, <&cru PCLK_OTPPHY>;
+		clock-names = "usr", "sbpi", "apb", "phy";
+		resets = <&cru SRST_OTPPHY>;
+		reset-names = "otp_phy";
+
+		specification_serial_number: specification-serial-number@7 {
+			reg = <0x07 0x1>;
+			bits = <0 5>;
+		};
+		mbist_vmin: mbist-vmin@9 {
+			reg = <0x09 0x1>;
+			bits = <0 4>;
+		};
+		log_leakage: log-leakage@1b {
+			reg = <0x1b 0x1>;
+		};
+		core_pvtm:core-pvtm@2a {
+			reg = <0x2a 0x2>;
+		};
+		remark_spec_serial_number: remark-spec-serial-number@56 {
+			reg = <0x56 0x1>;
+			bits = <0 5>;
+		};
+	};
+};
+
+#include "rk3568-vpu.dtsi"
+#include "rk3568-gpu.dtsi"
+#include "rk3568-npu.dtsi"
+#include "rk3568-crypto.dtsi"
