@@ -1,3 +1,19 @@
+# RK3568
+
+define Device/Legacy/rk3568
+$(call Device/Legacy,$(1))
+  SOC := rk3568
+  UBOOT_DEVICE_NAME := easepi-rk3568
+  BOOT_SCRIPT := rk3568
+  DEVICE_PACKAGES := kmod-rga3 kmod-rk_vcodec kmod-rkgpu-bifrost kmod-rknpu kmod-iio-rockchip-saradc
+endef
+
+define Device/Legacy/rk3566
+$(call Device/Legacy/rk3568,$(1))
+  SOC := rk3566
+  DEVICE_DTS = rk3568/$$(SOC)-$(lastword $(subst _, ,$(1)))
+endef
+
 
 # RK3588
 
