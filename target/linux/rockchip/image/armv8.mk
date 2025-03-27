@@ -145,7 +145,7 @@ define Device/friendlyarm_nanopi-r5c
   DEVICE_MODEL := NanoPi R5C
   DEVICE_PACKAGES := kmod-r8169 kmod-rtw88-8822ce rtl8822ce-firmware wpad-basic-mbedtls
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r5c
+# TARGET_DEVICES += friendlyarm_nanopi-r5c
 
 define Device/friendlyarm_nanopi-r5s
   $(Device/rk3568)

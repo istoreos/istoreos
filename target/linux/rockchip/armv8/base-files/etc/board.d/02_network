@@ -22,6 +22,7 @@ rockchip_setup_interfaces()
 		;;
 	friendlyarm,nanopc-t6|\
 	friendlyarm,nanopi-r5c|\
+	friendlyelec,nanopi-r5s-c1|\
 	friendlyarm,nanopi-r76s|\
 	hinlink,h28k|\
 	lunzn,fastrhino-r66s|\
@@ -86,7 +87,7 @@ rockchip_setup_macs()
 		;;
 	friendlyarm,nanopi-r2c-plus|\
 	friendlyarm,nanopi-r4s|\
-	friendlyarm,nanopi-r5s|\
+	friendlyarm,nanopi-r5s|friendlyelec,nanopi-r5s-c1|\
 	sinovoip,rk3568-bpi-r2pro)
 		wan_mac=$(macaddr_generate_from_mmc_cid mmcblk1)
 		lan_mac=$(macaddr_add "$wan_mac" 1)
