@@ -14,6 +14,18 @@ $(call Device/Legacy/rk3568,$(1))
   DEVICE_DTS = rk3568/$$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
+define Device/fastrhino_r6xs
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := FastRhino
+  DEVICE_MODEL := R68s/R66s combined
+  SUPPORTED_DEVICES += lunzn,fastrhino-r66s lunzn,fastrhino-r68s
+  SUPPORTED_DEVICES += fastrhino,r66s fastrhino,r68s
+  DEVICE_DTS := rk3568/rk3568-fastrhino-r66s rk3568/rk3568-fastrhino-r68s
+  BOOT_SCRIPT := rk3568-fastrhino
+  DEVICE_PACKAGES += kmod-r8169
+endef
+TARGET_DEVICES += fastrhino_r6xs
+
 define Device/friendlyarm_nanopi-r5c
 $(call Device/Legacy/rk3568,$(1))
   DEVICE_VENDOR := FriendlyARM

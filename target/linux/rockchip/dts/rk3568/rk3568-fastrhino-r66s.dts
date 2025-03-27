@@ -1,0 +1,8 @@
+/dts-v1/;
+
+#include <rockchip/rk3568-fastrhino-r66s.dts>
+#include "rk3568-ip.dtsi"
+#include "rk3568-ip-rk809.dtsi"
+
+/ {
+};
