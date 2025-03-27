@@ -244,6 +244,18 @@ define U-Boot/rk3568/Default
   TPL:=rk3568_ddr_1560MHz_v1.23.bin
 endef
 
+define U-Boot/easepi-rk3568
+  $(U-Boot/rk3568/Default)
+  NAME:=Easepi RK3568
+  DEFAULT:=y
+endef
+
+define U-Boot/easepi-rk3568-rk809
+  $(U-Boot/rk3568/Default)
+  NAME:=Easepi RK3568 with RK809
+  DEFAULT:=y
+endef
+
 define U-Boot/bpi-r2-pro-rk3568
   $(U-Boot/rk3568/Default)
   NAME:=Bananapi-R2 Pro
@@ -440,6 +452,8 @@ UBOOT_TARGETS := \
   radxa-cm3-io-rk3566 \
   radxa-zero-3-rk3566 \
   rock-3c-rk3566 \
+  easepi-rk3568 \
+  easepi-rk3568-rk809 \
   bpi-r2-pro-rk3568 \
   easepi-r1-rk3568 \
   fastrhino-r66s-rk3568 \
