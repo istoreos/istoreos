@@ -206,7 +206,7 @@ define Device/lunzn_fastrhino-r66s
   DEVICE_MODEL := FastRhino R66S
   DEVICE_PACKAGES := kmod-r8169
 endef
-TARGET_DEVICES += lunzn_fastrhino-r66s
+# TARGET_DEVICES += lunzn_fastrhino-r66s
 
 define Device/pine64_rock64
   $(Device/rk3328)
