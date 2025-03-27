@@ -484,6 +484,17 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += roc_k50s
 
+TARGET_DEVICES += embedfire_lubancat-2
+
+define Device/embedfire_lubancat-2n
+  DEVICE_VENDOR := EmbedFire
+  DEVICE_MODEL := LubanCat-2N
+  SOC := rk3568
+  BOOT_FLOW := pine64-img
+  DEVICE_PACKAGES := kmod-r8125 kmod-ata-ahci kmod-ata-ahci-platform kmod-ata-core
+endef
+TARGET_DEVICES += embedfire_lubancat-2n
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
