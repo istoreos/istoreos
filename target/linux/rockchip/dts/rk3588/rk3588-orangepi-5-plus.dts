@@ -7,12 +7,13 @@
 /dts-v1/;
 
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/leds/common.h>
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/input/rk-input.h>
 #include <dt-bindings/display/drm_mipi_dsi.h>
 #include <dt-bindings/display/rockchip_vop.h>
-#include <dt-bindings/sensor-dev.h> 
+#include <dt-bindings/sensor-dev.h>
 #include "dt-bindings/usb/pd.h"
 #include "rk3588.dtsi"
 #include "rk3588-rk806-single.dtsi"
@@ -21,7 +22,7 @@
 
 / {
 	model = "Orange Pi 5 Plus";
-	compatible = "rockchip,rk3588-orangepi-5-plus", "rockchip,rk3588";
+	compatible = "orangepi,5-plus", "rockchip,rk3588";
  
 	/delete-node/ chosen;
  
