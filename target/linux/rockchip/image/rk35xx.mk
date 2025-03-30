@@ -237,11 +237,21 @@ define Device/yijiahe_jm10
 $(call Device/rk3588)
   DEVICE_VENDOR := YIJIAHE
   DEVICE_MODEL := JM10
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-dsa-mv88e6xxx kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
+  DEVICE_PACKAGES := kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-dsa-mv88e6xxx kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
   SUPPORTED_DEVICES += yijiahe,jm10
   DEVICE_DTS := rk3588-yijiahe-jm10
 endef
 TARGET_DEVICES += yijiahe_jm10
+
+define Device/orangepi_5-plus
+$(call Device/rk3588)
+  DEVICE_VENDOR := ORANGE PI
+  DEVICE_MODEL := ORANGE PI 5 PLUS
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal
+  SUPPORTED_DEVICES += orangepi,5-plus
+  DEVICE_DTS := rk3588-orangepi-5-plus
+endef
+TARGET_DEVICES += orangepi_5-plus
 
 define Device/hinlink_rk3588
 $(call Device/rk3588)
