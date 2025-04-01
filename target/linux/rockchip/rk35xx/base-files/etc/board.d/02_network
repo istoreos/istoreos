@@ -52,6 +52,7 @@ rockchip_setup_interfaces()
 		;;
 	ezpro,mrkaio-m68s|\
 	ezpro,mrkaio-m68s-plus|\
+	xunlong,orangepi-5-plus|\
 	radxa,e20c|\
 	mangopi,m28k|\
 	hlink,h28k)
@@ -107,6 +108,7 @@ rockchip_setup_macs()
 	easepi,r1|\
 	ezpro,mrkaio-m68s|\
 	ezpro,mrkaio-m68s-plus|\
+	xunlong,orangepi-5-plus|\
 	firefly,rk3568-roc-pc|\
 	friendlyelec,nanopi-r3s|\
 	friendlyelec,nanopi-r5s|\
