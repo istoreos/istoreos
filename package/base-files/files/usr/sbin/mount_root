@@ -178,13 +178,27 @@ clean_os_version_files()
 
 clean_kmods()
 {
+	local DUMMY_VERSION=0.0.0-r1
 	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
 		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`
 		if [ -n "$compat" ]; then
 			cd "$1/upper/usr/lib/opkg/info"
-			grep -LFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' > /tmp/del_kmods.txt
-			cat /tmp/del_kmods.txt | sed 's/$/.list/' | xargs cat | sed "s#^/#$1/upper/#" | xargs rm -f
-			cat /tmp/del_kmods.txt | xargs -rn1 sh -c 'rm -f $0.*'
+			# ignore processed
+			grep -Lm1 '^Version: '$DUMMY_VERSION'$' kmod-*.control | sed 's/.control$//' > /tmp/cand_kmods.txt
+
+			grep -LFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' | grep -Fxf /tmp/cand_kmods.txt > /tmp/del_kmods.txt
+			grep -lFm1 "kernel (=$compat)" kmod-*.control | sed 's/.control$//' | grep -Fxf /tmp/cand_kmods.txt > /tmp/safe_kmods.txt
+			rm -f /tmp/cand_kmods.txt
+
+			# remove duplicated
+			( cd /usr/lib/opkg/info && ls kmod-*.control | sed 's/.control$//' ) | grep -Fxf /tmp/safe_kmods.txt >> /tmp/del_kmods.txt
+			rm -f /tmp/safe_kmods.txt
+
+			log "Clean kmods in $1: `cat /tmp/del_kmods.txt | xargs echo`"
+
+			cat /tmp/del_kmods.txt | sed 's/$/.list/' | xargs cat | sed "s#^/#$1/upper/#" | xargs -r rm -f
+			cat /tmp/del_kmods.txt | xargs -rn1 sh -c 'rm -f $0.list $0.prerm $0.postinst'
+			cat /tmp/del_kmods.txt | sed 's/$/.control/' | xargs -r sed -i 's/^Version: .*$/Version: '$DUMMY_VERSION'/g'
 			rm -f /tmp/del_kmods.txt
 			cd - >/dev/null 2>&1
 			return 0

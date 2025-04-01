@@ -40,11 +40,17 @@ ls_all_pkgs() {
 }
 
 rebuild_opkg_status() {
+	local DUMMY_VERSION=0.0.0-r1
 	local line
 	[ -f /tmp/romopkgstatus/kernel ] && cat /tmp/romopkgstatus/kernel
 	ls_all_pkgs | while read line; do
 		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control -o -f /ext_overlay/upper/usr/lib/opkg/info/$line.control ]; then
-			echo /tmp/newopkgstatus/$line
+			if [[ $line = "kmod-*" ]] && \
+				grep -qm1 '^Version: '$DUMMY_VERSION'$' /usr/lib/opkg/info/$line.control; then
+				[ -e /tmp/romopkgstatus/$line ] && echo /tmp/romopkgstatus/$line
+			else
+				echo /tmp/newopkgstatus/$line
+			fi
 		else
 			echo /tmp/romopkgstatus/$line
 		fi
