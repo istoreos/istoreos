@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include <rockchip/rk3568-easepi-r1.dts>
+#include "rk3568-ip.dtsi"
+#include "rk3568-ip-rk809.dtsi"
+
+/ {
+	compatible = "easepi,r1", "rockchip,rk3568";
+	model = "EasePi R1";
+	eth_order = "fe010000.ethernet,fe2a0000.ethernet,0001:*1:00.0,0000:01:00.0";
+
+	chosen {
+		default-firewall = "dual";
+		power-key-factory-reset;
+	};
+};
+
+&gmac0 {
+	snps,reset-gpio = <&gpio2 RK_PD3 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 15000 50000>;
+};
+
+&gmac1 {
+	snps,reset-gpio = <&gpio2 RK_PD1 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 15000 50000>;
+};
+
+&rgmii_phy0 {
+	realtek,led-data = <0xAC10>;
+};
+
+&rgmii_phy1 {
+	realtek,led-data = <0xAC10>;
+};
+
+&pcie2x1 {
+	pcie@00 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth3: pcie-eth@00,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
+};
+
+&pcie3x1 {
+	pcie@10 {
+		reg = <0x00100000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth2: pcie-eth@10,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
+};

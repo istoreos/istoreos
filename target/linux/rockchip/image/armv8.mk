@@ -198,7 +198,7 @@ define Device/linkease_easepi-r1
   DEVICE_MODEL := EasePi R1
   DEVICE_PACKAGES := blkdiscard block-mount kmod-button-hotplug kmod-nvme kmod-r8169
 endef
-TARGET_DEVICES += linkease_easepi-r1
+# TARGET_DEVICES += linkease_easepi-r1
 
 define Device/lunzn_fastrhino-r66s
   $(Device/rk3568)
