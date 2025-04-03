@@ -48,7 +48,7 @@ boot() {
 		sleep 1
 	}
 
-    [ -x /lib/board/init.sh ] && /lib/board/init.sh
+	[ -x /lib/board/init.sh ] && /lib/board/init.sh
 
 	mkdir -p /tmp/.uci
 	[ -f /etc/uci-defaults/30_uboot-envtools ] && (. /etc/uci-defaults/30_uboot-envtools)
