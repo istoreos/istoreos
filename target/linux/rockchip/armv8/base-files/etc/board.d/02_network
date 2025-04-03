@@ -41,9 +41,23 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan 'lan0 lan1 lan2 lan3' 'eth0'
 		;;
 	*)
-		ucidef_set_interface_lan 'eth0'
+		ucidef_set_interface_lan 'eth0' 'dhcp'
 		;;
 	esac
+}
+
+generate_mac_from_boot_mmc()
+{
+	local sd_hash
+	local bootdisk=$(
+		. /lib/upgrade/common.sh
+		export_bootdevice && export_partdevice bootdisk 0 && echo $bootdisk
+	)
+	if echo "$bootdisk" | grep -q '^mmcblk' && [ -f "/sys/class/block/$bootdisk/device/cid" ]; then
+		macaddr_generate_from_mmc_cid $bootdisk
+	else
+		macaddr_generate_from_mmc_cid mmcblk*
+	fi
 }
 
 rockchip_setup_macs()
@@ -84,6 +98,22 @@ rockchip_setup_macs()
 	xunlong,orangepi-r1-plus|\
 	xunlong,orangepi-r1-plus-lts)
 		wan_mac=$(macaddr_add "$(cat /sys/class/net/eth1/address)" -1)
+		;;
+	*)
+		if json_is_a network object; then
+			json_select_object network
+			if json_is_a wan object; then
+				wan_mac=$(generate_mac_from_boot_mmc)
+			fi
+			if json_is_a lan object; then
+				if [ -n "$wan_mac" ]; then
+					lan_mac=$(macaddr_add "$wan_mac" 1)
+				else
+					lan_mac=$(generate_mac_from_boot_mmc)
+				fi
+			fi
+			json_select ..
+		fi
 		;;
 	esac
 
