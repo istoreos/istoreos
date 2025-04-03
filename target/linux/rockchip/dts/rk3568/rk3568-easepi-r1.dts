@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include "rk3568-roc-k40pro.dts"
+
+/ {
+	compatible = "easepi,r1", "rockchip,rk3568";
+	model = "EasePi R1";
+	hwmodel_id = "R1";
+
+	chosen {
+		default-firewall = "dual";
+		power-key-factory-reset;
+	};
+};
