@@ -14,6 +14,15 @@ $(call Device/Legacy/rk3568,$(1))
   DEVICE_DTS = rk3568/$$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
+define Device/easepi_r1
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := R1
+  DEVICE_DTS := rk3568/rk3568-easepi-r1
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme
+endef
+TARGET_DEVICES += easepi_r1
+
 define Device/fastrhino_r6xs
 $(call Device/Legacy/rk3568,$(1))
   DEVICE_VENDOR := FastRhino
