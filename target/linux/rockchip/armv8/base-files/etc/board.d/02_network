@@ -34,6 +34,7 @@ rockchip_setup_interfaces()
 	friendlyarm,nanopi-r6s)
 		ucidef_set_interfaces_lan_wan 'eth0 eth2' 'eth1'
 		;;
+	easepi,r1|easepi,r1-lite|\
 	lunzn,fastrhino-r68s)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
