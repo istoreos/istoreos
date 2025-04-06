@@ -7,6 +7,8 @@
 uci -q batch <<-EOF >/dev/null
 	delete network.lan.ip6class
 	add_list network.lan.ip6class='wan6'
+	add_list network.lan.ip6class='wan_6'
+	add_list network.lan.ip6class='wan'
 	commit network
 EOF
 

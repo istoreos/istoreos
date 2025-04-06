@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include "rk3568-easepi-r1.dts"
+
+/{
+	compatible = "easepi,r1-lite", "rockchip,rk3568";
+	model = "EasePi R1";
+
+	pwr-net-25g {
+		status = "disabled";
+	};
+};
+
+&pcie_eth3 {
+	compatible = "pci10ec,8168";
+	realtek,led-data = <0x708>;
+	/delete-property/ realtek,led-feature;
+};
+
+&pcie_eth2 {
+	compatible = "pci10ec,8168";
+	realtek,led-data = <0x708>;
+	/delete-property/ realtek,led-feature;
+};

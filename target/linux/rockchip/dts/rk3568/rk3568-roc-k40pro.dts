@@ -14,8 +14,13 @@
 	eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0001:11:00.0,0000:01:00.0";
 	kdebug = "0";
 	hwmodel_id = "K40PROV3";
-	r8168_led = <0x438>;
+	r8168_led = <0x708>;
 	hw_support = "hdmi";
+
+	aliases {
+		ethernet2 = &pcie_eth2;
+		ethernet3 = &pcie_eth3;
+	};
 
 	pwr-net-25g {
 		compatible = "regulator-fixed";
@@ -87,21 +92,43 @@
 	status = "okay";
 };
 
-/* fix mali warning */
-&gpu {
-	power-off-delay-ms = <200>;
-};
-
 &pcie2x1 {
 	rockchip,init-delay-ms = <100>;
 	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
+
+	pcie@00 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth3: pcie-eth@00,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
 };
 
 &pcie3x1 {
 	reset-gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
+	pcie@10 {
+		reg = <0x00100000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth2: pcie-eth@10,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
 };
 
 &pcie3x2 {

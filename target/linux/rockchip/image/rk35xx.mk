@@ -163,6 +163,16 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += easepi_r1
 
+define Device/easepi_r1-lite
+$(call Device/rk3568)
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := R1 (4xGbE)
+  DEVICE_DTS := rk3568-easepi-r1-lite
+  SUPPORTED_DEVICES += easepi,r1 easepi,r1-lite
+  DEVICE_PACKAGES := kmod-r8168 kmod-nvme kmod-thermal
+endef
+TARGET_DEVICES += easepi_r1-lite
+
 define Device/easepi_r2
 $(call Device/rk3568)
   DEVICE_VENDOR := EasePi

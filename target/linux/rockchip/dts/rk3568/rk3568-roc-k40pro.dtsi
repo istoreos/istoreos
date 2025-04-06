@@ -342,6 +342,7 @@
 	rgmii_phy0: phy@0 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x0>;
+		realtek,led-data = <0xAC10>;
 	};
 };
 
@@ -349,6 +350,7 @@
 	rgmii_phy1: phy@0 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0x0>;
+		realtek,led-data = <0xAC10>;
 	};
 };
 
@@ -393,6 +395,7 @@
 };
 
 &gpu {
+	power-off-delay-ms = <200>;
 	mali-supply = <&vdd_gpu>;
 	status = "okay";
 };
@@ -831,7 +834,7 @@
 };
 
 &pwm0 {
-	status = "okay";
+	status = "disabled";
 };
 
 &pwm4 {
