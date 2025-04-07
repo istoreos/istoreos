@@ -1,0 +1,47 @@
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -3224,7 +3224,7 @@ static void mdio_real_direct_write_phy_o
+         int i;
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+-        WARN_ON_ONCE(RegAddr % 2);
++        WARN_ONCE(RegAddr % 2, "RegAddr not aligned");
+ #endif
+         data32 = RegAddr/2;
+         data32 <<= OCPR_Addr_Reg_shift;
+@@ -3317,7 +3317,7 @@ static u32 mdio_real_direct_read_phy_ocp
+         int i, value = 0;
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+-        WARN_ON_ONCE(RegAddr % 2);
++        WARN_ONCE(RegAddr % 2, "RegAddr not aligned");
+ #endif
+         data32 = RegAddr/2;
+         data32 <<= OCPR_Addr_Reg_shift;
+@@ -3451,7 +3451,7 @@ void rtl8125_mac_ocp_write(struct rtl812
+         u32 data32;
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+-        WARN_ON_ONCE(reg_addr % 2);
++        WARN_ONCE(reg_addr % 2, "reg_addr not aligned");
+ #endif
+ 
+         data32 = reg_addr/2;
+@@ -3468,7 +3468,7 @@ u16 rtl8125_mac_ocp_read(struct rtl8125_
+         u16 data16 = 0;
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+-        WARN_ON_ONCE(reg_addr % 2);
++        WARN_ONCE(reg_addr % 2, "reg_addr not aligned");
+ #endif
+ 
+         data32 = reg_addr/2;
+@@ -8020,7 +8020,7 @@ rtl8125_wait_phy_ups_resume(struct net_d
+                 }
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+-                WARN_ON_ONCE(i == 100);
++                WARN_ONCE(i == 100, "wait phy up timeout");
+ #endif
+                 break;
+         default:

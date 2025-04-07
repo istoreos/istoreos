@@ -9,7 +9,7 @@ Subject: [PATCH] rework 2.5G on [10ec:8162]
 
 --- a/src/r8125_n.c
 +++ b/src/r8125_n.c
-@@ -7903,7 +7903,7 @@ static void rtl8125_get_mac_version(struct rtl8125_private *tp)
+@@ -7904,7 +7904,7 @@ static void rtl8125_get_mac_version(stru
                  break;
          }
  
