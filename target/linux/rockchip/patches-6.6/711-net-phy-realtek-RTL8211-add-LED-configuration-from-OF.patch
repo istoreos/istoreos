@@ -1,0 +1,69 @@
+From 09719dae7e47237176f6c1efeab3cb6e066b6f91 Mon Sep 17 00:00:00 2001
+From: AnYun <amadeus@jmu.edu.cn>
+Date: Mon, 3 Apr 2023 23:26:04 +0800
+Subject: [PATCH] net: phy: realtek: add LED configuration from OF for 8211f
+
+---
+ drivers/net/phy/realtek.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/drivers/net/phy/realtek.c b/drivers/net/phy/realtek.c
+index cdcdd5d36..126d4819f 100644
+--- a/drivers/net/phy/realtek.c
++++ b/drivers/net/phy/realtek.c
+@@ -13,6 +13,7 @@
+ #include <linux/module.h>
+ #include <linux/delay.h>
+ #include <linux/clk.h>
++#include <linux/of.h>
+ 
+ #define RTL821x_PHYSR				0x11
+ #define RTL821x_PHYSR_DUPLEX			BIT(13)
+@@ -28,6 +29,8 @@
+ #define RTL821x_EXT_PAGE_SELECT			0x1e
+ #define RTL821x_PAGE_SELECT			0x1f
+ 
++#define RTL8211F_LCR				0x10
++#define RTL8211F_EEELCR				0x11
+ #define RTL8211F_PHYCR1				0x18
+ #define RTL8211F_PHYCR2				0x19
+ #define RTL8211F_INSR				0x1d
+@@ -374,11 +377,25 @@ static int rtl8211c_config_init(struct phy_device *phydev)
+ 			    CTL1000_ENABLE_MASTER | CTL1000_AS_MASTER);
+ }
+ 
++static void rtl8211f_set_led_data(struct phy_device *phydev, u16 val)
++{
++	int oldpage;
++	/*switch to extension page 0xd04*/
++	oldpage = phy_select_page(phydev, 0x0d04);
++
++	if (oldpage >= 0) {
++		__phy_write(phydev, RTL8211F_LCR, val);
++		__phy_write(phydev, RTL8211F_EEELCR, 0x0);
++	}
++	phy_restore_page(phydev, oldpage, 0);
++}
++
+ static int rtl8211f_config_init(struct phy_device *phydev)
+ {
+ 	struct rtl821x_priv *priv = phydev->priv;
+ 	struct device *dev = &phydev->mdio.dev;
+ 	u16 val_txdly, val_rxdly;
++	u32 led_data;
+ 	int ret;
+ 
+ 	ret = phy_modify_paged_changed(phydev, 0xa43, RTL8211F_PHYCR1,
+@@ -390,6 +407,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
+ 		return ret;
+ 	}
+ 
++	if (!of_property_read_u32(dev->of_node, "realtek,led-data", &led_data))
++		rtl8211f_set_led_data(phydev, led_data);
++
+ 	switch (phydev->interface) {
+ 	case PHY_INTERFACE_MODE_RGMII:
+ 		val_txdly = 0;
+-- 
+2.46.0
+
