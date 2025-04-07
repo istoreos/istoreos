@@ -8,6 +8,7 @@ export_ota_url() {
 	linkfog,ala2|\
 	radxa,e20c|\
 	radxa,e52c|\
+	radxa,e54c|\
 	easepi,ars4|\
 	lyt,t68m)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
