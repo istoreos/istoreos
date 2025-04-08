@@ -96,7 +96,7 @@ board_fixup_iface_name() {
 	friendlyelec,nanopi-r5c|\
 	fastrhino,r66s)
 		device="$(get_iface_device eth0)"
-		if [[ "$device" = "0001:11:00.0" ]]; then
+		if [[ "$device" = "0001:*1:00.0" ]]; then
 			rename_iface eth0 lan1
 			rename_iface eth1 eth0
 			rename_iface lan1 eth1
@@ -107,7 +107,7 @@ board_fixup_iface_name() {
 	hinlink,hnas|\
 	hinlink,opc-h66k)
 		device="$(get_iface_device eth1)"
-		if [[ "$device" = "0001:11:00.0" ]]; then
+		if [[ "$device" = "0001:*1:00.0" ]]; then
 			rename_iface eth0 lan1
 			rename_iface eth1 eth0
 			rename_iface lan1 eth1
@@ -122,7 +122,7 @@ board_fixup_iface_name() {
 			rename_iface wan eth1
 		fi
 		device="$(get_iface_device eth3)"
-		if [[ "$device" = "0002:21:00.0" ]]; then
+		if [[ "$device" = "0002:*1:00.0" ]]; then
 			rename_iface eth2 lan3
 			rename_iface eth3 eth2
 			rename_iface lan3 eth3
@@ -154,7 +154,7 @@ board_fixup_iface_name() {
 			rename_iface wan eth1
 		fi
 		device="$(get_iface_device eth3)"
-		if [[ "$device" = "0001:11:00.0" ]]; then
+		if [[ "$device" = "0001:*1:00.0" ]]; then
 			rename_iface eth2 lan3
 			rename_iface eth3 eth2
 			rename_iface lan3 eth3
@@ -162,7 +162,7 @@ board_fixup_iface_name() {
 		;;
 	hinlink,opc-h69k)
 		device="$(get_iface_device eth2)"
-		if [[ "$device" = "0001:11:00.0" ]]; then
+		if [[ "$device" = "0001:*1:00.0" ]]; then
 			rename_iface eth1 lan2
 			rename_iface eth2 eth1
 			rename_iface lan2 eth2
@@ -171,7 +171,7 @@ board_fixup_iface_name() {
 	hinlink,h88k-v3|\
 	friendlyelec,nanopi-r6s)
 		device="$(get_iface_device eth1)"
-		if [[ "$device" = "0004:41:00.0" ]]; then
+		if [[ "$device" = "0004:*1:00.0" ]]; then
 			rename_iface eth1 lan2
 			rename_iface eth2 eth1
 			rename_iface lan2 eth2
@@ -179,7 +179,7 @@ board_fixup_iface_name() {
 		;;
 	cyber,cyber3588-aib)
 		device="$(get_iface_device eth1)"
-		if [[ "$device" = "0004:41:00.0" ]]; then
+		if [[ "$device" = "0004:*1:00.0" ]]; then
 			rename_iface eth1 lan2
 			rename_iface eth2 eth1
 			rename_iface lan2 eth2
@@ -188,7 +188,7 @@ board_fixup_iface_name() {
 	armsom,sige7|\
 	armsom,sige7-v1)
 		device="$(get_iface_device eth1)"
-		if [[ "$device" = "0004:41:00.0" ]]; then
+		if [[ "$device" = "0004:*1:00.0" ]]; then
 			rename_iface eth1 wan
 			rename_iface eth0 eth1
 			rename_iface wan eth0
@@ -196,7 +196,7 @@ board_fixup_iface_name() {
 		;;
 	radxa,e52c)
 		device="$(get_iface_device eth0)"
-		if [[ "$device" = "0004:41:00.0" ]]; then
+		if [[ "$device" = "0004:*1:00.0" ]]; then
 			rename_iface eth1 wan
 			rename_iface eth0 eth1
 			rename_iface wan eth0
