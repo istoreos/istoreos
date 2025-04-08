@@ -13,7 +13,7 @@
 / {
 	compatible = "roceos,k40prov3", "rockchip,rk3568";
 	model = "ROCEOS K40PRO V3";
-	eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0001:11:00.0,0000:01:00.0";
+	eth_order =  "fe010000.ethernet,fe2a0000.ethernet,0001:*1:00.0,0000:01:00.0";
 	kdebug = "0";
 	hwmodel_id = "K40PROV3";
 	r8168_led = <0x708>;
