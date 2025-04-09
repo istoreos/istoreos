@@ -1,0 +1,44 @@
+From a3789019ce4ac4ee5dcd5d99a5b0ce73f3bd421a Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 9 Apr 2025 16:39:31 +0800
+Subject: [PATCH] drivers/rockchip-saradc: supports rk3568's 8 channels ADC
+
+Same as rk3399-saradc, except the number of channels is 8.
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/adc/rockchip-saradc.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/drivers/adc/rockchip-saradc.c b/drivers/adc/rockchip-saradc.c
+index f6832ab3073..9432203509b 100644
+--- a/drivers/adc/rockchip-saradc.c
++++ b/drivers/adc/rockchip-saradc.c
+@@ -336,6 +336,15 @@ static const struct rockchip_saradc_data rk3399_saradc_data = {
+ 	.stop = rockchip_saradc_stop_v1,
+ };
+ 
++static const struct rockchip_saradc_data rk3568_saradc_data = {
++	.num_bits = 10,
++	.num_channels = 8,
++	.clk_rate = 1000000,
++	.channel_data = rockchip_saradc_channel_data_v1,
++	.start_channel = rockchip_saradc_start_channel_v1,
++	.stop = rockchip_saradc_stop_v1,
++};
++
+ static const struct rockchip_saradc_data rk3588_saradc_data = {
+ 	.num_bits = 12,
+ 	.num_channels = 8,
+@@ -351,6 +360,8 @@ static const struct udevice_id rockchip_saradc_ids[] = {
+ 	  .data = (ulong)&rk3066_tsadc_data },
+ 	{ .compatible = "rockchip,rk3399-saradc",
+ 	  .data = (ulong)&rk3399_saradc_data },
++	{ .compatible = "rockchip,rk3568-saradc",
++	  .data = (ulong)&rk3568_saradc_data },
+ 	{ .compatible = "rockchip,rk3588-saradc",
+ 	  .data = (ulong)&rk3588_saradc_data },
+ 	{ }
+-- 
+2.46.0
+
