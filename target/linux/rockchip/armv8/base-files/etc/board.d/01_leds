@@ -35,6 +35,16 @@ friendlyarm,nanopi-r6s)
 	ucidef_set_led_netdev "lan1" "LAN1" "green:lan-1" "eth2"
 	ucidef_set_led_netdev "lan2" "LAN2" "green:lan-2" "eth0"
 	;;
+easepi,ars4|\
+hinlink,h88k-*|\
+hinlink,h88k|\
+hinlink,hnas|\
+hinlink,opc-h69k|\
+hinlink,opc-h68k|\
+hinlink,opc-h66k)
+	ucidef_set_led_netdev "wan" "WAN" "blue:net" "eth0"
+	ucidef_set_led_ide "disk" "DISK" "yellow:disk"
+	;;
 esac
 
 board_config_flush
