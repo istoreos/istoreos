@@ -8,6 +8,7 @@ rockchip_setup_interfaces()
 
 	case "$board" in
 	armsom,sige7|\
+	easepi,ars4|\
 	lunzn,fastrhino-r66s|\
 	friendlyarm,nanopi-r2c|\
 	friendlyarm,nanopi-r2c-plus|\
@@ -16,6 +17,8 @@ rockchip_setup_interfaces()
 	friendlyarm,nanopi-r4s|\
 	friendlyarm,nanopi-r4s-enterprise|\
 	friendlyarm,nanopi-r6c|\
+	hinlink,opc-h66k|\
+	hinlink,hnas|\
 	radxa,rockpi-e|\
 	xunlong,orangepi-r1-plus|\
 	xunlong,orangepi-r1-plus-lts)
@@ -28,6 +31,7 @@ rockchip_setup_interfaces()
 	radxa,rock-3b)
 		ucidef_set_interfaces_lan_wan 'eth0' 'eth1'
 		;;
+	hinlink,opc-h69k|\
 	friendlyarm,nanopi-r5s)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2' 'eth0'
 		;;
@@ -35,6 +39,7 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan 'eth0 eth2' 'eth1'
 		;;
 	easepi,r1|easepi,r1-lite|\
+	hinlink,opc-h68k|\
 	lunzn,fastrhino-r68s)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;

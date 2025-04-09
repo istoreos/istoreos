@@ -1,0 +1,169 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3568-hinlink.dtsi"
+
+/ {
+	model = "HINLINK OPC-H69K Board";
+	compatible = "hinlink,opc-h69k", "rockchip,rk3568";
+
+	aliases {
+		ethernet0 = &gmac1;
+	};
+
+	vcc3v3_ssd: vcc3v3-ssd-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_ssd";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc3v3_ssd_en>;
+	};
+
+	modem-enable-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "modem_enable";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW>;
+		startup-delay-us = <2000000>;
+		vin-supply = <&vcc5v0_sys>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&modem_enable_en>;
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		cooling-levels = <0 0x55 0x66 0x77 0x88 0x99 0xbb 0xcc 0xff>;
+		#cooling-cells = <2>;
+		fan-supply = <&vcc5v0_sys>;
+		pwms = <&pwm0 0 50000 0>;
+	};
+};
+
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	phy-mode = "rgmii";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio1 RK_PB0 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 15000 50000>;
+
+	assigned-clocks = <&cru SCLK_GMAC1_RX_TX>, <&cru SCLK_GMAC1>;
+	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>, <&cru CLK_MAC1_2TOP>;
+	assigned-clock-rates = <0>, <125000000>;
+	phy-handle = <&rgmii_phy1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&gmac1m1_miim
+		     &gmac1m1_tx_bus2
+		     &gmac1m1_rx_bus2
+		     &gmac1m1_rgmii_clk
+		     &gmac1m1_rgmii_bus>;
+
+	tx_delay = <0x4f>;
+	rx_delay = <0x26>;
+
+	status = "okay";
+};
+
+&mdio1 {
+	rgmii_phy1: ethernet-phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x0>;
+		pinctrl-0 = <&eth_phy1_reset_pin>;
+		pinctrl-names = "default";
+	};
+};
+
+&pwm0 {
+	status = "okay";
+};
+
+&i2c5 {
+	status = "okay";
+};
+
+&cpu_thermal {
+	trips {
+		cpu_warm: cpu_warm {
+			temperature = <65000>;
+			hysteresis = <5000>;
+			type = "active";
+		};
+
+		cpu_hot: cpu_hot {
+			temperature = <85000>;
+			hysteresis = <5000>;
+			type = "active";
+		};
+
+		cpu_hall: cpu_hall {
+			temperature = <95000>;
+			hysteresis = <5000>;
+			type = "active";
+		};
+
+		cpu_idle: cpu_idle {
+			temperature = <20000>;
+			hysteresis = <3000>;
+			type = "passive";
+		};
+	};
+
+	cooling-maps {
+		map2 {
+			trip = <&cpu_idle>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 2>;
+		};
+
+		map3 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan 2 4>;
+		};
+
+		map4 {
+			trip = <&cpu_hot>;
+			cooling-device = <&fan 4 6>;
+		};
+
+		map5 {
+			trip = <&cpu_hall>;
+			cooling-device = <&fan 6 THERMAL_NO_LIMIT>;
+		};
+
+	};
+};
+
+&pinctrl {
+	gmac1 {
+		eth_phy1_reset_pin: eth-phy1-reset-pin {
+			rockchip,pins = <1 RK_PB0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+	ssd {
+		vcc3v3_ssd_en: vcc3v3-ssd-en {
+			rockchip,pins = <0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	modem {
+		modem_enable_en: modem-enable-en {
+			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
