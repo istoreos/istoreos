@@ -32,6 +32,14 @@ $(call Device/Legacy/rk3568,$(1))
 endef
 TARGET_DEVICES += easepi_r1-lite
 
+define Device/easepi_ars4
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := ARS4
+  DEVICE_PACKAGES += kmod-r8169 kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += easepi_ars4
+
 define Device/fastrhino_r6xs
 $(call Device/Legacy/rk3568,$(1))
   DEVICE_VENDOR := FastRhino
@@ -54,6 +62,28 @@ $(call Device/Legacy/rk3568,$(1))
   BOOT_SCRIPT := rk3568-friendlyelec
   DEVICE_PACKAGES += kmod-r8169 kmod-rtw88-8822ce rtl8822ce-firmware wpad-basic-mbedtls
 endef
+
+
+define Device/rk3568/hinlink
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := HINLINK
+  DEVICE_PACKAGES += kmod-r8169 kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal
+endef
+
+define Device/hinlink_opc-h6xk
+$(call Device/rk3568/hinlink,$(1))
+  DEVICE_MODEL := OPC-H69K/H68K/H66K combined
+  SUPPORTED_DEVICES += hinlink,opc-h66k hinlink,opc-h68k hinlink,opc-h69k
+  DEVICE_DTS := rk3568/rk3568-opc-h66k rk3568/rk3568-opc-h68k rk3568/rk3568-opc-h69k
+  BOOT_SCRIPT := rk3568-hinlink
+endef
+TARGET_DEVICES += hinlink_opc-h6xk
+
+define Device/hinlink_hnas
+$(call Device/rk3568/hinlink,$(1))
+  DEVICE_MODEL := HNAS
+endef
+TARGET_DEVICES += hinlink_hnas
 
 
 # RK3588

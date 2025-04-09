@@ -8,6 +8,16 @@ boardname="${board##*,}"
 board_config_update
 
 case $board in
+easepi,ars4|\
+hinlink,h88k-*|\
+hinlink,h88k|\
+hinlink,hnas|\
+hinlink,opc-h69k|\
+hinlink,opc-h68k|\
+hinlink,opc-h66k)
+	ucidef_set_led_netdev "wan" "WAN" "blue:net" "eth0"
+	ucidef_set_led_ide "disk" "DISK" "yellow:disk"
+	;;
 friendlyarm,nanopi-r2c|\
 friendlyarm,nanopi-r2c-plus|\
 friendlyarm,nanopi-r2s|\
