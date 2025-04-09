@@ -93,6 +93,8 @@ define KernelPackage/ata-ahci-dwc
   TITLE:=Synopsys DWC AHCI SATA
   KCONFIG:= \
 	CONFIG_AHCI_DWC \
+	CONFIG_SATA_PMP=y \
+	CONFIG_SATA_PMP_LEDS=y \
 	CONFIG_SATA_HOST=y
   FILES:=$(LINUX_DIR)/drivers/ata/ahci_dwc.ko
   DEPENDS:=+kmod-ata-ahci-platform
