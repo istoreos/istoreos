@@ -161,7 +161,7 @@ define Device/friendlyarm_nanopi-r6c
   DEVICE_MODEL := NanoPi R6C
   DEVICE_PACKAGES := kmod-r8169
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r6c
+# TARGET_DEVICES += friendlyarm_nanopi-r6c
 
 define Device/friendlyarm_nanopi-r6s
   $(Device/rk3588s)
