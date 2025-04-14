@@ -79,6 +79,8 @@
 	tx_delay = <0x4f>;
 	rx_delay = <0x26>;
 
+	// this supply is actually not for phy, but for reset-gpio GPIO1_B0 in vccio1 domain
+	phy-supply = <&vccio_acodec>;
 	status = "okay";
 };
 
