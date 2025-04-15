@@ -3,6 +3,7 @@
 #include <rockchip/rk3568-fastrhino-r68s.dts>
 #include "rk3568-ip.dtsi"
 #include "rk3568-ip-rk809.dtsi"
+#include "rk3568-fastrhino-openwrt.dtsi"
 
 / {
 };
