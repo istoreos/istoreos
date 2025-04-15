@@ -1,0 +1,43 @@
+
+/ {
+	aliases {
+		led-boot 	 = &status_led;
+		led-failsafe = &status_led;
+		led-running  = &status_led;
+		led-upgrade  = &status_led;
+	};
+};
+
+/* LAN3 */
+&pcie3x1 {
+
+	pcie@10 {
+		reg = <0x00100000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_1: pcie-eth@10,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0x22b 0 0 0>;
+		};
+	};
+};
+
+/* LAN2 */
+&pcie3x2 {
+
+	pcie@20 {
+		reg = <0x00200000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_2: pcie-eth@20,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0x22b 0 0 0>;
+		};
+	};
+};
