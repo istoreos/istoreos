@@ -599,8 +599,6 @@
 			};
 
 			vccio_acodec: LDO_REG4 {
-				regulator-always-on;
-				regulator-boot-on;
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
 				regulator-name = "vccio_acodec";
@@ -774,7 +772,7 @@
 	status = "okay";
 	pmuio1-supply = <&vcc3v3_pmu>;
 	pmuio2-supply = <&vcc3v3_pmu>;
-	vccio1-supply = <&vccio_acodec>;
+	vccio1-supply = <&vcc_3v3>;
 	vccio3-supply = <&vccio_sd>;
 	vccio4-supply = <&vcc_1v8>;
 	vccio5-supply = <&vcc_3v3>;
