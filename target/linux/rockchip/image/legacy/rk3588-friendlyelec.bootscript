@@ -32,4 +32,7 @@ setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfeb50000 root=
 load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
 load mmc ${devnum}:1 ${kernel_addr_r} kernel.img
 
+env delete hwrev
+env delete adc_value
+
 booti ${kernel_addr_r} - ${fdt_addr_r}
