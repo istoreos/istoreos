@@ -125,3 +125,14 @@ $(call Device/Legacy/rk3588s,$(1))
   DEVICE_MODEL := NanoPi R6C
   DEVICE_PACKAGES += kmod-r8169
 endef
+
+define Device/hinlink_h88k
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := HINLINK
+  DEVICE_MODEL := H88K
+  SUPPORTED_DEVICES += hinlink,h88k-v2 hinlink,h88k-v3 hinlink,h88k
+  DEVICE_DTS := rk3588/rk3588-h88k-v2 rk3588/rk3588-h88k-v3
+  BOOT_SCRIPT := rk3588-hinlink
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme
+endef
+TARGET_DEVICES += hinlink_h88k
