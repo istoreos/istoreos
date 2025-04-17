@@ -1,3 +1,22 @@
+# RK3328
+
+define Device/Legacy/rk3328
+$(call Device/Legacy,$(1))
+  SOC := rk3328
+  DEVICE_PACKAGES := kmod-iio-rockchip-saradc
+endef
+
+define Device/friendlyarm_nanopi-r2s
+$(call Device/Legacy/rk3328,$(1))
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R2S/R2C | Plus
+  SUPPORTED_DEVICES += friendlyarm,nanopi-r2s friendlyarm,nanopi-r2c
+  DEVICE_DTS := rk3328/rk3328-nanopi-r2s rk3328/rk3328-nanopi-r2c
+  BOOT_SCRIPT := rk3328-friendlyelec
+  DEVICE_PACKAGES += kmod-usb-net-rtl8152 ethtool
+endef
+
+
 # RK3568
 
 define Device/Legacy/rk3568

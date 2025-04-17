@@ -1,0 +1,77 @@
+#include "rk3328-usb3.dtsi"
+
+/ {
+	aliases {
+		mmc1 = &emmc;
+	};
+
+	fan: pwm-fan {
+		compatible = "pwm-fan";
+		cooling-levels = <0 18 102 170 255>;
+		#cooling-cells = <2>;
+		fan-supply = <&vdd_5v>;
+		pwms = <&pwm2 0 50000 0>;
+	};
+};
+
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	mmc-ddr-1_8v;
+	mmc-hs200-1_8v;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&emmc_clk &emmc_cmd &emmc_bus8>;
+	vmmc-supply = <&vcc_io_33>;
+	vqmmc-supply = <&vcc18_emmc>;
+	status = "okay";
+};
+
+&gmac2io {
+	snps,reset-gpio = <&gpio1 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	snps,reset-delays-us = <0 15000 50000>;
+};
+
+&saradc {
+	vref-supply = <&vcc_18>;
+	status = "okay";
+};
+
+&soc_thermal {
+	trips {
+		cpu_warm: cpu_warm {
+			temperature = <50000>;
+			hysteresis = <5000>;
+			type = "active";
+		};
+		cpu_hot: cpu_hot {
+			temperature = <60000>;
+			hysteresis = <3000>;
+			type = "active";
+		};
+	};
+	cooling-maps {
+		map-pwm-fan-l0 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan THERMAL_NO_LIMIT 1>;
+		};
+		map-pwm-fan-l1 {
+			trip = <&cpu_hot>;
+			cooling-device = <&fan 2 THERMAL_NO_LIMIT>;
+		};
+	};
+};
+
+&u3phy {
+	vbus-supply = <&vdd_5v>;
+	status = "okay";
+};
+
+&u3phy_utmi {
+	status = "okay";
+};
+
+&u3phy_pipe {
+	status = "okay";
+};

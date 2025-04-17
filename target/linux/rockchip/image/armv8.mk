@@ -94,7 +94,7 @@ define Device/friendlyarm_nanopi-r2c
   DEVICE_MODEL := NanoPi R2C
   DEVICE_PACKAGES := kmod-usb-net-rtl8152
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r2c
+# TARGET_DEVICES += friendlyarm_nanopi-r2c
 
 define Device/friendlyarm_nanopi-r2c-plus
   $(Device/rk3328)
@@ -102,7 +102,7 @@ define Device/friendlyarm_nanopi-r2c-plus
   DEVICE_MODEL := NanoPi R2C Plus
   DEVICE_PACKAGES := kmod-usb-net-rtl8152
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r2c-plus
+# TARGET_DEVICES += friendlyarm_nanopi-r2c-plus
 
 define Device/friendlyarm_nanopi-r2s
   $(Device/rk3328)

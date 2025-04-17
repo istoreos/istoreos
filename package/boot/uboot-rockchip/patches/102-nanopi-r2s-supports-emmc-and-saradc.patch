@@ -1,0 +1,66 @@
+From 9aac85490c0a7b8fd236c68a051a903d5f4961e7 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 9 Jul 2025 14:22:01 +0800
+Subject: [PATCH] rockchip: rk3328-nanopi-r2s: supports emmc and saradc
+
+---
+ arch/arm/dts/rk3328-nanopi-r2s-u-boot.dtsi | 26 ++++++++++++++++++++++
+ configs/nanopi-r2s-rk3328_defconfig        |  1 +
+ 2 files changed, 27 insertions(+)
+
+diff --git a/arch/arm/dts/rk3328-nanopi-r2s-u-boot.dtsi b/arch/arm/dts/rk3328-nanopi-r2s-u-boot.dtsi
+index d8c79600b65..6e7dde5c548 100644
+--- a/arch/arm/dts/rk3328-nanopi-r2s-u-boot.dtsi
++++ b/arch/arm/dts/rk3328-nanopi-r2s-u-boot.dtsi
+@@ -7,10 +7,36 @@
+ #include "rk3328-u-boot.dtsi"
+ #include "rk3328-sdram-ddr4-666.dtsi"
+ 
++/ {
++	aliases {
++		mmc0 = &emmc;
++		mmc1 = &sdmmc;
++	};
++};
++
++&emmc {
++	bus-width = <8>;
++	cap-mmc-highspeed;
++	max-frequency = <150000000>;
++	mmc-ddr-1_8v;
++	mmc-hs200-1_8v;
++	non-removable;
++	pinctrl-names = "default";
++	pinctrl-0 = <&emmc_clk &emmc_cmd &emmc_bus8>;
++	vmmc-supply = <&vcc_io_33>;
++	vqmmc-supply = <&vcc18_emmc>;
++	status = "okay";
++};
++
+ &gpio1 {
+ 	bootph-pre-ram;
+ };
+ 
++&saradc {
++	vref-supply = <&vcc_18>;
++	status = "okay";
++};
++
+ &sdio_vcc_pin {
+ 	bootph-pre-ram;
+ };
+diff --git a/configs/nanopi-r2s-rk3328_defconfig b/configs/nanopi-r2s-rk3328_defconfig
+index 2591a9cc8ab..faf3965cf84 100644
+--- a/configs/nanopi-r2s-rk3328_defconfig
++++ b/configs/nanopi-r2s-rk3328_defconfig
+@@ -28,6 +28,7 @@ CONFIG_SPL_PAD_TO=0x7f8000
+ CONFIG_SPL_POWER=y
+ CONFIG_SPL_ATF=y
+ CONFIG_SPL_ATF_NO_PLATFORM_PARAM=y
++CONFIG_CMD_ADC=y
+ CONFIG_CMD_BOOTZ=y
+ CONFIG_CMD_GPIO=y
+ CONFIG_CMD_GPT=y
+-- 
+2.46.0
+
