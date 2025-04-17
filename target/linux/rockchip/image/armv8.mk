@@ -82,6 +82,18 @@ define Device/friendlyarm_nanopi-r4s
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r4s
 
+define Device/friendlyarm_nanopi-r4se
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R4SE
+  DEVICE_VARIANT := 4GB LPDDR4
+  SOC := rk3399
+  DEVICE_PACKAGES := kmod-r8169
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_DTS = rk3399/rk3399-nanopi-r4se
+  KERNEL = kernel-bin | lzma | fit lzma $$(KDIR)/image-rk3399-nanopi-r4se.dtb
+endef
+TARGET_DEVICES += friendlyarm_nanopi-r4se
+
 define Device/friendlyarm_nanopi-r4s-enterprise
   DEVICE_VENDOR := FriendlyARM
   DEVICE_MODEL := NanoPi R4S Enterprise Edition
