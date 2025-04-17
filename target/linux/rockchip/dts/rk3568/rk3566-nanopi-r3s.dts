@@ -1,0 +1,21 @@
+/dts-v1/;
+
+#include <rockchip/rk3566-nanopi-r3s.dts>
+#include "rk3568-ip.dtsi"
+#include "rk3568-ip-rk809.dtsi"
+
+/ {
+	aliases {
+		mmc0 = &sdmmc0;
+		mmc1 = &sdmmc1;
+		mmc2 = &sdhci;
+		mmc3 = &sdmmc2;
+	};
+};
+
+&gmac1 {
+	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+};
