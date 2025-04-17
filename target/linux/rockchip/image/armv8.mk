@@ -59,9 +59,12 @@ TARGET_DEVICES += friendlyarm_nanopi-r2c-plus
 
 define Device/friendlyarm_nanopi-r2s
   DEVICE_VENDOR := FriendlyARM
-  DEVICE_MODEL := NanoPi R2S
+  DEVICE_MODEL := NanoPi R2S/R2C
   SOC := rk3328
   DEVICE_PACKAGES := kmod-usb-net-rtl8152
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_DTS = rk3328/rk3328-nanopi-r2s
+  KERNEL = kernel-bin | lzma | fit lzma $$(KDIR)/image-rk3328-nanopi-r2s.dtb
 endef
 TARGET_DEVICES += friendlyarm_nanopi-r2s
 

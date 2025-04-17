@@ -1,0 +1,13 @@
+/dts-v1/;
+#include <rockchip/rk3328-nanopi-r2c.dts>
+#include "rk3328-nanopi-r2-openwrt.dtsi"
+
+/ {
+	model = "FriendlyElec NanoPi R2C | Plus";
+};
+
+&yt8521s {
+	/delete-property/ reset-assert-us;
+	/delete-property/ reset-deassert-us;
+	/delete-property/ reset-gpios;
+};

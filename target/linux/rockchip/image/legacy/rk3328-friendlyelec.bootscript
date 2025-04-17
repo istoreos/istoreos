@@ -1,0 +1,36 @@
+# friendlyelec rk3328 combined image, board detected by ADC
+# https://github.com/friendlyarm/uboot-rockchip/blob/nanopi-r2-v2017.09/board/rockchip/nanopi_r2/hwrev.c
+# R2S < 151 < R2C Plus < 275 < R2S Plus < 412 < R2C
+
+env delete hwrev
+env delete adc_value
+
+# using SARADC CH1 to detect hwrev
+
+adc single adc@ff280000 1 adc_value
+
+if test -n "$adc_value"; then
+	# R2C: 412 / 1024 * 1800000 = 724218.75
+	if test "$adc_value" -ge 724218; then
+		echo board R2C
+		setenv hwrev 1
+	elif test "$adc_value" -ge 483398; then
+		echo board R2S Plus
+	elif test "$adc_value" -ge 265429; then
+		echo board R2C Plus
+		setenv hwrev 1
+	fi
+fi
+
+env delete adc_value
+
+part uuid mmc ${devnum}:2 uuid
+
+setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xff130000 root=PARTUUID=${uuid} rw rootwait";
+
+load ${devtype} ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
+load ${devtype} ${devnum}:1 ${kernel_addr_r} kernel.img
+
+env delete hwrev
+
+booti ${kernel_addr_r} - ${fdt_addr_r}
