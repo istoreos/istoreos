@@ -4,7 +4,7 @@ START=25
 
 check_driver_bond() {
 	local kmod="$1"
-	ls /sys/module/$kmod/drivers/*/ | grep -Fq :
+	ls /sys/module/$kmod/drivers/*/ | grep -v '^/sys/module/' | grep -Fq :
 }
 
 rmmod_r() {
@@ -24,11 +24,13 @@ auto_unload() {
 	keep=0
 	if [ -n "$function" ]; then
 		for kmod in $function; do
-			if check_driver_bond $kmod; then
-				keep=1
-			elif [ -d /sys/module/$kmod ] ;then
-				echo "auto rmmod $kmod" >>/dev/kmsg
-				rmmod_r $kmod
+			if [ -d /sys/module/$kmod ]; then
+				if check_driver_bond $kmod; then
+					keep=1
+				else
+					echo "auto rmmod $kmod" >>/dev/kmsg
+					rmmod_r $kmod
+				fi
 			fi
 		done
 	fi
