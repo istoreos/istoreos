@@ -1,0 +1,28 @@
+From 9ac7de0d95c4c73c38119dd6fd57892df6cc22aa Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 21 Apr 2025 12:25:16 +0800
+Subject: [PATCH] block: use NTFS mount helper if existed
+
+---
+ block.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/block.c b/block.c
+index 37f5bfb..0662df1 100644
+--- a/block.c
++++ b/block.c
+@@ -946,8 +946,10 @@ static int handle_mount(const char *source, const char *target,
+ 	int err = -EINVAL;
+ 	size_t count;
+ 	int i;
++	struct stat s;
+ 
+-	if (!strcmp(fstype, "ntfs")) {
++	if (!strcmp(fstype, "ntfs") &&
++			(stat("/sbin/mount.ntfs", &s) < 0 || !S_ISREG(s.st_mode) || !(s.st_mode & S_IXUSR))) {
+ 		filesystems = ntfs_fs;
+ 		count = ARRAY_SIZE(ntfs_fs);
+ 	} else {
+-- 
+2.46.0
+
