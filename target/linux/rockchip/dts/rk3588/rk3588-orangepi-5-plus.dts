@@ -551,6 +551,7 @@
 	bus-width = <8>;
 	no-sdio;
 	no-sd;
+	supports-emmc;
 	non-removable;
 	max-frequency = <200000000>;
 	mmc-hs400-1_8v;
