@@ -94,6 +94,8 @@
 		};
 
 		green_led@2 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <2>;
 			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
 		};
@@ -105,18 +107,6 @@
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm3 0 50000 0>;
 		#cooling-cells = <2>;
-	};
-
-	pwm-leds {
-		compatible = "pwm-leds";
-
-		led {
-			color = <LED_COLOR_ID_GREEN>;
-			function = LED_FUNCTION_INDICATOR;
-			function-enumerator = <2>;
-			max-brightness = <255>;
-			pwms = <&pwm2 0 25000 0>;
-		};
 	};
 
 	sound {
