@@ -38,5 +38,5 @@
 
 #include "rk3568-vpu.dtsi"
 #include "rk3568-gpu.dtsi"
-//#include "rk3568-npu.dtsi"
+#include "rk3568-npu.dtsi"
 #include "rk3568-crypto.dtsi"

@@ -3,22 +3,22 @@
 	status = "okay";
 };
 
-/*
+
 &bus_npu {
 	bus-supply = <&vdd_logic>;
 	pvtm-supply = <&vdd_cpu>;
-	status = "okay";
+	status = "disabled";
 };
 
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
-	status = "okay";
+	status = "disabled";
 };
 
 &rknpu_mmu {
-	status = "okay";
+	status = "disabled";
 };
-*/
+
 
 &rkvenc {
 	venc-supply = <&vdd_logic>;
