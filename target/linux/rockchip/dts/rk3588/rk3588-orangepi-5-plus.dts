@@ -84,7 +84,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&blue_led_pin>, <&green_led_pin>;
 
-		blue_led {
+		blue_led: led-0 {
 			color = <LED_COLOR_ID_BLUE>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <1>;
@@ -93,7 +93,7 @@
 			linux,default-trigger-delay-ms = <0>;
 		};
 
-		green_led {
+		green_led: led-1 {
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <2>;
