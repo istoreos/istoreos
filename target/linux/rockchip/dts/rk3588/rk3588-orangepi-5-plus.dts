@@ -82,7 +82,7 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&blue_led_pin>, <&green_led_pin>;
+		pinctrl-0 = <&blue_led_pin>;
 
 		blue_led: led-0 {
 			color = <LED_COLOR_ID_BLUE>;
@@ -92,13 +92,6 @@
 			linux,default-trigger = "heartbeat";
 			linux,default-trigger-delay-ms = <0>;
 		};
-
-		green_led: led-1 {
-			color = <LED_COLOR_ID_GREEN>;
-			function = LED_FUNCTION_INDICATOR;
-			function-enumerator = <2>;
-			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_HIGH>;
-		};
 	};
 
 	fan: pwm-fan {
@@ -107,6 +100,18 @@
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm3 0 50000 0>;
 		#cooling-cells = <2>;
+	};
+
+	pwm-leds {
+		compatible = "pwm-leds";
+
+		green_led: led-1 {
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_INDICATOR;
+			function-enumerator = <2>;
+			max-brightness = <255>;
+			pwms = <&pwm2 0 25000 0>;
+		};
 	};
 
 	sound {
@@ -498,10 +503,6 @@
 	leds {
 		blue_led_pin: blue-led {
 			rockchip,pins = <3 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
-
-		green_led_pin: green-led {
-			rockchip,pins = <3 RK_PB1 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
