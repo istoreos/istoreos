@@ -24,6 +24,7 @@
 	};
 };
 
+#if 0
 &gmac0 {
 	phy-mode = "rgmii";
 	clock_in_out = "input";
@@ -38,6 +39,7 @@
 	assigned-clock-rates = <0>, <125000000>;
 	phy-handle = <&rgmii_phy0>;
 	pinctrl-names = "default";
+#if 0
 	pinctrl-0 = <&gmac0_miim
 		     &gmac0_tx_bus2
 		     &gmac0_rx_bus2
@@ -47,9 +49,51 @@
 
 	tx_delay = <0x13>;
 	rx_delay = <0x28>;
+#else
+	pinctrl-0 = <&gmac0_miim
+		     &gmac0_tx_bus2_level3
+		     &gmac0_rx_bus2
+		     &gmac0_clkinout
+		     &gmac0_rgmii_clk_level2
+		     &gmac0_rgmii_bus_level3>;
+
+	tx_delay = <0x2b>;
+	rx_delay = <0x26>;
+#endif
 
 	status = "okay";
 };
+
+#else
+
+&gmac0 {
+	phy-mode = "rgmii";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio2 RK_PD3 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	assigned-clocks = <&cru SCLK_GMAC0_RX_TX>, <&cru SCLK_GMAC0>;
+	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>, <&cru CLK_MAC0_2TOP>;
+	assigned-clock-rates = <0>, <125000000>;
+	phy-handle = <&rgmii_phy0>;
+	pinctrl-names = "default";
+
+	pinctrl-0 = <&gmac0_miim
+		     &gmac0_tx_bus2_level3
+		     &gmac0_rx_bus2
+		     &gmac0_rgmii_clk_level2
+		     &gmac0_rgmii_bus_level3>;
+
+	tx_delay = <0x26>;
+	rx_delay = <0x2a>;
+
+	status = "okay";
+};
+
+#endif
 
 &gmac1 {
 	phy-mode = "rgmii";
