@@ -82,7 +82,6 @@ rockchip_setup_macs()
 	armsom,sige7|\
 	lunzn,fastrhino-r66s|\
 	lunzn,fastrhino-r68s|\
-	xunlong,orangepi-5-plus|\
 	friendlyarm,nanopc-t6|\
 	friendlyarm,nanopi-r2c|\
 	friendlyarm,nanopi-r2s)
