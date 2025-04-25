@@ -1,0 +1,36 @@
+From 73ceaa32ee5074df10c49828831228fadd8bca95 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Fri, 25 Apr 2025 18:59:38 +0800
+Subject: [PATCH] drivers/rk8xx-i2c: initcall early
+
+---
+ drivers/mfd/rk8xx-i2c.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/mfd/rk8xx-i2c.c b/drivers/mfd/rk8xx-i2c.c
+index 1a98feea9..d5cd1623c 100644
+--- a/drivers/mfd/rk8xx-i2c.c
++++ b/drivers/mfd/rk8xx-i2c.c
+@@ -176,7 +176,18 @@ static struct i2c_driver rk8xx_i2c_driver = {
+ 	.probe = rk8xx_i2c_probe,
+ 	.shutdown  = rk8xx_i2c_shutdown,
+ };
+-module_i2c_driver(rk8xx_i2c_driver);
++
++static int __init rk8xx_i2c_driver_init(void)
++{
++	return i2c_add_driver(&rk8xx_i2c_driver);
++}
++subsys_initcall(rk8xx_i2c_driver_init);
++
++static void __exit rk8xx_i2c_driver_exit(void)
++{
++	i2c_del_driver(&rk8xx_i2c_driver);
++}
++module_exit(rk8xx_i2c_driver_exit);
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_AUTHOR("Chris Zhong <zyw@rock-chips.com>");
+-- 
+2.46.0
+

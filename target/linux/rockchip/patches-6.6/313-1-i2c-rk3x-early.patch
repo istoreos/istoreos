@@ -1,0 +1,35 @@
+From eeb8edf5ac7812a847c2d20d3dfbf11bcadea7d8 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Fri, 25 Apr 2025 18:57:38 +0800
+Subject: [PATCH] drivers/i2c-rk3x: initcall early
+
+---
+ drivers/i2c/busses/i2c-rk3x.c | 12 +++++++++++-
+ 1 file changed, 11 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/i2c/busses/i2c-rk3x.c b/drivers/i2c/busses/i2c-rk3x.c
+index 086fdf262..8f4bed0b5 100644
+--- a/drivers/i2c/busses/i2c-rk3x.c
++++ b/drivers/i2c/busses/i2c-rk3x.c
+@@ -1408,7 +1408,17 @@ static struct platform_driver rk3x_i2c_driver = {
+ 	},
+ };
+ 
+-module_platform_driver(rk3x_i2c_driver);
++static int __init rk3x_i2c_driver_init(void)
++{
++	return platform_driver_register(&rk3x_i2c_driver);
++}
++subsys_initcall(rk3x_i2c_driver_init);
++
++static void __exit rk3x_i2c_driver_exit(void)
++{
++	platform_driver_unregister(&rk3x_i2c_driver);
++}
++module_exit(rk3x_i2c_driver_exit);
+ 
+ MODULE_DESCRIPTION("Rockchip RK3xxx I2C Bus driver");
+ MODULE_AUTHOR("Max Schwarz <max.schwarz@online.de>");
+-- 
+2.46.0
+
