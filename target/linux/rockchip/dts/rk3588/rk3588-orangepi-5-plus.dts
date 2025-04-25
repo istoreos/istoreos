@@ -84,7 +84,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_blue_pin>;
 
-		led_blue: led-0 {
+		led_blue: led {
 			color = <LED_COLOR_ID_BLUE>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <1>;
@@ -105,7 +105,7 @@
 	pwm-leds {
 		compatible = "pwm-leds";
 
-		led_green: led-1 {
+		led_green: led {
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <2>;
