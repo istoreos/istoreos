@@ -182,6 +182,31 @@ define Device/aruba_ap-303h
 endef
 TARGET_DEVICES += aruba_ap-303h
 
+define Device/alibaba_ap4220
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := Alibaba
+	DEVICE_MODEL := AP4220
+	SOC := qcom-ipq4018
+	KERNEL_SIZE := 4096k
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	DEVICE_PACKAGES += ipq-wifi-alibaba_ap4220
+endef
+
+define Device/alibaba_ap4220-48m
+	$(call Device/alibaba_ap4220)
+	DEVICE_VARIANT := 48M
+endef
+TARGET_DEVICES += alibaba_ap4220-48m
+
+define Device/alibaba_ap4220-128m
+	$(call Device/alibaba_ap4220)
+	DEVICE_VARIANT := 128M
+endef
+TARGET_DEVICES += alibaba_ap4220-128m
+
+
 define Device/aruba_ap-365
 	$(call Device/aruba_glenmorangie)
 	DEVICE_MODEL := AP-365
