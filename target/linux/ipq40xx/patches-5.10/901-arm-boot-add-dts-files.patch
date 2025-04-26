@@ -16,6 +16,8 @@ Signed-off-by: John Crispin <john@phrozen.org>
  	qcom-apq8084-mtp.dtb \
 +	qcom-ipq4018-a42.dtb \
 +	qcom-ipq4018-ap120c-ac.dtb \
++	qcom-ipq4018-ap4220-48m.dtb \
++	qcom-ipq4018-ap4220-128m.dtb \
 +	qcom-ipq4018-dap-2610.dtb \
 +	qcom-ipq4018-cs-w3-wd1200g-eup.dtb \
 +	qcom-ipq4018-magic-2-wifi-next.dtb \

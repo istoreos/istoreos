@@ -25,7 +25,8 @@ endef
 # <https://wireless.wiki.kernel.org/en/users/drivers/ath10k/boardfiles>
 
 ALLWIFIBOARDS:= \
-	zte_mf289f
+	zte_mf289f\
+  alibaba_ap4220
 
 ALLWIFIPACKAGES:=$(foreach BOARD,$(ALLWIFIBOARDS),ipq-wifi-$(BOARD))
 
@@ -86,6 +87,6 @@ endef
 # Place files in this directory as board-<devicename>.<qca4019|qca9888|qca9984>
 # Add $(eval $(call generate-ipq-wifi-package,<devicename>,<display name>))
 
-$(eval $(call generate-ipq-wifi-package,zte_mf289f,ZTE MF289F))
+$(eval $(call generate-ipq-wifi-package,zte_mf289f,ZTE MF289F,alibaba_ap4220,Alibaba AP4220))
 
 $(foreach PACKAGE,$(ALLWIFIPACKAGES),$(eval $(call BuildPackage,$(PACKAGE))))
