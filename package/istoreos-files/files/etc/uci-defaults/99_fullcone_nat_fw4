@@ -1,0 +1,10 @@
+#!/bin/sh
+
+[ "0" = "$(uci -q get 'firewall.@defaults[0].fullcone')" ] && exit 0
+
+uci -q batch <<-EOF
+	set firewall.@defaults[0].fullcone='2'
+	commit firewall
+EOF
+
+exit 0

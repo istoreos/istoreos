@@ -238,7 +238,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 4 "eth1" "eth1-0" && \
 			set_iface_cpumask 4 "eth1" "eth1-16" && \
-			set_iface_cpumask 2 "eth1" "eth1-18" && \
+			set_iface_cpumask 2 "eth1" "eth1-18"
 			set_iface_cpumask 8 "eth2" "eth2-0" && \
 			set_iface_cpumask 8 "eth2" "eth2-18" && \
 			set_iface_cpumask 1 "eth2" "eth2-16"
@@ -279,7 +279,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 2 "eth0" "eth0-0" && \
 			set_iface_cpumask 2 "eth0" "eth0-16" && \
-			set_iface_cpumask 8 "eth0" "eth0-18" && \
+			set_iface_cpumask 8 "eth0" "eth0-18"
 			set_iface_cpumask 4 "eth1" "eth1-0" && \
 			set_iface_cpumask 4 "eth1" "eth1-18" && \
 			set_iface_cpumask 1 "eth1" "eth1-16"
@@ -295,7 +295,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 4 "eth1" "eth1-0" f0 && \
 			set_iface_cpumask 4 "eth1" "eth1-16" && \
-			set_iface_cpumask 2 "eth1" "eth1-18" && \
+			set_iface_cpumask 2 "eth1" "eth1-18"
 			set_iface_cpumask 8 "eth2" "eth2-0" f0 && \
 			set_iface_cpumask 8 "eth2" "eth2-18" && \
 			set_iface_cpumask 1 "eth2" "eth2-16"
@@ -309,7 +309,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 4 "eth0" "eth0-0" f0 && \
 			set_iface_cpumask 4 "eth0" "eth0-16" && \
-			set_iface_cpumask 2 "eth0" "eth0-18" && \
+			set_iface_cpumask 2 "eth0" "eth0-18"
 			set_iface_cpumask 8 "eth1" "eth1-0" f0 && \
 			set_iface_cpumask 8 "eth1" "eth1-18" && \
 			set_iface_cpumask 1 "eth1" "eth1-16"
@@ -322,7 +322,7 @@ board_set_iface_smp_affinity() {
 		else
 			set_iface_cpumask 4 "eth0" "eth0-0" 30 && \
 			set_iface_cpumask 4 "eth0" "eth0-16" && \
-			set_iface_cpumask 2 "eth0" "eth0-18" && \
+			set_iface_cpumask 2 "eth0" "eth0-18"
 			set_iface_cpumask 8 "eth1" "eth1-0" 30 && \
 			set_iface_cpumask 8 "eth1" "eth1-18" && \
 			set_iface_cpumask 1 "eth1" "eth1-16"
