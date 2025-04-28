@@ -139,6 +139,7 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 
 istoreos_pre_upgrade() {
 	if [ -n "$UPGRADE_BACKUP" ]; then
+		local running_ver=$(grep 'DISTRIB_RELEASE=' /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | sed -E "s/.*='(.+)'.*/\1/")
 		touch /usr/lib/opkg/.upgrading 2>/dev/null && sync /
 		# reset rom uuid in ext_overlay
 		if [ -e /ext_overlay/etc ]; then
@@ -147,17 +148,17 @@ istoreos_pre_upgrade() {
 				mkdir -p /ext_overlay/upper/usr/lib/opkg
 				touch /ext_overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
 			}
-			touch /ext_overlay/.upgrading
+			echo "$running_ver" >/ext_overlay/.upgrading
 			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] && rm -f /ext_overlay/etc/.extroot-uuid
 			sync /ext_overlay
 		fi
+		echo "$running_ver" >/overlay/.upgrading
 		[ -f /overlay/upper/usr/lib/opkg/.upgrading ] || {
 			rm -f /overlay/upper/usr/lib/opkg/.upgrading
 			mkdir -p /overlay/upper/usr/lib/opkg
 			touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
-			touch /overlay/.upgrading
-			sync /overlay
 		}
+		sync /overlay
 	fi
 }
 
@@ -176,7 +177,7 @@ istoreos_show_new_firmware_version() {
 
 date '+%Y-%m-%d %H:%M:%S' >/overlay/upgrade.log
 export SAVE_LOG=1
-v "Running Version: $(grep DISTRIB_DESCRIPTION= /etc/openwrt_release | cut -d= -f2)"
+v "Running Version: $(grep DISTRIB_DESCRIPTION= /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | cut -d= -f2)"
 if [ -s /tmp/sysupgrade.meta ]; then
 	(istoreos_show_new_firmware_version)
 fi

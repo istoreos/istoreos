@@ -104,5 +104,4 @@ boot() {
 			upgrade_opkg_distfeeds
 		}
 	fi
-	rm -f /overlay/upper/.upgrading
 }

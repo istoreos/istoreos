@@ -176,6 +176,79 @@ clean_os_version_files()
 	cd - >/dev/null 2>&1
 }
 
+nonconf_files_of_pkg() {
+	local pkgname="$1"
+	if [ -s /usr/lib/opkg/info/${pkgname}.conffiles ]; then
+		grep -hvxFf /usr/lib/opkg/info/${pkgname}.conffiles \
+			/usr/lib/opkg/info/${pkgname}.list
+	else
+		cat /usr/lib/opkg/info/${pkgname}.list
+	fi
+}
+
+clean_pkg_content() {
+	local overlay="$1"
+	local pkgname="$2"
+	local line
+
+	if [ -f /usr/lib/opkg/info/${pkgname}.control ]; then
+		if [ -f /usr/lib/opkg/info/${pkgname}.list ]; then
+			nonconf_files_of_pkg "${pkgname}" | grep -v '^/etc/uci-defaults/' | while read; do
+				line="$REPLY"
+				rm -f "$overlay/upper/${line}"
+			done
+			rm -f $overlay/upper/usr/lib/opkg/info/${pkgname}.list
+		fi
+		rm -f $overlay/upper/usr/lib/opkg/info/${pkgname}.*
+	fi
+}
+
+pkg_depends_rec() {
+	local overlay="$1"
+	local pkgname="$2"
+	local line
+	local dep
+	local deps
+
+	echo "${pkgname}" | grep -q '^kmod-' && return
+
+	if [ -f /usr/lib/opkg/info/${pkgname}.control -a ! -f /tmp/reset_core_packages/${pkgname} ]; then
+		deps=`grep '^Depends: ' /usr/lib/opkg/info/${pkgname}.control | sed -e 's/^Depends: //' -e 's/ ([^)]*)//g' -e 's/,/ /g'`
+		# avoid loop deps
+		rm -f $overlay/upper/usr/lib/opkg/info/${pkgname}.control
+		touch /tmp/reset_core_packages/${pkgname}
+		for dep in $deps ; do
+			pkg_depends_rec "$overlay" "$dep"
+		done
+	fi
+}
+
+reset_core_packages()
+{
+	local overlay="$1"
+	local running_ver=$(grep 'DISTRIB_RELEASE=' /etc/openwrt_release 2>/dev/null | sed -E "s/.*='(.+)'.*/\1/")
+	[ "v$(cat "$overlay/.upgrading" 2>/dev/null)" = "v$running_ver" ] && return
+	local pkg
+	rm -rf /tmp/reset_core_packages
+	mkdir -p /tmp/reset_core_packages
+	for pkg in \
+		luci-compat luci-lua-runtime luci-lib-base luci-base uhttpd \
+		rpcd procd \
+		netifd dnsmasq-full dnsmasq firewall4 \
+		block-mount \
+		curl \
+		ttyd kernel
+	do
+		pkg_depends_rec "$overlay" $pkg
+	done
+	log "Reset packages in $overlay: `ls /tmp/reset_core_packages/ | xargs echo`"
+	ls /tmp/reset_core_packages/ | while read; do
+		pkg="$REPLY"
+		clean_pkg_content "$overlay" $pkg
+	done
+	rm -rf /tmp/reset_core_packages
+}
+
 clean_kmods()
 {
 	local DUMMY_VERSION=0.0.0-r1
@@ -230,6 +303,7 @@ prepare_primary_overlay()
 		if [ -d /overlay/upper ] ; then
 			if update_overlay_lower_uuid /overlay || [ -f /overlay/.upgrading ] ; then
 				clean_os_version_files /overlay
+				reset_core_packages /overlay
 				is_overlayfs_use_xattr && clean_overlayfs_origin /overlay/upper
 				clean_overlayfs_redundant_whiteout_marker /overlay
 			else
@@ -301,9 +375,9 @@ prepare_ext_overlay()
 		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
 			clean_kmods "$newoverlaydir"
 		fi
-		# should change to $newoverlaydir/.upgrading
-		if [ -f "$newoverlaydir/upper/usr/lib/opkg/.upgrading" ]; then
+		if [ -f "$newoverlaydir/.upgrading" ]; then
 			clean_os_version_files "$newoverlaydir"
+			reset_core_packages "$newoverlaydir"
 			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
 		fi
 		if [ -f "$newoverlaydir/.commit" ]; then
