@@ -14,6 +14,7 @@
 / {
 	model = "HINLINK H88K V3";
 	compatible = "hinlink,h88k-v3", "rockchip,rk3588";
+	eth_order = "0004:*1:00.0,0003:*1:00.0,fe1b0000.ethernet";
 
 	vcc3v3_sd: vcc3v3-sd-regulator {
 		compatible = "regulator-fixed";

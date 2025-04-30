@@ -125,16 +125,6 @@ platform_copy_config() {
 		tar -C / -zxvf "$UPGRADE_BACKUP" boot/cmdline.txt boot/config.txt
 		bcm27xx_set_root_part
 
-		local backup_tmp="/tmp/backup-update"
-		mkdir -p $backup_tmp
-		tar -C $backup_tmp -zxvf $UPGRADE_BACKUP
-		cp -af /boot/cmdline.txt $backup_tmp/boot/
-
-		local work_dir=$(pwd)
-		cd $backup_tmp
-		tar -C $backup_tmp -zcvf /boot/$BACKUP_FILE *
-		cd $work_dir
-
 		sync
 		umount /boot
 	fi

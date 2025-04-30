@@ -3,6 +3,7 @@
 #include <rockchip/rk3588s-nanopi-r6s.dts>
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
+#include "rk3588s-nanopi-r6-openwrt.dtsi"
 
 / {
 };

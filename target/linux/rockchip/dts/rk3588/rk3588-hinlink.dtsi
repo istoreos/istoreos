@@ -283,6 +283,11 @@
 };
 
 &gmac0 {
+	snps,reset-gpio = <&gpio4 RK_PB3 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
 	clock_in_out = "output";
 	phy-handle = <&rgmii_phy>;
 	phy-mode = "rgmii-rxid";
