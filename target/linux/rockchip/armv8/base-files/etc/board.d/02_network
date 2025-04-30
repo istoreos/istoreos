@@ -23,6 +23,7 @@ rockchip_setup_interfaces()
 	hinlink,h88k|\
 	hinlink,hnas|\
 	radxa,rockpi-e|\
+	xunlong,orangepi-5-plus|\
 	xunlong,orangepi-r1-plus|\
 	xunlong,orangepi-r1-plus-lts)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
