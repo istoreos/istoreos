@@ -150,3 +150,11 @@ $(call Device/Legacy/rk3588,$(1))
   DEVICE_PACKAGES += kmod-r8169 kmod-nvme
 endef
 TARGET_DEVICES += hinlink_h88k
+
+define Device/xunlong_orangepi-5-plus
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := XunLong
+  DEVICE_MODEL := Orange Pi 5 Plus
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
+endef
+TARGET_DEVICES += xunlong_orangepi-5-plus

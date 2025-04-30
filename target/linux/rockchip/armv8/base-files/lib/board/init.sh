@@ -300,7 +300,8 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	armsom,sige7|\
-	armsom,sige7-v1)
+	armsom,sige7-v1|\
+	xunlong,orangepi-5-plus)
 		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
 			set_iface_cpumask 4 "eth0"
 			set_iface_cpumask 8 "eth1"
