@@ -22,9 +22,9 @@
 	aliases {
 		mmc0 = &sdhci;
 		mmc1 = &sdmmc;
-		led-boot = &blue_led;
-		led-failsafe = &blue_led;
-		led-running = &blue_led;
+		led-boot = &green_led;
+		led-failsafe = &green_led;
+		led-running = &green_led;
 		led-upgrade = &green_led;
 	};
 
