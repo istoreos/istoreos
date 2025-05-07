@@ -31,6 +31,8 @@ supivot() { # <new_root> <old_root>
 	/bin/mount -o noatime,move $2/overlay /overlay 2>&-
 	/bin/mount -o noatime,move $2/ext_overlay /ext_overlay 2>&-
 	/bin/umount -l $2/proc $2/sys $2/dev $2/tmp $2/overlay $2/ext_overlay 2>&-
+	/bin/umount -l $2/boot 2>&-
+	/bin/umount -l $2/boot 2>&- # some platforms like x86 have rebinded /boot
 	return 0
 }
 
@@ -49,6 +51,7 @@ switch_to_ramfs() {
 		ubidetach ubirsvol ubirmvol ubimkvol			\
 		snapshot snapshot_tool date logger			\
 		/usr/sbin/fw_printenv /usr/bin/fwtool			\
+		/usr/bin/umount \
 		$RAMFS_COPY_LOSETUP $RAMFS_COPY_LVM			\
 		$RAMFS_COPY_BIN
 	do
@@ -78,7 +81,7 @@ switch_to_ramfs() {
 	}
 
 	/bin/mount -o remount,ro /mnt
-	/bin/umount -l /mnt
+	/usr/bin/umount -R -d -l /mnt 2>&- || /bin/umount -l /mnt
 
 	grep -e "^/dev/dm-.*" -e "^/dev/loop.*" /proc/mounts | while read bdev mp _r; do
 		umount $mp
