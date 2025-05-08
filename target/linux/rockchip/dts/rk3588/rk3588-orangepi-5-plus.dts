@@ -219,7 +219,7 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	vbus5v0_typec: vbus-typec-regulator {
+	vbus5v0_typec: vbus5v0-typec-regulator {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpio = <&gpio4 RK_PB0 GPIO_ACTIVE_HIGH>;
@@ -377,7 +377,6 @@
 
 				port@0 {
 					reg = <0>;
-
 					usbc0_hs: endpoint {
 						remote-endpoint = <&usb_host0_xhci_drd_sw>;
 					};
@@ -385,7 +384,6 @@
 
 				port@1 {
 					reg = <1>;
-
 					usbc0_ss: endpoint {
 						remote-endpoint = <&usbdp_phy0_typec_ss>;
 					};
@@ -393,7 +391,6 @@
 
 				port@2 {
 					reg = <2>;
-
 					usbc0_sbu: endpoint {
 						remote-endpoint = <&usbdp_phy0_typec_sbu>;
 					};
