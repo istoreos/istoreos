@@ -1,0 +1,28 @@
+From fdace762b9da3d016ed2ee31fbae89be4be4fe7c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 13 May 2025 22:38:45 +0800
+Subject: [PATCH] guc vf version only check major
+
+Signed-off-by: jjm2473 <jjm2473@gmail.com>
+---
+ drivers/gpu/drm/i915/gt/iov/intel_iov_query.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c b/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
+index ed7ea1f..0e1793e 100644
+--- a/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
++++ b/drivers/gpu/drm/i915/gt/iov/intel_iov_query.c
+@@ -102,8 +102,8 @@ static int vf_handshake_with_guc(struct intel_iov *iov)
+ 	if (unlikely(err))
+ 		goto fail;
+ 
+-	/* XXX we only support one version, there must be a match */
+-	if (major != GUC_VF_VERSION_LATEST_MAJOR || minor != GUC_VF_VERSION_LATEST_MINOR)
++	/* we shouldn't get anything newer than requested */
++	if (major > GUC_VF_VERSION_LATEST_MAJOR)
+ 		goto fail;
+ 
+ 	guc_info(iov_to_guc(iov), "interface version %u.%u.%u.%u\n",
+-- 
+2.46.0
+

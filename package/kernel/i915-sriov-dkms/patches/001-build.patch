@@ -1,0 +1,159 @@
+From da54d38f534bd1ee07df52641ccaa11d8978b7f3 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 13 May 2025 22:35:38 +0800
+Subject: [PATCH] fix build on openwrt
+
+Signed-off-by: jjm2473 <jjm2473@gmail.com>
+---
+ Makefile                                     | 14 +++++---------
+ drivers/gpu/drm/i915/display/intel_display.c |  1 +
+ drivers/gpu/drm/i915/display/intel_hdmi.c    |  4 ++++
+ drivers/gpu/drm/i915/gt/gen8_ppgtt.c         |  7 -------
+ drivers/gpu/drm/i915/gt/uc/intel_huc.c       |  4 ++--
+ drivers/gpu/drm/i915/gt/uc/intel_huc.h       |  4 ++--
+ drivers/gpu/drm/i915/intel_device_info.c     |  3 +++
+ 7 files changed, 17 insertions(+), 20 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 42f5699..ba92594 100644
+--- a/Makefile
++++ b/Makefile
+@@ -3,17 +3,17 @@ KERNELRELEASE       ?= $(shell uname -r)
+ KERNELVERSION       := $(shell var=$(KERNELRELEASE); echo $${var%%-*})
+ 
+ # Kernel extraversion (separated by dashes)
+-EXTRAVERSION        := $(shell var=$(KERNELRELEASE); echo $${var#*-})
++EXTRAVERSION        := $(shell var=$(KERNELRELEASE); echo $${var\#*-})
+ EXTRAVERSION_MAJOR  := $(shell var=$(EXTRAVERSION); var=$$(echo $${var%-*} | awk -F. '{x=$$1+0; print x}'); echo $${var:-0})
+ EXTRAVERSION_MINOR  := $(shell var=$(EXTRAVERSION); var=$$(echo $${var%-*} | awk -F. '{x=$$2+0; print x}'); echo $${var:-0})
+-EXTRAVERSION_NAME   := $(shell var=$(EXTRAVERSION); echo $${var#*-})
++EXTRAVERSION_NAME   := openwrt
+ EXTRAVERSION_DEFINE := $(shell var=$(EXTRAVERSION_NAME); var=$$(echo $$var  | sed 's/-/_/'| awk '{print toupper($$0)}'); echo EXTRAVERSION_$${var:-EMPTY})
+ 
+ # LSB release
+-LSBRELEASE          := $(shell lsb_release -rs 2> /dev/null || cat /etc/*-release | grep '^VERSION_ID=' | head -n1 | cut -d '=' -f2 | xargs)
++LSBRELEASE          ?= $(shell lsb_release -rs 2> /dev/null || cat /etc/*-release | grep '^VERSION_ID=' | head -n1 | cut -d '=' -f2 | xargs)
+ LSBRELEASE_MAJOR    := $(shell var=$$(echo $(LSBRELEASE) | awk -F. '{x=$$1+0; print x}'); echo $${var:-0})
+ LSBRELEASE_MINOR    := $(shell var=$$(echo $(LSBRELEASE) | awk -F. '{x=$$2+0; print x}'); echo $${var:-0})
+-LSBRELEASE_NAME     := $(shell lsb_release -is 2> /dev/null || cat /etc/*-release | grep '^ID=' | head -n1 | cut -d '=' -f2 | xargs)
++LSBRELEASE_NAME     ?= $(shell lsb_release -is 2> /dev/null || cat /etc/*-release | grep '^ID=' | head -n1 | cut -d '=' -f2 | xargs)
+ LSBRELEASE_DEFINE   := $(shell var=$(LSBRELEASE_NAME); var=$$(echo $$var | sed 's/-/_/' | awk '{print toupper($$0)}'); echo RELEASE_$${var:-EMPTY})
+ 
+ # Option to override latest GuC firmware (default is API 1.9.0 / v70.20.0)
+@@ -42,11 +42,7 @@ $(info GUCFIRMWARE_MINOR=$(GUCFIRMWARE_MINOR))
+ #
+ 
+ # Configuration
+-EXTRA_CFLAGS += -DCONFIG_PM -DCONFIG_DEBUG_FS -DCONFIG_PNP -DCONFIG_PROC_FS \
+-				-DCONFIG_MMU_NOTIFIER -DCONFIG_DRM_I915_COMPRESS_ERROR \
+-				-DCONFIG_COMPAT -DCONFIG_PERF_EVENTS -DCONFIG_PCI_IOV \
+-				-DCONFIG_X86 -DCONFIG_ACPI -DCONFIG_DRM_FBDEV_EMULATION \
+-				-DCONFIG_PMIC_OPREGION -DCONFIG_SWIOTLB -DCONFIG_DRM_I915_PXP \
++EXTRA_CFLAGS += -DCONFIG_DRM_I915_COMPRESS_ERROR \
+ 				-DGUC_VF_VERSION_LATEST_MAJOR=$(GUCFIRMWARE_MAJOR) \
+ 				-DGUC_VF_VERSION_LATEST_MINOR=$(GUCFIRMWARE_MINOR) \
+ 				-DEXTRAVERSION_MAJOR=$(EXTRAVERSION_MAJOR) \
+diff --git a/drivers/gpu/drm/i915/display/intel_display.c b/drivers/gpu/drm/i915/display/intel_display.c
+index e4d6896..07a7d51 100644
+--- a/drivers/gpu/drm/i915/display/intel_display.c
++++ b/drivers/gpu/drm/i915/display/intel_display.c
+@@ -9047,6 +9047,7 @@ void intel_modeset_driver_remove_noirq(struct drm_i915_private *i915)
+ 
+ 	intel_unregister_dsm_handler();
+ 
++#define __warn_flushing_systemwide_wq() do {} while(0)
+ 	/* flush any delayed tasks or pending work */
+ 	flush_scheduled_work();
+ 
+diff --git a/drivers/gpu/drm/i915/display/intel_hdmi.c b/drivers/gpu/drm/i915/display/intel_hdmi.c
+index 6468488..994af6d 100644
+--- a/drivers/gpu/drm/i915/display/intel_hdmi.c
++++ b/drivers/gpu/drm/i915/display/intel_hdmi.c
+@@ -2680,11 +2680,15 @@ bool intel_hdmi_handle_sink_scrambling(struct intel_encoder *encoder,
+ 				       bool scrambling)
+ {
+ 	struct drm_i915_private *dev_priv = to_i915(encoder->base.dev);
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,4,0)
+ 	struct intel_hdmi *intel_hdmi = enc_to_intel_hdmi(encoder);
++#endif
+ 	struct drm_scrambling *sink_scrambling =
+ 		&connector->display_info.hdmi.scdc.scrambling;
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,4,0)
+ 	struct i2c_adapter *adapter =
+ 		intel_gmbus_get_adapter(dev_priv, intel_hdmi->ddc_bus);
++#endif
+ 
+ 	if (!sink_scrambling->supported)
+ 		return true;
+diff --git a/drivers/gpu/drm/i915/gt/gen8_ppgtt.c b/drivers/gpu/drm/i915/gt/gen8_ppgtt.c
+index e899430..b6a000c 100644
+--- a/drivers/gpu/drm/i915/gt/gen8_ppgtt.c
++++ b/drivers/gpu/drm/i915/gt/gen8_ppgtt.c
+@@ -100,13 +100,6 @@ static u64 gen12_pte_encode(dma_addr_t addr,
+ 	return pte;
+ }
+ 
+-static u64 gen12_pte_encode_shim(dma_addr_t addr,
+-			  enum i915_cache_level level,
+-			  u32 flags)
+-{
+-	return gen12_pte_encode(addr, (unsigned int)level, flags);
+-}
+-
+ static void gen8_ppgtt_notify_vgt(struct i915_ppgtt *ppgtt, bool create)
+ {
+ 	struct drm_i915_private *i915 = ppgtt->vm.i915;
+diff --git a/drivers/gpu/drm/i915/gt/uc/intel_huc.c b/drivers/gpu/drm/i915/gt/uc/intel_huc.c
+index 9c34f63..638fb89 100644
+--- a/drivers/gpu/drm/i915/gt/uc/intel_huc.c
++++ b/drivers/gpu/drm/i915/gt/uc/intel_huc.c
+@@ -182,7 +182,7 @@ static int gsc_notifier(struct notifier_block *nb, unsigned long action, void *d
+ 	return 0;
+ }
+ 
+-void intel_huc_register_gsc_notifier(struct intel_huc *huc, struct bus_type *bus)
++void intel_huc_register_gsc_notifier(struct intel_huc *huc, const struct bus_type *bus)
+ {
+ 	int ret;
+ 
+@@ -198,7 +198,7 @@ void intel_huc_register_gsc_notifier(struct intel_huc *huc, struct bus_type *bus
+ 	}
+ }
+ 
+-void intel_huc_unregister_gsc_notifier(struct intel_huc *huc, struct bus_type *bus)
++void intel_huc_unregister_gsc_notifier(struct intel_huc *huc, const struct bus_type *bus)
+ {
+ 	if (!huc->delayed_load.nb.notifier_call)
+ 		return;
+diff --git a/drivers/gpu/drm/i915/gt/uc/intel_huc.h b/drivers/gpu/drm/i915/gt/uc/intel_huc.h
+index 4ae90da..54835da 100644
+--- a/drivers/gpu/drm/i915/gt/uc/intel_huc.h
++++ b/drivers/gpu/drm/i915/gt/uc/intel_huc.h
+@@ -66,8 +66,8 @@ int intel_huc_check_status(struct intel_huc *huc);
+ void intel_huc_update_auth_status(struct intel_huc *huc);
+ int intel_huc_fw_load_and_auth_via_gsc_cs(struct intel_huc *huc);
+ 
+-void intel_huc_register_gsc_notifier(struct intel_huc *huc, struct bus_type *bus);
+-void intel_huc_unregister_gsc_notifier(struct intel_huc *huc, struct bus_type *bus);
++void intel_huc_register_gsc_notifier(struct intel_huc *huc, const struct bus_type *bus);
++void intel_huc_unregister_gsc_notifier(struct intel_huc *huc, const struct bus_type *bus);
+ 
+ static inline int intel_huc_sanitize(struct intel_huc *huc)
+ {
+diff --git a/drivers/gpu/drm/i915/intel_device_info.c b/drivers/gpu/drm/i915/intel_device_info.c
+index b1ddfde..2d5ad70 100644
+--- a/drivers/gpu/drm/i915/intel_device_info.c
++++ b/drivers/gpu/drm/i915/intel_device_info.c
+@@ -151,6 +151,9 @@ void intel_device_info_print(const struct intel_device_info *info,
+ }
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+ #define ID(id) (id)
++#else
++#undef INTEL_VGA_DEVICE
++#define INTEL_VGA_DEVICE(id, info) (id)
+ #endif
+ 
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(6,11,0)
+-- 
+2.46.0
+
