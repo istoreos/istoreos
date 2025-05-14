@@ -17,6 +17,8 @@ boot() {
 
 		local release="$(uname -r)"
 		[[ -n "$release" ]] || return 0
+
+		echo "enable i915-sriov" >>/dev/kmsg
 		ls /lib/modules/$release/i915-sriov/ 2>/dev/null | while read kmod; do
 			if [[ "$kmod" = "*.ko" ]]; then
 				[[ -f /lib/modules/$release/$kmod ]] || continue
