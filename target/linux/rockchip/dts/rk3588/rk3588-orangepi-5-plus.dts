@@ -1002,7 +1002,8 @@
 };
 
 &usb_host0_xhci {
-	usb-role-switch;
+	//usb-role-switch;
+	dr_mode = "host";
 	status = "okay";
 
 	port {
