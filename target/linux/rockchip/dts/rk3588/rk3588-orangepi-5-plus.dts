@@ -228,7 +228,7 @@
 		regulator-name = "vbus5v0_typec";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		startup-delay-us = <50000>;
+		startup-delay-us = <5000>;
 		vin-supply = <&vcc5v0_sys>;
 	};
 };
