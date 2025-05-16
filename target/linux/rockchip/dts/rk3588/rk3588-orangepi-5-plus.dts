@@ -187,11 +187,11 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	vcc3v3_wf: vcc3v3-wf-regulator {
+	vcc3v3_pcie2x1l0: vcc3v3-pcie2x1l0-regulator {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpios = <&gpio2 RK_PC5 GPIO_ACTIVE_HIGH>;
-		regulator-name = "vcc3v3_wf";
+		regulator-name = "vcc3v3_pcie2x1l0";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		startup-delay-us = <50000>;
@@ -228,6 +228,7 @@
 		regulator-name = "vbus5v0_typec";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
+		startup-delay-us = <50000>;
 		vin-supply = <&vcc5v0_sys>;
 	};
 };
@@ -461,7 +462,7 @@
 /* phy1 - M.KEY socket */
 &pcie2x1l0 {
 	reset-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_wf>;
+	vpcie3v3-supply = <&vcc3v3_pcie2x1l0>;
 	status = "okay";
 };
 
