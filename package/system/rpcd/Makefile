@@ -8,6 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rpcd
+PKG_FLAGS:=hold
 PKG_RELEASE:=2
 
 PKG_SOURCE_PROTO:=git
