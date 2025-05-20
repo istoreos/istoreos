@@ -9,6 +9,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=uci
+PKG_FLAGS:=hold
 PKG_RELEASE:=2
 
 PKG_SOURCE_URL=$(PROJECT_GIT)/project/uci.git
