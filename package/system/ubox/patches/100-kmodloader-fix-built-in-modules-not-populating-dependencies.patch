@@ -1,0 +1,59 @@
+From 18a1503a3334f077fea3ce4bad46a94c4e7b93a5 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Tue, 20 May 2025 20:15:48 +0800
+Subject: [PATCH] kmodloader: fix built-in modules not populating dependencies
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ kmodloader.c | 13 +++++++++----
+ 1 file changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/kmodloader.c b/kmodloader.c
+index 8fd989f..017971c 100644
+--- a/kmodloader.c
++++ b/kmodloader.c
+@@ -741,9 +741,9 @@ static int deps_available(struct module *m, int verbose)
+ 
+ 		if (verbose && !m)
+ 			ULOG_ERR("missing dependency %s\n", dep);
+-		if (verbose && m && (m->state != LOADED))
++		if (verbose && m && (m->state != BUILTIN && m->state != LOADED))
+ 			ULOG_ERR("dependency not loaded %s\n", dep);
+-		if (!m || (m->state != LOADED))
++		if (!m || (m->state != BUILTIN && m->state != LOADED))
+ 			err++;
+ 		dep += strlen(dep) + 1;
+ 	}
+@@ -809,7 +809,7 @@ static void load_moddeps(struct module *_m)
+ 
+ 		if (!m)
+ 			ULOG_ERR("failed to find dependency %s\n", dep);
+-		if (m && (m->state != LOADED)) {
++		if (m && (m->state != BUILTIN && m->state != LOADED)) {
+ 			m->state = PROBE;
+ 			load_moddeps(m);
+ 		}
+@@ -1191,6 +1191,11 @@ static int main_loader(int argc, char **argv)
+ 		goto free_path;
+ 	}
+ 
++	if (scan_builtin_modules()) {
++		ret = -1;
++		goto free_path;
++	}
++
+ 	ULOG_INFO("loading kernel modules from %s\n", path);
+ 
+ 	if (glob(path, gl_flags, NULL, &gl) < 0)
+@@ -1219,7 +1224,7 @@ static int main_loader(int argc, char **argv)
+ 				*opts++ = '\0';
+ 
+ 			m = find_module(get_module_name(mod));
+-			if (!m || m->state == LOADED || m->state == BLACKLISTED)
++			if (!m || m->state == BUILTIN || m->state == LOADED || m->state == BLACKLISTED)
+ 				continue;
+ 
+ 			if (opts) {
+-- 
+2.46.0
+
