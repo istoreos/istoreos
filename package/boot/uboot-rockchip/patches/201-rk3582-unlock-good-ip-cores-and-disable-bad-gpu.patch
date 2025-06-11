@@ -1,0 +1,46 @@
+From 73f3bfac1998320bed3fafe5edcde8497f81ac89 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 11 Jun 2025 17:01:10 +0800
+Subject: [PATCH] rockchip: rk3588: unlock good IP cores and disable bad GPU in RK3582
+
+---
+
+--- a/arch/arm/mach-rockchip/rk3588/rk3588.c
++++ b/arch/arm/mach-rockchip/rk3588/rk3588.c
+@@ -210,6 +210,7 @@ int arch_cpu_init(void)
+ #define FAIL_RKVDEC1			BIT(7)
+ #define FAIL_RKVENC0			BIT(0)
+ #define FAIL_RKVENC1			BIT(2)
++#define FAIL_GPU				GENMASK(4, 1)
+ 
+ int checkboard(void)
+ {
+@@ -342,6 +343,7 @@ int ft_system_setup(void *blob, struct b
+ 	if (ip_state[0] & FAIL_CPU_CLUSTER2)
+ 		ip_state[0] |= FAIL_CPU_CLUSTER2;
+ 
++#if 0
+ 	/* policy: always fail one big core cluster on rk3582/rk3583 */
+ 	if (!(ip_state[0] & (FAIL_CPU_CLUSTER1 | FAIL_CPU_CLUSTER2)))
+ 		ip_state[0] |= FAIL_CPU_CLUSTER2;
+@@ -353,6 +355,7 @@ int ft_system_setup(void *blob, struct b
+ 	/* policy: always fail one rkvenc core on rk3582/rk3583 */
+ 	if (!(ip_state[2] & (FAIL_RKVENC0 | FAIL_RKVENC1)))
+ 		ip_state[2] |= FAIL_RKVENC1;
++#endif
+ 
+ 	log_debug("ip-state: %02x %02x %02x (policy)\n",
+ 		  ip_state[0], ip_state[1], ip_state[2]);
+@@ -398,6 +401,12 @@ int ft_system_setup(void *blob, struct b
+ 		fdt_status_fail_by_pathf(blob, "/iommu@fdbef000");
+ 	}
+ 
++	/* gpu: ip_state[1]: bit1~4 */
++	if (ip_state[1] & FAIL_GPU) {
++		log_debug("fail gpu\n");
++		fdt_status_fail_by_pathf(blob, "/gpu@fb000000");
++	}
++
+ 	parent = fdt_path_offset(blob, "/cpus");
+ 	if (parent < 0) {
+ 		log_err("Could not find /cpus, parent=%d\n", parent);
