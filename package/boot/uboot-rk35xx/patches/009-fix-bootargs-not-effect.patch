@@ -1,0 +1,29 @@
+From ca4343eb308b019c6bc6930361b56306cd3ba55d Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 5 Jun 2023 18:48:45 +0800
+Subject: [PATCH] fix boorargs not in effect
+
+---
+ arch/arm/mach-rockchip/board.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+Index: rk-u-boot/arch/arm/mach-rockchip/board.c
+===================================================================
+--- rk-u-boot.orig/arch/arm/mach-rockchip/board.c
++++ rk-u-boot/arch/arm/mach-rockchip/board.c
+@@ -1399,6 +1399,7 @@ static void bootargs_add_dtb_dtbo(void *
+ 	}
+ }
+ 
++#ifdef CONFIG_CMD_BOOT_ANDROID
+ char *board_fdt_chosen_bootargs(void *fdt)
+ {
+ 	int verbose = is_hotkey(HK_CMDLINE);
+@@ -1442,6 +1443,7 @@ char *board_fdt_chosen_bootargs(void *fd
+ 
+ 	return (char *)bootargs;
+ }
++#endif
+ 
+ int ft_verify_fdt(void *fdt)
+ {

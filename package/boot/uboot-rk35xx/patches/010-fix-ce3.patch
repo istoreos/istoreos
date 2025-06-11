@@ -1,0 +1,25 @@
+From 8a530b27f8c486281b60a4bbcf35ed463431a617 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 11 Jun 2025 14:28:23 +0800
+Subject: [PATCH] fix CE cmd_process signature mismatch
+
+---
+ common/command.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/common/command.c b/common/command.c
+index 71715572..001238a9 100644
+--- a/common/command.c
++++ b/common/command.c
+@@ -501,7 +501,7 @@ static int cmd_call(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+ 	return result;
+ }
+ 
+-enum command_ret_t cmd_process(int flag, int argc, char * const argv[],
++int cmd_process(int flag, int argc, char * const argv[],
+ 			       int *repeatable, ulong *ticks)
+ {
+ 	enum command_ret_t rc = CMD_RET_SUCCESS;
+-- 
+2.46.0
+

@@ -1,0 +1,22 @@
+From 600dbd1d1ca42e82aa11540954725a7c19952bef Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Mon, 5 Jun 2023 16:58:02 +0800
+Subject: [PATCH] supports legacy image
+
+---
+ include/configs/rockchip-common.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+Index: rk-u-boot/include/configs/rockchip-common.h
+===================================================================
+--- rk-u-boot.orig/include/configs/rockchip-common.h
++++ rk-u-boot/include/configs/rockchip-common.h
+@@ -180,6 +180,8 @@
+ 	"run distro_bootcmd;"
+ #endif
+ 
++#define CONFIG_IMAGE_FORMAT_LEGACY /* enable also legacy image format */
++
+ #endif /* CONFIG_SPL_BUILD */
+ 
+ #define CONFIG_DISPLAY_BOARDINFO_LATE

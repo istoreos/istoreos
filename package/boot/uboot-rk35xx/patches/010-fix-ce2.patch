@@ -1,0 +1,32 @@
+From 6928b3a2b8397bea88add5174821e7a9c6f405d9 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 11 Jun 2025 14:16:45 +0800
+Subject: [PATCH] fix CE without CMD_BOOT_ANDROID
+
+---
+ arch/arm/mach-rockchip/board.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/arm/mach-rockchip/board.c b/arch/arm/mach-rockchip/board.c
+index f98eaca8..7714345d 100644
+--- a/arch/arm/mach-rockchip/board.c
++++ b/arch/arm/mach-rockchip/board.c
+@@ -1217,6 +1217,7 @@ int board_rng_seed(struct abuf *buf)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_CMD_BOOT_ANDROID
+ /*
+  * Pass fwver when any available.
+  */
+@@ -1398,6 +1399,7 @@ static void bootargs_add_dtb_dtbo(void *fdt, bool verbose)
+ #endif
+ 	}
+ }
++#endif
+ 
+ #ifdef CONFIG_CMD_BOOT_ANDROID
+ char *board_fdt_chosen_bootargs(void *fdt)
+-- 
+2.46.0
+
