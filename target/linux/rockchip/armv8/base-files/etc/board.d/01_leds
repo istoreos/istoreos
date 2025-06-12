@@ -46,6 +46,16 @@ hinlink,opc-h66k)
 	ucidef_set_led_netdev "wan" "WAN" "blue:net" "eth0"
 	ucidef_set_led_ide "disk" "DISK" "yellow:disk"
 	;;
+radxa,e52c)
+	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
+	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth1"
+	;;
+radxa,e54c)
+	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x8"
+	ucidef_set_led_switch "lan1" "lan1" "green:lan:1" "switch0" "0x4"
+	ucidef_set_led_switch "lan2" "lan2" "green:lan:2" "switch0" "0x2"
+	ucidef_set_led_switch "lan3" "lan3" "green:lan:3" "switch0" "0x1"
+	;;
 esac
 
 board_config_flush

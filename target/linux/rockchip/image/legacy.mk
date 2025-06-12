@@ -170,6 +170,23 @@ $(call Device/Legacy/rk3588,$(1))
 endef
 TARGET_DEVICES += hinlink_h88k
 
+define Device/radxa_e52c
+$(call Device/Legacy/rk3588s,$(1))
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E52C
+  UBOOT_DEVICE_NAME := easepi-rk3588-lp4-1866
+  DEVICE_PACKAGES += kmod-r8169
+endef
+TARGET_DEVICES += radxa_e52c
+
+define Device/radxa_e54c
+$(call Device/Legacy/rk3588s,$(1))
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E54C
+  DEVICE_PACKAGES += kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+endef
+TARGET_DEVICES += radxa_e54c
+
 define Device/xunlong_orangepi-5-plus
 $(call Device/Legacy/rk3588,$(1))
   DEVICE_VENDOR := XunLong
