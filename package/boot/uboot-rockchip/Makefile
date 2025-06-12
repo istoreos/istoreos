@@ -305,6 +305,16 @@ define U-Boot/easepi-rk3588
   DEFAULT:=y
 endef
 
+define U-Boot/easepi-rk3588-lp4-1866
+  $(U-Boot/rk3588/Default)
+  NAME:=Easepi RK3588 LPDDR4 1866Mhz
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3588-lp4-1866
+  TPL:=rk3588_ddr_lp4_1866MHz_lp5_2400MHz_v1.16.bin
+  UBOOT_CONFIG:=easepi-rk3588
+  BUILD_DEVICES:= \
+    radxa_e52c
+endef
+
 define U-Boot/nanopc-t6-rk3588
   $(U-Boot/rk3588/Default)
   NAME:=NanoPC T6
@@ -383,6 +393,7 @@ UBOOT_TARGETS := \
   rock-3a-rk3568 \
   rock-3b-rk3568 \
   easepi-rk3588 \
+  easepi-rk3588-lp4-1866 \
   nanopc-t6-rk3588 \
   rock5b-rk3588 \
   sige7-rk3588 \
