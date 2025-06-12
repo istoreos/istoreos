@@ -5,6 +5,11 @@
 / {
 	model = "FriendlyElec NanoPi R4SE";
 	compatible = "friendlyarm,nanopi-r4se", "rockchip,rk3399";
+
+	aliases {
+		mmc0 = &sdhci;
+		mmc2 = &sdio0;
+	};
 };
 
 &emmc_phy {
