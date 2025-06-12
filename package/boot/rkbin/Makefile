@@ -63,13 +63,19 @@ define Trusted-Firmware-A/rk3588
   TPL:=rk35/rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.16.bin
 endef
 
+define Trusted-Firmware-A/rk3588-lp4-1866
+$(call Trusted-Firmware-A/rk3588,$(1))
+  TPL:=$$(MOD_TPL)
+endef
+
 TFA_TARGETS:= \
 	rk3308 \
 	rk3308-rock-pi-s \
 	rk3566 \
 	rk3568 \
 	rk3568-e25 \
-	rk3588
+	rk3588 \
+	rk3588-lp4-1866
 
 ifeq ($(BUILD_VARIANT),rk3308-rock-pi-s)
   TPL_FILE:=rk3308_ddr_589MHz_uart0_m0_v2.07.bin
@@ -100,6 +106,20 @@ ifeq ($(BUILD_VARIANT),rk3568-e25)
 	$(call Build/Prepare/Default)
 
 	$(CP) $(DL_DIR)/$(TPL_FILE) $(PKG_BUILD_DIR)/bin/rk35/
+  endef
+endif
+
+ifeq ($(BUILD_VARIANT),rk3588-lp4-1866)
+$(eval $(call Trusted-Firmware-A/rk3588,$(BUILD_VARIANT)))
+  SRC_TPL:=$(TPL)
+  MOD_TPL:=$(subst _lp4_2112MHz_,_lp4_1866MHz_,$(TPL))
+
+  define Build/Prepare
+	$(call Build/Prepare/Default)
+
+	$(STAGING_DIR_HOST)/bin/sed 's/^lp4_freq=.*/lp4_freq=1866/' $(PKG_BUILD_DIR)/tools/ddrbin_param.txt > $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt
+	$(CP) $(PKG_BUILD_DIR)/bin/$(SRC_TPL) $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
+	$(PKG_BUILD_DIR)/tools/ddrbin_tool rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
   endef
 endif
 
