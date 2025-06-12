@@ -370,6 +370,16 @@ define U-Boot/easepi-rk3588
   DEFAULT:=y
 endef
 
+define U-Boot/easepi-rk3588-lp4-1866
+  $(U-Boot/rk3588/Default)
+  NAME:=Easepi RK3588 LPDDR4 1866Mhz
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3588-tpl-lp4-1866
+  TPL:=rk3588_ddr_lp4_1866MHz_lp5_2400MHz_v1.19.bin
+  UBOOT_CONFIG:=easepi-rk3588
+  BUILD_DEVICES:= \
+    radxa_e52c
+endef
+
 define U-Boot/generic-rk3588
   $(U-Boot/rk358x/Default)
   NAME:=Generic RK358x board
@@ -479,6 +489,7 @@ UBOOT_TARGETS := \
   generic-rk3576 \
   rock-4d-rk3576 \
   easepi-rk3588 \
+  easepi-rk3588-lp4-1866 \
   generic-rk3588 \
   nanopc-t6-rk3588 \
   rock-5-itx-rk3588 \
