@@ -6,7 +6,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_VERSION:=2025.10
-PKG_RELEASE:=4
+PKG_RELEASE:=5
 PKG_HASH:=b4f032848e56cc8f213ad59f9132c084dbbb632bc29176d024e58220e0efdf4a
 
 PKG_MAINTAINER:=Sarah Maedel <openwrt@tbspace.de>
