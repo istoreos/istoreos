@@ -635,7 +635,7 @@
 	status = "okay";
 };
 
-/* MULTI_PHY0 For SATA0, USB3.0 OTG Only USB2.0 */
+/* OTG Only USB2.0, Only device mode */
 &usb_host0_xhci {
 	phys = <&usb2phy0_otg>;
 	phy-names = "usb2-phy";
@@ -667,7 +667,7 @@
 };
 
 &usb2phy0_otg {
-	phy-supply = <&vcc5v0_otg>;
+	vbus-supply = <&vcc5v0_otg>;
 	status = "okay";
 };
 
