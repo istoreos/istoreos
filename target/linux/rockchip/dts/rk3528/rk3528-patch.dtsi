@@ -1,0 +1,77 @@
+
+/ {
+	soc {
+		wdt: watchdog@ffac0000 {
+			compatible = "snps,dw-wdt";
+			reg = <0x0 0xffac0000 0x0 0x100>;
+			clocks = <&cru TCLK_WDT_NS>, <&cru PCLK_WDT_NS>;
+			clock-names = "tclk", "pclk";
+			interrupts = <GIC_SPI 28 IRQ_TYPE_LEVEL_HIGH>;
+			status = "disabled";
+		};
+	};
+};
+
+&cpu_opp_table {
+	opp-408000000 {
+		opp-hz = /bits/ 64 <408000000>;
+		opp-microvolt = <875000 875000 1100000>;
+		clock-latency-ns = <40000>;
+		opp-suspend;
+	};
+
+	opp-600000000 {
+		opp-hz = /bits/ 64 <600000000>;
+		opp-microvolt = <875000 875000 1100000>;
+		clock-latency-ns = <40000>;
+	};
+
+	opp-816000000 {
+		opp-hz = /bits/ 64 <816000000>;
+		opp-microvolt = <875000 875000 1100000>;
+		clock-latency-ns = <40000>;
+	};
+
+	opp-1008000000 {
+		opp-hz = /bits/ 64 <1008000000>;
+		opp-microvolt = <875000 875000 1100000>;
+		clock-latency-ns = <40000>;
+	};
+
+};
+
+&otp {
+	cpu_mbist_vmin: cpu-mbist-vmin@9 {
+		reg = <0x09 0x1>;
+		bits = <0 3>;
+	};
+	gpu_mbist_vmin: gpu-mbist-vmin@9 {
+		reg = <0x09 0x1>;
+		bits = <3 2>;
+	};
+	logic_mbist_vmin: logic-mbist-vmin@9 {
+		reg = <0x09 0x1>;
+		bits = <5 2>;
+	};
+	test_version: test-version@29 {
+		reg = <0x29 0x1>;
+	};
+	macphy_bgs: macphy-bgs@2d {
+		reg = <0x2d 0x1>;
+	};
+	macphy_txlevel: macphy-txlevel@2e {
+		reg = <0x2e 0x2>;
+	};
+	vdac_out_current: vdac-out-current@30 {
+		reg = <0x30 0x1>;
+	};
+	cpu_opp_info: cpu-opp-info@32 {
+		reg = <0x32 0x6>;
+	};
+	gpu_opp_info: gpu-opp-info@38 {
+		reg = <0x38 0x6>;
+	};
+	dmc_opp_info: dmc-opp-info@3e {
+		reg = <0x3e 0x6>;
+	};
+};
