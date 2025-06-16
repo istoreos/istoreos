@@ -23,6 +23,22 @@ $(call Device/friendlyarm_nanopi-r2c,$(1))
 endef
 
 
+# RK3528
+
+define Device/Legacy/rk3528
+$(call Device/Legacy,$(1))
+  SOC := rk3528
+  UBOOT_DEVICE_NAME := easepi-rk3528
+  BOOT_SCRIPT := rk3528
+  DEVICE_PACKAGES := kmod-rga3 kmod-rk_vcodec kmod-iio-rockchip-saradc
+endef
+
+define Device/Legacy/rk3528_rtl8111h
+$(call Device/Legacy/rk3528,$(1))
+  DEVICE_PACKAGES += kmod-r8169 kmod-thermal
+endef
+
+
 # RK3568
 
 define Device/Legacy/rk3568
