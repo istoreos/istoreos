@@ -38,6 +38,13 @@ $(call Device/Legacy/rk3528,$(1))
   DEVICE_PACKAGES += kmod-r8169 kmod-thermal
 endef
 
+define Device/radxa_e20c
+$(call Device/Legacy/rk3528_rtl8111h,$(1))
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E20C
+endef
+TARGET_DEVICES += radxa_e20c
+
 
 # RK3568
 

@@ -1,0 +1,144 @@
+/dts-v1/;
+
+#include <rockchip/rk3528-radxa-e20c.dts>
+#include "rk3528-patch.dtsi"
+#include "rk3528-ip.dtsi"
+
+/ {
+	aliases {
+		ethernet0 = &gmac1;
+		ethernet1 = &rtl8111h;
+
+		mmc0 = &sdmmc;
+		mmc1 = &sdhci;
+		mmc2 = &sdio0;
+
+		led-boot = &sys_led;
+		led-failsafe = &sys_led;
+		led-running = &sys_led;
+		led-upgrade = &sys_led;
+	};
+
+	vcc5v0_usb20: regulator-5v0-vcc-usb20 {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_host_en>;
+		regulator-name = "vcc5v0_usb20";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	leds {
+
+		led-lan {
+
+		};
+
+		sys_led: led-sys {
+
+		};
+
+		led-wan {
+
+		};
+	};
+
+	gpio-keys {
+		button-user {
+			linux,code = <KEY_RESTART>;
+		};
+	};
+};
+
+&combphy_pu {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
+	status = "okay";
+};
+
+&pcie2x1 {
+	reset-gpios = <&gpio1 RK_PA2 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+	pcie@0,0 {
+		reg = <0x000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8111h: pcie-eth@0,0 {
+			compatible = "pci10ec,8168";
+			reg = <0x000000 0 0 0 0>;
+			realtek,led-data = <0xca>;
+		};
+	};
+};
+
+&pwm1 {
+	status = "okay";
+};
+
+// pwm2 hangs system, disable it
+&vdd_logic {
+	status = "disabled";
+};
+
+&pwm2 {
+	pinctrl-0 = <&pwm2m0_pins_pull_down>;
+	status = "disabled";
+};
+
+&pinctrl {
+	pwm1 {
+		pwm1m0_pins_pull_down: pwm1m0-pins-pull-down {
+			rockchip,pins =
+				/* pwm1_m0 */
+				<4 RK_PC4 1 &pcfg_pull_down_drv_level_0>;
+		};
+	};
+	pwm2 {
+		pwm2m0_pins_pull_down: pwm2m0-pins-pull-down {
+			rockchip,pins =
+				/* pwm2_m0 */
+				<4 RK_PC5 1 &pcfg_pull_down_drv_level_0>;
+		};
+	};
+	usb {
+		usb_host_en: usb-host-en {
+			rockchip,pins = <0 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&tsadc {
+	status = "okay";
+};
+
+&usb2phy {
+	status = "okay";
+};
+
+&u2phy_host {
+	phy-supply = <&vcc5v0_usb20>;
+	status = "okay";
+};
+
+&u2phy_otg {
+	status = "okay";
+};
+
+&usb_host0_ehci {
+	status = "okay";
+};
+
+&usb_host0_ohci {
+	status = "okay";
+};
+
+&usb_host0_xhci {
+	extcon = <&usb2phy>;
+	maximum-speed = "high-speed";
+	phys = <&u2phy_otg>;
+	phy-names = "usb2-phy";
+	status = "okay";
+};
