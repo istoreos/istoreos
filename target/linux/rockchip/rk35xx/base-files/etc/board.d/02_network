@@ -25,6 +25,7 @@ rockchip_setup_interfaces()
 	jsy,h1|\
 	nlnet,xgp|\
 	radxa,e52c|\
+	xunlong,orangepi-5-plus|\
 	firefly,rk3568-roc-pc)
 		ucidef_set_interfaces_lan_wan 'eth1' 'eth0'
 		;;
@@ -52,7 +53,6 @@ rockchip_setup_interfaces()
 		;;
 	ezpro,mrkaio-m68s|\
 	ezpro,mrkaio-m68s-plus|\
-	xunlong,orangepi-5-plus|\
 	radxa,e20c|\
 	mangopi,m28k|\
 	hlink,h28k)
