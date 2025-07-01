@@ -70,3 +70,7 @@
 		};
 	};
 };
+
+&rk809 {
+	long-press-off-time-sec = <10>;
+};
