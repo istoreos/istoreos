@@ -12,5 +12,6 @@
 	chosen {
 		default-firewall = "dual";
 		power-key-factory-reset;
+		power-key-dbclick;
 	};
 };
