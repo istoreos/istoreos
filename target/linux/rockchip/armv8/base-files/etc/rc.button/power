@@ -49,6 +49,26 @@ power_key_factory_reset() {
 	[ -e /proc/device-tree/chosen/power-key-factory-reset ]
 }
 
+check_poweroff() {
+	if [ -e /proc/device-tree/chosen/power-key-dbclick ]; then
+		local now=$(sed 's/^\([0-9]*\)\.\([0-9][0-9]\).*/\1\2/' /proc/uptime)
+		if [ -n "$now" ]; then
+			if [ -e /tmp/.power_key_last_click ]; then
+				local last=$(cat /tmp/.power_key_last_click)
+				local duration=$(( $now - $last ))
+				# duration is 10ms units
+				if [ "$duration" -lt 50 ]; then
+					rm -f /tmp/.power_key_last_click
+					return 0
+				fi
+			fi
+			echo "$now" >/tmp/.power_key_last_click
+			exit 0
+		fi
+	fi
+	return 0
+}
+
 if power_key_factory_reset; then
 	case "$ACTION" in
 	pressed)
@@ -61,6 +81,7 @@ if power_key_factory_reset; then
 	released)
 		if [ "$SEEN" -lt 1 ]
 		then
+			check_poweroff
 			exec /sbin/poweroff
 		elif [ "$SEEN" -ge 5 ]
 		then
@@ -75,6 +96,7 @@ fi
 
 [ "${ACTION}" = "released" ] || exit 0
 
+check_poweroff
 exec /sbin/poweroff
 
 return 0
