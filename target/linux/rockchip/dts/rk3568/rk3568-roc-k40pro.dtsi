@@ -325,6 +325,7 @@
 		vcc8-supply = <&vcc3v3_sys>;
 		vcc9-supply = <&vcc3v3_sys>;
 		wakeup-source;
+		long-press-off-time-sec = <10>;
 
 		regulators {
 			vdd_logic: DCDC_REG1 {
