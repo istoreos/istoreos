@@ -1,0 +1,22 @@
+#!/bin/sh
+
+[ -f /etc/config/kmods ] || exit 0
+
+uci -q batch <<-EOF >/dev/null
+
+	delete kmods.mali
+	set kmods.mali=auto_unload
+	set kmods.mali.function="bifrost_kbase lima mali panfrost panthor"
+
+	delete kmods.rkmpp
+	set kmods.rkmpp=auto_unload
+	set kmods.rkmpp.function="rga2 rga3 rk_vcodec"
+
+	delete kmods.rknpu
+	set kmods.rknpu=auto_unload
+	set kmods.rknpu.function=rknpu
+
+	commit kmods
+EOF
+
+exit 0
