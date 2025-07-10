@@ -20,6 +20,13 @@
 	};
 };
 
+&gmac0 {
+	snps,reset-gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 15ms, 50ms for rtl8211f */
+	snps,reset-delays-us = <0 15000 50000>;
+};
+
 &pwm0 {
 	status = "okay";
 };
