@@ -16,12 +16,7 @@ else
 	if test -n "$adc_value"; then
 		# h68k 511-524
 		# h69k 691-695
-		if test "$adc_value" -ge 1024; then
-			if test "$adc_value" -ge 1072265; then
-				echo h69k
-				setenv hwflag 10
-			fi
-		elif test "$adc_value" -ge 610; then
+		if test "$adc_value" -lt 1024 -a "$adc_value" -ge 610 -o "$adc_value" -ge 1072265; then
 			echo h69k
 			setenv hwflag 10
 		fi
