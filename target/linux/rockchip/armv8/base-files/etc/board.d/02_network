@@ -54,7 +54,8 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
 	hinlink,opc-h68k|\
-	lunzn,fastrhino-r68s)
+	lunzn,fastrhino-r68s|\
+	lyt,t68m)
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
 	radxa,e52c)
