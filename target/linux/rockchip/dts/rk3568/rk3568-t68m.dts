@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+// Source: https://github.com/immortalwrt/immortalwrt/blob/594ab12ff83c9d0a30165a20366d591c4a80e944/target/linux/rockchip/files/arch/arm64/boot/dts/rockchip/rk3568-lyt-t68m.dts
 
 /dts-v1/;
 #include <dt-bindings/gpio/gpio.h>
@@ -6,7 +7,10 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/soc/rockchip,vop2.h>
-#include "rk3568.dtsi"
+#include <rockchip/rk3568.dtsi>
+
+#include "rk3568-ip.dtsi"
+#include "rk3568-ip-rk809.dtsi"
 
 / {
 	model = "LYT T68M";
@@ -28,16 +32,17 @@
 		stdout-path = "serial2:1500000n8";
 	};
 
-	gpio-keys {
-		compatible = "gpio-keys";
-		pinctrl-names = "default";
-		pinctrl-0 = <&reset_button_pin>;
+	adc-keys {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1750000>;
+		poll-interval = <100>;
 
-		button-reset {
-			label = "reset";
-			gpios = <&gpio3 RK_PB1 GPIO_ACTIVE_LOW>;
+		button-recovery {
+			label = "RECOVERY";
 			linux,code = <KEY_RESTART>;
-			debounce-interval = <50>;
+			press-threshold-microvolt = <0>;
 		};
 	};
 
@@ -53,7 +58,8 @@
 		};
 
 		status_led: led-status {
-			color =<LED_COLOR_ID_RED>;
+			label = "t68m:red:user";
+			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_STATUS;
 			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
 		};
@@ -153,16 +159,29 @@
 		vin-supply = <&vcc3v3_sys>;
 	};
 
-	vcc3v3_pcie: vcc3v3-pcie-regulator {
+	/* actually fed by vcc5v0_sys */
+	vcc3v3_pi6c: vcc3v3-pi6c-regulator {
 		compatible = "regulator-fixed";
 		enable-active-high;
 		gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pcie_enable_h>;
+		pinctrl-0 = <&pi6c_enable_h>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-name = "vcc3v3_pi6c";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_3v3>;
+	};
+
+	vcc3v3_pcie: vcc3v3-pcie-regulator {
+		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_pcie";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		vin-supply = <&vcc12v_dcin>;
+		/* wait for pi6c stable */
+		startup-delay-us = <50000>;
+		vin-supply = <&vcc3v3_pi6c>;
 	};
 
 	/* actually fed by vcc12v_dcin */
@@ -175,7 +194,7 @@
 		regulator-name = "vcc3v3_minipcie";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
-		vin-supply = <&vcc3v3_pcie>;
+		vin-supply = <&vcc12v_dcin>;
 	};
 };
 
@@ -212,7 +231,6 @@
 	assigned-clock-parents = <&cru SCLK_GMAC0_RGMII_SPEED>;
 	assigned-clock-rates = <0>, <125000000>;
 	clock_in_out = "output";
-	label = "lan1";
 	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac0_miim
@@ -233,7 +251,6 @@
 	assigned-clock-parents = <&cru SCLK_GMAC1_RGMII_SPEED>;
 	assigned-clock-rates = <0>, <125000000>;
 	clock_in_out = "output";
-	label = "lan2";
 	phy-mode = "rgmii-id";
 	pinctrl-names = "default";
 	pinctrl-0 = <&gmac1m1_miim
@@ -387,8 +404,8 @@
 
 			vdda0v9_image: LDO_REG1 {
 				regulator-name = "vdda0v9_image";
-				regulator-min-microvolt = <900000>;
-				regulator-max-microvolt = <900000>;
+				regulator-min-microvolt = <950000>;
+				regulator-max-microvolt = <950000>;
 
 				regulator-state-mem {
 					regulator-off-in-suspend;
@@ -523,25 +540,7 @@
 	rgmii_phy0: ethernet-phy@0 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0>;
-
-		leds {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			led@1 {
-				reg = <1>;
-				color = <LED_COLOR_ID_AMBER>;
-				function = LED_FUNCTION_LAN;
-				default-state = "keep";
-			};
-
-			led@2 {
-				reg = <2>;
-				color = <LED_COLOR_ID_GREEN>;
-				function = LED_FUNCTION_LAN;
-				default-state = "keep";
-			};
-		};
+		realtek,led-data = <0x6151>;
 	};
 };
 
@@ -549,25 +548,7 @@
 	rgmii_phy1: ethernet-phy@0 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <0>;
-
-		leds {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			led@1 {
-				reg = <1>;
-				color = <LED_COLOR_ID_AMBER>;
-				function = LED_FUNCTION_LAN;
-				default-state = "keep";
-			};
-
-			led@2 {
-				reg = <2>;
-				color = <LED_COLOR_ID_GREEN>;
-				function = LED_FUNCTION_LAN;
-				default-state = "keep";
-			};
-		};
+		realtek,led-data = <0x6151>;
 	};
 };
 
@@ -596,8 +577,6 @@
 		rtl8125_1: pcie-eth@10,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
-
-			label = "lan4";
 		};
 	};
 };
@@ -616,8 +595,6 @@
 		rtl8125_2: pcie-eth@20,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
-
-			label = "lan3";
 		};
 	};
 };
@@ -638,7 +615,7 @@
 			rockchip,pins = <0 RK_PC7 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-		pcie_enable_h: pcie-enable-h {
+		pi6c_enable_h: pi6c-enable-h {
 			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
