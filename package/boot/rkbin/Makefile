@@ -78,6 +78,11 @@ $(call Trusted-Firmware-A/rk3588-tpl,$(1))
   TPL:=$$(MOD_TPL)
 endef
 
+define Trusted-Firmware-A/rk3588-tpl-uart2-115200
+$(call Trusted-Firmware-A/rk3588-tpl,$(1))
+  TPL:=$$(MOD_TPL)
+endef
+
 TFA_TARGETS:= \
 	rk3308 \
 	rk3308-tpl-rock-pi-s \
@@ -87,7 +92,8 @@ TFA_TARGETS:= \
 	rk3568-tpl-e25 \
 	rk3576-tpl \
 	rk3588-tpl \
-	rk3588-tpl-lp4-1866
+	rk3588-tpl-lp4-1866 \
+	rk3588-tpl-uart2-115200
 
 ifeq ($(BUILD_VARIANT),rk3308-tpl-rock-pi-s)
   define Download/rk3308-tpl-rock-pi-s
@@ -132,6 +138,20 @@ $(eval $(call Trusted-Firmware-A/rk3588-tpl,$(BUILD_VARIANT)))
 	$(STAGING_DIR_HOST)/bin/sed 's/^lp4_freq=.*/lp4_freq=1866/' $(PKG_BUILD_DIR)/tools/ddrbin_param.txt > $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt
 	$(CP) $(PKG_BUILD_DIR)/bin/$(SRC_TPL) $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
 	$(PKG_BUILD_DIR)/tools/ddrbin_tool rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
+  endef
+endif
+
+ifeq ($(BUILD_VARIANT),rk3588-tpl-uart2-115200)
+$(eval $(call Trusted-Firmware-A/rk3588-tpl,$(BUILD_VARIANT)))
+  SRC_TPL:=$(TPL)
+  MOD_TPL:=$(subst MHz_v,MHz_uart2_115200_v,$(TPL))
+
+  define Build/Prepare
+	$(call Build/Prepare/Default)
+
+	$(STAGING_DIR_HOST)/bin/sed 's/^uart baudrate=.*/uart baudrate=115200/' $(PKG_BUILD_DIR)/tools/ddrbin_param.txt > $(PKG_BUILD_DIR)/tools/ddrbin_param_uart2-115200.txt
+	$(CP) $(PKG_BUILD_DIR)/bin/$(SRC_TPL) $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
+	$(PKG_BUILD_DIR)/tools/ddrbin_tool rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_uart2-115200.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
   endef
 endif
 
