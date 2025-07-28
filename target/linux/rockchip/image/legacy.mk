@@ -196,6 +196,16 @@ $(call Device/Legacy/rk3588,$(1))
 endef
 TARGET_DEVICES += hinlink_h88k
 
+define Device/lyt_t88m
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := LYT
+  DEVICE_MODEL := T88M
+  UBOOT_DEVICE_NAME := easepi-rk3588-uart2-115200
+  BOOT_SCRIPT := rk3588-uart2-115200
+  DEVICE_PACKAGES := kmod-r8169 kmod-nvme kmod-ata-ahci-dwc
+endef
+TARGET_DEVICES += lyt_t88m
+
 define Device/radxa_e52c
 $(call Device/Legacy/rk3588s,$(1))
   DEVICE_VENDOR := Radxa
