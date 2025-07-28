@@ -161,6 +161,14 @@ $(call Device/rk3568/hinlink,$(1))
 endef
 TARGET_DEVICES += hinlink_hnas
 
+define Device/lyt_t68m
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := LYT
+  DEVICE_MODEL := T68M
+  DEVICE_PACKAGES := kmod-r8169 kmod-nvme kmod-ata-ahci-dwc
+endef
+TARGET_DEVICES += lyt_t68m
+
 
 # RK3588
 
