@@ -315,6 +315,16 @@ define U-Boot/easepi-rk3588-lp4-1866
     radxa_e52c
 endef
 
+define U-Boot/easepi-rk3588-uart2-115200
+  $(U-Boot/rk3588/Default)
+  NAME:=Easepi RK3588 UART2 115200
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3588-uart2-115200
+  TPL:=rk3588_ddr_lp4_2112MHz_lp5_2400MHz_uart2_115200_v1.16.bin
+  UBOOT_CONFIG:=easepi-rk3588-uart2-115200
+  BUILD_DEVICES:= \
+    lyt_t88m
+endef
+
 define U-Boot/nanopc-t6-rk3588
   $(U-Boot/rk3588/Default)
   NAME:=NanoPC T6
@@ -394,6 +404,7 @@ UBOOT_TARGETS := \
   rock-3b-rk3568 \
   easepi-rk3588 \
   easepi-rk3588-lp4-1866 \
+  easepi-rk3588-uart2-115200 \
   nanopc-t6-rk3588 \
   rock5b-rk3588 \
   sige7-rk3588 \
