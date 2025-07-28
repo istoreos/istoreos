@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include "rk3588-easepi.dts"
+
+/ {
+	model = "Easepi RK3588 UART2 115200 Board";
+
+	chosen {
+		stdout-path = "serial2:115200n8";
+	};
+
+};
