@@ -46,6 +46,11 @@ hinlink,opc-h66k)
 	ucidef_set_led_netdev "wan" "WAN" "blue:net" "eth0"
 	ucidef_set_led_ide "disk" "DISK" "yellow:disk"
 	;;
+hlink,h28k)
+	ucidef_set_led_default "power" "POWER" "green:work" "1"
+	ucidef_set_led_netdev "wan" "WAN" "yellow:led3" "eth1"
+	ucidef_set_led_netdev "lan" "LAN" "blue:led4" "eth0"
+	;;
 radxa,e20c)
 	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth1"
 	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth0"

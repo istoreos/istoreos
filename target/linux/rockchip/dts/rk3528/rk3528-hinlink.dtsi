@@ -1,0 +1,327 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+* Copyright (c) 2022 Rockchip Electronics Co., Ltd.
+*
+*/
+
+#include <rockchip/rk3528.dtsi>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3528-patch.dtsi"
+#include "rk3528-ip.dtsi"
+
+/ {
+	model = "HINLINK/Hlink RK3528 Boards";
+	compatible = "hinlink,rk3528", "rockchip,rk3528";
+
+	aliases {
+		ethernet0 = &gmac1;
+		/delete-property/ ethernet1;
+		/* ethernet1 = &pcie-eth; */
+
+		mmc0 = &sdmmc;
+		mmc1 = &sdhci;
+
+		led-boot = &led_work;
+		led-failsafe = &led_work;
+		led-running = &led_work;
+		led-upgrade = &led_work;
+	};
+
+	chosen {
+		stdout-path = "serial0:1500000n8";
+	};
+
+	vcc5v0_sys: vcc5v0-sys {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_sys";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
+
+	/omit-if-no-ref/
+	vccio_sd: vccio-sd {
+		compatible = "regulator-gpio";
+		regulator-name = "vccio_sd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		states = <1800000 0x0
+			3300000 0x1>;
+	};
+
+	vdd_logic: vdd-logic {
+		compatible = "pwm-regulator";
+		pwms = <&pwm2 0 5000 1>;
+		regulator-name = "vdd_logic";
+		regulator-min-microvolt = <705000>;
+		regulator-max-microvolt = <1006000>;
+		regulator-init-microvolt = <900000>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-ramp-delay = <6001>;
+		regulator-settling-time-up-us = <250>;
+		pwm-supply = <&vcc5v0_sys>;
+		status = "okay";
+	};
+
+	vdd_cpu: vdd-cpu {
+		compatible = "pwm-regulator";
+		pwms = <&pwm1 0 5000 1>;
+		regulator-name = "vdd_cpu";
+		regulator-min-microvolt = <746000>;
+		regulator-max-microvolt = <1201000>;
+		regulator-init-microvolt = <953000>;
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-ramp-delay = <6001>;
+		regulator-settling-time-up-us = <250>;
+		pwm-supply = <&vcc5v0_sys>;
+		status = "okay";
+	};
+
+	vdd_0v9_s3: vdd-0v9-s3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_0v9_s3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <900000>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	vdd_1v8_s3: vdd-1v8-s3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_1v8_s3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	vcc_3v3_s3: vcc-3v3-s3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3_s3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc5v0_sys>;
+	};
+
+	/omit-if-no-ref/
+	vcc_sd: vcc-sd {
+		compatible = "regulator-fixed";
+		gpio = <&gpio4 RK_PA1 GPIO_ACTIVE_LOW>;
+		regulator-name = "vcc_sd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vcc_3v3_s3>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 =
+			<&led_work_en>,
+			<&led_yellow_en>,
+			<&led_blue_en>;
+
+		led_work: led-work {
+			gpios = <&gpio4 RK_PB7 GPIO_ACTIVE_LOW>;
+			label = "green:work";
+			linux,default-trigger = "heartbeat";
+		};
+		led-yellow {
+			gpios = <&gpio4 RK_PC1 GPIO_ACTIVE_LOW>;
+			label = "yellow:led3";
+		};
+		led-blue {
+			gpios = <&gpio4 RK_PC0 GPIO_ACTIVE_LOW>;
+			label = "blue:led4";
+		};
+	};
+};
+
+&gmac1 {
+	/* Use rgmii-rxid mode to disable rx delay inside Soc */
+	phy-mode = "rgmii-rxid";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	tx_delay = <0x3b>;
+	/* rx_delay = <0x3f>; */
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&rgmii_miim
+			&rgmii_tx_bus2
+			&rgmii_rx_bus2
+			&rgmii_rgmii_clk
+			&rgmii_rgmii_bus>;
+
+	phy-handle = <&rgmii_phy>;
+	status = "okay";
+};
+
+&mdio1 {
+	rgmii_phy: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+	};
+};
+
+&combphy_pu {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
+	status = "okay";
+};
+
+&pcie2x1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rtl8111_isolate>;
+	reset-gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&u2phy_host {
+	phy-supply = <&vcc5v0_sys>;
+	status = "okay";
+};
+
+&u2phy_otg {
+	vbus-supply = <&vcc5v0_sys>;
+	rockchip,vbus-always-on;
+	status = "okay";
+};
+
+&usb2phy {
+	status = "okay";
+};
+
+&usb_host0_ehci {
+	status = "okay";
+};
+
+&usb_host0_ohci {
+	status = "okay";
+};
+
+&usb_host0_xhci {
+	extcon = <&usb2phy>; // only dr_mode = "otg" need this */
+	phys = <&u2phy_otg>; /* only USB2.0 */
+	phy-names = "usb2-phy"; /* only USB2.0 */
+	maximum-speed = "high-speed"; /* only USB2.0 */
+	snps,dis_u2_susphy_quirk; /* only USB2.0 */
+	status = "okay";
+};
+
+&sdhci {
+	bus-width = <8>;
+	no-sd;
+	no-sdio;
+	non-removable;
+	mmc-hs200-1_8v;
+	max-frequency = <200000000>;
+	vmmc-supply = <&vcc_3v3_s3>;
+	vqmmc-supply = <&vdd_1v8_s3>;
+	status = "okay";
+};
+
+&sdmmc {
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	max-frequency = <150000000>;
+	supports-sd;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	vqmmc-supply = <&vccio_sd>;
+	vmmc-supply = <&vcc_sd>;
+	status = "okay";
+};
+
+&saradc {
+	status = "okay";
+	vref-supply = <&vdd_1v8_s3>;
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0m0_xfer>;
+	status = "okay";
+};
+
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu1 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu2 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu3 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&tsadc {
+	status = "okay";
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm1m0_pins>;
+	status = "okay";
+};
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm2m0_pins>;
+	status = "okay";
+};
+
+&pinctrl {
+	leds {
+		led_work_en: led-work-en {
+			rockchip,pins =
+				<4 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_yellow_en: led-lan-en {
+			rockchip,pins =
+				<4 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_blue_en: led-wan-en {
+			rockchip,pins =
+				<4 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	pcie {
+		rtl8111_isolate: rtl8111-isolate {
+			rockchip,pins = 
+				<4 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+};
+
+// pwm2 hangs system, disable it
+&vdd_logic {
+	status = "disabled";
+};
+
+&pwm2 {
+	status = "disabled";
+};
