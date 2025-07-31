@@ -1,0 +1,29 @@
+/dts-v1/;
+
+#include <rockchip/rk3528-hinlink-h28k.dts>
+#include "rk3528-patch.dtsi"
+#include "rk3528-ip.dtsi"
+
+/ {
+	model = "Hlink H28K";
+	compatible = "hlink,h28k", "rockchip,rk3528";
+
+	leds {
+		led-0 {
+			label = "yellow:led3";
+		};
+
+		led-1 {
+			label = "blue:led4";
+		};
+
+		led_work: led-2 {
+			label = "green:work";
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};
+
+&combphy {
+	rockchip,dis-u3otg0-port; /* disable USB3.0 */
+};

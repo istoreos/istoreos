@@ -32,6 +32,7 @@ rockchip_setup_interfaces()
 	friendlyarm,nanopi-r5c|\
 	friendlyelec,nanopi-r5s-c1|\
 	friendlyarm,nanopi-r76s|\
+	hlink,h28k|\
 	hinlink,h28k|\
 	radxa,e20c|\
 	radxa,e25|\
