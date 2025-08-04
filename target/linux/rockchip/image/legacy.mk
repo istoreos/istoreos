@@ -168,6 +168,7 @@ TARGET_DEVICES += hinlink_opc-h6xk
 define Device/hinlink_hnas
 $(call Device/rk3568/hinlink,$(1))
   DEVICE_MODEL := HNAS
+  DEVICE_PACKAGES += kmod-aic8800s
 endef
 TARGET_DEVICES += hinlink_hnas
 
