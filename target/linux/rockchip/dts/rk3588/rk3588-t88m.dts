@@ -206,7 +206,7 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "vcc3v3_modem";
 		pinctrl-names = "default";
-		pintctrl-0 = <&modem_power_en>;
+		pinctrl-0 = <&modem_power_en>;
 		vin-supply = <&vcc_3v3_s3>;
 	};
 
@@ -220,7 +220,7 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "vcc3v3_m2_wifi";
 		pinctrl-names = "default";
-		pintctrl-0 = <&m2_wifi_power_en>;
+		pinctrl-0 = <&m2_wifi_power_en>;
 		vin-supply = <&vcc_3v3_s3>;
 	};
 
@@ -234,7 +234,7 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "vcc3v3_ngff1";
 		pinctrl-names = "default";
-		pintctrl-0 = <&ngff1_power_en>;
+		pinctrl-0 = <&ngff1_power_en>;
 		vin-supply = <&vcc_3v3_s3>;
 	};
 
