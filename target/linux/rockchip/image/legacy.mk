@@ -243,6 +243,16 @@ $(call Device/Legacy/rk3588s,$(1))
 endef
 TARGET_DEVICES += radxa_e54c
 
+define Device/roceos_k60pro
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := ROCEOS
+  DEVICE_MODEL := K60Pro
+  UBOOT_DEVICE_NAME := easepi-rk3588-uart2-115200
+  BOOT_SCRIPT := rk3588-uart2-115200
+  DEVICE_PACKAGES := kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal 
+endef
+TARGET_DEVICES += roceos_k60pro
+
 define Device/xunlong_orangepi-5-plus
 $(call Device/Legacy/rk3588,$(1))
   DEVICE_VENDOR := XunLong
