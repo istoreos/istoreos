@@ -12,6 +12,7 @@ export_ota_url() {
 	hlink,h28k|\
 	linkfog,ala2|\
 	radxa,e20c|\
+	radxa,e24c|\
 	radxa,e52c|\
 	radxa,e54c|\
 	easepi,ars4|\

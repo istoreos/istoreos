@@ -52,6 +52,14 @@ $(call Device/Legacy/rk3528_rtl8111h,$(1))
 endef
 TARGET_DEVICES += radxa_e20c
 
+define Device/radxa_e24c
+$(call Device/Legacy/rk3528,$(1))
+  DEVICE_VENDOR := Radxa
+  DEVICE_MODEL := E24C
+  DEVICE_PACKAGES += kmod-nvme kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+endef
+TARGET_DEVICES += radxa_e24c
+
 
 # RK3568
 
