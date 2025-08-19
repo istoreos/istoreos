@@ -1,3 +1,4 @@
+#!/bin/sh
 
 . /lib/functions/leds.sh
 . /lib/functions/uci-defaults.sh
@@ -8,6 +9,7 @@ boardname="${board##*,}"
 board_config_update
 
 case $board in
+cyber,3588-aib|\
 friendlyarm,nanopi-r2c|\
 friendlyarm,nanopi-r2c-plus|\
 friendlyarm,nanopi-r2s|\
