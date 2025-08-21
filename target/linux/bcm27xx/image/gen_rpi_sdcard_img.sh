@@ -26,6 +26,8 @@ BOOTOFFSET="$(($1 / 512))"
 ROOTFSOFFSET="$(($3 / 512))"
 USERDATAOFFSET="$(($5 / 512))"
 
+echo "PREVENT \"SMART\" PARTED FROM MODIFYING MBR DISKID" | dd of="$OUTPUT" bs=440 conv=notrunc,sync count=1
+
 dd bs=512 if="$BOOTFS" of="$OUTPUT" seek="$BOOTOFFSET" conv=notrunc
 dd bs=512 if="$ROOTFS" of="$OUTPUT" seek="$ROOTFSOFFSET" conv=notrunc
 echo "RESET000" | dd of="$OUTPUT" bs=512 seek="$USERDATAOFFSET" conv=notrunc,sync count=1

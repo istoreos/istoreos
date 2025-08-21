@@ -60,6 +60,7 @@ if [ -n "$GUID" ]; then
     mkfs.fat --invariant -n kernel -C "$OUTPUT.kernel" -S 512 "$((KERNELSIZE / 1024))"
     LC_ALL=C dos_dircopy "$KERNELDIR" /
 else
+    echo "PREVENT \"SMART\" PARTED FROM MODIFYING MBR DISKID" | dd of="$OUTPUT" bs=440 conv=notrunc,sync count=1
     make_ext4fs -J -L kernel -l "$KERNELSIZE" ${SOURCE_DATE_EPOCH:+-T ${SOURCE_DATE_EPOCH}} "$OUTPUT.kernel" "$KERNELDIR"
 fi
 dd if="$OUTPUT.kernel" of="$OUTPUT" bs=512 seek="$KERNELOFFSET" conv=notrunc
