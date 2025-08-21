@@ -258,7 +258,7 @@ define Device/cyber_cyber3588-aib
   DEVICE_VENDOR := Cyber
   DEVICE_MODEL := Cyber3588-AIB
   SOC := rk3588
-  DEVICE_DTS := rockchip/rk3588-cyber3588-aib
+  DEVICE_DTS := rk3588-cyber3588-aib
   DEVICE_PACKAGES := kmod-r8169 kmod-hwmon-pwmfan kmod-igb
 endef
 TARGET_DEVICES += cyber_cyber3588-aib
