@@ -308,15 +308,10 @@ define U-Boot/rock5b-rk3588
   $(U-Boot/rk3588/Default)
   NAME:=ROCK 5B
   BUILD_DEVICES:= \
-    radxa_rock-5b
-endef
-
-define U-Boot/cyber3588-aib-rk3588
-  $(U-Boot/rk3588/Default)
-  NAME:=Cyber 3588 AIB
-  BUILD_DEVICES:= \
+    radxa_rock-5b \
     cyber_cyber3588-aib
 endef
+
 
 define U-Boot/sige7-rk3588
   $(U-Boot/rk3588/Default)
@@ -382,7 +377,6 @@ UBOOT_TARGETS := \
   easepi-rk3588-uart2-115200 \
   nanopc-t6-rk3588 \
   rock5b-rk3588 \
-  cyber3588-aib-rk3588 \
   sige7-rk3588 \
   nanopi-r6c-rk3588s \
   nanopi-r6s-rk3588s \
