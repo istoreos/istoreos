@@ -358,6 +358,7 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	easepi,r2|\
+	easepi,r2-qc|\
 	ynn,nas|\
 	le,hes30|\
 	jp,tvbox|\
