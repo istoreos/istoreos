@@ -179,7 +179,7 @@ $(call Device/rk3568)
   DEVICE_MODEL := R2
   DEVICE_DTS := rk3568-easepi-r2
   SUPPORTED_DEVICES += easepi,r2
-  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal brcmfmac-firmware-43455-sdio brcmfmac-firmware-43455-sdio-nvram
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-brcmfmac cypress-firmware-43455-sdio brcmfmac-firmware-43455-sdio-nvram
 endef
 TARGET_DEVICES += easepi_r2
 
