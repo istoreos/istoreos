@@ -79,6 +79,13 @@ define Package/brcmfmac-firmware-43455-sdio-rpi-4b/install
 endef
 $(eval $(call BuildPackage,brcmfmac-firmware-43455-sdio-rpi-4b))
 
+Package/brcmfmac-firmware-43455-sdio-nvram = $(call Package/firmware-default,Broadcom BCM43455 NVRAM)
+define Package/brcmfmac-firmware-43455-sdio-nvram/install
+	$(INSTALL_DIR) $(1)/lib/firmware/brcm
+	$(LN) brcmfmac43455-sdio.raspberrypi,4-model-b.txt $(1)/lib/firmware/brcm/brcmfmac43455-sdio.txt
+endef
+$(eval $(call BuildPackage,brcmfmac-firmware-43455-sdio-nvram))
+
 Package/brcmfmac-firmware-usb = $(call Package/firmware-default,Broadcom BCM43xx fullmac USB firmware)
 define Package/brcmfmac-firmware-usb/install
 	$(INSTALL_DIR) $(1)/lib/firmware/brcm
