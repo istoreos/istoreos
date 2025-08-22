@@ -254,14 +254,6 @@ define Device/radxa_rock-pi-s
 endef
 TARGET_DEVICES += radxa_rock-pi-s
 
-define Device/cyber_cyber3588-aib
-  DEVICE_VENDOR := Cyber
-  DEVICE_MODEL := Cyber3588-AIB
-  SOC := rk3588
-  DEVICE_DTS := rk3588-cyber3588-aib
-  DEVICE_PACKAGES := kmod-r8169 kmod-hwmon-pwmfan
-endef
-TARGET_DEVICES += cyber_cyber3588-aib
 
 define Device/radxa_zero-3e
   DEVICE_VENDOR := Radxa

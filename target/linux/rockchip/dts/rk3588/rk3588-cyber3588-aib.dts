@@ -21,7 +21,7 @@
 #include "rk3588s-ip-supply.dtsi"
 
 / {
-	model = "Cyber 3588 AIB";
+	model = "Cyber Cyber3588 AIB";
 	compatible = "cyber,cyber3588-aib", "rockchip,rk3588";
 
 	aliases {
