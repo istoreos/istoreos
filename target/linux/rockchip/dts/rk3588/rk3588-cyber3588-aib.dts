@@ -12,12 +12,11 @@
 #include <dt-bindings/pwm/pwm.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/input/input.h>
-#include <dt-bindings/display/rockchip_vop.h>
-#include <dt-bindings/sensor-dev.h>
-#include "rk3588.dtsi"
+#include <rockchip/rk3588.dtsi>
 #include "rk3588-rk806-single.dtsi"
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
+
 
 / {
 	model = "Cyber 3588 AIB";
@@ -251,30 +250,13 @@
 		};
 	};
 
-	/* If hdmirx node is disabled, delete the reserved-memory node here. */
-	reserved-memory {
-		#address-cells = <2>;
-		#size-cells = <2>;
-		ranges;
-
-		/* Reserve 256MB memory for hdmirx-controller@fdee0000 */
-		cma {
-			compatible = "shared-dma-pool";
-			reusable;
-			reg = <0x0 (256 * 0x100000) 0x0 (256 * 0x100000)>;
-			linux,cma-default;
-		};
-	};
 
 	hdmiin-sound {
 		compatible = "rockchip,hdmi";
 		rockchip,mclk-fs = <128>;
 		rockchip,format = "i2s";
-		rockchip,bitclock-master = <&hdmirx_ctrler>;
-		rockchip,frame-master = <&hdmirx_ctrler>;
 		rockchip,card-name = "rockchip-hdmiin";
 		rockchip,cpu = <&i2s7_8ch>;
-		rockchip,codec = <&hdmirx_ctrler 0>;
 		rockchip,jack-det;
 	};
 
@@ -728,18 +710,6 @@
 	status = "okay";
 };
 
-/* Should work with at least 128MB cma reserved above. */
-&hdmirx_ctrler {
-	status = "okay";
-
-	#sound-dai-cells = <1>;
-	/* Effective level used to trigger HPD: 0-low, 1-high */
-	hpd-trigger-level = <1>;
-	hdmirx-det-gpios = <&gpio1 RK_PD5 GPIO_ACTIVE_LOW>;
-
-	pinctrl-0 = <&hdmim1_rx_cec &hdmim1_rx_hpdin &hdmim1_rx_scl &hdmim1_rx_sda &hdmirx_det>;
-	pinctrl-names = "default";
-};
 
 &hdptxphy_hdmi0 {
 	status = "okay";
@@ -761,42 +731,11 @@
 	status = "okay";
 };
 
-&vop {
-	status = "okay";
-};
-
-&vop_mmu {
-	status = "okay";
-};
 
 &vepu {
 	status = "okay";
 };
 
-/* vp0 & vp1 splice for 8K output */
-&vp0 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0)>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER0>;
-	cursor-win-id = <ROCKCHIP_VOP2_ESMART0>;
-};
-
-&vp1 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1)>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER1>;
-	cursor-win-id = <ROCKCHIP_VOP2_ESMART1>;
-};
-
-&vp2 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2)>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER2>;
-	cursor-win-id = <ROCKCHIP_VOP2_ESMART2>;
-};
-
-&vp3 {
-	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
-	rockchip,primary-plane = <ROCKCHIP_VOP2_CLUSTER3>;
-	cursor-win-id = <ROCKCHIP_VOP2_ESMART3>;
-};
 
 &u2phy2 {
 	status = "okay";
@@ -1244,11 +1183,6 @@
 		};
 	};
 
-	hdmirx {
-		hdmirx_det: hdmirx-det {
-			rockchip,pins = <1 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
 
 	gmac1_rgmii {
 		gmac1_rgmii_pwr_en: gmac1-rgmii-pwr-en {
