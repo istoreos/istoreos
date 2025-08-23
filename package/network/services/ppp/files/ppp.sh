@@ -86,13 +86,16 @@ ppp_generic_init_config() {
 	proto_config_add_boolean sourcefilter
 	proto_config_add_boolean delegate
 	proto_config_add_boolean norelease
+	proto_config_add_string iface_dslite
+	proto_config_add_string iface_map
+	proto_config_add_string iface_464xlat
 }
 
 ppp_generic_setup() {
 	local config="$1"; shift
 	local localip
 
-	json_get_vars ip6table demand keepalive keepalive_adaptive username password pppd_options pppname unnumbered reqprefix persist maxfail holdoff peerdns sourcefilter delegate norelease
+	json_get_vars ip6table demand keepalive keepalive_adaptive username password pppd_options pppname unnumbered reqprefix persist maxfail holdoff peerdns sourcefilter delegate norelease iface_dslite iface_map iface_464xlat
 
 	[ ! -e /proc/sys/net/ipv6 ] && ipv6=0 || json_get_var ipv6 ipv6
 
@@ -159,6 +162,9 @@ ppp_generic_setup() {
 		${peerdns:+set PEERDNS=$peerdns} \
 		${sourcefilter:+set NOSOURCEFILTER=1} \
 		${delegate:+set DELEGATE=0} \
+		${iface_dslite:+set IFACE_DSLITE=$iface_dslite} \
+		${iface_map:+set IFACE_MAP=$iface_map} \
+		${iface_464xlat:+set IFACE_464XLAT=$iface_464xlat} \
 		nodefaultroute \
 		usepeerdns \
 		$demand $persist maxfail $maxfail \
