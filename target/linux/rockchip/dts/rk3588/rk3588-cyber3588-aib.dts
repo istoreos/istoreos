@@ -6,6 +6,7 @@
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/pwm/pwm.h>
 #include <rockchip/rk3588.dtsi>
 #include "rk3588-rk806-single.dtsi"
 #include "rk3588s-ip.dtsi"
@@ -270,7 +271,7 @@
 	pinctrl-0 = <&i2c1m2_xfer>;
 	status = "okay";
 
-	vdd_npu_s0: regulator@42 {
+	vdd_npu_s0: vdd_npu_mem_s0: regulator@42 {
 		compatible = "rockchip,rk8602";
 		reg = <0x42>;
 		fcs,suspend-voltage-selector = <1>;
