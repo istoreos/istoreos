@@ -187,6 +187,7 @@ board_fixup_iface_name() {
 			rename_iface lan2 eth2
 		fi
 		;;
+	cyber,cyber3588-aib|\  
 	armsom,sige7|\
 	armsom,sige7-v1)
 		device="$(get_iface_device eth1)"
