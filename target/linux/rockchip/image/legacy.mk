@@ -180,6 +180,14 @@ $(call Device/Legacy,$(1))
   DEVICE_PACKAGES := kmod-rga3 kmod-rk_vcodec kmod-rkgpu-bifrost kmod-rknpu kmod-iio-rockchip-saradc
 endef
 
+define Device/friendlyarm_nanopi-r76s
+$(call Device/Legacy/rk3576,$(1))
+  DEVICE_VENDOR := FriendlyARM
+  DEVICE_MODEL := NanoPi R76S
+  DEVICE_PACKAGES += kmod-r8169 kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += friendlyarm_nanopi-r76s
+
 
 # RK3588
 

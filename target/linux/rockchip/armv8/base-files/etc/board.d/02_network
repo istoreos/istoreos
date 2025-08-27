@@ -18,6 +18,7 @@ rockchip_setup_interfaces()
 	friendlyarm,nanopi-r4se|\
 	friendlyarm,nanopi-r4s-enterprise|\
 	friendlyarm,nanopi-r6c|\
+	friendlyarm,nanopi-r76s|\
 	hinlink,opc-h66k|\
 	hinlink,h88k-v2|\
 	hinlink,h88k|\
