@@ -1,0 +1,44 @@
+/*
+ * This works around the design of the RK3576's power domains, which
+ * makes the PD_NVM power domain, which the sdhci controller on the
+ * RK3576 is in, never come back the same way once it's run-time
+ * suspended once. This can happen during early kernel boot if no driver
+ * is using either PD_NVM or its child power domain PD_SDGMAC for a
+ * short moment, leading to it being turned off to save power. By
+ * keeping it on, sdhci suspending won't lead to PD_NVM becoming a
+ * candidate for getting turned off.
+ */
+
+&power {
+	/delete-node/ power-domain@RK3576_PD_NVM;
+};
+
+// RK3576_PD_NVM
+&sdhci {
+	/delete-property/ power-domains;
+};
+
+&sfc0 {
+	/delete-property/ power-domains;
+};
+
+// RK3576_PD_SDGMAC
+&gmac0 {
+	/delete-property/ power-domains;
+};
+
+&gmac1 {
+	/delete-property/ power-domains;
+};
+
+&sfc1 {
+	/delete-property/ power-domains;
+};
+
+&sdmmc {
+	/delete-property/ power-domains;
+};
+
+&sdio {
+	/delete-property/ power-domains;
+};

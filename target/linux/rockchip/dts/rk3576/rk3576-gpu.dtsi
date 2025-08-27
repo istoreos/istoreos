@@ -1,0 +1,221 @@
+/ {
+
+	gpu_opp_table_rk: gpu-opp-table-rk {
+		compatible = "operating-points-v2";
+
+		nvmem-cells = <&gpu_leakage>, <&gpu_opp_info>,
+			      <&specification_serial_number>, <&test_version>;
+		nvmem-cell-names = "leakage", "opp-info",
+				   "specification_serial_number", "test_version";
+		rockchip,supported-hw;
+
+		rockchip,pvtm-hw = <0x06>;
+		rockchip,pvtm-voltage-sel-hw = <
+			0	689	0
+			690	709	1
+			710	729	2
+			730	749	3
+			750	769	4
+			770	789	5
+			790	809	6
+			810	829	7
+			830	849	8
+			850	869	9
+			870	9999	10
+		>;
+		rockchip,pvtm-voltage-sel = <
+			0	704	0
+			705	724	1
+			725	744	2
+			745	764	3
+			765	784	4
+			785	804	5
+			805	824	6
+			825	844	7
+			845	864	8
+			865	884	9
+			885	9999	10
+		>;
+		rockchip,pvtm-low-len-sel = <0>;
+		rockchip,pvtm-pvtpll;
+		rockchip,pvtpll = <&gpu_pvtpll>;
+		rockchip,pvtm-offset = <0x54>;
+		rockchip,pvtm-sample-time = <1100>;
+		rockchip,pvtm-freq = <800000>;
+		rockchip,pvtm-volt = <750000>;
+		rockchip,pvtm-ref-temp = <35>;
+		rockchip,pvtm-temp-prop = <0 0>;
+		rockchip,pvtm-thermal-zone = "gpu-thermal";
+
+		rockchip,grf = <&gpu_grf>;
+		volt-mem-read-margin = <
+			855000	1
+			765000	2
+			675000	3
+			495000	4
+		>;
+		intermediate-threshold-freq = <300000>;
+		rockchip,opp-clocks = <&cru CLK_GPU>, <&cru PCLK_GPU_ROOT>;
+
+		rockchip,temp-hysteresis = <5000>;
+		rockchip,low-temp = <15000>;
+		rockchip,low-temp-min-volt = <750000>;
+
+		opp-300000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <712500 712500 875000>;
+		};
+		opp-400000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <712500 712500 875000>;
+		};
+		opp-500000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <712500 712500 875000>;
+		};
+		opp-600000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <712500 712500 875000>;
+		};
+		opp-700000000 {
+			opp-supported-hw = <0xf9 0xffff>;
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <712500 712500 875000>;
+			opp-microvolt-L0 = <750000 750000 875000>;
+			opp-microvolt-L1 = <750000 750000 875000>;
+			opp-microvolt-L2 = <737500 737500 875000>;
+			opp-microvolt-L3 = <725000 725000 875000>;
+			opp-microvolt-L4 = <725000 725000 875000>;
+		};
+		/* The Max frequency of RK3576S GPU is 800MHz */
+		opp-s-800000000 {
+			opp-supported-hw = <0x08 0xffff>;
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <837500 837500 875000>;
+			opp-microvolt-L1 = <825000 825000 875000>;
+			opp-microvolt-L2 = <812500 812500 875000>;
+			opp-microvolt-L3 = <800000 800000 875000>;
+			opp-microvolt-L4 = <787500 787500 875000>;
+			opp-microvolt-L5 = <775000 775000 875000>;
+			opp-microvolt-L6 = <762500 762500 875000>;
+			opp-microvolt-L7 = <750000 750000 875000>;
+			opp-microvolt-L8 = <737500 737500 875000>;
+			opp-microvolt-L9 = <725000 725000 875000>;
+			opp-microvolt-L10 = <725000 725000 875000>;
+		};
+		opp-800000000 {
+			opp-supported-hw = <0xf1 0xffff>;
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <812500 812500 875000>;
+			opp-microvolt-L1 = <812500 812500 875000>;
+			opp-microvolt-L2 = <800000 800000 875000>;
+			opp-microvolt-L3 = <787500 787500 875000>;
+			opp-microvolt-L4 = <775000 775000 875000>;
+			opp-microvolt-L5 = <762500 762500 875000>;
+			opp-microvolt-L6 = <750000 750000 875000>;
+			opp-microvolt-L7 = <737500 737500 875000>;
+			opp-microvolt-L8 = <725000 725000 875000>;
+			opp-microvolt-L9 = <725000 725000 875000>;
+			opp-microvolt-L10 = <725000 725000 875000>;
+		};
+		opp-900000000 {
+			opp-supported-hw = <0xf1 0xffff>;
+			opp-hz = /bits/ 64 <900000000>;
+			opp-microvolt = <875000 875000 875000>;
+			opp-microvolt-L1 = <875000 875000 875000>;
+			opp-microvolt-L2 = <862500 862500 875000>;
+			opp-microvolt-L3 = <850000 850000 875000>;
+			opp-microvolt-L4 = <837500 837500 875000>;
+			opp-microvolt-L5 = <825000 825000 875000>;
+			opp-microvolt-L6 = <812500 812500 875000>;
+			opp-microvolt-L7 = <800000 800000 875000>;
+			opp-microvolt-L8 = <787500 787500 875000>;
+			opp-microvolt-L9 = <775000 775000 875000>;
+			opp-microvolt-L10 = <762500 762500 875000>;
+		};
+
+		/* RK3576J/M GPU OPPs */
+		opp-j-m-300000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <750000 750000 950000>;
+		};
+		opp-j-m-400000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <750000 750000 950000>;
+		};
+		opp-j-m-500000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <750000 750000 950000>;
+		};
+		opp-j-m-600000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <750000 750000 950000>;
+		};
+		opp-j-m-700000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <750000 750000 950000>;
+			opp-microvolt-L0 = <775000 775000 950000>;
+			opp-microvolt-L1 = <762500 762500 950000>;
+		};
+		gpu_opp_j_m_800000000: opp-j-m-800000000 {
+			opp-supported-hw = <0x06 0xffff>;
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <850000 850000 875000>;
+			opp-microvolt-L1 = <837500 837500 875000>;
+			opp-microvolt-L2 = <825000 825000 875000>;
+			opp-microvolt-L3 = <812500 812500 875000>;
+			opp-microvolt-L4 = <800000 800000 875000>;
+			opp-microvolt-L5 = <787500 787500 875000>;
+			opp-microvolt-L6 = <775000 775000 875000>;
+			opp-microvolt-L7 = <762500 762500 875000>;
+			opp-microvolt-L8 = <750000 750000 875000>;
+			opp-microvolt-L9 = <750000 750000 875000>;
+			opp-microvolt-L10 = <750000 750000 875000>;
+		};
+	};
+
+	soc {
+		gpu: gpu@27800000 {
+			compatible = "arm,mali-bifrost";
+			reg = <0x0 0x27800000 0x0 0x20000>;
+
+			interrupts = <GIC_SPI 349 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 348 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 347 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "GPU", "MMU", "JOB";
+
+			upthreshold = <40>;
+			downdifferential = <10>;
+
+			clocks = <&scmi_clk SCMI_CLK_GPU>, <&cru CLK_GPU>;
+			clock-names = "clk_mali", "clk_gpu";
+			assigned-clocks = <&cru CLK_GPU>;
+			assigned-clock-rates = <198000000>;
+			power-domains = <&power RK3576_PD_GPU>;
+			operating-points-v2 = <&gpu_opp_table_rk>;
+			#cooling-cells = <2>;
+			dynamic-power-coefficient = <1625>;
+			status = "disabled";
+		};
+
+		gpu_pvtpll: syscon@27268000 {
+			compatible = "rockchip,rk3576-gpu-pvtpll", "syscon";
+			reg = <0x0 0x27268000 0x0 0x1000>;
+		};
+	};
+};
+
+&otp {
+	gpu_opp_info: gpu-opp-info@48 {
+		reg = <0x48 0x6>;
+	};
+};
