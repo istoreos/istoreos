@@ -279,3 +279,11 @@ $(call Device/Legacy/rk3588,$(1))
   DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
 endef
 TARGET_DEVICES += xunlong_orangepi-5-plus
+
+define Device/cyber_cyber3588-aib
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := Cyber
+  DEVICE_MODEL := Cyber3588-AIB
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal 
+endef
+TARGET_DEVICES += cyber_cyber3588-aib

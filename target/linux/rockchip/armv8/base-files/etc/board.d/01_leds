@@ -8,6 +8,10 @@ boardname="${board##*,}"
 board_config_update
 
 case $board in
+cyber,cyber3588-aib)
+	ucidef_set_led_netdev "wan" "WAN" "blue:status" "eth0"
+	ucidef_set_led_netdev "lan" "LAN" "green:status" "eth1"
+	;;
 friendlyarm,nanopi-r2c|\
 friendlyarm,nanopi-r2c-plus|\
 friendlyarm,nanopi-r2s|\
