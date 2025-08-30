@@ -318,14 +318,6 @@ define U-Boot/sige7-rk3588
     armsom_sige7
 endef
 
-define U-Boot/cyber3588-aib-rk3588
-  $(U-Boot/rk3588/Default)
-  NAME:=Cyber
-  BUILD_DEVICES:= \
-    cyber_cyber3588-aib
-endef
-
-
 
 # RK3588S boards
 
