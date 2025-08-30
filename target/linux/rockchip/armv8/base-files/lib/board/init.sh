@@ -181,6 +181,7 @@ board_fixup_iface_name() {
 		;;
 	armsom,sige7|\
 	armsom,sige7-v1|\
+	xunlong,orangepi-5-plus|\
 	cyber,cyber3588-aib)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0004:*1:00.0" ]]; then
