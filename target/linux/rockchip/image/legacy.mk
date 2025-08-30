@@ -124,7 +124,7 @@ $(call Device/Legacy/rk3566,$(1))
 endef
 
 define Device/firefly_station-m2
-\$(call Device/Legacy/rk3566,\$(1))
+$(call Device/Legacy/rk3566,\$(1))
   DEVICE_VENDOR := Firefly
   DEVICE_MODEL := Station M2 / RK3566 ROC PC
   DEVICE_DTS := rk3568/rk3566-roc-pc
