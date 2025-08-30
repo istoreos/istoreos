@@ -179,16 +179,9 @@ board_fixup_iface_name() {
 			rename_iface lan2 eth2
 		fi
 		;;
-	cyber,cyber3588-aib)
-		device="$(get_iface_device eth1)"
-		if [[ "$device" = "0004:*1:00.0" ]]; then
-			rename_iface eth1 wan
-			rename_iface eth0 eth1
-			rename_iface wan eth0
-		fi
-		;;
 	armsom,sige7|\
-	armsom,sige7-v1)
+	armsom,sige7-v1|\
+	cyber,cyber3588-aib)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0004:*1:00.0" ]]; then
 			rename_iface eth1 wan
@@ -303,21 +296,9 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth2" "eth2-16"
 		fi
 		;;
-	cyber,cyber3588-aib)
-		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
-			set_iface_cpumask 4 "eth0"
-			set_iface_cpumask 8 "eth1"
-		else
-			set_iface_cpumask 4 "eth0" "eth0-0" f0 && \
-			set_iface_cpumask 4 "eth0" "eth0-16" && \
-			set_iface_cpumask 2 "eth0" "eth0-18"
-			set_iface_cpumask 8 "eth1" "eth1-0" f0 && \
-			set_iface_cpumask 8 "eth1" "eth1-18" && \
-			set_iface_cpumask 1 "eth1" "eth1-16"
-		fi
-		;;
 	armsom,sige7|\
-	armsom,sige7-v1)
+	armsom,sige7-v1|\
+ 	cyber,cyber3588-aib)
 		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
 			set_iface_cpumask 4 "eth0"
 			set_iface_cpumask 8 "eth1"
