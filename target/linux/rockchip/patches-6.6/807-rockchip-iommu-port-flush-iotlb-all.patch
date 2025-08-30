@@ -11,7 +11,7 @@ fix MPP AV1 decoding
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -910,6 +910,39 @@ static size_t rk_iommu_unmap(struct iomm
+@@ -905,6 +905,39 @@ static size_t rk_iommu_unmap(struct iomm
  	return unmap_size;
  }
  
@@ -51,7 +51,7 @@ fix MPP AV1 decoding
  static struct rk_iommu *rk_iommu_from_dev(struct device *dev)
  {
  	struct rk_iommudata *data = dev_iommu_priv_get(dev);
-@@ -1352,6 +1385,7 @@ static const struct iommu_ops rk_iommu_o
+@@ -1346,6 +1379,7 @@ static const struct iommu_ops rk_iommu_o
  		.attach_dev	= rk_iommu_attach_device,
  		.map		= rk_iommu_map,
  		.unmap		= rk_iommu_unmap,

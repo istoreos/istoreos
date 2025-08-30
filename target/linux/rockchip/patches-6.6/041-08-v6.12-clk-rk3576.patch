@@ -1,0 +1,124 @@
+From 6b907e33312618729adc6181aed3ebae85d3e6c3 Mon Sep 17 00:00:00 2001
+From: Elaine Zhang <zhangqing@rock-chips.com>
+Date: Wed, 28 Aug 2024 15:42:55 +0000
+Subject: [PATCH] clk: rockchip: Add clock controller for the RK3576
+
+Add the clock and reset tree definitions for the new RK3576
+SoC.
+
+As opposed to the other rockchip CRU drivers, the GRF node is looked up
+via compatible instead of a phandle, which simplifies the device tree
+bindings.
+
+Signed-off-by: Elaine Zhang <zhangqing@rock-chips.com>
+Signed-off-by: Finley Xiao <finley.xiao@rock-chips.com>
+Signed-off-by: YouMin Chen <cym@rock-chips.com>
+Signed-off-by: Liang Chen <cl@rock-chips.com>
+Signed-off-by: Sugar Zhang <sugar.zhang@rock-chips.com>
+Signed-off-by: Detlev Casanova <detlev.casanova@collabora.com>
+Reviewed-by: Elaine Zhang <zhangqing@rock-chips.com>
+Tested-by: Shawn Lin <shawn.lin@rock-chips.com>
+Acked-by: Dragan Simic <dsimic@manjaro.org>
+Link: https://lore.kernel.org/r/0102019199a7781a-888440f0-a3f7-4a7d-a831-491260cbdfe7-000000@eu-west-1.amazonses.com
+[dropped additional blank line at EOF in rst-rk3576.c
+ dropped the whole (non-)working as module part]
+Signed-off-by: Heiko Stuebner <heiko@sntech.de>
+---
+ drivers/clk/rockchip/Kconfig  |  7 +++++
+ drivers/clk/rockchip/Makefile |  1 +
+ drivers/clk/rockchip/clk.h    | 53 +++++++++++++++++++++++++++++++++++
+ 3 files changed, 61 insertions(+)
+
+--- a/drivers/clk/rockchip/Kconfig
++++ b/drivers/clk/rockchip/Kconfig
+@@ -107,6 +107,13 @@ config CLK_RK3568
+ 	help
+ 	  Build the driver for RK3568 Clock Driver.
+ 
++config CLK_RK3576
++	bool "Rockchip RK3576 clock controller support"
++	depends on ARM64 || COMPILE_TEST
++	default y
++	help
++	  Build the driver for RK3576 Clock Driver.
++
+ config CLK_RK3588
+ 	bool "Rockchip RK3588 clock controller support"
+ 	depends on ARM64 || COMPILE_TEST
+--- a/drivers/clk/rockchip/Makefile
++++ b/drivers/clk/rockchip/Makefile
+@@ -30,4 +30,5 @@ obj-$(CONFIG_CLK_RK3368)        += clk-r
+ obj-$(CONFIG_CLK_RK3399)        += clk-rk3399.o
+ obj-$(CONFIG_CLK_RK3528)	+= clk-rk3528.o rst-rk3528.o
+ obj-$(CONFIG_CLK_RK3568)	+= clk-rk3568.o
++obj-$(CONFIG_CLK_RK3576)	+= clk-rk3576.o rst-rk3576.o
+ obj-$(CONFIG_CLK_RK3588)	+= clk-rk3588.o rst-rk3588.o
+--- a/drivers/clk/rockchip/clk.h
++++ b/drivers/clk/rockchip/clk.h
+@@ -259,6 +259,58 @@ struct clk;
+ #define RK3568_PMU_CLKGATE_CON(x)	((x) * 0x4 + 0x180)
+ #define RK3568_PMU_SOFTRST_CON(x)	((x) * 0x4 + 0x200)
+ 
++#define RK3576_PHP_CRU_BASE		0x8000
++#define RK3576_SECURE_NS_CRU_BASE	0x10000
++#define RK3576_PMU_CRU_BASE		0x20000
++#define RK3576_BIGCORE_CRU_BASE		0x38000
++#define RK3576_LITCORE_CRU_BASE		0x40000
++#define RK3576_CCI_CRU_BASE		0x48000
++
++#define RK3576_PLL_CON(x)		RK2928_PLL_CON(x)
++#define RK3576_MODE_CON0		0x280
++#define RK3576_BPLL_MODE_CON0		(RK3576_BIGCORE_CRU_BASE + 0x280)
++#define RK3576_LPLL_MODE_CON0		(RK3576_LITCORE_CRU_BASE + 0x280)
++#define RK3576_PPLL_MODE_CON0		(RK3576_PHP_CRU_BASE + 0x280)
++#define RK3576_CLKSEL_CON(x)		((x) * 0x4 + 0x300)
++#define RK3576_CLKGATE_CON(x)		((x) * 0x4 + 0x800)
++#define RK3576_SOFTRST_CON(x)		((x) * 0x4 + 0xa00)
++#define RK3576_GLB_CNT_TH		0xc00
++#define RK3576_GLB_SRST_FST		0xc08
++#define RK3576_GLB_SRST_SND		0xc0c
++#define RK3576_GLB_RST_CON		0xc10
++#define RK3576_GLB_RST_ST		0xc04
++#define RK3576_SDIO_CON0		0xC24
++#define RK3576_SDIO_CON1		0xC28
++#define RK3576_SDMMC_CON0		0xC30
++#define RK3576_SDMMC_CON1		0xC34
++
++#define RK3576_PHP_CLKSEL_CON(x)	((x) * 0x4 + RK3576_PHP_CRU_BASE + 0x300)
++#define RK3576_PHP_CLKGATE_CON(x)	((x) * 0x4 + RK3576_PHP_CRU_BASE + 0x800)
++#define RK3576_PHP_SOFTRST_CON(x)	((x) * 0x4 + RK3576_PHP_CRU_BASE + 0xa00)
++
++#define RK3576_PMU_PLL_CON(x)		((x) * 0x4 + RK3576_PHP_CRU_BASE)
++#define RK3576_PMU_CLKSEL_CON(x)	((x) * 0x4 + RK3576_PMU_CRU_BASE + 0x300)
++#define RK3576_PMU_CLKGATE_CON(x)	((x) * 0x4 + RK3576_PMU_CRU_BASE + 0x800)
++#define RK3576_PMU_SOFTRST_CON(x)	((x) * 0x4 + RK3576_PMU_CRU_BASE + 0xa00)
++
++#define RK3576_SECURE_NS_CLKSEL_CON(x)	((x) * 0x4 + RK3576_SECURE_NS_CRU_BASE + 0x300)
++#define RK3576_SECURE_NS_CLKGATE_CON(x)	((x) * 0x4 + RK3576_SECURE_NS_CRU_BASE + 0x800)
++#define RK3576_SECURE_NS_SOFTRST_CON(x)	((x) * 0x4 + RK3576_SECURE_NS_CRU_BASE + 0xa00)
++
++#define RK3576_CCI_CLKSEL_CON(x)	((x) * 0x4 + RK3576_CCI_CRU_BASE + 0x300)
++#define RK3576_CCI_CLKGATE_CON(x)	((x) * 0x4 + RK3576_CCI_CRU_BASE + 0x800)
++#define RK3576_CCI_SOFTRST_CON(x)	((x) * 0x4 + RK3576_CCI_CRU_BASE + 0xa00)
++
++#define RK3576_BPLL_CON(x)		((x) * 0x4 + RK3576_BIGCORE_CRU_BASE)
++#define RK3576_BIGCORE_CLKSEL_CON(x)	((x) * 0x4 + RK3576_BIGCORE_CRU_BASE + 0x300)
++#define RK3576_BIGCORE_CLKGATE_CON(x)	((x) * 0x4 + RK3576_BIGCORE_CRU_BASE + 0x800)
++#define RK3576_BIGCORE_SOFTRST_CON(x)	((x) * 0x4 + RK3576_BIGCORE_CRU_BASE + 0xa00)
++#define RK3576_LPLL_CON(x)		((x) * 0x4 + RK3576_CCI_CRU_BASE)
++#define RK3576_LITCORE_CLKSEL_CON(x)	((x) * 0x4 + RK3576_LITCORE_CRU_BASE + 0x300)
++#define RK3576_LITCORE_CLKGATE_CON(x)	((x) * 0x4 + RK3576_LITCORE_CRU_BASE + 0x800)
++#define RK3576_LITCORE_SOFTRST_CON(x)	((x) * 0x4 + RK3576_LITCORE_CRU_BASE + 0xa00)
++#define RK3576_NON_SECURE_GATING_CON00	0xc48
++
+ #define RK3588_PHP_CRU_BASE		0x8000
+ #define RK3588_PMU_CRU_BASE		0x30000
+ #define RK3588_BIGCORE0_CRU_BASE	0x50000
+@@ -1116,6 +1168,7 @@ static inline void rockchip_register_sof
+ }
+ 
+ void rk3528_rst_init(struct device_node *np, void __iomem *reg_base);
++void rk3576_rst_init(struct device_node *np, void __iomem *reg_base);
+ void rk3588_rst_init(struct device_node *np, void __iomem *reg_base);
+ 
+ #endif

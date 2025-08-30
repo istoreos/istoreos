@@ -11,7 +11,7 @@ VPU/NPU drivers do not support passthrough iommu.
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -1298,6 +1298,13 @@ static int rk_iommu_of_xlate(struct devi
+@@ -1292,6 +1292,13 @@ static int rk_iommu_of_xlate(struct devi
  	return 0;
  }
  
@@ -25,7 +25,7 @@ VPU/NPU drivers do not support passthrough iommu.
  void rockchip_iommu_mask_irq(struct device *dev)
  {
  	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
-@@ -1340,6 +1347,7 @@ static const struct iommu_ops rk_iommu_o
+@@ -1334,6 +1341,7 @@ static const struct iommu_ops rk_iommu_o
  	.pgsize_bitmap = RK_IOMMU_PGSIZE_BITMAP,
  	.of_xlate = rk_iommu_of_xlate,
  	.owner = THIS_MODULE,

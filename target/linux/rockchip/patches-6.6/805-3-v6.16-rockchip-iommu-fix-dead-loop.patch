@@ -23,7 +23,7 @@ Signed-off-by: Joerg Roedel <joerg.roedel@amd.com>
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -1323,7 +1323,6 @@ static int rk_iommu_of_xlate(struct devi
+@@ -1290,7 +1290,6 @@ static int rk_iommu_of_xlate(struct devi
  	iommu_dev = of_find_device_by_node(args->np);
  
  	data->iommu = platform_get_drvdata(iommu_dev);
@@ -31,7 +31,7 @@ Signed-off-by: Joerg Roedel <joerg.roedel@amd.com>
  	dev_iommu_priv_set(dev, data);
  
  	platform_device_put(iommu_dev);
-@@ -1404,6 +1403,8 @@ static int rk_iommu_probe(struct platfor
+@@ -1362,6 +1361,8 @@ static int rk_iommu_probe(struct platfor
  	if (!iommu)
  		return -ENOMEM;
  

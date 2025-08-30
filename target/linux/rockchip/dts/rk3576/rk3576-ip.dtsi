@@ -1,0 +1,69 @@
+
+#include "rk3576-vpu.dtsi"
+#include "rk3576-npu.dtsi"
+
+&gpu {
+	reg = <0x0 0x27800000 0x0 0x20000>;
+};
+
+// NPU power domain cannot be registered (so no one will switch it off), that will crash system when rknpu probing
+// [   12.673716] rockchip-pm-domain 27380000.power-management:power-controller: failed to get ack on domain 'nputop', val=0x11bff
+&power {
+	/delete-node/ power-domain@RK3576_PD_NPU;
+};
+
+&rknpu {
+	/delete-property/ power-domains;
+	/delete-property/ power-domain-names;
+};
+
+#ifdef DT_RK3576_NO_POWER_DOMAINS
+&jpegd {
+	/delete-property/ power-domains;
+};
+&jpege {
+	/delete-property/ power-domains;
+};
+&jpeg_mmu {
+	/delete-property/ power-domains;
+};
+&rga2_core0 {
+	/delete-property/ power-domains;
+};
+&rga2_core0_mmu {
+	/delete-property/ power-domains;
+};
+&rga2_core1 {
+	/delete-property/ power-domains;
+};
+&rga2_core1_mmu {
+	/delete-property/ power-domains;
+};
+&iep {
+	/delete-property/ power-domains;
+};
+&iep_mmu {
+	/delete-property/ power-domains;
+};
+&vdpp {
+	/delete-property/ power-domains;
+};
+&rkvenc0 {
+	/delete-property/ power-domains;
+};
+&rkvenc0_mmu {
+	/delete-property/ power-domains;
+};
+&rkvenc1 {
+	/delete-property/ power-domains;
+};
+&rkvenc1_mmu {
+	/delete-property/ power-domains;
+};
+&rkvdec {
+	/delete-property/ power-domains;
+};
+&rkvdec_mmu {
+	/delete-property/ power-domains;
+};
+#endif
