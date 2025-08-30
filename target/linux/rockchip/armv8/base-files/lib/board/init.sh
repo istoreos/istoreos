@@ -181,7 +181,6 @@ board_fixup_iface_name() {
 		;;
 	armsom,sige7|\
 	armsom,sige7-v1|\
-	xunlong,orangepi-5-plus|\
 	cyber,cyber3588-aib)
 		device="$(get_iface_device eth1)"
 		if [[ "$device" = "0004:*1:00.0" ]]; then
@@ -299,6 +298,7 @@ board_set_iface_smp_affinity() {
 		;;
 	armsom,sige7|\
 	armsom,sige7-v1|\
+	xunlong,orangepi-5-plus|\
 	cyber,cyber3588-aib)
 		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
 			set_iface_cpumask 4 "eth0"
