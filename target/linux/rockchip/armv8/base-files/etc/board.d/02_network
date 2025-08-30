@@ -7,6 +7,7 @@ rockchip_setup_interfaces()
 	local board="$1"
 
 	case "$board" in
+	cyber,cyber3588-aib|\
 	armsom,sige7|\
 	easepi,ars4|\
 	lunzn,fastrhino-r66s|\
