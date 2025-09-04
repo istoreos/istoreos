@@ -1,0 +1,39 @@
+From 0b1ae3b4e0b5d6c0a8a7b3c9d2e8f1a0c7b6d4e3 Mon Sep 17 00:00:00 2001
+From: wangxin <wangxin20000101@gmail.com>
+Date: Wed, 3 Sep 2025 10:42:39 +0800
+Subject: [PATCH] net: stmmac: Fix MDIO bus name conflict in multi-controller
+ systems
+
+Modified the MDIO bus naming scheme to use device names instead of
+fixed bus IDs to prevent naming conflicts when multiple stmmac
+controllers are present (e.g. RK3576 dual Ethernet ports).
+
+The original implementation used a fixed "stmmac-%x" format which
+caused conflicts when multiple controllers shared the same bus ID.
+
+Now generates unique names using the device's name (e.g. "stmmac-2a220000.ethernet"),
+ensuring each MDIO bus has a distinct identifier.
+
+Signed-off-by: wangxin <wangxin20000101@gmail.com>
+---
+ drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
+index 8a9b7c2d4..f1c8a9e6a 100644
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
+@@ -514,8 +514,9 @@ int stmmac_mdio_register(struct net_device *ndev)
+ 	if (mdio_bus_data->needs_reset)
+ 		new_bus->reset = &stmmac_mdio_reset;
+ 
+-	snprintf(new_bus->id, MII_BUS_ID_SIZE, "%s-%x",
+-		 new_bus->name, priv->plat->bus_id);
++	/* Generate unique MDIO bus name using device name */
++	snprintf(new_bus->id, MII_BUS_ID_SIZE, "stmmac-%s", dev_name(priv->device));
++
+ 	new_bus->priv = ndev;
+ 	new_bus->phy_mask = mdio_bus_data->phy_mask;
+ 	new_bus->parent = priv->device;
+-- 
+2.34.1
