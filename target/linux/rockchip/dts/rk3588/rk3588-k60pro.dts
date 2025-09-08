@@ -2,13 +2,13 @@
 /dts-v1/;
 
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/input/input.h>
+#include <dt-bindings/input/rk-input.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/usb/pd.h>
-#include <rockchip/rk3588.dtsi>
+#include <dt-bindings/display/rockchip_vop.h>
+#include "rk3588.dtsi"
 #include "rk3588-rk806-single.dtsi"
-#include "rk3588s-ip.dtsi"
-#include "rk3588s-ip-supply.dtsi"
+#include "rk3588-linux.dtsi"
 
 / {
 	model = "ROCEOS K60pro";
@@ -22,10 +22,6 @@
 		led-failsafe = &led_red;
 		led-running = &led_red;
 		led-upgrade = &led_red;
-	};
-
-	chosen {
-		stdout-path = "serial2:115200n8";
 	};
 
 	leds {
@@ -209,7 +205,7 @@
 	wireless_wlan: wireless-wlan {
 		status = "okay";
 		compatible = "wlan-platdata";
-		wifi_chip_type = "ap6256s";
+		wifi_chip_type = "ap6255";
 		pinctrl-names = "default";
 		pinctrl-0 = <&wifi_host_wake_irq>;
 		WIFI,host_wake_irq = <&gpio0 RK_PB0 GPIO_ACTIVE_HIGH>;
@@ -224,6 +220,16 @@
 		pinctrl-0 = <&wifi_enable_h>;
 		post-power-on-delay-ms = <200>;
 		reset-gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
+	};
+
+	hdmi0_sound: hdmi0-sound {
+		status = "okay";
+		compatible = "rockchip,hdmi";
+		rockchip,mclk-fs = <128>;
+		rockchip,card-name = "rockchip-hdmi0";
+		rockchip,cpu = <&i2s5_8ch>;
+		rockchip,codec = <&hdmi0>;
+		rockchip,jack-det;
 	};
 
 };
@@ -242,34 +248,21 @@
 
 &cpu_l0 {
 	cpu-supply = <&vdd_cpu_lit_s0>;
-};
-
-&cpu_l1 {
-	cpu-supply = <&vdd_cpu_lit_s0>;
-};
-
-&cpu_l2 {
-	cpu-supply = <&vdd_cpu_lit_s0>;
-};
-
-&cpu_l3 {
-	cpu-supply = <&vdd_cpu_lit_s0>;
+	mem-supply = <&vdd_cpu_lit_s0>;
 };
 
 &cpu_b0 {
 	cpu-supply = <&vdd_cpu_big0_s0>;
-};
-
-&cpu_b1 {
-	cpu-supply = <&vdd_cpu_big0_s0>;
+	mem-supply = <&vdd_cpu_big0_s0>;
 };
 
 &cpu_b2 {
 	cpu-supply = <&vdd_cpu_big1_s0>;
+	mem-supply = <&vdd_cpu_big1_s0>;
 };
 
-&cpu_b3 {
-	cpu-supply = <&vdd_cpu_big1_s0>;
+&crypto {
+	status = "okay";
 };
 
 &gmac0 {// ethernet@fe1b0000
@@ -347,13 +340,14 @@
 	vdd_cpu_big0_s0: regulator@42 {
 		compatible = "rockchip,rk8602";
 		reg = <0x42>;
-		fcs,suspend-voltage-selector = <1>;
-		regulator-name = "vdd_cpu_big0_s0";
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-compatible = "rk860x-reg";
 		regulator-min-microvolt = <550000>;
 		regulator-max-microvolt = <1050000>;
+		regulator-name = "vdd_cpu_big0_s0";
 		regulator-ramp-delay = <2300>;
+		rockchip,suspend-voltage-selector = <1>;
 		vin-supply = <&vcc5v0_sys>;
 
 		regulator-state-mem {
@@ -364,13 +358,14 @@
 	vdd_cpu_big1_s0: regulator@43 {
 		compatible = "rockchip,rk8603", "rockchip,rk8602";
 		reg = <0x43>;
-		fcs,suspend-voltage-selector = <1>;
-		regulator-name = "vdd_cpu_big1_s0";
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-compatible = "rk860x-reg";
 		regulator-min-microvolt = <550000>;
 		regulator-max-microvolt = <1050000>;
+		regulator-name = "vdd_cpu_big1_s0";
 		regulator-ramp-delay = <2300>;
+		rockchip,suspend-voltage-selector = <1>;
 		vin-supply = <&vcc5v0_sys>;
 
 		regulator-state-mem {
@@ -387,13 +382,14 @@
 	vdd_npu_s0: regulator@42 {
 		compatible = "rockchip,rk8602";
 		reg = <0x42>;
-		fcs,suspend-voltage-selector = <1>;
-		regulator-name = "vdd_npu_s0";
 		regulator-always-on;
 		regulator-boot-on;
+		regulator-compatible = "rk860x-reg";
 		regulator-min-microvolt = <550000>;
 		regulator-max-microvolt = <950000>;
+		regulator-name = "vdd_npu_s0";
 		regulator-ramp-delay = <2300>;
+		rockchip,suspend-voltage-selector = <1>;
 		vin-supply = <&vcc5v0_sys>;
 
 		regulator-state-mem {
@@ -417,12 +413,8 @@
 	hym8563: rtc@51 {
 		compatible = "haoyu,hym8563";
 		reg = <0x51>;
-		interrupt-parent = <&gpio0>;
-		interrupts = <RK_PB0 IRQ_TYPE_LEVEL_LOW>;
 		#clock-cells = <0>;
 		clock-output-names = "hym8563";
-		pinctrl-names = "default";
-		pinctrl-0 = <&hym8563_int>;
 		wakeup-source;
 	};
 };
@@ -430,6 +422,10 @@
 &i2c7 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c7m3_xfer>;
+	status = "okay";
+};
+
+&i2s5_8ch {
 	status = "okay";
 };
 
@@ -489,7 +485,7 @@
 };
 
 &pcie30phy {
-	// rockchip,pcie30-phymode = <PHY_MODE_PCIE_NABIBI>;
+	rockchip,pcie30-phymode = <PHY_MODE_PCIE_NABIBI>;
 	data-lanes = <1 3 2 4>;
 	status = "okay";
 };
@@ -519,11 +515,7 @@
 			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	hym8563 {
-		hym8563_int: hym8563-int {
-			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
+
 	leds {
 		led_net_en: led_net_en {
 			rockchip,pins = <1 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -679,7 +671,13 @@
 };
 
 &uart2 {
+	// use fiq debugger instead of uart2
 	pinctrl-0 = <&uart2m0_xfer>;
+	status = "disabled";
+};
+
+&uart8 {
+	pinctrl-0 = <&uart8m0_xfer>;
 	status = "okay";
 };
 
@@ -688,7 +686,7 @@
 };
 
 &u2phy0_otg {
-	phy-supply = <&vcc5v0_otg>;
+	vbus-supply = <&vcc5v0_otg>;
 	status = "okay";
 };
 
@@ -726,16 +724,26 @@
 	status = "okay";
 };
 
-&usb_host0_xhci {
+&usbdrd3_0 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_0 {
 	dr_mode = "host";
 	status = "okay";
+	extcon = <&u2phy0>;
 	phys = <&u2phy0_otg>;
 	phy-names = "usb2-phy";
 };
 
-&usb_host1_xhci {
+&usbdrd3_1 {
+	status = "okay";
+};
+
+&usbdrd_dwc3_1 {
 	dr_mode = "host";
 	status = "okay";
+	extcon = <&u2phy1>;
 	phys = <&u2phy1_otg>;
 	phy-names = "usb2-phy";
 };
@@ -747,4 +755,207 @@
 
 &usb_host1_ohci {
 	status = "okay";
+};
+
+
+// VPU/NPU/GPU
+
+&gpu {
+	mali-supply = <&vdd_gpu_s0>;
+	mem-supply = <&vdd_gpu_mem_s0>;
+	status = "okay";
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu_s0>;
+	mem-supply = <&vdd_npu_s0>;
+	status = "okay";
+};
+
+&rknpu_mmu {
+	status = "okay";
+};
+
+&av1d {
+	status = "okay";
+};
+
+&av1d_mmu {
+	status = "okay";
+};
+
+&iep {
+	status = "okay";
+};
+
+&iep_mmu {
+	status = "okay";
+};
+
+&jpegd {
+	status = "okay";
+};
+
+&jpegd_mmu {
+	status = "okay";
+};
+
+&jpege_ccu {
+	status = "okay";
+};
+
+&jpege0 {
+	status = "okay";
+};
+
+&jpege0_mmu {
+	status = "okay";
+};
+
+&jpege1 {
+	status = "okay";
+};
+
+&jpege1_mmu {
+	status = "okay";
+};
+
+&jpege2 {
+	status = "okay";
+};
+
+&jpege2_mmu {
+	status = "okay";
+};
+
+&jpege3 {
+	status = "okay";
+};
+
+&jpege3_mmu {
+	status = "okay";
+};
+
+&mpp_srv {
+	status = "okay";
+};
+
+&rga2 {
+	status = "okay";
+};
+
+&rga3_core0 {
+	status = "okay";
+};
+
+&rga3_0_mmu {
+	status = "okay";
+};
+
+&rga3_core1 {
+	status = "okay";
+};
+
+&rga3_1_mmu {
+	status = "okay";
+};
+
+&rkvdec_ccu {
+	status = "okay";
+};
+
+&rkvdec0 {
+	status = "okay";
+};
+
+&rkvdec0_mmu {
+	status = "okay";
+};
+
+&rkvdec1 {
+	status = "okay";
+};
+
+&rkvdec1_mmu {
+	status = "okay";
+};
+
+&rkvenc_ccu {
+	status = "okay";
+};
+
+&rkvenc0 {
+	venc-supply = <&vdd_vdenc_s0>;
+	mem-supply = <&vdd_vdenc_mem_s0>;
+	status = "okay";
+};
+
+&rkvenc0_mmu {
+	status = "okay";
+};
+
+&rkvenc1 {
+	venc-supply = <&vdd_vdenc_s0>;
+	mem-supply = <&vdd_vdenc_mem_s0>;
+	status = "okay";
+};
+
+&rkvenc1_mmu {
+	status = "okay";
+};
+
+&vdpu {
+	status = "okay";
+};
+
+&vdpu_mmu {
+	status = "okay";
+};
+
+// hdmi
+
+&hdmi0 {
+	enable-gpios = <&gpio4 RK_PA5 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&hdmi0_in_vp0 {
+	status = "okay";
+};
+
+&hdptxphy_hdmi0 {
+	status = "okay";
+};
+
+&route_hdmi0 {
+	status = "okay";
+};
+
+&vop {
+	status = "okay";
+};
+
+&vop_mmu {
+	status = "okay";
+};
+
+/* vp0 & vp1 splice for 8K output */
+&vp0 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER0 | 1 << ROCKCHIP_VOP2_ESMART0)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART0>;
+};
+
+&vp1 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER1 | 1 << ROCKCHIP_VOP2_ESMART1)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART1>;
+};
+
+&vp2 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER2 | 1 << ROCKCHIP_VOP2_ESMART2)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART2>;
+};
+
+&vp3 {
+	rockchip,plane-mask = <(1 << ROCKCHIP_VOP2_CLUSTER3 | 1 << ROCKCHIP_VOP2_ESMART3)>;
+	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 };

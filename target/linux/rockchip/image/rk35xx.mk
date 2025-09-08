@@ -512,6 +512,15 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += roc_k50s
 
+define Device/roc_k60pro
+$(call Device/rk3588)
+  DEVICE_VENDOR := ROCEOS
+  DEVICE_MODEL := K60PRO
+  DEVICE_DTS := rk3588-k60pro
+  DEVICE_PACKAGES := kmod-r8125 kmod-thermal
+endef
+TARGET_DEVICES += roc_k60pro
+
 define Device/nlnet_xgp
 $(call Device/rk3568)
 $(call Device/rk3568_combined_nlnet)
