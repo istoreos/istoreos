@@ -396,7 +396,7 @@
 		rockchip,taskqueue-node = <7>;
 		rockchip,task-capacity = <8>;
 		power-domains = <&power RK3588_PD_VENC0>;
-		operating-points-v2 = <&venc_opp_table>;
+		//operating-points-v2 = <&venc_opp_table>;
 		status = "disabled";
 	};
 
@@ -435,7 +435,7 @@
 		rockchip,taskqueue-node = <7>;
 		rockchip,task-capacity = <8>;
 		power-domains = <&power RK3588_PD_VENC1>;
-		operating-points-v2 = <&venc_opp_table>;
+		//operating-points-v2 = <&venc_opp_table>;
 		status = "disabled";
 	};
 

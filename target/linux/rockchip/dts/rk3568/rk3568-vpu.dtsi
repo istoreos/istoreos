@@ -184,7 +184,7 @@
 		rockchip,taskqueue-node = <3>;
 		rockchip,resetgroup-node = <3>;
 		power-domains = <&power RK3568_PD_RKVENC>;
-		operating-points-v2 = <&rkvenc_opp_table>;
+		//operating-points-v2 = <&rkvenc_opp_table>;
 		status = "disabled";
 	};
 
@@ -256,7 +256,7 @@
 		reset-names = "video_a", "video_h", "video_cabac",
 			      "video_core", "video_hevc_cabac";
 		power-domains = <&power RK3568_PD_RKVDEC>;
-		operating-points-v2 = <&rkvdec_opp_table>;
+		//operating-points-v2 = <&rkvdec_opp_table>;
 		vdec-supply = <&vdd_logic>;
 		iommus = <&rkvdec_mmu>;
 		rockchip,srv = <&mpp_srv>;
