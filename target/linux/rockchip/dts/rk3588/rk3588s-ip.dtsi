@@ -3,6 +3,14 @@
  * Copyright (c) 2025 jjm2473 <jjm2473@gmail.com>
  */
 
+/{
+	rockchip_system_monitor: rockchip-system-monitor {
+		compatible = "rockchip,system-monitor";
+
+		rockchip,thermal-zone = "package-thermal";
+	};
+};
+
 &otp {
 	specification_serial_number: specification-serial-number@6 {
 		reg = <0x06 0x1>;
