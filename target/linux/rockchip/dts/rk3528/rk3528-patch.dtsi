@@ -2,6 +2,16 @@
 #include <dt-bindings/thermal/thermal.h>
 
 / {
+	rockchip_system_monitor: rockchip-system-monitor {
+		compatible = "rockchip,system-monitor";
+
+		rockchip,thermal-zone = "soc-thermal";
+		rockchip,polling-delay = <200>; /* milliseconds */
+		rockchip,temp-hysteresis = <5000>; /* millicelsius */
+		rockchip,offline-cpu-temp = <105000>; /* millicelsius */
+		rockchip,temp-offline-cpus = "2-3";
+	};
+
 	cpu_opp_table: opp-table-cpu {
 		compatible = "operating-points-v2";
 		opp-shared;
