@@ -1,0 +1,172 @@
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aicsdio.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aicsdio.c
+index 813c0f39f8..aa8ab21fa6 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aicsdio.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_bsp/aicsdio.c
+@@ -407,7 +407,7 @@ done:
+ 	sdio_dbg("%s done\n", __func__);
+ }
+ 
+-
++#if 0
+ static int aicbsp_sdio_suspend(struct device *dev)
+ {
+ 	struct sdio_func *func = dev_to_sdio_func(dev);
+@@ -462,6 +462,7 @@ static int aicbsp_sdio_resume(struct device *dev)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ static const struct sdio_device_id aicbsp_sdmmc_ids[] = {
+ 	{SDIO_DEVICE_CLASS(SDIO_CLASS_WLAN)},
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aicwf_sdio.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aicwf_sdio.c
+index 455b5bd1e1..263a2ba11d 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aicwf_sdio.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/aicwf_sdio.c
+@@ -919,6 +919,7 @@ void aicwf_sdio_shutdown(struct device *dev)
+ #endif
+ #endif
+ 
++#if 0
+ static int aicwf_sdio_suspend(struct device *dev)
+ {
+ 	int ret = 0;
+@@ -1061,6 +1062,7 @@ static int aicwf_sdio_resume(struct device *dev)
+ 	sdio_dbg("%s exit\n", __func__);
+ 	return 0;
+ }
++#endif
+ 
+ static const struct sdio_device_id aicwf_sdmmc_ids[] = {
+ 	{SDIO_DEVICE(SDIO_VENDOR_ID_AIC8801, SDIO_DEVICE_ID_AIC8801)},
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
+index 3ee11ae369..40d52bd814 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_main.c
+@@ -785,7 +785,7 @@ static void rwnx_csa_finish(struct work_struct *ws)
+ 		} else
+ 			rwnx_txq_vif_stop(vif, RWNX_TXQ_STOP_CHAN, rwnx_hw);
+ 		spin_unlock_bh(&rwnx_hw->cb_lock);
+-#if (LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION3)
++#if (LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION3) && !BUILD_OPENWRT
+ 		cfg80211_ch_switch_notify(vif->ndev, &csa->chandef, 0, 0);
+ #elif (LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION)
+ 		cfg80211_ch_switch_notify(vif->ndev, &csa->chandef, 0);
+@@ -3346,7 +3346,7 @@ end:
+  *	interface. This should reject the call when AP mode wasn't started.
+  */
+ static int rwnx_cfg80211_change_beacon(struct wiphy *wiphy, struct net_device *dev,
+-									   struct cfg80211_beacon_data *info)
++									   struct cfg80211_ap_update *info)
+ {
+ 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+ 	struct rwnx_vif *vif = netdev_priv(dev);
+@@ -3359,7 +3359,7 @@ static int rwnx_cfg80211_change_beacon(struct wiphy *wiphy, struct net_device *d
+ 	RWNX_DBG(RWNX_FN_ENTRY_STR);
+ 
+ 	// Build the beacon
+-	buf = rwnx_build_bcn(bcn, info);
++	buf = rwnx_build_bcn(bcn, &info->beacon);
+ 	if (!buf)
+ 		return -ENOMEM;
+ 
+@@ -3427,6 +3427,7 @@ static int rwnx_cfg80211_stop_ap(struct wiphy *wiphy, struct net_device *dev)
+  * configured at firmware level.
+  */
+ static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
++											 struct net_device *dev,
+ 											 struct cfg80211_chan_def *chandef)
+ {
+ 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+@@ -3481,7 +3482,7 @@ static int rwnx_cfg80211_set_monitor_channel(struct wiphy *wiphy,
+ 
+ int rwnx_cfg80211_set_monitor_channel_(struct wiphy *wiphy,
+                                              struct cfg80211_chan_def *chandef){
+-    return rwnx_cfg80211_set_monitor_channel(wiphy, chandef);
++    return rwnx_cfg80211_set_monitor_channel(wiphy, NULL, chandef);
+ }
+ 
+ 
+@@ -3900,7 +3901,7 @@ static int rwnx_cfg80211_get_channel(struct wiphy *wiphy,
+ 
+ 	if (rwnx_vif->vif_index == rwnx_hw->monitor_vif) {
+ 		//retrieve channel from firmware
+-		rwnx_cfg80211_set_monitor_channel(wiphy, NULL);
++		rwnx_cfg80211_set_monitor_channel(wiphy, NULL, NULL);
+ 	}
+ 
+ 	//Check if channel context is valid
+@@ -4036,6 +4037,7 @@ int rwnx_cfg80211_start_radar_detection(struct wiphy *wiphy,
+ 									#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 15, 0))
+ 										, u32 cac_time_ms
+ 									#endif
++										, int link_id
+ 										)
+ {
+ 	struct rwnx_hw *rwnx_hw = wiphy_priv(wiphy);
+@@ -4176,7 +4178,7 @@ int rwnx_cfg80211_channel_switch (struct wiphy *wiphy,
+ 		goto end;
+ 	} else {
+ 		INIT_WORK(&csa->work, rwnx_csa_finish);
+-#if LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION4
++#if (LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION4) && !BUILD_OPENWRT
+ 		cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, false, 0);
+ #elif LINUX_VERSION_CODE >= HIGH_KERNEL_VERSION2
+ 		cfg80211_ch_switch_started_notify(dev, &csa->chandef, 0, params->count, false);
+@@ -4205,6 +4207,7 @@ rwnx_cfg80211_tdls_mgmt(struct wiphy *wiphy,
+ #else
+ 	u8 *peer,
+ #endif
++	int link_id,
+ 	u8 action_code,
+ 	u8 dialog_token,
+ 	u16 status_code,
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_radar.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_radar.c
+index 358e260c5f..9ac59bcc17 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_radar.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_radar.c
+@@ -1400,7 +1400,11 @@ static void rwnx_radar_cac_work(struct work_struct *ws)
+ 					#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+ 					   &ctxt->chan_def,
+ 					#endif
++					#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)) || BUILD_OPENWRT
++					   NL80211_RADAR_CAC_FINISHED, GFP_KERNEL, 0);
++					#else
+ 					   NL80211_RADAR_CAC_FINISHED, GFP_KERNEL);
++					#endif
+ 	rwnx_send_apm_stop_cac_req(rwnx_hw, radar->cac_vif);
+ 	rwnx_chanctx_unlink(radar->cac_vif);
+ 
+@@ -1500,7 +1504,11 @@ void rwnx_radar_cancel_cac(struct rwnx_radar *radar)
+ 						#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+ 						   &ctxt->chan_def,
+ 						#endif
++						#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)) || BUILD_OPENWRT
++						   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL, 0);
++						#else
+ 						   NL80211_RADAR_CAC_ABORTED, GFP_KERNEL);
++						#endif
+ 		rwnx_chanctx_unlink(radar->cac_vif);
+ 	}
+ 
+diff --git a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_rx.c b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_rx.c
+index 7b42358c3b..a9b191e1e6 100644
+--- a/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_rx.c
++++ b/src/SDIO/driver_fw/driver/aic8800/aic8800_fdrv/rwnx_rx.c
+@@ -11,6 +11,7 @@
+ #include <linux/ieee80211.h>
+ #include <linux/etherdevice.h>
+ #include <net/ieee80211_radiotap.h>
++#include <linux/string.h>
+ 
+ #include "rwnx_defs.h"
+ #include "rwnx_rx.h"
+@@ -1186,7 +1187,7 @@ static void rwnx_rx_add_rtap_hdr(struct rwnx_hw *rwnx_hw,
+ 		while ((pos - (u8 *)rtap) & 1)
+ 			pos++;
+ 		rtap->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_HE);
+-		memcpy(pos, &he, sizeof(he));
++		unsafe_memcpy(pos, &he, sizeof(he), /* justification */);
+ 		pos += sizeof(he);
+ 	}
+ 
