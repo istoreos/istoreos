@@ -3,10 +3,10 @@
 #include "rk3568-roc-k40pro.dtsi"
 
 / {
-	compatible = "easepi,r2", "rockchip,rk3568";
-	model = "EasePi R2";
+	compatible = "easepi,a2", "rockchip,rk3568";
+	model = "EasePi A2";
 	kdebug = "0";
-	hwmodel_id = "R2";
+	hwmodel_id = "A2";
 	hw_support = "hdmi";
 
 	vcc3v3_nvme: vcc3v3-nvme-regulator {

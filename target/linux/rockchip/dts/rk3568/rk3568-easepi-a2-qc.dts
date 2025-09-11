@@ -1,0 +1,8 @@
+/dts-v1/;
+
+#include "rk3568-easepi-a2.dts"
+
+/ {
+	compatible = "easepi,a2-qc", "rockchip,rk3568";
+	model = "EasePi A2 (QC)";
+};

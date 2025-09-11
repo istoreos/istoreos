@@ -173,23 +173,23 @@ $(call Device/rk3568)
 endef
 TARGET_DEVICES += easepi_r1-lite
 
-define Device/easepi_r2
+define Device/easepi_a2
 $(call Device/rk3568)
   DEVICE_VENDOR := EasePi
-  DEVICE_MODEL := R2
-  DEVICE_DTS := rk3568-easepi-r2
-  SUPPORTED_DEVICES += easepi,r2 easepi,r2-qc
+  DEVICE_MODEL := A2
+  DEVICE_DTS := rk3568-easepi-a2
+  SUPPORTED_DEVICES += easepi,a2 easepi,a2-qc
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-brcmfmac cypress-firmware-43455-sdio brcmfmac-firmware-43455-sdio-nvram
 endef
-TARGET_DEVICES += easepi_r2
+TARGET_DEVICES += easepi_a2
 
-define Device/easepi_r2_qc
-$(call Device/easepi_r2)
-  DEVICE_MODEL := R2 (QC)
-  DEVICE_DTS := rk3568-easepi-r2-qc
-  SUPPORTED_DEVICES := easepi,r2-qc
+define Device/easepi_a2_qc
+$(call Device/easepi_a2)
+  DEVICE_MODEL := A2 (QC)
+  DEVICE_DTS := rk3568-easepi-a2-qc
+  SUPPORTED_DEVICES := easepi,a2-qc
 endef
-TARGET_DEVICES += easepi_r2_qc
+TARGET_DEVICES += easepi_a2_qc
 
 define Device/friendlyelec_nanopi-r3s
 $(call Device/rk3566)
