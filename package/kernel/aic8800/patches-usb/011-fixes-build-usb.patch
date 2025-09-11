@@ -1,0 +1,32 @@
+--- a/src/USB/driver_fw/drivers/aic8800/aic8800_fdrv/rwnx_msg_rx.c
++++ b/src/USB/driver_fw/drivers/aic8800/aic8800_fdrv/rwnx_msg_rx.c
+@@ -781,7 +781,9 @@ static inline int rwnx_rx_scanu_result_i
+ #endif
+ 
+     }
++#ifdef CONFIG_USE_WIRELESS_EXT
+ putbss:
++#endif
+     if (bss != NULL)
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 9, 0)
+ 	cfg80211_put_bss(bss);
+--- a/src/USB/driver_fw/drivers/aic8800/aic8800_fdrv/rwnx_rx.c
++++ b/src/USB/driver_fw/drivers/aic8800/aic8800_fdrv/rwnx_rx.c
+@@ -1201,7 +1201,7 @@ static void rwnx_rx_add_rtap_hdr(struct
+         while ((pos - (u8 *)rtap) & 1)
+             pos++;
+         rtap->it_present |= cpu_to_le32(1 << IEEE80211_RADIOTAP_HE);
+-        memcpy(pos, &he, sizeof(he));
++        unsafe_memcpy(pos, &he, sizeof(he), /* justification */);
+         pos += sizeof(he);
+     }
+ 
+@@ -2476,7 +2476,7 @@ check_len_update:
+ 				u8 flags_need_reord = hw_rxhdr->flags_need_reord;
+ 				u8 flags_vif_idx = hw_rxhdr->flags_vif_idx;
+                 u8 flags_is_amsdu = hw_rxhdr->flags_is_amsdu;
+-				u8 reord_cnt = 0;
++				//u8 reord_cnt = 0;
+ 				struct recv_msdu *pframe = NULL;
+ 
+ 				__skb_queue_head_init(&list);
