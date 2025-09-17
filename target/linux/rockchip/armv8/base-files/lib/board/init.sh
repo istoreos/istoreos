@@ -282,6 +282,20 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 1 "eth1" "eth1-16"
 		fi
 		;;
+	friendlyarm,nanopi-r76s)
+		# rk3576 pcie interrupts does not support smp_affinity, ignore error
+		if ethtool -i eth0 | grep -Fq 'driver: r8169'; then
+			set_iface_cpumask 4 "eth0" "" f0
+			set_iface_cpumask 8 "eth1" "" f0
+		else
+			set_iface_cpumask 4 "eth0" "eth0-0" f0 && \
+			set_iface_cpumask 4 "eth0" "eth0-16" && \
+			set_iface_cpumask 2 "eth0" "eth0-18"
+			set_iface_cpumask 8 "eth1" "eth1-0" f0 && \
+			set_iface_cpumask 8 "eth1" "eth1-18" && \
+			set_iface_cpumask 1 "eth1" "eth1-16"
+		fi
+		;;
 	friendlyarm,nanopc-t6|\
 	friendlyelec,nanopi-r6s|friendlyarm,nanopi-r6s|\
 	friendlyelec,nanopi-r6c|friendlyarm,nanopi-r6c)
