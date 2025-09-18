@@ -12,7 +12,6 @@
 #include <dt-bindings/soc/rockchip,vop2.h>
 #include <rockchip/rk3568.dtsi>
 #include "rk3568-ip.dtsi"
-#include "rk3568-ip-rk809.dtsi"
 
 / {
 	aliases {
@@ -654,3 +653,5 @@
 		remote-endpoint = <&hdmi_in_vp0>;
 	};
 };
+
+#include "rk3568-ip-rk809.dtsi"
