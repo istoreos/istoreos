@@ -7,7 +7,7 @@ index 813c0f39f8..aa8ab21fa6 100644
  }
  
 -
-+#if 0
++#ifdef CONFIG_PM_SLEEP
  static int aicbsp_sdio_suspend(struct device *dev)
  {
  	struct sdio_func *func = dev_to_sdio_func(dev);
@@ -27,7 +27,7 @@ index 455b5bd1e1..263a2ba11d 100644
  #endif
  #endif
  
-+#if 0
++#ifdef CONFIG_PM_SLEEP
  static int aicwf_sdio_suspend(struct device *dev)
  {
  	int ret = 0;
