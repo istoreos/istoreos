@@ -22,6 +22,7 @@ start() {
 }
 
 stop() {
+	[ -e /var/state/ntp_last_sync ] && touch /etc/.last_saved_time
 	hwclock_save
 }
 
