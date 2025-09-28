@@ -1,0 +1,11 @@
+--- a/drivers/gpu/drm/i915/intel_runtime_pm.c
++++ b/drivers/gpu/drm/i915/intel_runtime_pm.c
+@@ -242,7 +242,7 @@ static intel_wakeref_t __intel_runtime_p
+ 		 * function, since the power state is undefined. This applies
+ 		 * atm to the late/early system suspend/resume handlers.
+ 		 */
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6,9,0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6,9,0) && LINUX_VERSION_CODE > KERNEL_VERSION(6,7,0) || LINUX_VERSION_CODE < KERNEL_VERSION(6,6,103)
+ 		if (pm_runtime_get_if_active(rpm->kdev, ignore_usecount) <= 0)
+ 			return 0;
+ #else
