@@ -2,11 +2,21 @@
 # Copy running iStoreOS to eMMC for amlogic
 # Copyright (C) 2024 jjm2473@gmail.com
 
+# https://github.com/ophub/amlogic-s9xxx-armbian/blob/main/build-armbian/armbian-files/platform-files/amlogic/rootfs/usr/sbin/armbian-install
+# https://github.com/ophub/luci-app-amlogic/blob/main/luci-app-amlogic/root/usr/sbin/openwrt-install-amlogic
+
+# BLANK1=68
+# BOOT=512
+# 68-580
+# BLANK2=220
+# 800-END
+
+
 # part		start			size			end
 # boot		0x4400000/68M 	0x4000000/64M	0x8400000
-# rootfs	0x8400000/132M	0x10000000/256M	0x18400000
-# (gap for amlogic bootloader 0x27400000 - 0x2F400000)
-# overlay	0x2FC00000/764M	0x80000000/2G	0xAFC00000
+# rootfs	0x8400000/132M	0x1C000000/448M	0x24400000/580M
+# (gap for amlogic bootloader 0x24400000 - 0x32000000)
+# overlay	0x32000000/800M	0x80000000/2G	0xB2000000/2848M
 
 . /lib/functions.sh
 . /lib/functions/system.sh
@@ -33,8 +43,8 @@ function part_disk() {
 	parted --script "/dev/$to" \
 		mktable msdos \
 		mkpart primary 68MiB 132MiB \
-		mkpart primary 132MiB 388MiB \
-		mkpart primary 764MiB 2812MiB
+		mkpart primary 132MiB 580MiB \
+		mkpart primary 800MiB 2848MiB
 }
 
 function get_bootdisk() {
@@ -59,8 +69,8 @@ function get_emmcs() {
         local diskinfo="`parted -ms "/dev/$disk" unit GiB print 2>/dev/null | grep -m1 "^/dev/$disk:"`"
         [ -z "$diskinfo" ] && continue
         local size="`echo "$diskinfo" | cut -d: -f2`"
-		# check disk greater than 2.8GB
-        [ $(( `echo "${size%%GiB}" | sed 's/\.\(.\).*/ * 10 + \1/'` )) -ge 28 ] || continue
+		# check disk greater than 2.848GB
+        [ $(( `echo "${size%%GiB}" | sed 's/\.\(.\).*/ * 10 + \1/'` )) -ge 29 ] || continue
         local model="`echo "$diskinfo" | cut -d: -f7 | sed 's/"/_/g'`"
         disks="${disks}$index. $disk $size \"$model\"$NEWLINE"
 		index=$(($index + 1))
