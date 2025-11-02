@@ -5,16 +5,28 @@
 # https://github.com/ophub/amlogic-s9xxx-armbian/blob/main/build-armbian/armbian-files/platform-files/amlogic/rootfs/usr/sbin/armbian-install
 # https://github.com/ophub/luci-app-amlogic/blob/main/luci-app-amlogic/root/usr/sbin/openwrt-install-amlogic
 
+# s905d
 # BLANK1=68
 # BOOT=512
 # 68-580
 # BLANK2=220
 # 800-END
 
+# danger zones
+# 0-68
+# 580-800
+
+# amparted
+# BLANK1=117
+# BOOT=512
+# BLANK2=0
+
+# danger zones
+# 0-117
 
 # part		start			size			end
-# boot		0x4400000/68M 	0x4000000/64M	0x8400000
-# rootfs	0x8400000/132M	0x1C000000/448M	0x24400000/580M
+# boot		0x7500000/117M 	0x4000000/64M	0xB500000/181M
+# rootfs	0xB500000/181M	0x18F00000/399M	0x24400000/580M
 # (gap for amlogic bootloader 0x24400000 - 0x32000000)
 # overlay	0x32000000/800M	0x80000000/2G	0xB2000000/2848M
 
@@ -42,8 +54,8 @@ function part_disk() {
 	dd if=/dev/zero of="/dev/$to" bs=512 count=1 conv=notrunc 2>/dev/null
 	parted --script "/dev/$to" \
 		mktable msdos \
-		mkpart primary 68MiB 132MiB \
-		mkpart primary 132MiB 580MiB \
+		mkpart primary 117MiB 181MiB \
+		mkpart primary 181MiB 580MiB \
 		mkpart primary 800MiB 2848MiB
 }
 
@@ -130,6 +142,8 @@ function main() {
 		echo "part /dev/$to"
 		part_disk "$to" || return 1
 		partprobe "/dev/$to"
+		sleep 2
+		umount_disk "$to" || return 1
 		if export_partdevice partdev 1; then
 			# umount /boot
 			echo "try umount /boot"
