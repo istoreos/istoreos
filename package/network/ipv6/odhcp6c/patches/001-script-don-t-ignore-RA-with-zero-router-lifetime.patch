@@ -1,0 +1,63 @@
+From a877f98e949e4c791e401c9e7a928db828281e1f Mon Sep 17 00:00:00 2001
+From: Gasper Stukelj <gstukelj@plume.com>
+Date: Mon, 8 Apr 2024 11:48:09 +0200
+Subject: [PATCH] script: don't ignore RA with zero router lifetime
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+As per RFC 4861 (section 4.2), 0 is a valid value for
+Router Lifetime field in Router Advertisement messages.
+To quote from the RFC:
+
+> A Lifetime of 0 indicates that the router is not a
+> default router and SHOULD NOT appear on the default
+> router list.
+
+In fact, this is the mechanism by which a router,
+previously advertising itself as a default router must
+invalidate itself. From the RFC 7084 (4.1, G-5):
+
+> By default, if the IPv6 CE router is an advertising
+> router and loses its IPv6 default router(s) and/or
+> detects loss of connectivity on the WAN interface,
+> it MUST explicitly invalidate itself as an IPv6
+> default router on each of its advertising interfaces
+> by immediately transmitting one or more Router
+> Advertisement messages with the "Router Lifetime"
+> field set to zero [RFC4861].
+
+Given that Router Lifetime is stored in the `valid`
+field of the `struct odhcp6c_entry`, entries with
+the field set to 0 shouldn't be ignored when entry
+type is `ENTRY_ROUTE`.
+
+Signed-off-by: Gasper Stukelj <gstukelj@plume.com>
+Link: https://github.com/openwrt/odhcp6c/pull/84
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+(cherry picked from commit 70f7467db3010af421a2ca528c92313dd3fb2dcc)
+---
+ src/script.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+--- a/src/script.c
++++ b/src/script.c
+@@ -180,11 +180,14 @@ static void entry_to_env(const char *nam
+ 
+ 	for (size_t i = 0; i < len / sizeof(*e); ++i) {
+ 		/*
+-		 * The only invalid entries allowed to be passed to the script are prefix entries.
+-		 * This will allow immediate removal of the old ipv6-prefix-assignment that might
+-		 * otherwise be kept for up to 2 hours (see L-13 requirement of RFC 7084).
++		 * The only invalid entries allowed to be passed to the script are prefix and RA
++		 * entries. This will allow immediate removal of the old ipv6-prefix-assignment
++		 * that might otherwise be kept for up to 2 hours (see L-13 requirement of RFC 7084).
++		 * Similarly, a RA with router lifetime set to 0 indicates that the advertising
++		 * router "is not a default router and SHOULD NOT appear on the default router list"
++		 * (see RFC 4861, section 4.2).
+ 		 */
+-		if (!e[i].valid && type != ENTRY_PREFIX)
++		if (!e[i].valid && type != ENTRY_PREFIX && type != ENTRY_ROUTE)
+ 			continue;
+ 
+ 		inet_ntop(AF_INET6, &e[i].target, &buf[buf_len], INET6_ADDRSTRLEN);

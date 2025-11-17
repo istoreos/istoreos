@@ -1,0 +1,36 @@
+From 00dac46811b2ab37ccfe26e9689d5d8441fdc720 Mon Sep 17 00:00:00 2001
+From: Nicolas BESNARD <nicolas.besnard_ext@softathome.com>
+Date: Fri, 11 Apr 2025 09:50:07 +0000
+Subject: [PATCH] dhcpv6: fix incorrect IA type being printed in syslog
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Problem: If a status error code is received, "IA_NA" is always written
+to syslog.
+
+Cause: IA header type is not converted from network byte order to host
+byte order.
+
+Solution: Use ntohs() to convert to host byte order.
+
+Signed-off-by: Nicolas BESNARD <nicolas.besnard_ext@softathome.com>
+Signed-off-by: Paul Donald <newtwen+github@gmail.com>
+Link: https://github.com/openwrt/odhcp6c/pull/106
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+(cherry picked from commit 1051cabb4da3283a58e1504513946130c007ebdf)
+---
+ src/dhcpv6.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/dhcpv6.c
++++ b/src/dhcpv6.c
+@@ -1585,7 +1585,7 @@ static void dhcpv6_handle_ia_status_code
+ 		const void *status_msg, const int len,
+ 		bool handled_status_codes[_DHCPV6_Status_Max], int *ret)
+ {
+-	dhcpv6_log_status_code(code, ia_hdr->type == DHCPV6_OPT_IA_NA ?
++	dhcpv6_log_status_code(code, ntohs(ia_hdr->type) == DHCPV6_OPT_IA_NA ?
+ 		"IA_NA" : "IA_PD", status_msg, len);
+ 
+ 	switch (code) {

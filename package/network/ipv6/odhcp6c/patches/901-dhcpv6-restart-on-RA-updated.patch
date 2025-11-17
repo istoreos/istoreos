@@ -1,4 +1,4 @@
-From 59d35b1cdf45205ba430003317c2b68f4d65e304 Mon Sep 17 00:00:00 2001
+From 9a7f1a99b5a92c03118684107811a47c24b609a8 Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Mon, 29 Sep 2025 12:36:45 +0800
 Subject: [PATCH] dhcpv6: restart on RA updated
@@ -11,8 +11,6 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  src/ra.c      |  5 ++++-
  4 files changed, 95 insertions(+), 3 deletions(-)
 
-diff --git a/src/dhcpv6.c b/src/dhcpv6.c
-index c1603f5..ce96a98 100644
 --- a/src/dhcpv6.c
 +++ b/src/dhcpv6.c
 @@ -115,6 +115,9 @@ static uint8_t reconf_key[16];
@@ -69,7 +67,7 @@ index c1603f5..ce96a98 100644
  
  			for (struct cmsghdr *ch = CMSG_FIRSTHDR(&msg); ch != NULL;
  				ch = CMSG_NXTHDR(&msg, ch)) {
-@@ -1571,7 +1601,8 @@ static void dhcpv6_handle_status_code(const enum dhcpv6_msg orig,
+@@ -1571,7 +1601,8 @@ static void dhcpv6_handle_status_code(co
  
  	case DHCPV6_NoAddrsAvail:
  	case DHCPV6_NoPrefixAvail:
@@ -79,8 +77,6 @@ index c1603f5..ce96a98 100644
  			*ret = 0; // Failure
  		break;
  
-diff --git a/src/odhcp6c.c b/src/odhcp6c.c
-index 20b4040..8c7c1a7 100644
 --- a/src/odhcp6c.c
 +++ b/src/odhcp6c.c
 @@ -59,6 +59,7 @@ static volatile bool signal_io = false;
@@ -91,7 +87,7 @@ index 20b4040..8c7c1a7 100644
  
  static int urandom_fd = -1, allow_slaac_only = 0;
  static bool bound = false, release = true, ra = false;
-@@ -688,11 +689,53 @@ static uint8_t* odhcp6c_resize_state(enum odhcp6c_state state, ssize_t len)
+@@ -688,11 +689,53 @@ static uint8_t* odhcp6c_resize_state(enu
  	return n;
  }
  
@@ -172,8 +168,6 @@ index 20b4040..8c7c1a7 100644
  void odhcp6c_clear_state(enum odhcp6c_state state)
  {
  	state_len[state] = 0;
-diff --git a/src/odhcp6c.h b/src/odhcp6c.h
-index 7904946..47d9436 100644
 --- a/src/odhcp6c.h
 +++ b/src/odhcp6c.h
 @@ -417,6 +417,7 @@ uint64_t odhcp6c_get_milli_time(void);
@@ -184,8 +178,6 @@ index 7904946..47d9436 100644
  
  // State manipulation
  void odhcp6c_clear_state(enum odhcp6c_state state);
-diff --git a/src/ra.c b/src/ra.c
-index 01a8b72..e6adf58 100644
 --- a/src/ra.c
 +++ b/src/ra.c
 @@ -353,6 +353,7 @@ bool ra_process(void)
@@ -207,6 +199,3 @@ index 01a8b72..e6adf58 100644
  				changed |= odhcp6c_update_entry(STATE_RA_PREFIX, entry,
  								7200, ra_holdoff_interval);
  			} else if (opt->type == ND_OPT_RECURSIVE_DNS && opt->len > 2) {
--- 
-2.46.0
-
