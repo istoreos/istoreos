@@ -1,0 +1,63 @@
+From 7e6acc5c0ab7500ac88ffcfac14dc12b34c1f463 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?David=20H=C3=A4rdeman?= <david@hardeman.nu>
+Date: Sun, 2 Nov 2025 19:25:13 +0100
+Subject: [PATCH] router: always use link-local src address for RAs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This is a follow-up to:
+https://github.com/openwrt/odhcpd/pull/242
+
+As noted by @willmo [1], RAs are currently not strictly limited to using a
+link-local source address, which they should according to RFC4861, §4.2.
+
+This is usually not an issue, since router solicitations typically
+originate from link-local source addresses or the undefined address,
+meaning that odhcpd will reply with its own link-local address
+(auto-selected by the kernel).
+
+But if a solicitation is sent from e.g. a GUA/ULA address, odhpcd will
+currently reply using it's own GUA/ULA address.
+
+While fixing this, correct some misleading comments.
+
+[1] https://github.com/openwrt/odhcpd/pull/242#issuecomment-3475020864
+
+Signed-off-by: David Härdeman <david@hardeman.nu>
+Link: https://github.com/openwrt/odhcpd/pull/297
+Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
+(cherry picked from commit 74eeff193848a993ee0c42acbd2f4d58721e091c)
+---
+ src/router.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+--- a/src/router.c
++++ b/src/router.c
+@@ -1020,7 +1020,7 @@ static int send_router_advert(struct int
+ 
+ 	syslog(LOG_DEBUG, "Sending a RA on %s", iface->name);
+ 
+-	if (odhcpd_send(iface->router_event.uloop.fd, &dest, iov, ARRAY_SIZE(iov), iface) > 0) {
++	if (odhcpd_try_send_with_src(iface->router_event.uloop.fd, &dest, iov, ARRAY_SIZE(iov), iface) > 0) {
+ 		iface->ra_sent++;
+ 
+ 		config_save_ra_pio(iface);
+@@ -1074,7 +1074,7 @@ static void handle_icmpv6(void *addr, vo
+ }
+ 
+ 
+-/* Forward router solicitation */
++/* Forward a router solicitation from slave to master interface */
+ static void forward_router_solicitation(const struct interface *iface)
+ {
+ 	struct icmp6_hdr rs = {ND_ROUTER_SOLICIT, 0, 0, {{0}}};
+@@ -1094,7 +1094,7 @@ static void forward_router_solicitation(
+ }
+ 
+ 
+-/* Handler for incoming router solicitations on slave interfaces */
++/* Forward a router advertisment from master to slave interfaces */
+ static void forward_router_advertisement(const struct interface *iface, uint8_t *data, size_t len)
+ {
+ 	struct nd_router_advert *adv = (struct nd_router_advert *)data;
