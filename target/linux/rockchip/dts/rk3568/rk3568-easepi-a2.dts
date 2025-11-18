@@ -120,6 +120,11 @@
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+	oled {
+		oled_en: oled-en {
+			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
 };
 
 &led_green {
@@ -133,7 +138,7 @@
 };
 
 &i2c3 {
-	pinctrl-0 = <&i2c3m1_xfer>;
+	pinctrl-0 = <&i2c3m1_xfer &oled_en>;
 
 	i2c-scl-rising-time-ns = <160>;
 	i2c-scl-falling-time-ns = <30>;
