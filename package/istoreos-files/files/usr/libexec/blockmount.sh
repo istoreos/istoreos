@@ -69,7 +69,7 @@ EOF
         check_configured "$UUID" "$LABEL" "$1" "$candidate" || return 0
 
         # log "add mount $UUID => $candidate"
-        mkdir -p "$candidate" && mount "$1" "$candidate"
+        mkdir -p "$candidate" && busybox mount "$1" "$candidate"
     fi
 
 }
