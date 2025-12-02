@@ -1,2 +1,9 @@
 #!/bin/sh
+if [[ "$1" != "-*" ]]; then
+	head -c 11 "$1" | tail -c 8 | grep -Fwq 'NTFS    ' || {
+		echo "NTFS signature is missing." >&2
+		exit 32
+	}
+fi
+
 mount -i -t ntfs3 -o iocharset=utf8,force "$@" || mount -i -t ntfs3 -o iocharset=utf8,ro "$@"
