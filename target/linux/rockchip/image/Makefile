@@ -29,17 +29,18 @@ define Build/pine64-img
 	# Creates the final SD/eMMC images, 
 	# combining boot partition, root partition as well as the u-boot bootloader
 
-	# Generate a new partition table in $@ with 32 MiB of 
-	# alignment padding for the u-boot-rockchip.bin (idbloader + u-boot) to fit:
+	# Generate a new partition table in $@ with 16 MiB of 
+	# offset for the u-boot-rockchip.bin (idbloader + u-boot) to fit:
 	# http://opensource.rock-chips.com/wiki_Boot_option#Boot_flow
 	#
 	# U-Boot SPL expects the U-Boot ITB to be located at sector 0x4000 (8 MiB) on the MMC storage
 	SIGNATURE="$(IMG_PART_SIGNATURE)" \
+	PARTOFFSET=16M \
 	$(SCRIPT_DIR)/gen_image_generic.sh \
 		$@ \
 		$(CONFIG_TARGET_KERNEL_PARTSIZE) $@.boot \
 		$(CONFIG_TARGET_ROOTFS_PARTSIZE) $(IMAGE_ROOTFS) \
-		32768
+		1024
 
 	# Copy the u-boot-rockchip.bin to the image at sector 0x40
 	dd if="$(STAGING_DIR_IMAGE)"/$(UBOOT_DEVICE_NAME)-u-boot-rockchip.bin of="$@" seek=64 conv=notrunc
