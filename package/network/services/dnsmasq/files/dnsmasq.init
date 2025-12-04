@@ -1272,6 +1272,14 @@ dnsmasq_start()
 	[ -e "$hostsfile" ] && procd_add_jail_mount $hostsfile
 
 	procd_close_instance
+
+	config_get_bool dns_redirect "$cfg" dns_redirect 0
+	config_get dns_port "$cfg" port 53
+	if [ "$dns_redirect" = 1 ]; then
+		nft add table inet dnsmasq
+		nft add chain inet dnsmasq prerouting "{ type nat hook prerouting priority -95; policy accept; }"
+		nft add rule inet dnsmasq prerouting "meta nfproto { ipv4, ipv6 } udp dport 53 counter redirect to :$dns_port comment \"DNSMASQ HIJACK\""
+	fi
 }
 
 dnsmasq_stop()
@@ -1287,6 +1295,12 @@ dnsmasq_stop()
 	[ "$localuse" -gt 0 ] && ln -sf "/tmp/resolv.conf.d/resolv.conf.auto" /tmp/resolv.conf
 
 	rm -f ${BASEDHCPSTAMPFILE}.${cfg}.*.dhcp
+}
+
+nftables_clear()
+{
+	! nft --check list table inet dnsmasq > "/dev/null" 2>&1 || \
+		nft delete table inet dnsmasq
 }
 
 add_interface_trigger()
@@ -1360,6 +1374,7 @@ start_service() {
 }
 
 reload_service() {
+	nftables_clear
 	rc_procd start_service "$@"
 	procd_send_signal dnsmasq "$@"
 }
@@ -1386,4 +1401,6 @@ stop_service() {
 	else
 		config_foreach dnsmasq_stop dnsmasq
 	fi
+
+	nftables_clear
 }
