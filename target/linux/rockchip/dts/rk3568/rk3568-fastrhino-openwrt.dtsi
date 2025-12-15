@@ -1,4 +1,6 @@
 
+#include "rk3568-ramoops.dtsi"
+
 / {
 	aliases {
 		led-boot 	 = &status_led;

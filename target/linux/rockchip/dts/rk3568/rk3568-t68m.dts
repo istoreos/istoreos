@@ -11,6 +11,8 @@
 
 #include "rk3568-ip.dtsi"
 
+#include "rk3568-ramoops.dtsi"
+
 / {
 	model = "LYT T68M";
 	compatible = "lyt,t68m", "rockchip,rk3568";

@@ -12,6 +12,8 @@
 #include <dt-bindings/soc/rockchip,vop2.h>
 #include <rockchip/rk3568.dtsi>
 
+#include "rk3568-ramoops.dtsi"
+
 / {
 	eth_order =  "fe010000.ethernet,fe2a0000.ethernet";
 
