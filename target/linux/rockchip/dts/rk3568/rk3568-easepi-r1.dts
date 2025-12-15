@@ -6,6 +6,8 @@
 #include "rk3568-ip.dtsi"
 #include "rk3568-ip-rk809.dtsi"
 
+#include "rk3568-ramoops.dtsi"
+
 / {
 	compatible = "easepi,r1", "rockchip,rk3568";
 	model = "EasePi R1";

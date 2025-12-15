@@ -4,6 +4,8 @@
 #include "rk3568-ip.dtsi"
 #include "rk3568-ip-rk809.dtsi"
 
+#include "rk3568-ramoops.dtsi"
+
 / {
 	aliases {
 		mmc0 = &sdmmc0;
