@@ -26,6 +26,15 @@
 		pinctrl-0 = <&pmic_pins>, <&rk806_dvs1_null>,
 			    <&rk806_dvs2_null>, <&rk806_dvs3_null>;
 
+		/* 0: restart PMU;
+		 * 1: reset all the power off reset registers,
+		 *    forcing the state to switch to ACTIVE mode;
+		 * 2: Reset all the power off reset registers,
+		 *    forcing the state to switch to ACTIVE mode,
+		 *    and simultaneously pull down the RESETB PIN for 5mS before releasing
+		 */
+		// pmic-reset-func = <1>;
+		rockchip,reset-mode = <1>; 
 		spi-max-frequency = <1000000>;
 		system-power-controller;
 
