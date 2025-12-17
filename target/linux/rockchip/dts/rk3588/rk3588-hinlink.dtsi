@@ -15,6 +15,8 @@
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
 
+#include "rk3588-ramoops.dtsi"
+
 / {
 	model = "HINLINK H88K";
 	compatible = "hinlink,h88k", "rockchip,rk3588";

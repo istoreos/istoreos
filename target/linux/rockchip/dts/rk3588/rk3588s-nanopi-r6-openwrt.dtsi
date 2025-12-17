@@ -1,3 +1,5 @@
+#include "rk3588-ramoops.dtsi"
+
 / {
 	aliases {
 		mmc0 = &sdmmc;
@@ -15,4 +17,8 @@
 
 &sdmmc {
 	cd-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_LOW>;
+};
+
+&rk806_single {
+	rockchip,reset-mode = <1>;
 };

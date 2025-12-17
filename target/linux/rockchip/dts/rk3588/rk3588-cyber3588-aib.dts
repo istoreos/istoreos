@@ -12,6 +12,7 @@
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
 
+#include "rk3588-ramoops.dtsi"
 
 / {
 	model = "Cyber 3588 AIB";

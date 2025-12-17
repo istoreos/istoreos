@@ -17,6 +17,8 @@
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
 
+#include "rk3588-ramoops.dtsi"
+
 / {
 	model = "Xunlong Orange Pi 5 Plus";
 	compatible = "xunlong,orangepi-5-plus", "rockchip,rk3588";
