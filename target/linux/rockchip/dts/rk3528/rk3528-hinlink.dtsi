@@ -10,6 +10,7 @@
 #include <dt-bindings/pinctrl/rockchip.h>
 #include "rk3528-patch.dtsi"
 #include "rk3528-ip.dtsi"
+#include "rk3528-ramoops.dtsi"
 
 / {
 	model = "HINLINK/Hlink RK3528 Boards";

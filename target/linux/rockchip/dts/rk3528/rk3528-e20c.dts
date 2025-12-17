@@ -4,6 +4,8 @@
 #include "rk3528-patch.dtsi"
 #include "rk3528-ip.dtsi"
 
+#include "rk3528-ramoops.dtsi"
+
 / {
 	aliases {
 		ethernet0 = &gmac1;
