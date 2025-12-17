@@ -7,6 +7,22 @@
 #include "rk3576-ip.dtsi"
 #include "rk3576-ip-rk806.dtsi"
 
+#include "rk3576-ramoops.dtsi"
+
 / {
 	eth_order = "0001:21:00.0,0000:01:00.0";
+};
+
+&i2c1 {
+	pmic@23 {
+		/* 0: restart PMU;
+		 * 1: reset all the power off reset registers,
+		 *    forcing the state to switch to ACTIVE mode;
+		 * 2: Reset all the power off reset registers,
+		 *    forcing the state to switch to ACTIVE mode,
+		 *    and simultaneously pull down the RESETB PIN for 5mS before releasing
+		 */
+		// pmic-reset-func = <1>;
+		rockchip,reset-mode = <1>;
+	};
 };
