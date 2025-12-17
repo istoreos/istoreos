@@ -17,6 +17,8 @@
 #include "rk3576-ip.dtsi"
 #include "rk3576-ip-rk806.dtsi"
 
+#include "rk3576-ramoops.dtsi"
+
 / {
 	model = "FriendlyElec boards based on Rockchip RK3576";
 	compatible = "friendlyelec,nanopi5",
