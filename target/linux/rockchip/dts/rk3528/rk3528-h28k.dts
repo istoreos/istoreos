@@ -4,6 +4,8 @@
 #include "rk3528-patch.dtsi"
 #include "rk3528-ip.dtsi"
 
+#include "rk3528-ramoops.dtsi"
+
 / {
 	model = "Hlink H28K";
 	compatible = "hlink,h28k", "rockchip,rk3528";

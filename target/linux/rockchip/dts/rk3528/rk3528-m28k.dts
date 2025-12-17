@@ -14,6 +14,8 @@
 #include "rk3528-patch.dtsi"
 #include "rk3528-ip.dtsi"
 
+#include "rk3528-ramoops.dtsi"
+
 / {
 	model = "MangoPi M28K";
 	compatible = "mangopi,m28k", "rockchip,rk3528";
@@ -59,18 +61,6 @@
 		drm_cubic_lut: drm-cubic-lut@00000000 {
 			compatible = "rockchip,drm-cubic-lut";
 			reg = <0x0 0x0 0x0 0x0>;
-		};
-
-		ramoops: ramoops@110000 {
-			compatible = "ramoops";
-			/* 0x110000 to 0x1f0000 is for ramoops */
-			reg = <0x0 0x110000 0x0 0xe0000>;
-			boot-log-size = <0x8000>;	/* do not change */
-			boot-log-count = <0x1>;		/* do not change */
-			console-size = <0x80000>;
-			pmsg-size = <0x30000>;
-			ftrace-size = <0x00000>;
-			record-size = <0x14000>;
 		};
 	};
 

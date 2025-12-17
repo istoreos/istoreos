@@ -13,6 +13,8 @@
 #include "rk3528-patch.dtsi"
 #include "rk3528-ip.dtsi"
 
+#include "rk3528-ramoops.dtsi"
+
 / {
 	model = "ArmSom RK3528 sige1 Board";
 	compatible = "armsom,sige1-v1", "rockchip,rk3528";
