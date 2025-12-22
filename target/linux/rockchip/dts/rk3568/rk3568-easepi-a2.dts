@@ -153,3 +153,10 @@
 		linux,code = <KEY_RESTART>;
 	};
 };
+
+// bluetooth
+&uart8 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart8m0_xfer &uart8m0_ctsn>;
+};
