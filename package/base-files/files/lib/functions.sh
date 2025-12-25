@@ -384,15 +384,18 @@ default_postinst() {
 		fi
 
 		if grep -m1 -q -s "^/usr/share/rpcd/acl\\.d/" "$filelist"; then
-			/etc/init.d/rpcd reload
+			/etc/init.d/rpcd reload 2>/dev/null
 		fi
 
 		if grep -m1 -q -s "^/usr/lib/lua/luci/" "$filelist"; then
 			if grep -m1 -q -s "^/usr/lib/lua/luci/i18n/" "$filelist"; then
-				/etc/init.d/fix_luci_lang boot
+				/etc/init.d/fix_luci_lang boot 2>/dev/null
 				touch /tmp/luci-i18n-mtime
 			fi
 			rm -rf /tmp/luci-indexcache /tmp/luci-modulecache /tmp/luci-indexcache.*
+		fi
+		if grep -m1 -q -s "^/usr/share/luci/menu.d/" "$filelist"; then
+			rm -f /tmp/luci-indexcache.*
 		fi
 	fi
 
