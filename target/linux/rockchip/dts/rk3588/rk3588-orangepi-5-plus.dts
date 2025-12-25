@@ -95,12 +95,114 @@
 		};
 	};
 
+	thermal-zones {
+		// 禁用原生温控节点
+		package-thermal {
+			status = "disabled";
+		};
+
+		// CPU 核心主温控区（优先级最高，关联风扇调速）
+		cpu_thermal: cpu-thermal {
+			priority = <100>;
+			polling-delay-passive = <100>; // 被动散热轮询间隔 100ms
+			polling-delay = <0>;
+			thermal-sensors = <&tsadc 0>; // 绑定 CPU 温度传感器
+			status = "okay";
+
+			trips {
+				// 风扇停转阈值：低于 37℃ 保持停转
+				cpu_temp_off: temp-off {
+					temperature = <37000>; // 单位 m℃（37℃）
+					hysteresis = <3000>; // 回差 3℃，避免频繁启停
+					type = "passive";
+				};
+
+				// 风扇1级（25%）：40℃ 触发启动
+				cpu_temp_level1: temp-level1 {
+					temperature = <40000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+
+				// 风扇2级（45%）：48℃ 触发
+				cpu_temp_level2: temp-level2 {
+					temperature = <48000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+
+				// 风扇3级（65%）：56℃ 触发
+				cpu_temp_level3: temp-level3 {
+					temperature = <56000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+
+				// 风扇4级（85%）：64℃ 触发
+				cpu_temp_level4: temp-level4 {
+					temperature = <64000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+
+				// 风扇5级（100%）：72℃ 触发
+				cpu_temp_level5: temp-level5 {
+					temperature = <72000>;
+					hysteresis = <3000>;
+					type = "passive";
+				};
+
+				// 临界保护：90℃ 触发系统降频/关机
+				cpu_temp_crit: temp-crit {
+					temperature = <90000>;
+					hysteresis = <5000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				// 温度→风扇等级映射（对应 cooling-levels = <0 25 45 65 85 100>）
+				map_off {
+					trip = <&cpu_temp_off>;
+					cooling-device = <&fan 0 0>; // <37℃ → 等级0（停转）
+				};
+				map1 {
+					trip = <&cpu_temp_level1>;
+					cooling-device = <&fan 1 1>; // 40℃ → 等级1（25%）
+				};
+				map2 {
+					trip = <&cpu_temp_level2>;
+					cooling-device = <&fan 2 2>; // 48℃ → 等级2（45%）
+				};
+				map3 {
+					trip = <&cpu_temp_level3>;
+					cooling-device = <&fan 3 3>; // 56℃ → 等级3（65%）
+				};
+				map4 {
+					trip = <&cpu_temp_level4>;
+					cooling-device = <&fan 4 4>; // 64℃ → 等级4（85%）
+				};
+				map5 {
+					trip = <&cpu_temp_level5>;
+					cooling-device = <&fan 5 5>; // 72℃ → 等级5（100%）
+				};
+				map_crit {
+					trip = <&cpu_temp_crit>;
+					cooling-device = <&fan 5 5>; // 临界温度保持满速
+				};
+			};
+		};
+	};
+
 	fan: pwm-fan {
 		compatible = "pwm-fan";
-		cooling-levels = <0 70 75 80 100>;
+		cooling-levels = <0 25 45 65 85 100>;
+		cooling-min-level = <0>;
+		cooling-max-level = <5>;
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm3 0 50000 0>;
 		#cooling-cells = <2>;
+		status = "okay";
 	};
 
 	pwm-leds {
