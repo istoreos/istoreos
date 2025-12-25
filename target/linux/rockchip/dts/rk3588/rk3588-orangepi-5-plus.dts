@@ -106,6 +106,7 @@
 			priority = <100>;
 			polling-delay-passive = <100>; // 被动散热轮询间隔 100ms
 			polling-delay = <0>;
+			hysteresis = <1000>;
 			thermal-sensors = <&tsadc 0>; // 绑定 CPU 温度传感器
 			status = "okay";
 
@@ -114,7 +115,7 @@
 				cpu_temp_off: temp-off {
 					temperature = <37000>; // 单位 m℃（37℃）
 					hysteresis = <3000>; // 回差 3℃，避免频繁启停
-					type = "passive";
+					type = "active";
 				};
 
 				// 风扇1级（25%）：40℃ 触发启动
