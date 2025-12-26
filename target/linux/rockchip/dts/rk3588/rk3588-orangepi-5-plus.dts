@@ -104,9 +104,8 @@
 		// CPU 核心主温控区（优先级最高，关联风扇调速）
 		cpu_thermal: cpu-thermal {
 			priority = <100>;
-			polling-delay-passive = <100>; // 被动散热轮询间隔 100ms
-			polling-delay = <0>;
-			hysteresis = <1000>;
+			polling-delay-passive = <250>; // 被动散热轮询间隔 250ms
+			polling-delay-active = <100>; // 主动散热轮询间隔 100ms
 			thermal-sensors = <&tsadc 0>; // 绑定 CPU 温度传感器
 			status = "okay";
 
@@ -122,35 +121,35 @@
 				cpu_temp_level1: temp-level1 {
 					temperature = <40000>;
 					hysteresis = <3000>;
-					type = "passive";
+					type = "active";
 				};
 
 				// 风扇2级（45%）：48℃ 触发
 				cpu_temp_level2: temp-level2 {
 					temperature = <48000>;
 					hysteresis = <3000>;
-					type = "passive";
+					type = "active";
 				};
 
 				// 风扇3级（65%）：56℃ 触发
 				cpu_temp_level3: temp-level3 {
 					temperature = <56000>;
 					hysteresis = <3000>;
-					type = "passive";
+					type = "active";
 				};
 
 				// 风扇4级（85%）：64℃ 触发
 				cpu_temp_level4: temp-level4 {
 					temperature = <64000>;
 					hysteresis = <3000>;
-					type = "passive";
+					type = "active";
 				};
 
 				// 风扇5级（100%）：72℃ 触发
 				cpu_temp_level5: temp-level5 {
 					temperature = <72000>;
 					hysteresis = <3000>;
-					type = "passive";
+					type = "active";
 				};
 
 				// 临界保护：90℃ 触发系统降频/关机
@@ -169,19 +168,19 @@
 				};
 				map1 {
 					trip = <&cpu_temp_level1>;
-					cooling-device = <&fan 1 1>; // 40℃ → 等级1（25%）
+					cooling-device = <&fan 1 5>; // 40℃ → 允许1~5级调速
 				};
 				map2 {
 					trip = <&cpu_temp_level2>;
-					cooling-device = <&fan 2 2>; // 48℃ → 等级2（45%）
+					cooling-device = <&fan 2 5>; // 48℃ → 允许2~5级调速
 				};
 				map3 {
 					trip = <&cpu_temp_level3>;
-					cooling-device = <&fan 3 3>; // 56℃ → 等级3（65%）
+					cooling-device = <&fan 3 5>; // 56℃ → 允许3~5级调速
 				};
 				map4 {
 					trip = <&cpu_temp_level4>;
-					cooling-device = <&fan 4 4>; // 64℃ → 等级4（85%）
+					cooling-device = <&fan 4 5>; // 64℃ → 允许4~5级调速
 				};
 				map5 {
 					trip = <&cpu_temp_level5>;
@@ -198,8 +197,6 @@
 	fan: pwm-fan {
 		compatible = "pwm-fan";
 		cooling-levels = <0 25 45 65 85 100>;
-		cooling-min-level = <0>;
-		cooling-max-level = <5>;
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm3 0 50000 0>;
 		#cooling-cells = <2>;
