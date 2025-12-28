@@ -75,7 +75,7 @@ diff --git a/src/expression.c b/src/expression.c
 index c0cb7f22..39d2821a 100644
 --- a/src/expression.c
 +++ b/src/expression.c
-@@ -803,6 +803,51 @@ struct expr *range_expr_alloc(const struct location *loc,
+@@ -803,6 +803,55 @@ struct expr *range_expr_alloc(const struct location *loc,
  	return expr;
  }
  
@@ -100,7 +100,11 @@ index c0cb7f22..39d2821a 100644
 +	.type		= EXPR_FULLCONE,
 +	.name		= "fullcone",
 +	.print		= fullcone_expr_print,
-+	.json		= fullcone_expr_json,
++#ifdef ENABLE_JSON
++    .json   = fullcone_expr_json,
++#else
++    .json   = NULL,
++#endif
 +	.clone		= fullcone_expr_clone,
 +	.destroy	= fullcone_expr_destroy,
 +};
