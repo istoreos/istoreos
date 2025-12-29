@@ -47,7 +47,7 @@ define Device/friendlyarm_nanopi-r2c
   SOC := rk3328
   DEVICE_PACKAGES := kmod-usb-net-rtl8152
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r2c
+# TARGET_DEVICES += friendlyarm_nanopi-r2c
 
 define Device/friendlyarm_nanopi-r2c-plus
   DEVICE_VENDOR := FriendlyARM
@@ -55,7 +55,7 @@ define Device/friendlyarm_nanopi-r2c-plus
   SOC := rk3328
   DEVICE_PACKAGES := kmod-usb-net-rtl8152
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r2c-plus
+# TARGET_DEVICES += friendlyarm_nanopi-r2c-plus
 
 define Device/friendlyarm_nanopi-r2s
   DEVICE_VENDOR := FriendlyARM
@@ -116,7 +116,7 @@ define Device/friendlyarm_nanopi-r5c
   SOC := rk3568
   DEVICE_PACKAGES := kmod-r8169 kmod-rtw88-8822ce rtl8822ce-firmware wpad-basic-mbedtls
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r5c
+# TARGET_DEVICES += friendlyarm_nanopi-r5c
 
 define Device/friendlyarm_nanopi-r5s
   DEVICE_VENDOR := FriendlyARM
@@ -132,7 +132,7 @@ define Device/friendlyarm_nanopi-r6c
   SOC := rk3588s
   DEVICE_PACKAGES := kmod-r8169
 endef
-TARGET_DEVICES += friendlyarm_nanopi-r6c
+# TARGET_DEVICES += friendlyarm_nanopi-r6c
 
 define Device/friendlyarm_nanopi-r6s
   DEVICE_VENDOR := FriendlyARM
@@ -148,7 +148,7 @@ define Device/linkease_easepi-r1
   SOC := rk3568
   DEVICE_PACKAGES := blkdiscard block-mount kmod-button-hotplug kmod-nvme kmod-r8169
 endef
-TARGET_DEVICES += linkease_easepi-r1
+# TARGET_DEVICES += linkease_easepi-r1
 
 define Device/lunzn_fastrhino-r66s
   DEVICE_VENDOR := Lunzn
@@ -156,7 +156,7 @@ define Device/lunzn_fastrhino-r66s
   SOC := rk3568
   DEVICE_PACKAGES := kmod-r8169
 endef
-TARGET_DEVICES += lunzn_fastrhino-r66s
+# TARGET_DEVICES += lunzn_fastrhino-r66s
 
 define Device/pine64_rock64
   DEVICE_VENDOR := Pine64
