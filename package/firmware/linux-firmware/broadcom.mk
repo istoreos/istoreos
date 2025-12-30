@@ -161,6 +161,13 @@ define Package/brcmfmac-nvram-43455-sdio/install
 endef
 $(eval $(call BuildPackage,brcmfmac-nvram-43455-sdio))
 
+Package/brcmfmac-nvram-43455-sdio-generic = $(call Package/firmware-default,Broadcom BCM43455 SDIO NVRAM (Generic),+brcmfmac-nvram-43455-sdio,LICENCE.broadcom_bcm43xx)
+define Package/brcmfmac-nvram-43455-sdio-generic/install
+	$(INSTALL_DIR) $(1)/lib/firmware/brcm
+	$(LN) brcmfmac43455-sdio.raspberrypi,4-model-b.txt $(1)/lib/firmware/brcm/brcmfmac43455-sdio.txt
+endef
+$(eval $(call BuildPackage,brcmfmac-nvram-43455-sdio-generic))
+
 Package/brcmfmac-nvram-4356-sdio = $(call Package/firmware-default,Broadcom BCM4356 SDIO NVRAM,,LICENCE.broadcom_bcm43xx)
 define Package/brcmfmac-nvram-4356-sdio/install
 	$(INSTALL_DIR) $(1)/lib/firmware/brcm
