@@ -23,7 +23,7 @@ platform_check_part_size() {
 }
 
 platform_check_image() {
-	local diskdev partdev diff failed
+	local diskdev partdev diff
 
 	export_bootdevice && export_partdevice diskdev 0 || {
 		v "Unable to determine upgrade device"
@@ -37,19 +37,15 @@ platform_check_image() {
 
 	get_partitions /tmp/image.bs image
 
-	if [ "$SAVE_CONFIG" -eq 1 ] || ( echo "$diskdev" | grep -q '^mmcblk' && [ -e "/dev/${diskdev}boot0" ] ); then
-		platform_check_part_size || failed=1
-	else
-		#compare tables
-		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
-	fi
+	platform_check_part_size || diff=1
 	rm -f /tmp/image.bs /tmp/partmap.bootdisk /tmp/partmap.image
 
-	if [ -n "$failed" ]; then
-		exit 1
-	fi
-
 	if [ -n "$diff" ]; then
+		if echo "$diskdev" | grep -q '^mmcblk' && [ -e "/dev/${diskdev}boot0" ]; then
+			v "Target is eMMC, but image partition layout has changed, cannot process."
+			notify_firmware_broken || exit 1
+			return 1
+		fi
 		v "Partition layout has changed. Full image will be written."
 		ask_bool 0 "Abort" && exit 1
 		return 0
@@ -73,8 +69,8 @@ platform_do_upgrade() {
 
 	get_partitions /tmp/image.bs image
 
-	if [ -n "$UPGRADE_BACKUP" ] || ( echo "$diskdev" | grep -q '^mmcblk' && [ -e "/dev/${diskdev}boot0" ] ); then
-		platform_check_part_size || return 1
+	if [ "$UPGRADE_OPT_SAVE_PARTITIONS" = "1" -o -n "$UPGRADE_BACKUP" ] || ( echo "$diskdev" | grep -q '^mmcblk' && [ -e "/dev/${diskdev}boot0" ] ); then
+		platform_check_part_size || diff=1
 	else
 		#compare tables
 		diff="$(grep -F -x -v -f /tmp/partmap.bootdisk /tmp/partmap.image)"
