@@ -463,7 +463,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie2_2_rst>;
 	reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_pcie>;
+	vpcie3v3-supply = <&vcc_3v3_s3>;
 	status = "okay";
 };
 
@@ -727,7 +727,7 @@
 
 // bluetooth
 &uart9 {
-	pinctrl-0 = <&uart9m0_xfer>;
+	pinctrl-0 = <&uart9m0_xfer &uart9m0_ctsn>;
 	status = "okay";
 };
 
