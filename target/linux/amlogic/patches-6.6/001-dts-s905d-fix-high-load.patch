@@ -1,0 +1,19 @@
+From c5aab1467eb35daa5324c577fa4a0aad5b994abf Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 26 Mar 2024 11:16:52 +0800
+Subject: [PATCH] arm64: dts: amlogic meson-gxl-s905d-p230 fix cpu high load
+
+---
+ arch/arm64/boot/dts/amlogic/meson-gxl-s905d-p230.dts | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-p230.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-p230.dts
+@@ -86,7 +86,6 @@
+ 		interrupt-parent = <&gpio_intc>;
+ 		/* MAC_INTR on GPIOZ_15 */
+ 		interrupts = <25 IRQ_TYPE_LEVEL_LOW>;
+-		eee-broken-1000t;
+ 	};
+ };
+ 
