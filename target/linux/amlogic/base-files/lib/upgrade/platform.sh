@@ -2,6 +2,8 @@
 # 1. keep overlay partition when upgrade
 # 2. reset rom uuid in ext_overlay (aka sandbox mode) when upgrade (stage2:istoreos_pre_upgrade)
 
+REQUIRE_IMAGE_METADATA=1
+
 platform_check_part_size() {
 	local part start size cursize
 	#iterate over each partition from the image and check boot disk partition size
