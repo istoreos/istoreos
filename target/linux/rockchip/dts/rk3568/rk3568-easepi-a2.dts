@@ -160,3 +160,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart8m0_xfer &uart8m0_ctsn>;
 };
+
+// IR receiver
+&pwm3 {
+	compatible = "rockchip,remotectl-pwm";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm3_pins>;
+	remote_pwm_id = <3>;
+	handle_cpu_id = <1>;
+	remote_support_psci = <0>;
+	status = "okay";
+};
