@@ -1,0 +1,22 @@
+From 128dd33903d6ef59548a616d84ef1e921006cb28 Mon Sep 17 00:00:00 2001
+From: jjm2473 <1129525450@qq.com>
+Date: Tue, 26 Mar 2024 15:04:27 +0800
+Subject: [PATCH] dts: amlogic meson-gxl-s905d-phicomm-n1 disable sd
+
+---
+ arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+--- a/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
++++ b/arch/arm64/boot/dts/amlogic/meson-gxl-s905d-phicomm-n1.dts
+@@ -45,6 +45,10 @@
+ 	dr_mode = "host";
+ };
+ 
++&sd_emmc_b {
++	status = "disabled";
++};
++
+ &ethmac {
+ 	snps,aal;
+ 	snps,txpbl = <0x8>;
