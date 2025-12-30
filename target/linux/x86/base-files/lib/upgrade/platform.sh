@@ -25,11 +25,13 @@ platform_check_image() {
 	if part_magic_efi "/dev/$diskdev"; then
 		if ! part_magic_efi "$1"; then
 			v "Flashing a non EFI image to EFI system!"
+			notify_firmware_broken || exit 1
 			return 1
 		fi
 	else
 		if part_magic_efi "$1"; then
 			v "Flashing a EFI image to non EFI system!"
+			notify_firmware_broken || exit 1
 			return 1
 		fi
 	fi
