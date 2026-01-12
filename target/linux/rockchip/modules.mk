@@ -1,7 +1,25 @@
+define KernelPackage/cec-core
+  SUBMENU:=$(VIDEO_MENU)
+  DEPENDS:=@TARGET_rockchip
+  TITLE:=CEC Core
+  HIDDEN:=1
+  KCONFIG:=\
+	CONFIG_CEC_CORE
+  FILES:=\
+	$(LINUX_DIR)/drivers/media/cec/cec.ko@lt5.10 \
+	$(LINUX_DIR)/drivers/media/cec/core/cec.ko@ge5.10
+endef
+
+define KernelPackage/cec-core/description
+  CEC Core
+endef
+
+$(eval $(call KernelPackage,cec-core))
+
 
 define KernelPackage/drm-rockchip-rk35xx
   SUBMENU:=$(VIDEO_MENU)
-  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-backlight +kmod-drm +kmod-drm-kms-helper
+  DEPENDS:=@TARGET_rockchip_rk35xx +kmod-backlight +kmod-drm +kmod-drm-kms-helper +kmod-cec-core
   TITLE:=DRM for rockchip RK35xx
   KCONFIG:=\
 	CONFIG_DRM_ROCKCHIP \
@@ -17,9 +35,7 @@ define KernelPackage/drm-rockchip-rk35xx
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-hdcp.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-cec.ko \
-	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp-cec.ko \
-	$(LINUX_DIR)/drivers/media/cec/cec.ko@lt5.10 \
-	$(LINUX_DIR)/drivers/media/cec/core/cec.ko@ge5.10
+	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp-cec.ko
   AUTOLOAD:=$(call AutoLoad,80,dw-hdmi-cec dw-hdmi-hdcp dw-hdmi-qp-cec rockchipdrm)
 endef
 
@@ -140,6 +156,29 @@ define KernelPackage/rkgpu-mali400/description
 endef
 
 $(eval $(call KernelPackage,rkgpu-mali400))
+
+
+define KernelPackage/rockchip-hdmirx
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=Rockchip HDMI RX
+  KCONFIG:=\
+	CONFIG_VIDEO_ROCKCHIP_HDMIRX \
+	CONFIG_VIDEO_ROCKCHIP_HDMIRX_CLASS
+  FILES:=\
+	$(LINUX_DIR)/drivers/media/common/videobuf2/videobuf2-dma-contig.ko \
+	$(LINUX_DIR)/drivers/media/v4l2-core/v4l2-dv-timings.ko \
+	$(LINUX_DIR)/drivers/media/platform/rockchip/hdmirx/rockchip-hdmirx-class.ko \
+	$(LINUX_DIR)/drivers/media/platform/rockchip/hdmirx/rockchip-hdmirx.ko
+  AUTOLOAD:=$(call AutoLoad,80,rockchip-hdmirx)
+  $(call AddDepends/video,@TARGET_rockchip +kmod-cec-core +kmod-video-videobuf2)
+endef
+
+define KernelPackage/rockchip-hdmirx/description
+  Rockchip HDMI RX
+endef
+
+$(eval $(call KernelPackage,rockchip-hdmirx))
+
 
 define KernelPackage/sound-soc-rockchip
   SUBMENU:=$(SOUND_MENU)
