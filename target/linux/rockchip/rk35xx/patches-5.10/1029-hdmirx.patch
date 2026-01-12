@@ -1,0 +1,30 @@
+--- a/drivers/media/platform/Kconfig
++++ b/drivers/media/platform/Kconfig
+@@ -147,6 +147,7 @@ config VIDEO_RENESAS_CEU
+ 	help
+ 	  This is a v4l2 driver for the Renesas CEU Interface
+ 
++source "drivers/media/platform/rockchip/Kconfig"
+ source "drivers/media/platform/exynos4-is/Kconfig"
+ source "drivers/media/platform/am437x/Kconfig"
+ source "drivers/media/platform/xilinx/Kconfig"
+--- a/drivers/media/platform/Makefile
++++ b/drivers/media/platform/Makefile
+@@ -53,6 +53,7 @@ obj-$(CONFIG_VIDEO_RENESAS_JPU)		+= rcar
+ obj-$(CONFIG_VIDEO_RENESAS_VSP1)	+= vsp1/
+ 
+ obj-$(CONFIG_VIDEO_ROCKCHIP_RGA)	+= rockchip/rga/
++obj-$(CONFIG_VIDEO_ROCKCHIP_HDMIRX_CLASS) += rockchip/hdmirx/
+ 
+ obj-y	+= omap/
+ 
+--- a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -5,6 +5,7 @@
+  * Author: Dingxian Wen <shawn.wen@rock-chips.com>
+  */
+ 
++#include <dt-bindings/soc/rockchip-system-status.h>
+ #include <linux/clk.h>
+ #include <linux/cpufreq.h>
+ #include <linux/debugfs.h>
