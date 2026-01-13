@@ -81,6 +81,7 @@ $(call Device/rk3528)
   DEVICE_MODEL := sige1
   SUPPORTED_DEVICES += armsom,sige1 armsom,sige1-v1 armsom,sige1-v1.0
   DEVICE_PACKAGES := kmod-r8125 kmod-thermal
+  DEFAULT := n
 endef
 TARGET_DEVICES += armsom_sige1
 
@@ -92,6 +93,7 @@ $(call Device/rk3588)
   DEVICE_DTS := rk3588-sige7-v1-1 rk3588-sige7-v1
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-hwmon-pwmfan kmod-thermal kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
   IMAGE/sysupgrade.img.gz := boot-combined | boot-script rk3588 | pine64-img | gzip | append-metadata
+  DEFAULT := n
 endef
 TARGET_DEVICES += armsom_sige7-v1
 
@@ -188,6 +190,7 @@ $(call Device/easepi_a2)
   DEVICE_MODEL := A2 (QC)
   DEVICE_DTS := rk3568-easepi-a2-qc
   SUPPORTED_DEVICES := easepi,a2-qc
+  DEFAULT := n
 endef
 TARGET_DEVICES += easepi_a2_qc
 
@@ -258,6 +261,7 @@ $(call Device/rk3588)
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-dsa-mv88e6xxx kmod-rkwifi-bcmdhd-pcie rkwifi-firmware-ap6275p
   SUPPORTED_DEVICES += yijiahe,jm10
   DEVICE_DTS := rk3588-yijiahe-jm10
+  DEFAULT := n
 endef
 TARGET_DEVICES += yijiahe_jm10
 
@@ -312,6 +316,7 @@ $(call Device/rk3588)
   DEVICE_VENDOR := Inspur
   DEVICE_MODEL := IHEC301
   DEVICE_PACKAGES := kmod-scsi-core kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+  DEFAULT := n
 endef
 TARGET_DEVICES += inspur_ihec301
 
@@ -322,6 +327,7 @@ $(call Device/rk3568)
   DEVICE_DTS := rk3568-jsy-h1
   SUPPORTED_DEVICES += jsy,h1
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-scsi-core kmod-thermal kmod-leds-pwm
+  DEFAULT := n
 endef
 TARGET_DEVICES += jsy_h1
 
@@ -332,6 +338,7 @@ $(call Device/rk3568)
   DEVICE_DTS := rk3568-yyy-h1
   SUPPORTED_DEVICES += yyy,h1
   DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
+  DEFAULT := n
 endef
 TARGET_DEVICES += yyy_h1
 
@@ -342,6 +349,7 @@ $(call Device/rk3568)
   DEVICE_DTS := rk3568-idiskk-h1
   SUPPORTED_DEVICES += idiskk,h1
   DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan kmod-backlight-gpio kmod-leds-pwm
+  DEFAULT := n
 endef
 TARGET_DEVICES += idiskk_h1
 
@@ -391,6 +399,7 @@ define Device/ynn_ynnnas
   DEVICE_MODEL := NAS
   SUPPORTED_DEVICES += ynn,nas
   DEVICE_PACKAGES := kmod-scsi-core
+  DEFAULT := n
 endef
 TARGET_DEVICES += ynn_ynnnas
 
@@ -430,6 +439,7 @@ $(call Device/rk3566)
   DEVICE_DTS := rk3566-hes30
   SUPPORTED_DEVICES += le,hes30
   DEVICE_PACKAGES := kmod-scsi-core kmod-thermal kmod-hwmon-pwmfan
+  DEFAULT := n
 endef
 TARGET_DEVICES += le_hes30
 
@@ -439,6 +449,7 @@ $(call Device/rk3566)
   DEVICE_MODEL := NAS 101
   DEVICE_DTS := rk3566-klan-nas101
   DEVICE_PACKAGES := kmod-scsi-core
+  DEFAULT := n
 endef
 TARGET_DEVICES += klan_nas101
 
@@ -448,6 +459,7 @@ $(call Device/rk3566)
   DEVICE_MODEL := NAS 102
   DEVICE_DTS := rk3566-klan-nas102
   DEVICE_PACKAGES := kmod-scsi-core
+  DEFAULT := n
 endef
 TARGET_DEVICES += klan_nas102
 
@@ -499,6 +511,7 @@ $(call Device/rk3568)
   DEVICE_DTS := rk3568-roc-k40pro-v2
   SUPPORTED_DEVICES += roceos,k40pro
   DEVICE_PACKAGES := kmod-r8125 kmod-r8168 kmod-nvme kmod-thermal
+  DEFAULT := n
 endef
 TARGET_DEVICES += roc_k40pro
 
@@ -509,6 +522,7 @@ $(call Device/rk3568)
   DEVICE_DTS := rk3568-roc-k50s
   SUPPORTED_DEVICES += roceos,k50s
   DEVICE_PACKAGES := kmod-r8125 kmod-thermal
+  DEFAULT := n
 endef
 TARGET_DEVICES += roc_k50s
 
@@ -518,6 +532,7 @@ $(call Device/rk3588)
   DEVICE_MODEL := K60PRO
   DEVICE_DTS := rk3588-k60pro
   DEVICE_PACKAGES := kmod-r8125 kmod-thermal
+  DEFAULT := n
 endef
 TARGET_DEVICES += roc_k60pro
 
