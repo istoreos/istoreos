@@ -28,6 +28,20 @@
 		led-upgrade = &led_red;
 	};
 
+	/* If hdmirx node is disabled, delete the reserved-memory node here. */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		cma {
+			compatible = "shared-dma-pool";
+			reg = <0x0 (256 * 0x100000) 0x0 (256 * 0x100000)>;
+			reusable;
+			linux,cma-default;
+		};
+	};
+
 	dp0_sound: dp0-sound {
 		compatible = "rockchip,hdmi";
 		rockchip,card-name= "rockchip,dp0";
