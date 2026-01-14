@@ -174,13 +174,6 @@
 		vin-supply = <&vcc_3v3_s3>;
 	};
 
-	vcc_sata_pwr: vcc-sata-pwr {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_sata_pwr";
-		vin1-supply = <&vcc12v_dcin>;
-		vin2-supply = <&vcc5v0_sys>;
-	};
-
 	vcc3v8_modem: vcc3v8-modem {
 		compatible = "regulator-fixed";
 		enable-active-high;
@@ -646,16 +639,10 @@
 
 &sata1 {
 	status = "okay";
-	sata-port@0 {
-		target-supply = <&vcc_sata_pwr>;
-	};
 };
 
 &sata2 {
 	status = "okay";
-	sata-port@0 {
-		target-supply = <&vcc_sata_pwr>;
-	};
 };
 
 &sdhci {
