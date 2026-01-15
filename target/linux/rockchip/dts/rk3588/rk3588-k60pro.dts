@@ -627,16 +627,12 @@
 
 &sata1 {
 	status = "okay";
-	sata-port@0 {
-		target-supply = <&vcc_sata_pwr>;
-	};
+	target-supply = <&vcc_sata_pwr>;
 };
 
 &sata2 {
 	status = "okay";
-	sata-port@0 {
-		target-supply = <&vcc_sata_pwr>;
-	};
+	target-supply = <&vcc_sata_pwr>;
 };
 
 &sdhci {
