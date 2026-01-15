@@ -194,6 +194,16 @@ $(call Device/easepi_a2)
 endef
 TARGET_DEVICES += easepi_a2_qc
 
+define Device/easepi_r2
+$(call Device/rk3588)
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := R2
+  DEVICE_DTS := rk3588-easepi-r2
+  SUPPORTED_DEVICES := linkease,easepi-r2
+  DEVICE_PACKAGES := kmod-r8125 kmod-nvme kmod-thermal kmod-brcmfmac cypress-firmware-43455-sdio brcmfmac-firmware-43455-sdio-nvram
+endef
+TARGET_DEVICES += easepi_r2
+
 define Device/friendlyelec_nanopi-r3s
 $(call Device/rk3566)
   DEVICE_VENDOR := FriendlyARM

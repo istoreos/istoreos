@@ -35,6 +35,7 @@ rockchip_setup_interfaces()
 		ucidef_set_interfaces_lan_wan "eth1 eth2" "eth0"
 		;;
 	easepi,r1|easepi,r1-lite|\
+	linkease,easepi-r2|\
 	roceos,k40pro|\
 	lyt,t68m|\
 	lyt,t88m|\
@@ -119,6 +120,7 @@ rockchip_setup_macs()
 	armsom,sige7-v1|\
 	easepi,ars4|\
 	easepi,r1|easepi,r1-lite|\
+	linkease,easepi-r2|\
 	ezpro,mrkaio-m68s|\
 	ezpro,mrkaio-m68s-plus|\
 	firefly,rk3568-roc-pc|\
