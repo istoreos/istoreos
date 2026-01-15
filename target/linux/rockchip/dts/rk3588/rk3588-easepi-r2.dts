@@ -20,6 +20,10 @@
 		led-failsafe = &led_red;
 		led-running = &led_red;
 		led-upgrade = &led_red;
+
+		mmc0 = &sdmmc;
+		mmc1 = &sdio;
+		mmc2 = &sdhci;
 	};
 
 	leds {
