@@ -28,11 +28,14 @@ define KernelPackage/drm-rockchip
 	CONFIG_DRM_DISPLAY_CONNECTOR \
 	CONFIG_HDMI=y \
 	CONFIG_DRM_DW_HDMI \
+	CONFIG_DRM_DW_HDMI_QP \
 	CONFIG_DRM_DW_HDMI_CEC \
 	CONFIG_DRM_DW_HDMI_GP_AUDIO=n \
+	CONFIG_PHY_ROCKCHIP_SAMSUNG_HDPTX \
 	CONFIG_ROCKCHIP_ANALOGIX_DP=n \
 	CONFIG_ROCKCHIP_CDN_DP=n \
 	CONFIG_ROCKCHIP_DW_HDMI=y \
+	CONFIG_ROCKCHIP_DW_HDMI_QP=y \
 	CONFIG_ROCKCHIP_DW_MIPI_DSI=n \
 	CONFIG_ROCKCHIP_INNO_HDMI=n \
 	CONFIG_ROCKCHIP_LVDS=n \
@@ -44,11 +47,13 @@ define KernelPackage/drm-rockchip
 	CONFIG_DRM_PANEL_BRIDGE=y
   FILES:= \
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi.ko \
+	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/synopsys/dw-hdmi-cec.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/bridge/display-connector.ko \
 	$(LINUX_DIR)/drivers/gpu/drm/rockchip/rockchipdrm.ko \
+	$(LINUX_DIR)/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.ko \
 	$(LINUX_DIR)/drivers/media/cec/core/cec.ko
-  AUTOLOAD:=$(call AutoLoad,80,dw-hdmi-cec rockchipdrm display-connector)
+  AUTOLOAD:=$(call AutoLoad,80,phy-rockchip-samsung-hdptx dw-hdmi-cec rockchipdrm display-connector)
 endef
 
 define KernelPackage/drm-rockchip/description
