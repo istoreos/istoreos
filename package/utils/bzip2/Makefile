@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bzip2
 PKG_VERSION:=1.0.8
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://sourceware.org/pub/bzip2
@@ -79,6 +79,7 @@ define Package/libbz2/install
 	$(INSTALL_DIR) $(1)/usr/lib/
 	$(CP) $(PKG_BUILD_DIR)/libbz2.so.$(PKG_VERSION) $(1)/usr/lib/
 	$(LN) libbz2.so.$(PKG_VERSION) $(1)/usr/lib/libbz2.so.1.0
+	$(LN) libbz2.so.$(PKG_VERSION) $(1)/usr/lib/libbz2.so.1
 endef
 
 define Package/bzip2/install
