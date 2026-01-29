@@ -2,7 +2,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=libxml2
 PKG_VERSION:=2.14.5
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@GNOME/libxml2/$(basename $(PKG_VERSION))
@@ -12,6 +12,14 @@ PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=Copyright
 PKG_CPE_ID:=cpe:/a:xmlsoft:libxml2
 HOST_BUILD_DEPENDS := libiconv-full/host
+
+PKG_CONFIG_DEPENDS:= CONFIG_LIBXML2_WITH_PYTHON
+
+LIBXML2_WITH_PYTHON:=OFF
+ifdef CONFIG_LIBXML2_WITH_PYTHON
+  PKG_BUILD_DEPENDS := python3
+  LIBXML2_WITH_PYTHON:=ON
+endif
 
 include $(INCLUDE_DIR)/host-build.mk
 include $(INCLUDE_DIR)/package.mk
@@ -57,6 +65,11 @@ endef
 define Package/libxml2-utils/description
   This package contains the binaries xmllint and xmlcatalog
   from libxml2, a library for manipulating XML and HTML resources.
+endef
+
+define Package/libxml2/config
+config LIBXML2_WITH_PYTHON
+	bool
 endef
 
 CMAKE_HOST_OPTIONS += \
@@ -116,7 +129,7 @@ CMAKE_OPTIONS += \
 	-DLIBXML2_WITH_PATTERN=ON \
 	-DLIBXML2_WITH_PROGRAMS=ON \
 	-DLIBXML2_WITH_PUSH=ON \
-	-DLIBXML2_WITH_PYTHON=OFF \
+	-DLIBXML2_WITH_PYTHON=$(LIBXML2_WITH_PYTHON) \
 	-DLIBXML2_WITH_READER=ON \
 	-DLIBXML2_WITH_REGEXPS=ON \
 	-DLIBXML2_WITH_RUN_DEBUG=OFF \
@@ -161,6 +174,11 @@ define Build/InstallDev
 
 	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
 	$(INSTALL_DATA) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libxml-2.0.pc $(1)/usr/lib/pkgconfig/
+
+ifdef CONFIG_LIBXML2_WITH_PYTHON
+	$(INSTALL_DIR) $(1)/usr/python
+	$(CP) $(PKG_INSTALL_DIR)/usr/python/* $(1)/usr/python
+endif
 endef
 
 define Host/Install
