@@ -1135,9 +1135,6 @@
 };
 
 &rknpu {
-	reg = <0x0 0xfdab0000 0x0 0x8000>,
-		      <0x0 0xfdac0000 0x0 0x8000>,
-		      <0x0 0xfdad0000 0x0 0x8000>;
     rknpu-supply = <&vdd_npu_s0>;
     mem-supply = <&vdd_npu_mem_s0>;
     status = "okay";
