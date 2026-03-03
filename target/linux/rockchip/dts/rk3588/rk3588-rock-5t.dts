@@ -236,6 +236,7 @@
 
 &gpu {
 	mali-supply = <&vdd_gpu_s0>;
+	power-off-delay-ms = <20>;
 	status = "okay";
 };
 
@@ -569,14 +570,6 @@
 	reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc3v3_pcie30>;
 	status = "okay";
-};
-
-&pd_gpu {
-	domain-supply = <&vdd_gpu_s0>;
-};
-
-&pd_npu {
-	domain-supply = <&vdd_npu_s0>;
 };
 
 &pinctrl {
