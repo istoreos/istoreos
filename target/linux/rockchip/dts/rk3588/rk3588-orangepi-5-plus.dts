@@ -113,7 +113,6 @@
 		fan-supply = <&vcc5v0_sys>;
 		pwms = <&pwm3 0 50000 0>;
 		#cooling-cells = <2>;
-		status = "okay";
 	};
 
 	pwm-leds {
@@ -538,10 +537,8 @@
 };
 
 &package_thermal {
-	priority = <100>;
 	polling-delay = <1000>;
 	thermal-sensors = <&tsadc 0>;
-	status = "okay";
 
 	trips {
 		package_fan0: package-fan0 {
