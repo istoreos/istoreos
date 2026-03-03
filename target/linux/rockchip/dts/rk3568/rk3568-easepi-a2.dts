@@ -10,6 +10,11 @@
 	hwmodel_id = "A2";
 	hw_support = "hdmi";
 
+	aliases {
+		ethernet0 = &pcie_eth0;
+		/delete-property/ ethernet1;
+	};
+
 	vcc3v3_nvme: vcc3v3-nvme-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_nvme";
@@ -92,6 +97,20 @@
 &pcie2x1 {
 	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
+
+	pcie@10 {
+		reg = <0x00100000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth0: pcie-eth@10,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
 };
 
 &pcie3x1 {
