@@ -20,6 +20,9 @@ export_ota_url() {
 	lyt,t68m)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*,}"
 		;;
+	easepi,a2)
+		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/easepi-a2"
+		;;
 	easepi,r1)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/easepi-r1"
 		;;

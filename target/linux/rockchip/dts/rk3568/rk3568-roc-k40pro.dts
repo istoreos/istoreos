@@ -22,6 +22,7 @@
 	aliases {
 		ethernet2 = &pcie_eth2;
 		ethernet3 = &pcie_eth3;
+		mmc2 = &sdmmc2;
 	};
 
 	pwr-net-25g {
@@ -99,12 +100,12 @@
 	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
-	pcie@00 {
+	pcie@0,0 {
 		reg = <0x00000000 0 0 0 0>;
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		pcie_eth3: pcie-eth@00,0 {
+		pcie_eth3: pcie@00,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
 
@@ -118,12 +119,12 @@
 	reset-gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
-	pcie@10 {
+	pcie@0,0 {
 		reg = <0x00100000 0 0 0 0>;
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		pcie_eth2: pcie-eth@10,0 {
+		pcie_eth2: pcie@10,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
 
