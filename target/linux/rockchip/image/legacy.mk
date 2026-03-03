@@ -300,6 +300,14 @@ $(call Device/Legacy/rk3588,$(1))
 endef
 TARGET_DEVICES += xunlong_orangepi-5-plus
 
+define Device/radxa_rock-5t
+$(call Device/Legacy/rk3588,$(1))
+  DEVICE_VENDOR := Radxa 
+  DEVICE_MODEL := ROCK 5T
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal
+endef
+TARGET_DEVICES += radxa_rock-5t
+
 define Device/cyber_cyber3588-aib
 $(call Device/Legacy/rk3588,$(1))
   DEVICE_VENDOR := Cyber
