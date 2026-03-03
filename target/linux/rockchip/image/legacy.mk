@@ -77,6 +77,15 @@ $(call Device/Legacy/rk3568,$(1))
   DEVICE_DTS = rk3568/$$(SOC)-$(lastword $(subst _, ,$(1)))
 endef
 
+define Device/easepi_a2
+$(call Device/Legacy/rk3568,$(1))
+  DEVICE_VENDOR := EasePi
+  DEVICE_MODEL := A2
+  DEVICE_DTS := rk3568/rk3568-easepi-a2
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-brcmfmac cypress-firmware-43455-sdio brcmfmac-nvram-43455-sdio-generic
+endef
+TARGET_DEVICES += easepi_a2
+
 define Device/easepi_r1
 $(call Device/Legacy/rk3568,$(1))
   DEVICE_VENDOR := EasePi

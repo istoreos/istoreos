@@ -389,7 +389,7 @@ board_set_iface_smp_affinity() {
 			set_iface_cpumask 5 eth1 eth1-0 a
 		fi
 		;;
-	easepi,r2|\
+	easepi,a2|\
 	ynn,nas|\
 	le,hes30|\
 	jp,tvbox|\

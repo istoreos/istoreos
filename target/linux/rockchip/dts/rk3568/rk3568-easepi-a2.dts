@@ -1,0 +1,180 @@
+/dts-v1/;
+
+#include "rk3568-roc-k40pro.dtsi"
+
+/ {
+	compatible = "easepi,a2", "rockchip,rk3568";
+	model = "EasePi A2";
+	eth_order = "0000:01:00.0";
+	kdebug = "0";
+	hwmodel_id = "A2";
+	hw_support = "hdmi";
+
+	aliases {
+		ethernet0 = &pcie_eth0;
+		/delete-property/ ethernet1;
+	};
+
+	vcc3v3_nvme: vcc3v3-nvme-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_nvme";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&dc_12v>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc3v3_nvme_en>;
+	};
+
+};
+
+&gmac0 {
+	status = "disabled";
+};
+
+&gmac1 {
+	status = "disabled";
+};
+
+//配置WL_REG_ON引脚
+&sdio_pwrseq {
+	status = "okay";
+	reset-gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_LOW>;
+	post-power-on-delay-ms = <200>;
+};
+
+// 配置WL_HOST_WAKE引脚，OOB模式时，该引脚必须配置
+&wireless_wlan {
+	pinctrl-names = "default";
+	pinctrl-0 = <&wifi_host_wake_irq>;
+	WIFI,host_wake_irq = <&gpio3 RK_PD4 GPIO_ACTIVE_HIGH>;
+	wifi_chip_type = "ap6255";
+	status = "okay";
+};
+
+&wireless_bluetooth {
+	compatible = "bluetooth-platdata";
+	clocks = <&rk809 1>;
+	clock-names = "ext_clock";
+	//wifi-bt-power-toggle;
+	uart_rts_gpios = <&gpio2 RK_PB1 GPIO_ACTIVE_LOW>;
+	pinctrl-names = "default", "rts_gpio";
+	pinctrl-0 = <&uart8m0_rtsn>;
+	pinctrl-1 = <&uart8_gpios>;
+	BT,reset_gpio	= <&gpio4 RK_PC4 GPIO_ACTIVE_HIGH>;
+	BT,wake_gpio	 = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+	BT,wake_host_irq = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+// wifi
+&sdmmc2 {
+	max-frequency = <150000000>;
+	supports-sdio;
+	bus-width = <4>;
+	disable-wp;
+	cap-sd-highspeed;
+	cap-sdio-irq;
+	keep-power-in-suspend;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc2m0_bus4 &sdmmc2m0_cmd &sdmmc2m0_clk>;
+	sd-uhs-sdr104;
+	status = "okay";
+};
+
+&pcie2x1 {
+	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	pcie@00 {
+		reg = <0x00000000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		pcie_eth0: pcie-eth@00,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			realtek,led-data = <0 0 0x200 0x02B>;
+			realtek,led-feature = /bits/ 8 <0xC0>;
+		};
+	};
+};
+
+&pcie3x1 {
+	reset-gpios = <&gpio3 RK_PA1 GPIO_ACTIVE_HIGH>;
+	vpcie3v3-supply = <&vcc3v3_nvme>;
+	status = "okay";
+
+};
+
+&pcie3x2 {
+	reset-gpios = <&gpio2 RK_PD6 GPIO_ACTIVE_HIGH>;
+	vpcie3v3-supply = <&vcc3v3_nvme>;
+	status = "okay";
+};
+
+&usb_host0_xhci {
+	status = "disabled";
+};
+
+&pinctrl {
+	nvme {
+		vcc3v3_nvme_en: vcc3v3-nvme-en {
+			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	oled {
+		oled_en: oled-en {
+			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+	};
+};
+
+&led_green {
+	gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
+	label = "power-key";
+	linux,default-trigger = "heartbeat";
+};
+
+&led_green_en {
+	rockchip,pins = <3 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
+};
+
+&i2c3 {
+	pinctrl-0 = <&i2c3m1_xfer &oled_en>;
+
+	i2c-scl-rising-time-ns = <160>;
+	i2c-scl-falling-time-ns = <30>;
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&adc_keys {
+	vol-up-key {
+		label = "recovery";
+		linux,code = <KEY_RESTART>;
+	};
+};
+
+// bluetooth
+&uart8 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart8m0_xfer &uart8m0_ctsn>;
+};
+
+// IR receiver
+&pwm3 {
+	compatible = "rockchip,remotectl-pwm";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pwm3_pins>;
+	remote_pwm_id = <3>;
+	handle_cpu_id = <1>;
+	remote_support_psci = <0>;
+	status = "okay";
+};
