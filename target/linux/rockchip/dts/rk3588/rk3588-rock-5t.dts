@@ -641,6 +641,11 @@
 		vcc5v0_host_en: vcc5v0-host-en {
 			rockchip,pins = <1 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
+
+		usbc_sbu_dc: usbc-sbu-dc {
+			rockchip,pins = <0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>,
+					<0 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
 	};
 };
 
@@ -1037,6 +1042,10 @@
 	status = "okay";
 };
 
+&usb_con {
+	power-role = "source";
+};
+
 &u2phy0 {
 	status = "okay";
 };
@@ -1075,6 +1084,10 @@
 &usbdp_phy0 {
 	//mode-switch;
 	orientation-switch;
+	pinctrl-names = "default";
+	pinctrl-0 = <&usbc_sbu_dc>;
+	sbu1-dc-gpios = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
+	sbu2-dc-gpios = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
 	port {
