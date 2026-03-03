@@ -538,7 +538,6 @@
 
 &package_thermal {
 	polling-delay = <1000>;
-	thermal-sensors = <&tsadc 0>;
 
 	trips {
 		package_fan0: package-fan0 {
