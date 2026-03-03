@@ -5,6 +5,7 @@
 / {
 	compatible = "easepi,a2", "rockchip,rk3568";
 	model = "EasePi A2";
+	eth_order = "0000:01:00.0";
 	kdebug = "0";
 	hwmodel_id = "A2";
 	hw_support = "hdmi";
