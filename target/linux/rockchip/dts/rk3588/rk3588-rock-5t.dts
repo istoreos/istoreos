@@ -24,10 +24,10 @@
 		mmc0 = &sdhci;
 		mmc1 = &sdmmc;
 		mmc2 = &sdio;
-		led-boot = &led_rgb_green;
-		led-failsafe = &led_rgb_green;
-		led-running = &led_rgb_green;
-		led-upgrade = &led_rgb_green;
+		led-boot = &led_rgb_red;
+		led-failsafe = &led_rgb_red;
+		led-running = &led_rgb_blue;
+		led-upgrade = &led_rgb_red;
 	};
 
 	chosen {
@@ -37,7 +37,7 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
-		pinctrl-0 = <&led_rgb_blue_en &led_rgb_green_en>;
+		pinctrl-0 = <&led_rgb_blue_en &led_rgb_red_en>;
 
 		led_rgb_blue {
 			color = <LED_COLOR_ID_BLUE>;
@@ -47,11 +47,11 @@
 			linux,default-trigger = "heartbeat";
 		};
 
-		led_rgb_green {
-			color = <LED_COLOR_ID_GREEN>;
+		led_rgb_red {
+			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <2>;
-			gpios = <&gpio0 RK_PA1 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
 		};
 	};
 
@@ -596,8 +596,8 @@
 			rockchip,pins = <0 RK_PA0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-		led_rgb_green_en: led-rgb-green-en {
-			rockchip,pins = <0 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+		led_rgb_red_en: led-rgb-red-en {
+			rockchip,pins = <4 RK_PC5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
