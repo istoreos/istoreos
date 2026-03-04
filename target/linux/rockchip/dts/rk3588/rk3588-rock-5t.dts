@@ -39,7 +39,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_rgb_blue_en>;
 
-		led_rgb_blue {
+		led_rgb_blue: led_rgb_blue {
 			color = <LED_COLOR_ID_BLUE>;
 			function = LED_FUNCTION_STATUS;
 			function-enumerator = <1>;
