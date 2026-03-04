@@ -39,7 +39,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&led_rgb_blue_en &led_rgb_red_en>;
 
-		led_rgb_blue {
+		led_rgb_blue: led_rgb_blue {
 			color = <LED_COLOR_ID_BLUE>;
 			function = LED_FUNCTION_STATUS;
 			function-enumerator = <1>;
@@ -47,11 +47,12 @@
 			linux,default-trigger = "heartbeat";
 		};
 
-		led_rgb_red {
+		led_rgb_red: led_rgb_red {
 			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_INDICATOR;
 			function-enumerator = <2>;
 			gpios = <&gpio4 RK_PC5 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "none";
 		};
 	};
 
