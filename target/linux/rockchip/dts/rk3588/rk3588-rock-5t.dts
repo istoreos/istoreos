@@ -42,7 +42,6 @@
 		led_rgb_blue: led_rgb_blue {
 			color = <LED_COLOR_ID_BLUE>;
 			function = LED_FUNCTION_STATUS;
-			function-enumerator = <1>;
 			gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 		};
