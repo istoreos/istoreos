@@ -314,6 +314,7 @@
 		compatible = "rockchip,rk8602";
 		reg = <0x42>;
 		fcs,suspend-voltage-selector = <1>;
+		regulator-compatible = "rk860x-reg";
 		regulator-name = "vdd_cpu_big0_s0";
 		regulator-always-on;
 		regulator-boot-on;
@@ -331,6 +332,7 @@
 		compatible = "rockchip,rk8603", "rockchip,rk8602";
 		reg = <0x43>;
 		fcs,suspend-voltage-selector = <1>;
+		regulator-compatible = "rk860x-reg";
 		regulator-name = "vdd_cpu_big1_s0";
 		regulator-always-on;
 		regulator-boot-on;
@@ -364,7 +366,7 @@
 
 		regulator-state-mem {
 			regulator-off-in-suspend;
-		 };
+		};
 	};
 };
 
@@ -394,11 +396,13 @@
 			label = "USB-C";
 			data-role = "dual";
 			power-role = "dual";
+			try-power-role = "sink";
 			/* fusb302 supports PD Rev 2.0 Ver 1.2 */
 			pd-revision = /bits/ 8 <0x2 0x0 0x1 0x2>;
 			op-sink-microwatt = <1000000>;
 			sink-pdos =
-				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
+				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>,
+				<PDO_VAR(5000, 20000, 5000)>;
 			source-pdos =
 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
 
@@ -546,12 +550,42 @@
 	status = "okay";
 };
 
+/* rtl8125b */
 &pcie2x1l2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie2_2_rst>;
 	reset-gpios = <&gpio3 RK_PB0 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc3v3_pcie2x1l2>;
 	status = "okay";
+
+	pcie@0,0 {
+		reg = <0x00400000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		bus-range = <0x40 0x4f>;
+		device_type = "pci";
+		ranges;
+
+		rtl8125: pcie-eth@0,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x410000 0 0 0 0>;
+
+			/* G+: LED0
+			 * G-: LED1
+			 * Y+: 3v3
+			 * Y-: LED2
+			 */
+			// LED0: active high, link on all speed
+			r8125,led0 = <0x102b>;
+
+			// LED1: active low, act on all speed
+			r8125,led1 = <0x0200>;
+
+			// LED2: active low, link on 100 + 1000 + 2500
+			r8125,led2 = <0x002a>;
+		};
+	};
 };
 
 &pcie30phy {
@@ -592,6 +626,12 @@
 	hym8563 {
 		hym8563_int: hym8563-int {
 			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	mmc {
+		sdmmc_det_pin: sdmmc-det-pin {
+			rockchip,pins = <0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -683,7 +723,6 @@
 };
 
 &sdmmc {
-	max-frequency = <200000000>;
 	no-sdio;
 	no-mmc;
 	bus-width = <4>;
@@ -691,6 +730,8 @@
 	cap-sd-highspeed;
 	cd-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_LOW>;
 	disable-wp;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc_bus4 &sdmmc_clk &sdmmc_cmd &sdmmc_det_pin>;
 	sd-uhs-sdr104;
 	vmmc-supply = <&vcc_3v3_s3>;
 	vqmmc-supply = <&vccio_sd_s0>;
@@ -1044,10 +1085,6 @@
 &uart2 {
 	pinctrl-0 = <&uart2m0_xfer>;
 	status = "okay";
-};
-
-&usb_con {
-	power-role = "source";
 };
 
 &u2phy0 {
