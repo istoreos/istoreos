@@ -396,7 +396,7 @@
 			label = "USB-C";
 			data-role = "dual";
 			power-role = "dual";
-			try-power-role = "sink";
+			try-power-role = "source";
 			/* fusb302 supports PD Rev 2.0 Ver 1.2 */
 			pd-revision = /bits/ 8 <0x2 0x0 0x1 0x2>;
 			op-sink-microwatt = <1000000>;
@@ -405,13 +405,6 @@
 				<PDO_VAR(5000, 20000, 5000)>;
 			source-pdos =
 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-
-			altmodes {
-				displayport {
-					svid = /bits/ 16 <0xff01>;
-					vdo = <0xffffffff>;
-				};
-			};
 
 			ports {
 				#address-cells = <1>;
@@ -1093,28 +1086,12 @@
 };
 
 &usbdp_phy0 {
-	//mode-switch;
 	orientation-switch;
 	pinctrl-names = "default";
 	pinctrl-0 = <&usbc_sbu_dc>;
 	sbu1-dc-gpios = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
 	sbu2-dc-gpios = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
 	status = "okay";
-
-	port {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		usbdp_phy0_ss: endpoint@0 {
-			reg = <0>;
-			remote-endpoint = <&usbc0_ss>;
-		};
-
-		usbdp_phy0_sbu: endpoint@1 {
-			reg = <1>;
-			remote-endpoint = <&usbc0_sbu>;
-		};
-	};
 };
 
 &usbdp_phy1 {
@@ -1130,15 +1107,9 @@
 };
 
 &usb_host0_xhci {
-	//usb-role-switch;
+	usb-role-switch;
 	dr_mode = "host";
 	status = "okay";
-
-	port {
-		usb_host0_xhci_to_usbc0: endpoint {
-			remote-endpoint = <&usbc0_hs>;
-		};
-	};
 };
 
 &usb_host1_ehci {
