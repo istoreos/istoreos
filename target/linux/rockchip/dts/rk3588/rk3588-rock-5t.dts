@@ -387,18 +387,17 @@
 		 * power-supply reacts with a hard-reset. That removes the
 		 * power from VBUS for some time, which resets te whole board.
 		 */
-		status = "fail";
+		status = "okay";
 
 		usb_con: connector {
 			compatible = "usb-c-connector";
 			label = "USB-C";
 			data-role = "dual";
+			power-role = "dual";
 			/* fusb302 supports PD Rev 2.0 Ver 1.2 */
 			pd-revision = /bits/ 8 <0x2 0x0 0x1 0x2>;
 			op-sink-microwatt = <1000000>;
-			sink-pdos =
-				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>,
-				<PDO_VAR(5000, 20000, 5000)>;
+			sink-pdos = <PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
 			source-pdos =
 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
 
@@ -1124,6 +1123,7 @@
 
 &usb_host0_xhci {
 	//usb-role-switch;
+	dr_mode = "host";
 	status = "okay";
 
 	port {
