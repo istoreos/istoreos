@@ -1,0 +1,8 @@
+#!/bin/sh
+
+[ "${ACTION}" = "add" ] && {
+	[ -f /tmp/.wifi-up ] && exit 0
+	touch /tmp/.wifi-up
+
+	/sbin/wifi isup || /sbin/wifi up
+}
