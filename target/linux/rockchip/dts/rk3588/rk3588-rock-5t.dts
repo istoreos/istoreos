@@ -401,8 +401,7 @@
 			pd-revision = /bits/ 8 <0x2 0x0 0x1 0x2>;
 			op-sink-microwatt = <1000000>;
 			sink-pdos =
-				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>,
-				<PDO_VAR(5000, 20000, 5000)>;
+				<PDO_FIXED(5000, 1000, PDO_FIXED_USB_COMM)>;
 			source-pdos =
 				<PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
 
