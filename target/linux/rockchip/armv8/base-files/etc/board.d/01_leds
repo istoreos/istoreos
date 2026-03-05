@@ -13,7 +13,7 @@ cyber,cyber3588-aib)
 	ucidef_set_led_netdev "lan" "LAN" "green:status" "eth1"
 	;;
 radxa,rock-5t)
-	ucidef_set_led_heartbeat "blue-status" "Status LED" "blue:status"
+	ucidef_set_led_heartbeat "status" "STATUS" "blue:status"
 	;;
 friendlyarm,nanopi-r2c|\
 friendlyarm,nanopi-r2c-plus|\
