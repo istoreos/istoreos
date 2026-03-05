@@ -169,8 +169,6 @@ $(eval $(call BuildPackage,cypress-firmware-43439-sdio))
 define Package/cypress-firmware-43455-sdio
   $(Package/cypress-firmware-default)
   TITLE:=CYW43455 FullMac SDIO firmware
-  PROVIDES:=brcmfmac-firmware-43455-sdio
-  CONFLICTS:=brcmfmac-firmware-43455-sdio
 endef
 
 define Package/cypress-firmware-43455-sdio/install
@@ -181,13 +179,6 @@ define Package/cypress-firmware-43455-sdio/install
 	$(INSTALL_DATA) \
 		$(PKG_BUILD_DIR)/firmware/cyfmac43455-sdio.clm_blob \
 		$(1)/lib/firmware/cypress/
-	$(INSTALL_DIR) $(1)/lib/firmware/brcm
-	$(LN) \
-		../cypress/cyfmac43455-sdio.bin \
-		$(1)/lib/firmware/brcm/brcmfmac43455-sdio.bin
-	$(LN) \
-		../cypress/cyfmac43455-sdio.clm_blob \
-		$(1)/lib/firmware/brcm/brcmfmac43455-sdio.clm_blob
 endef
 
 $(eval $(call BuildPackage,cypress-firmware-43455-sdio))

@@ -7,6 +7,6 @@ define Device/phicomm_n1
   UBOOT_DEVICE_NAME := phicomm-n1
   IMAGE/sysupgrade.img.gz := boot-common | boot-script | aml-img | gzip | append-metadata
   DEVICE_PACKAGES := kmod-usb-net-rtl8152 ethtool
-  DEVICE_PACKAGES += kmod-brcmfmac cypress-firmware-43455-sdio brcmfmac-nvram-43455-sdio-generic
+  DEVICE_PACKAGES += kmod-brcmfmac brcmfmac-firmware-43455-sdio brcmfmac-nvram-43455-sdio-generic
 endef
 TARGET_DEVICES += phicomm_n1
