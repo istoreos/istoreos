@@ -1108,7 +1108,7 @@
 
 &usb_host0_xhci {
 	usb-role-switch;
-	dr_mode = "host";
+	dr_mode = "otg";
 	status = "okay";
 };
 
