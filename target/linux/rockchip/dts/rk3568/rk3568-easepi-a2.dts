@@ -15,6 +15,11 @@
 		/delete-property/ ethernet1;
 	};
 
+	chosen {
+		power-key-factory-reset;
+		power-key-dbclick;
+	};
+
 	vcc3v3_nvme: vcc3v3-nvme-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc3v3_nvme";
