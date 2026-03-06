@@ -26,6 +26,7 @@ rockchip_setup_interfaces()
 	hinlink,hnas|\
 	radxa,e52c|\
 	radxa,rockpi-e|\
+	radxa,rock-5t|\
 	xunlong,orangepi-5-plus|\
 	xunlong,orangepi-r1-plus|\
 	xunlong,orangepi-r1-plus-lts)
