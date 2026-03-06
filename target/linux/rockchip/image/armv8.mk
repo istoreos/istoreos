@@ -389,7 +389,9 @@ define Device/radxa_rock-5t
   DEVICE_VENDOR := Radxa
   DEVICE_MODEL := ROCK 5T
   UBOOT_DEVICE_NAME := generic-rk3588
-  DEVICE_DTS := rk3588-rock-5t
+  DEVICE_DTS_DIR := ../dts
+  DEVICE_DTS := rk3588/rk3588-rock-5t
+  KERNEL = kernel-bin | lzma | fit lzma $$(KDIR)/image-rk3588-rock-5t.dtb
   DEVICE_PACKAGES := blkdiscard block-mount iwlwifi-firmware-ax210 kmod-hwmon-pwmfan kmod-iwlwifi kmod-nvme kmod-r8169 wpad-basic-mbedtls
 endef
 TARGET_DEVICES += radxa_rock-5t
