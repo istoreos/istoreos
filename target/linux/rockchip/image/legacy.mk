@@ -108,7 +108,7 @@ define Device/easepi_ars4
 $(call Device/Legacy/rk3568,$(1))
   DEVICE_VENDOR := EasePi
   DEVICE_MODEL := ARS4
-  DEVICE_PACKAGES += kmod-r8169 kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal
+  DEVICE_PACKAGES += kmod-r8169 kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-aic8800s
 endef
 TARGET_DEVICES += easepi_ars4
 
