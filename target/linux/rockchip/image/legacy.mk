@@ -304,7 +304,7 @@ define Device/radxa_rock-5t
 $(call Device/Legacy/rk3588,$(1))
   DEVICE_VENDOR := Radxa 
   DEVICE_MODEL := ROCK 5T
-  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal
+  DEVICE_PACKAGES += kmod-r8169 kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-rtw89-8852be
 endef
 TARGET_DEVICES += radxa_rock-5t
 
