@@ -19,6 +19,7 @@
 / {
 	model = "Radxa ROCK 5T";
 	compatible = "radxa,rock-5t", "rockchip,rk3588";
+	eth_order = "0004:41:00.0,0003:31:00.0";
 
 	aliases {
 		mmc0 = &sdhci;
