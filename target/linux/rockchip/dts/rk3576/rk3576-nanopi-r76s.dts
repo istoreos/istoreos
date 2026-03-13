@@ -151,6 +151,7 @@
 	rockchip,skip-hw-retry;
 	rockchip,wait-for-link-ms = <1000>;
 	vpcie3v3-supply = <&vcc_3v3_pcie20>;
+	rockchip,irq-affinity = <0xf0>;
 	/delete-property/ prsnt-gpios;
 
 	pcie@0,0 {
@@ -174,6 +175,7 @@
 	rockchip,skip-hw-retry;
 	rockchip,wait-for-link-ms = <1000>;
 	vpcie3v3-supply = <&vcc_3v3_pcie20>;
+	rockchip,irq-affinity = <0xf0>;
 
 	pcie@0,0 {
 		reg = <0x00200000 0 0 0 0>;
