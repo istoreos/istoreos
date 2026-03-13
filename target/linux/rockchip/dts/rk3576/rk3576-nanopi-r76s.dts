@@ -26,3 +26,11 @@
 		rockchip,reset-mode = <1>;
 	};
 };
+
+&pcie0 {
+    rockchip,irq-affinity = <0xf0>;
+};
+
+&pcie1 {
+    rockchip,irq-affinity = <0xf0>;
+};
