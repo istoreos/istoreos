@@ -167,8 +167,6 @@
 
 &led_green {
 	gpios = <&gpio3 RK_PA3 GPIO_ACTIVE_HIGH>;
-	label = "power-key";
-	linux,default-trigger = "heartbeat";
 };
 
 &led_green_en {
