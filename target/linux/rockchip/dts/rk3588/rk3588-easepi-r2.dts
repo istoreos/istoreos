@@ -33,6 +33,7 @@
 
 		led_red: work {
 			label = "red:work";
+			linux,default-trigger = "heartbeat";
 			gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
 		};
 	};
