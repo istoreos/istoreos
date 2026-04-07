@@ -24,11 +24,11 @@
 # danger zones
 # 0-117
 
-# part		start			size			end
-# boot		0x7500000/117M 	0x4000000/64M	0xB500000/181M
-# rootfs	0xB500000/181M	0x18F00000/399M	0x24400000/580M
+# part		start							size			end
+# boot		0x7500000/117M (239616s) 		0x4000000/64M	0xB500000/181M (370687s)
+# rootfs	0xB500000/181M (370688s)		0x18F00000/399M	0x24400000/580M (1187839s)
 # (gap for amlogic bootloader 0x24400000 - 0x32000000)
-# overlay	0x32000000/800M	0x80000000/2G	0xB2000000/2848M
+# overlay	0x32000000/800M	(1638400s)		0x80000000/2G	0xB2000000/2848M (4194304s)
 
 . /lib/functions.sh
 . /lib/functions/system.sh
@@ -51,6 +51,19 @@ function umount_disk() {
 
 function part_disk() {
 	local to="${1#/dev/}"
+	#dd if="/dev/$to" of=/tmp/mmc-diskid.bin bs=1 skip=440 count=4
+	dd if=/dev/zero of="/dev/$to" bs=1 seek=446 count=64 conv=notrunc
+	{
+#		echo o;
+		echo n; echo p; echo 1; echo 239616; echo 370687;
+		echo n; echo p; echo 2; echo 370688; echo 1187839;
+		echo n; echo p; echo 3; echo 1638400; echo 4194304;
+		echo t; echo 1; echo c;
+		echo w;
+	} | fdisk "/dev/$to"
+	#dd if=/tmp/mmc-diskid.bin of="/dev/$to" bs=1 seek=440 count=4 conv=notrunc
+	return 0
+
 	dd if=/dev/zero of="/dev/$to" bs=512 count=1 conv=notrunc 2>/dev/null
 	parted --script "/dev/$to" \
 		mktable msdos \
