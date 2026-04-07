@@ -55,6 +55,10 @@ rockchip_setup_interfaces()
 		ucidef_set_network_device_path eth3 'platform/3c0000000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0'
 		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
 		;;
+	linkease,easepi-r2)
+		ucidef_set_interfaces_lan_wan 'eth1 eth2 eth3' 'eth0'
+		ucidef_set_interface "wwan" device "usb4g" metric "100" protocol "none"
+		;;
 	hinlink,opc-h68k|\
 	lunzn,fastrhino-r68s|\
 	lyt,t68m|\

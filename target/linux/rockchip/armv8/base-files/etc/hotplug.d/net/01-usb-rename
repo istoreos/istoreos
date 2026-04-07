@@ -1,0 +1,11 @@
+#!/bin/sh
+
+[[ "$ACTION" = add ]] || exit
+
+case $(board_name) in
+linkease,easepi-r2)
+	if [[ ${DEVICENAME} != usb4g && ${DEVPATH} = /devices/platform/fc800000.usb/usb* ]]; then
+		ip link set "${DEVICENAME}" name usb4g
+	fi
+	;;
+esac
