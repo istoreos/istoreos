@@ -184,6 +184,12 @@ define Package/base-files/install
 			$(CP) $(PLATFORM_SUBDIR)/base-files/* $(1)/; \
 		fi; \
 	)
+	if $(FIND) -P $(1) -type f \( -name "*.rej" -o -name "*.orig" -o -name ".*.swp" -o -name ".DS_Store" \) | grep .; then \
+		echo "Error: found temp files in $(1) ! (see above)"; \
+		exit 1; \
+	else \
+		true; \
+	fi
 
 	$(VERSION_SED_SCRIPT) \
 		$(1)/etc/banner \
