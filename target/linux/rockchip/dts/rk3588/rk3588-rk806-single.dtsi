@@ -34,7 +34,12 @@
 		 *    and simultaneously pull down the RESETB PIN for 5mS before releasing
 		 */
 		// pmic-reset-func = <1>;
-		rockchip,reset-mode = <1>; 
+		rockchip,reset-mode = <1>;
+		/*
+		 * pwrkey long press off time, unit is seconds.
+		 * available values are 6, 8, 10, and 12 seconds. default is 6 seconds.
+		 */
+		long-press-off-time-sec = <10>;
 		spi-max-frequency = <1000000>;
 		system-power-controller;
 
