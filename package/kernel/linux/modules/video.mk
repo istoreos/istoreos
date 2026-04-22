@@ -828,6 +828,15 @@ endef
 
 $(eval $(call KernelPackage,video-async))
 
+define KernelPackage/video-dv-timings
+  TITLE:=V4L2 DV Timings support
+  HIDDEN:=1
+  FILES:=$(LINUX_DIR)/drivers/media/$(V4L2_DIR)/v4l2-dv-timings.ko
+  $(call AddDepends/video)
+endef
+
+$(eval $(call KernelPackage,video-dv-timings))
+
 define KernelPackage/video-fwnode
   TITLE:=V4L2 FWNODE support
   HIDDEN:=1
