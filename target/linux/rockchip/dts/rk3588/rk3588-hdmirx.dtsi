@@ -1,0 +1,13 @@
+/*
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
+ * Copyright (c) 2026 jjm2473 <jjm2473@gmail.com>
+ */
+
+&hdmi_receiver {
+	compatible = "rockchip,rk3588-hdmirx-ctrler", "rockchip,hdmirx-ctrler";
+	interrupts = <GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH 0>,
+				<GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH 0>;
+	pinctrl-0 = <&hdmim1_rx_cec &hdmim1_rx_hpdin &hdmim1_rx_scl &hdmim1_rx_sda>;
+	pinctrl-names = "default";
+};
