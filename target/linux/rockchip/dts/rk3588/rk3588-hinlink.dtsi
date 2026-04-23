@@ -15,6 +15,7 @@
 #include "rk3588-rk806-single.dtsi"
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
+#include "rk3588-hdmirx.dtsi"
 
 #include "rk3588-ramoops.dtsi"
 
@@ -570,6 +571,12 @@
 		};
 	};
 
+	hdmirx {
+		hdmirx_hpd: hdmirx-5v-detection {
+			rockchip,pins = <2 RK_PB5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	modem {
 		modem_power_en: modem-power-en {
 			rockchip,pins = <4 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -789,6 +796,22 @@
 };
 
 &hdmi1_sound {
+	status = "okay";
+};
+
+&hdmi_receiver_cma {
+	status = "okay";
+};
+
+&i2s7_8ch {
+	status = "okay";
+};
+
+&hdmi_receiver {
+	hpd-gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_LOW>;
+	//hpd-is-active-low;
+	pinctrl-0 = <&hdmim1_rx_cec &hdmim1_rx_hpdin &hdmim1_rx_scl &hdmim1_rx_sda &hdmirx_hpd>;
+	pinctrl-names = "default";
 	status = "okay";
 };
 
