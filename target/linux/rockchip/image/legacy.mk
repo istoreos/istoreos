@@ -127,9 +127,11 @@ TARGET_DEVICES += fastrhino_r6xs
 define Device/friendlyarm_nanopi-r3s
 $(call Device/Legacy/rk3566,$(1))
   DEVICE_VENDOR := FriendlyARM
-  DEVICE_MODEL := NanoPi R3S
-  SUPPORTED_DEVICES += friendlyelec,nanopi-r3s friendlyarm,nanopi-r3s
+  DEVICE_MODEL := NanoPi R3S | LTS
+  SUPPORTED_DEVICES += friendlyarm,nanopi-r3s-lts friendlyelec,nanopi-r3s friendlyarm,nanopi-r3s
   DEVICE_PACKAGES += kmod-r8169
+  DEVICE_DTS := rk3568/rk3566-nanopi-r3s rk3568/rk3566-nanopi-r3s-lts
+  BOOT_SCRIPT := rk3568-friendlyelec
 endef
 
 define Device/firefly_station-m2

@@ -1,6 +1,7 @@
 # friendlyelec rk3568 combined image, board detected by ADC
 # https://github.com/friendlyarm/uboot-rockchip/blob/nanopi5-v2017.09/board/rockchip/nanopi5/hwrev.c
 # R5S < 151 < R5C < 343 < R5S LTS < 478 < R5S C1
+# R3S < 151 < R3S LTS < 212 << 478 < R3G < 546
 
 env delete hwrev
 env delete adc_value

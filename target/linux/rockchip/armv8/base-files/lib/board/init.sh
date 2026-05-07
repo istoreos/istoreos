@@ -381,6 +381,7 @@ board_set_iface_smp_affinity() {
 		fi
 		;;
 	friendlyelec,nanopi-r3s|friendlyarm,nanopi-r3s|\
+	friendlyarm,nanopi-r3s-lts|\
 	radxa,e20c|\
 	mangopi,m28k|\
 	hlink,h28k)
