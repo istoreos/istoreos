@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: fix <fix@openwrt>
+Date: Sat, 17 May 2025 00:00:00 +0800
+Subject: [PATCH] fix SPL FIT header corruption by printf/malloc
+
+The header buffer in mmc_load_image_raw_sector is placed at
+CONFIG_SYS_TEXT_BASE - sizeof(image_header_t), which is inside
+the SPL malloc pool (0x00180000 ~ 0x00200000).
+
+When spl_load_simple_fit is called, the first thing it does is
+printf("Trying fit image..."), which internally uses malloc and
+corrupts the fit/header buffer. The subsequent magic check then
+fails, printing "Not fit magic".
+
+Fix: always re-read the sector from disk inside the loop before
+checking magic, instead of reusing the caller's buffer for i=0.
+
+---
+ common/spl/spl_fit.c | 14 ++++++--------
+ 1 file changed, 6 insertions(+), 8 deletions(-)
+
+Index: rk-u-boot/common/spl/spl_fit.c
+===================================================================
+--- rk-u-boot.orig/common/spl/spl_fit.c
++++ rk-u-boot/common/spl/spl_fit.c
+@@ -832,18 +832,16 @@ int spl_load_simple_fit(struct spl_image
+ 	mpb_init_1(*info);
+ #endif
+
+-	printf("Trying fit image at 0x%lx sector\n", sector_offs);
+ 	for (i = 0; i < CONFIG_SPL_FIT_IMAGE_MULTIPLE; i++) {
+-		if (i > 0) {
++		if (i > 0)
+ 			sector_offs +=
+-			   i * ((CONFIG_SPL_FIT_IMAGE_KB << 10) / info->bl_len);
+-			printf("Trying fit image at 0x%lx sector\n", sector_offs);
+-			if (info->read(info, sector_offs, 1, fit) != 1) {
+-				printf("IO error\n");
+-				continue;
+-			}
++			   (CONFIG_SPL_FIT_IMAGE_KB << 10) / info->bl_len;
++
++		printf("Trying fit image at 0x%lx sector\n", sector_offs);
++		if (info->read(info, sector_offs, 1, fit) != 1) {
++			printf("IO error\n");
++			continue;
+ 		}
+-
+ 		if (image_get_magic(fit) != FDT_MAGIC) {
+ 			printf("Not fit magic\n");
+ 			continue;
