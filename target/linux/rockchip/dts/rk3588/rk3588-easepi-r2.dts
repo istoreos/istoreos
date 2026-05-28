@@ -16,25 +16,27 @@
 	eth_order =  "0004:41:00.0,0002:21:00.0,0001:11:00.0,0003:31:00.0";
 
 	aliases {
-		led-boot = &led_red;
-		led-failsafe = &led_red;
-		led-running = &led_red;
-		led-upgrade = &led_red;
+		led-boot = &led_run;
+		led-failsafe = &led_run;
+		led-running = &led_run;
+		led-upgrade = &led_run;
 
 		mmc0 = &sdmmc;
 		mmc1 = &sdio;
 		mmc2 = &sdhci;
 	};
 
-	leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 = <&led_work_en>;
+	adc-keys-0 {
+		compatible = "adc-keys";
+		io-channels = <&saradc 0>;
+		io-channel-names = "buttons";
+		keyup-threshold-microvolt = <1750000>;
+		poll-interval = <100>;
 
-		led_red: work {
-			label = "red:work";
-			linux,default-trigger = "heartbeat";
-			gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
+		button-maskrom {
+			label = "Mask Rom";
+			linux,code = <KEY_RESTART>;
+			press-threshold-microvolt = <878>;
 		};
 	};
 
@@ -87,44 +89,26 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	/* pi6c pcie clock generator feeds both ports */
-	vcc3v3_pi6c_05: vcc3v3-pi6c-05 {
+	vcc3v3_nvme: vcc3v3-nvme {
 		compatible = "regulator-fixed";
-		regulator-name = "vcc3v3_pi6c_05";
-		regulator-always-on;
-		regulator-boot-on;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+		regulator-name = "vcc3v3_nvme";
+		vin-supply = <&vcc12v_dcin>;
 		enable-active-high;
 		gpios = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
 		startup-delay-us = <5000>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pi6c_power_en>;
-		vin-supply = <&vcc4v0_sys>;
+		pinctrl-0 = <&nvme_power_en>;
 	};
 
-	/* actually fed by vcc_3v3_s3, dependent on pi6c clock generator */
 	vcc3v3_pcie: vcc3v3-pcie {
-		//compatible = "regulator-fixed-clock";
-		//clocks = <&pcie30_refclk>;
 		compatible = "regulator-fixed";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-name = "vcc3v3_pcie";
 		startup-delay-us = <50000>;
 		vin-supply = <&vcc_3v3_s3>;
-	};
-
-	/* actually fed by vcc12v_dcin, dependent on pi6c clock generator */
-	vcc3v3_m2: vcc3v3-m2 {
-		//compatible = "regulator-fixed-clock";
-		//clocks = <&pcie30_refclk>;
-		compatible = "regulator-fixed";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		regulator-name = "vcc3v3_m2";
-		startup-delay-us = <50000>;
-		vin-supply = <&vcc12v_dcin>;
 	};
 
 	vdd0v95_25glan1: vdd0v95-25glan1 {
@@ -206,19 +190,6 @@
 		vin-supply = <&vcc5v0_sys>;
 	};
 
-	wireless_bluetooth: wireless-bluetooth {
-		compatible = "bluetooth-platdata";
-		clocks = <&hym8563>;
-		clock-names = "ext_clock";
-		uart_rts_gpios = <&gpio4 RK_PC4 GPIO_ACTIVE_LOW>;// schematic wrongly connected to GPIO4_C3
-		pinctrl-names = "default", "rts_gpio";
-		pinctrl-0 = <&uart9m0_rtsn>, <&bt_reset_gpio>, <&bt_wake_gpio>, <&bt_irq_gpio>;
-		pinctrl-1 = <&uart9m0_gpios>;
-		BT,reset_gpio = <&gpio2 RK_PB4 GPIO_ACTIVE_HIGH>;
-		BT,wake_gpio = <&gpio2 RK_PB6 GPIO_ACTIVE_HIGH>;
-		BT,wake_host_irq = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
-	};
-
 	wireless_wlan: wireless-wlan {
 		compatible = "wlan-platdata";
 		wifi_chip_type = "ap6255";
@@ -235,19 +206,6 @@
 		pinctrl-0 = <&wifi_enable_h>;
 		post-power-on-delay-ms = <200>;
 		reset-gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_LOW>;
-	};
-
-	vcc3v3_sd: vcc3v3-sd {
-		compatible = "regulator-fixed";
-		enable-active-high;
-		gpio = <&gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&sd_pwren>;
-		regulator-boot-on;
-		regulator-max-microvolt = <3300000>;
-		regulator-min-microvolt = <3300000>;
-		regulator-name = "vcc3v3_sd";
-		vin-supply = <&vcc_3v3_s3>;
 	};
 
 	fan0: gpio_fan0 {
@@ -301,7 +259,7 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
-	
+
 		/* Reserve 256MB memory for hdmirx-controller@fdee0000 */
 		cma {
 			compatible = "shared-dma-pool";
@@ -309,6 +267,22 @@
 			reg = <0x00 0x10000000 0x00 0x8000000>;
 			size = <0x00 0x800000>;
 			linux,cma-default;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&led_run_en>, <&led_user_en>;
+
+		led_run: led-0 {
+			label = "green:run";
+			linux,default-trigger = "heartbeat";
+			gpios = <&gpio3 RK_PB7 GPIO_ACTIVE_HIGH>;
+		};
+		led-1 {
+			label = "green:user";
+			gpios = <&gpio3 RK_PB6 GPIO_ACTIVE_HIGH>;
 		};
 	};
 };
@@ -436,8 +410,14 @@
 	};
 };
 
+&i2c7 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c7m0_xfer>;
+	status = "okay";
+};
+
 &pcie2x1l0 {
-	// idx3,p0l1 => rtl8125
+	// pcie30phy lane3, p0l1, 0002:20:00.0 => rtl8125 (lan1,eth1)
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie2_0_rst>;
 	phys = <&pcie30phy>;
@@ -447,7 +427,7 @@
 };
 
 &pcie2x1l1 {
-	// idx4, p1l1 => rtl8125
+	// pcie30phy lane4, p1l1, 0003:30:00.0 => rtl8125 (lan3,eth3)
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie2_1_rst>;
 	phys = <&pcie30phy>;
@@ -456,9 +436,8 @@
 	status = "okay";
 };
 
-// combphy0_ps -> pcie2x1l2
 &pcie2x1l2 {
-	// rtl8125
+	// combphy0_ps, 0004:40:00.0 => rtl8125 (lan4,eth0)
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie2_2_rst>;
 	reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
@@ -467,13 +446,14 @@
 };
 
 &pcie30phy {
+	// divided into 4 lanes
 	rockchip,pcie30-phymode = <PHY_MODE_PCIE_NABIBI>;
 	data-lanes = <1 3 2 4>;
 	status = "okay";
 };
 
 &pcie3x2 {
-	// idx2, p1l0 => rtl8125
+	// pcie30phy lane2, p1l0, 0001:10:00.0 => rtl8125 (lan2,eth2)
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie3x2_rst>;
 	num-lanes = <1>;
@@ -483,32 +463,27 @@
 };
 
 &pcie3x4 {
-	// idx1, p0l0 => nvme
+	// pcie30phy lane1, p0l0, 0000:00:00.0 => nvme
 	pinctrl-names = "default";
 	pinctrl-0 = <&pcie3x4_rst>;
 	num-lanes = <1>;
 	reset-gpios = <&gpio4 RK_PB6 GPIO_ACTIVE_HIGH>;
-	vpcie3v3-supply = <&vcc3v3_m2>;
+	vpcie3v3-supply = <&vcc3v3_nvme>;
 	status = "okay";
 };
 
 &pinctrl {
-	rtl8211f {
-		rtl8211f0_rst: rtl8211f0-rst {
-			rockchip,pins = <3 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-		rtl8211f1_rst: rtl8211f1-rst {
-			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
 	hdmirx {
 		hdmirx_det: hdmirx-det {
 			rockchip,pins = <1 RK_PD5 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 	leds {
-		led_work_en: led_work_en {
+		led_run_en: led_run_en {
 			rockchip,pins = <3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		led_user_en: led_user_en {
+			rockchip,pins = <3 RK_PB6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -552,8 +527,8 @@
 			rockchip,pins = <3 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
-	pi6c {
-		pi6c_power_en: pi6c-power-en {
+	nvme {
+		nvme_power_en: nvme-power-en {
 			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
@@ -567,22 +542,11 @@
 			rockchip,pins = <0 RK_PB0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
-	sdmmc {
-		sd_pwren: sd-pwren {
-			rockchip,pins = <0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
-		};
-	};
 	usb {
 		vbus5v0_usb_en: vbus5v0_usb_en {
 			rockchip,pins = <4 RK_PB0 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 
-	};
-
-	usb-typec {
-		usbc0_int: usbc0-int {
-			rockchip,pins = <1 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
-		};
 	};
 
 	wireless-bluetooth {
@@ -651,6 +615,7 @@
 	status = "okay";
 };
 
+// eMMC
 &sdhci {
 	bus-width = <8>;
 	no-sdio;
@@ -662,6 +627,7 @@
 	status = "okay";
 };
 
+// TF Card slot
 &sdmmc {
 	max-frequency = <150000000>;
 	no-sdio;
@@ -671,15 +637,15 @@
 	cap-sd-highspeed;
 	disable-wp;
 	sd-uhs-sdr104;
-	vmmc-supply = <&vcc3v3_sd>;
+	vmmc-supply = <&vcc_3v3_s3>;
 	vqmmc-supply = <&vccio_sd_s0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&sdmmc_bus4 &sdmmc_clk &sdmmc_cmd &sdmmc_det>;
 	status = "okay";
 };
 
-&sdio { // wifi sdio
-	status = "okay";
+// WiFi SDIO
+&sdio {
 	pinctrl-0 = <&sdiom0_pins>;
 	max-frequency = <150000000>;
 	no-sd;
@@ -695,7 +661,8 @@
 	num-slots = <1>;
 	rockchip,default-sample-phase = <90>;
 	sd-uhs-sdr50;
-	sd-uhs-sdr104; //SDIO3.0
+	sd-uhs-sdr104; // SDIO 3.0
+	status = "okay";
 };
 
 &tsadc {
@@ -708,9 +675,8 @@
 };
 
 &uart2 {
-	// use fiq debugger instead of uart2
 	pinctrl-0 = <&uart2m0_xfer>;
-	status = "disabled";
+	status = "disabled";// Use FIQ debugger instead of UART2
 };
 
 &uart3 {
@@ -718,18 +684,38 @@
 	status = "okay";
 };
 
-// bluetooth
+// Bluetooth
 &uart9 {
-	pinctrl-0 = <&uart9m0_xfer &uart9m0_ctsn>;
+	pinctrl-0 = <&uart9m0_xfer &uart9m0_ctsn &uart9m0_rtsn>;
 	status = "okay";
+	uart-has-rtscts;
+	bluetooth {
+		compatible = "brcm,bcm4345c5";
+		clocks = <&hym8563>;
+		clock-names = "ext_clock";
+		/*
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PA0 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-names = "host-wakeup";
+		*/
+		host-wakeup-gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
+		device-wakeup-gpios = <&gpio2 RK_PB6 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio2 RK_PB4 GPIO_ACTIVE_HIGH>;
+		max-speed = <1500000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_reset_gpio &bt_wake_gpio &bt_irq_gpio>;
+		vbat-supply = <&vcc_3v3_s3>;
+		vddio-supply = <&vcc_1v8_s3>;
+	};
 };
 
-// type-c for firmware update
+// Type-C for firmware update
 &u2phy0 {
 	status = "okay";
 };
 
 &u2phy0_otg {
+	rockchip,typec-vbus-det;
 	status = "okay";
 };
 
@@ -746,7 +732,7 @@
 	status = "okay";
 };
 
-// usb 3.0
+// USB 3.0
 &u2phy1 {
 	status = "okay";
 };
@@ -793,7 +779,7 @@
 	status = "okay";
 };
 
-// usb 2.0
+// USB 2.0
 &u2phy3 {
 	status = "okay";
 };
@@ -965,7 +951,7 @@
 	status = "okay";
 };
 
-// hdmi tx
+// HDMI TX
 &i2s5_8ch {
 	status = "okay";
 };
@@ -1020,7 +1006,7 @@
 	rockchip,primary-plane = <ROCKCHIP_VOP2_ESMART3>;
 };
 
-//hdmi rx
+// HDMI RX
 &i2s7_8ch {
 	status = "okay";
 };
