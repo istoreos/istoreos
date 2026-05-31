@@ -97,11 +97,11 @@
 	status = "okay";
 
 	pcie@0,0 {
-		reg = <0x00100000 0 0 0 0>;
+		reg = <0x00000000 0 0 0 0>;
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		pcie_eth0: pcie@10,0 {
+		pcie_eth0: pcie@00,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
 
