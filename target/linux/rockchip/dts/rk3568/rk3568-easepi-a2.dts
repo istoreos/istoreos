@@ -28,6 +28,12 @@
 		pinctrl-0 = <&vcc3v3_nvme_en>;
 	};
 
+	ir-receiver {
+		compatible = "gpio-ir-receiver";
+		gpios = <&gpio0 RK_PC2 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ir_receiver_pin>;
+	};
 };
 
 &gmac0 {
@@ -66,7 +72,7 @@
 	BT,reset_gpio	= <&gpio4 RK_PC4 GPIO_ACTIVE_HIGH>;
 	BT,wake_gpio	 = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
 	BT,wake_host_irq = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
-	status = "okay";
+	status = "disabled";
 };
 
 // wifi
@@ -127,6 +133,22 @@
 };
 
 &pinctrl {
+	bluetooth {
+		bt_shutdown_gpio: bt-shutdown-gpio {
+			rockchip,pins = <4 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		bt_host_wake_gpio: bt-host-wake-gpio {
+			rockchip,pins = <0 RK_PD4 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+		bt_device_wake_gpio: bt-device-wake-gpio {
+			rockchip,pins = <0 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+	ir-receiver {
+		ir_receiver_pin: ir-receiver-pin {
+			rockchip,pins = <0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 	nvme {
 		vcc3v3_nvme_en: vcc3v3-nvme-en {
 			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -168,10 +190,25 @@
 &uart8 {
 	status = "okay";
 	pinctrl-names = "default";
-	pinctrl-0 = <&uart8m0_xfer &uart8m0_ctsn>;
+	pinctrl-0 = <&uart8m0_xfer &uart8m0_ctsn &uart8m0_rtsn>;
+	uart-has-rtscts;
+
+	bluetooth {
+		compatible = "brcm,bcm4345c5";
+		clocks = <&rk809 1>;
+		clock-names = "ext_clock";
+		host-wakeup-gpios = <&gpio0 RK_PD4 GPIO_ACTIVE_HIGH>;
+		device-wakeup-gpios = <&gpio0 RK_PD5 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio4 RK_PC4 GPIO_ACTIVE_HIGH>;
+		max-speed = <1500000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_host_wake_gpio &bt_device_wake_gpio &bt_shutdown_gpio>;
+		vbat-supply = <&vcc_3v3>;
+		vddio-supply = <&vcc_1v8>;
+	};
 };
 
-// IR receiver
+// IR receiver, but we use gpio-ir-receiver driver
 &pwm3 {
 	compatible = "rockchip,remotectl-pwm";
 	pinctrl-names = "default";
@@ -179,5 +216,5 @@
 	remote_pwm_id = <3>;
 	handle_cpu_id = <1>;
 	remote_support_psci = <0>;
-	status = "okay";
+	status = "disabled";
 };
