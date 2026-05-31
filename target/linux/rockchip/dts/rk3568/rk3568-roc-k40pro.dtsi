@@ -25,21 +25,21 @@
 		ethernet0 = &gmac0;
 		ethernet1 = &gmac1;
 
-		led-boot 	 = &led_green;
+		led-boot     = &led_green;
 		led-failsafe = &led_green;
 		led-running  = &led_green;
 		led-upgrade  = &led_green;
 	};
 
 	chosen: chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0 rootpart=mmcblk1p3 rw rootwait autoresize=mmcblk1p4";
+		bootargs = "earlycon=uart8250,mmio32,0xfe660000 console=ttyFIQ0";
 	};
 
 	adc_keys: adc-keys {
 		compatible = "adc-keys";
 		io-channels = <&saradc 0>;
 		io-channel-names = "buttons";
-		keyup-threshold-microvolt = <1800000>;
+		keyup-threshold-microvolt = <1750000>;
 		poll-interval = <100>;
 
 		vol-up-key {

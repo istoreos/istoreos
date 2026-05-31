@@ -7,7 +7,6 @@
 / {
 	compatible = "easepi,r1", "rockchip,rk3568";
 	model = "EasePi R1";
-	hwmodel_id = "R1";
 
 	chosen {
 		default-firewall = "dual";

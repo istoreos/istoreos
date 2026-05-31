@@ -6,9 +6,6 @@
 	compatible = "easepi,a2", "rockchip,rk3568";
 	model = "EasePi A2";
 	eth_order = "0000:01:00.0";
-	kdebug = "0";
-	hwmodel_id = "A2";
-	hw_support = "hdmi";
 
 	aliases {
 		ethernet0 = &pcie_eth0;
@@ -38,10 +35,6 @@
 };
 
 &gmac1 {
-	status = "disabled";
-};
-
-&sata0 {
 	status = "disabled";
 };
 
@@ -93,21 +86,16 @@
 	status = "okay";
 };
 
-/* fix mali warning */
-&gpu {
-	power-off-delay-ms = <200>;
-};
-
 &pcie2x1 {
 	reset-gpios = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 
-	pcie@10 {
+	pcie@0,0 {
 		reg = <0x00100000 0 0 0 0>;
 		#address-cells = <3>;
 		#size-cells = <2>;
 
-		pcie_eth0: pcie-eth@10,0 {
+		pcie_eth0: pcie@10,0 {
 			compatible = "pci10ec,8125";
 			reg = <0x000000 0 0 0 0>;
 
