@@ -208,6 +208,13 @@
 		reset-gpios = <&gpio2 RK_PB5 GPIO_ACTIVE_LOW>;
 	};
 
+	ir-receiver {
+		compatible = "gpio-ir-receiver";
+		gpios = <&gpio3 RK_PB2 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ir_receiver_pin>;
+	};
+
 	fan0: gpio_fan0 {
 		compatible = "gpio-fan";
 		fan-supply = <&vcc12v_dcin>;
@@ -591,7 +598,7 @@
 	};
 };
 
-// IR receiver
+// IR receiver, but we use gpio-ir-receiver driver
 &pwm3 {
 	compatible = "rockchip,remotectl-pwm";
 	pinctrl-names = "default";
@@ -599,7 +606,7 @@
 	remote_pwm_id = <3>;
 	handle_cpu_id = <1>;
 	remote_support_psci = <0>;
-	status = "okay";
+	status = "disabled";
 };
 
 &saradc {
