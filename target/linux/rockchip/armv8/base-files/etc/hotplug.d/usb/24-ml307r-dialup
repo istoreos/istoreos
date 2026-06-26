@@ -1,0 +1,99 @@
+#!/bin/sh
+# Copyright (C) 2026 jjm2473@gmail.com
+
+[[ "$ACTION" = bind ]] || exit
+[[ "$PRODUCT" = "2ecc/3012/*" ]] || exit
+
+TTYNAME=
+if [[ $(cat "/sys${DEVPATH}/bInterfaceNumber") = "02" ]]; then
+	TTYNAME=$(cat /sys${DEVPATH}/tty*/tty/tty*/uevent | grep '^DEVNAME=' | head -1 | cut -d= -f2)
+fi
+
+LOG=/tmp/log/ml307r-at-$TTYNAME.log
+
+send_cmd() {
+	echo -ne "$2"'\r\n' >"$1"
+}
+
+# dev, cmd, result, timeout
+send_and_wait() {
+	send_cmd "$1" "$2"
+	local seconds
+	for seconds in $(seq 1 ${4:-1}); do
+		grep -qF "$3" "$LOG" && return 0
+		sleep 1
+	done
+	return 1
+}
+
+ping_at() {
+	local seconds
+	for seconds in $(seq 1 ${2:-1}); do
+		send_and_wait "$1" "AT" "OK" 1 && return 0
+		sleep 1
+	done
+	return 1
+}
+
+LOGPID=
+clean_and_exit() {
+	if [[ -n "$LOGPID" ]]; then
+		kill "$LOGPID" 2>/dev/null
+		wait "$LOGPID" 2>/dev/null
+	fi
+	exit $1
+}
+
+# RNDIS: AT+MDIALUPCFG="mode",0
+# ECM: AT+MDIALUPCFG="mode",1
+# Dialup: AT+MDIALUP=1,1
+# Auto dialup: AT+MDIALUPCFG="auto",1
+# SIM card status: AT+CPIN?
+# SIM card ICCID: AT+MCCID
+# SIM card IMSI: AT+CIMI
+# Modem IMEI: AT+CGSN=1
+# Network status: AT+CEREG?
+# IP address: AT+MDIALUP?
+# Signal quality: AT+CSQ
+# Reboot: AT+MREBOOT=0
+
+if [[ -n "$TTYNAME" && -e "/dev/$TTYNAME" ]]; then
+	# rename /dev/$TTYNAME to avoid conflict with other process
+	TTYNAMEEX="tmp-ml307r-$TTYNAME"
+	while [ -e "/dev/$TTYNAME" ]; do
+		rm -f "/dev/$TTYNAMEEX"
+		mv "/dev/$TTYNAME" "/dev/$TTYNAMEEX"
+	done
+	sleep 1
+	cat "/dev/$TTYNAMEEX" >"$LOG" 2>/dev/null &
+	LOGPID=$!
+	ping_at "/dev/$TTYNAMEEX" 4 || { clean_and_exit 1; }
+	>"$LOG"
+
+	if ! send_and_wait "/dev/$TTYNAMEEX" 'AT+MDIALUPCFG="auto"' '+MDIALUPCFG: "auto",' 1 || grep -qF '+MDIALUPCFG: "auto",1' "$LOG"; then
+		logger -t "ml307r" "send AT+MDIALUP=1,1 to $TTYNAME"
+		send_cmd "/dev/$TTYNAMEEX" 'AT+MDIALUP=1,1'
+		sleep 5
+		mv "/dev/$TTYNAMEEX" "/dev/$TTYNAME"
+	else
+		logger -t "ml307r" "set auto dialup to $TTYNAME"
+
+		SUCCESS=false
+		for i in $(seq 1 3); do
+			send_and_wait "/dev/$TTYNAMEEX" 'AT+MDIALUPCFG="auto",1' "OK" 1 || continue
+			send_and_wait "/dev/$TTYNAMEEX" 'AT+MDIALUPCFG="auto"' '+MDIALUPCFG: "auto",1' 1 && { SUCCESS=true; break; }
+			logger -t "ml307r" "failed to set auto dialup to $TTYNAME, retry $i"
+		done
+		if $SUCCESS; then
+			sleep 2
+			logger -t "ml307r" "reboot $TTYNAME to apply auto dialup"
+			send_cmd "/dev/$TTYNAMEEX" 'AT+MREBOOT=0'
+			sleep 1
+		else
+			logger -t "ml307r" "failed to set auto dialup to $TTYNAME"
+			mv "/dev/$TTYNAMEEX" "/dev/$TTYNAME"
+			clean_and_exit 1
+		fi
+	fi
+	clean_and_exit 0
+fi
