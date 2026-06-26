@@ -422,6 +422,13 @@ board_set_iface_smp_affinity() {
 	esac
 }
 
+serial_option_new_id() {
+	# ASR Microelectronics ML307R
+	echo 2ecc 3012 ff > /sys/bus/usb-serial/drivers/option1/new_id
+	# Quectel EC801E
+	echo 2c7c 0903 ff > /sys/bus/usb-serial/drivers/option1/new_id
+}
+
 board_wait_wifi() {
 	local seconds
 	[[ -f "/etc/uci-defaults/01-rk35xx-wifi" ]] || return 0
@@ -442,5 +449,7 @@ board_wait_wifi() {
 board_fixup_iface_name
 
 board_set_iface_smp_affinity
+
+serial_option_new_id
 
 board_wait_wifi
