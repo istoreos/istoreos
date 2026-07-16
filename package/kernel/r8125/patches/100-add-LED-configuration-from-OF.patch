@@ -1,0 +1,105 @@
+From 038d93935f67bc8a196355d2b6199d1286c53557 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 26 Jun 2024 10:59:50 +0800
+Subject: [PATCH] 100-add-LED-configuration-from-OF
+  see https://mail.coreboot.org/hyperkitty/list/coreboot-gerrit@coreboot.org/thread/4SIVEXWBE5MNR4ONIW2D5MMEKHR47CJC/
+
+---
+ src/r8125.h   |  5 +++++
+ src/r8125_n.c | 53 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 58 insertions(+)
+
+--- a/src/r8125.h
++++ b/src/r8125.h
+@@ -1403,6 +1403,7 @@ enum RTL8125_registers {
+         CounterAddrLow      = 0x10,
+         CounterAddrHigh     = 0x14,
+         CustomLED       = 0x18,
++        LEDSEL_0_8125   = 0x18,
+         TxDescStartAddrLow  = 0x20,
+         TxDescStartAddrHigh = 0x24,
+         TxHDescStartAddrLow = 0x28,
+@@ -1442,6 +1443,7 @@ enum RTL8125_registers {
+         LEDSEL_2_8125   = 0x84,
+         LEDSEL_1_8125   = 0x86,
+         TimeInt2        = 0x8C,
++        LEDFEATURE_8125 = 0x94,
+         LEDSEL_3_8125   = 0x96,
+         OCPDR           = 0xB0,
+         MACOCP          = 0xB0,
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -43,6 +43,7 @@
+ #include <linux/etherdevice.h>
+ #include <linux/delay.h>
+ #include <linux/mii.h>
++#include <linux/of.h>
+ #include <linux/if_vlan.h>
+ #include <linux/crc32.h>
+ #include <linux/interrupt.h>
+@@ -14760,6 +14761,56 @@ rtl8125_restore_phy_fuse_dout(struct rtl
+                 return;
+ }
+ 
++/*
++ * Refer to RTL8125 datasheet 5.Customizable LED Configuration
++ * Register Name	IO Address
++ * LEDSEL0		0x18
++ * LEDSEL1		0x86
++ * LEDSEL2		0x84
++ * LEDSEL3		0x96
++ * LEDFEATURE		0x94
++ *
++ * LEDSEL Bit[]		Description
++ * Bit0			Link10M
++ * Bit1			Link100M
++ * Bit3			Link1000M
++ * Bit5			Link2.5G
++ * Bit9			ACT
++ * Bit10		preboot enable
++ * Bit11		lp enable
++ * Bit12		active low/high
++ *
++ * LEDFEATURE		Description
++ * Bit0			LED Table V1/V2
++ * Bit1~3		Reserved
++ * Bit4~5		LED Blinking Duty Cycle	12.5%/ 25%/ 50%/ 75%
++ * Bit6~7		LED Blinking Freq. 240ms/160ms/80ms/Link-Speed-Dependent
++ */
++static int
++rtl8125_led_configuration(struct rtl8125_private *tp)
++{
++        const int led_regs[] = { LEDSEL_0_8125, LEDSEL_1_8125, LEDSEL_2_8125, LEDSEL_3_8125 }; /* LEDSEL 0-3 */
++        u32 led_data[4];
++        u8 led_feature;
++        int ret, i;
++
++        ret = of_property_read_u32_array(tp->pci_dev->dev.of_node,
++                                  "realtek,led-data", led_data, 4);
++
++        if (!ret) {
++                for (i = 0; i < 4; i++)
++                        RTL_W16(tp, led_regs[i], led_data[i]);
++        }
++
++        ret = of_property_read_u8(tp->pci_dev->dev.of_node,
++                                  "realtek,led-feature", &led_feature);
++
++        if (!ret) {
++                RTL_W8(tp, LEDFEATURE_8125, led_feature);
++        }
++        return 0;
++}
++
+ static void
+ rtl8125_init_software_variable(struct net_device *dev)
+ {
+@@ -15276,6 +15327,8 @@ rtl8125_init_software_variable(struct ne
+         else if (tp->InitRxDescType == RX_DESC_RING_TYPE_4)
+                 tp->rtl8125_rx_config &= ~EnableRxDescV4_1;
+ 
++        rtl8125_led_configuration(tp);
++
+         rtl8125_backup_led_select(tp);
+ 
+         tp->wol_opts = rtl8125_get_hw_wol(tp);
