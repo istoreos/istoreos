@@ -20,7 +20,7 @@ define KernelPackage/r8125
   TITLE:=Realtek RTL8125 PCI 2.5 Gigabit Ethernet driver
   DEPENDS:=@PCI_SUPPORT +kmod-libphy
   FILES:=$(PKG_BUILD_DIR)/src/r8125.ko
-  AUTOLOAD:=$(call AutoProbe,r8125,1)
+  AUTOLOAD:=$(call AutoLoad,35,r8125)
   PROVIDES:=@kmod-r8169-any
   VARIANT:=regular
   PKG_MAKE_FLAGS += CONFIG_ASPM=n
