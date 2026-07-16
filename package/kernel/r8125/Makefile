@@ -26,6 +26,20 @@ define KernelPackage/r8125
   PKG_MAKE_FLAGS += CONFIG_ASPM=n
 endef
 
+define KernelPackage/r8125/install/dkml
+	$(INSTALL_DIR) $(1)/etc/modules-pending.d
+	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
+endef
+
+ifneq ($(filter y,$(CONFIG_TARGET_x86) $(CONFIG_TARGET_rockchip)),)
+KernelPackage/r8125/install = $(KernelPackage/r8125/install/dkml)
+endif
+
+define Package/kmod-r8125/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || rm -f /etc/modules-pending.d/$(NAME)
+endef
+
 define KernelPackage/r8125-rss
 $(call KernelPackage/r8125)
   CONFLICTS:=kmod-r8125
