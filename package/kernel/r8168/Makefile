@@ -25,6 +25,20 @@ define KernelPackage/r8168
   VARIANT:=regular
 endef
 
+define KernelPackage/r8168/install/dkml
+	$(INSTALL_DIR) $(1)/etc/modules-pending.d
+	$(LN) ../modules.d/$(filter-out 0-,$(word 1,$(AUTOLOAD))-)$$(NAME) $(1)/etc/modules-pending.d/$$(NAME)
+endef
+
+ifneq ($(filter y,$(CONFIG_TARGET_x86) $(CONFIG_TARGET_rockchip)),)
+KernelPackage/r8168/install = $(KernelPackage/r8168/install/dkml)
+endif
+
+define Package/kmod-r8168/postinst
+#!/bin/sh
+[ -n "$${IPKG_INSTROOT}" ] || rm -f /etc/modules-pending.d/$(NAME)
+endef
+
 define KernelPackage/r8168-rss
 $(call KernelPackage/r8168)
   CONFLICTS:=kmod-r8168
