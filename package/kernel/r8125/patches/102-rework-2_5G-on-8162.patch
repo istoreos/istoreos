@@ -1,0 +1,20 @@
+From 11803ed4d9dd0fb5954b2a0257c74f89e68d9982 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 28 Nov 2024 14:45:03 +0800
+Subject: [PATCH] rework 2.5G on [10ec:8162]
+
+---
+ src/r8125_n.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -7656,7 +7656,7 @@ static void rtl8125_get_mac_version(stru
+                 break;
+         }
+ 
+-        if (pdev->device == 0x8162) {
++        if (pdev->subsystem_vendor == 0x8162) {
+                 if (tp->mcfg == CFG_METHOD_3)
+                         tp->mcfg = CFG_METHOD_6;
+                 else if (tp->mcfg == CFG_METHOD_5)
