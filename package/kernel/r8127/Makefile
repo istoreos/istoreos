@@ -20,7 +20,7 @@ define KernelPackage/r8127
   TITLE:=Realtek RTL8127 PCI 10 Gigabit Ethernet driver
   DEPENDS:=@PCI_SUPPORT +kmod-libphy
   FILES:=$(PKG_BUILD_DIR)/src/r8127.ko
-  AUTOLOAD:=$(call AutoProbe,r8127,1)
+  AUTOLOAD:=$(call AutoLoad,35,r8127)
   PROVIDES:=kmod-r8169
   VARIANT:=regular
 endef
