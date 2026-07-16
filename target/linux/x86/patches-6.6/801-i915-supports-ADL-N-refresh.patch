@@ -1,0 +1,28 @@
+From 2395f67a4d83ddc7650364c870e5f4a459e677f8 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 13 Jan 2025 11:11:36 +0800
+Subject: [PATCH] drivers/i915: supports Intel ADL-N Refresh (N150/N250/N355)
+ iGPU
+
+---
+ include/drm/i915_pciids.h | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/include/drm/i915_pciids.h b/include/drm/i915_pciids.h
+index e1e10dfbb..c69fe11c6 100644
+--- a/include/drm/i915_pciids.h
++++ b/include/drm/i915_pciids.h
+@@ -672,7 +672,9 @@
+ #define INTEL_ADLN_IDS(info) \
+ 	INTEL_VGA_DEVICE(0x46D0, info), \
+ 	INTEL_VGA_DEVICE(0x46D1, info), \
+-	INTEL_VGA_DEVICE(0x46D2, info)
++	INTEL_VGA_DEVICE(0x46D2, info), \
++	INTEL_VGA_DEVICE(0x46D3, info), \
++	INTEL_VGA_DEVICE(0x46D4, info)
+ 
+ /* RPL-S */
+ #define INTEL_RPLS_IDS(info) \
+-- 
+2.46.0
+

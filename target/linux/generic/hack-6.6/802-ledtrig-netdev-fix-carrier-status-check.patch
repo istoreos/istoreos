@@ -1,0 +1,24 @@
+From b09e2f05ea1d740403397a55dd8e59ad637554e5 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Tue, 26 Dec 2023 17:10:08 +0800
+Subject: [PATCH] ledtrig-netdev: fix carrier status check
+
+Referring to carrier_show in net/core/net-sysfs.c,
+we can see that netif_carrier_ok is only meaningful on netif_running.
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/leds/trigger/ledtrig-netdev.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/leds/trigger/ledtrig-netdev.c
++++ b/drivers/leds/trigger/ledtrig-netdev.c
+@@ -207,7 +207,7 @@ static void get_device_state(struct led_
+ {
+ 	struct ethtool_link_ksettings cmd;
+ 
+-	trigger_data->carrier_link_up = netif_carrier_ok(trigger_data->net_dev);
++	trigger_data->carrier_link_up = netif_running(trigger_data->net_dev) && netif_carrier_ok(trigger_data->net_dev);
+ 	if (!trigger_data->carrier_link_up)
+ 		return;
+ 

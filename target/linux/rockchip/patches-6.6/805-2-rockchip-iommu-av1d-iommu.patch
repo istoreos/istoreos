@@ -1,0 +1,48 @@
+From 7ffedb05594cb70b13af27d6bba83bc259249f23 Mon Sep 17 00:00:00 2001
+From: Yandong Lin <yandong.lin@rock-chips.com>
+Date: Mon, 3 Jul 2023 20:32:01 +0800
+Subject: [PATCH] iommu/rockchip: support av1d iommu
+
+Signed-off-by: Yandong Lin <yandong.lin@rock-chips.com>
+Change-Id: Ic7cbb95b83cef361ea4d62c969d5585318ec0dac
+---
+ drivers/iommu/Makefile         | 4 +++-
+ drivers/iommu/rockchip-iommu.c | 7 ++++++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+--- a/drivers/iommu/Makefile
++++ b/drivers/iommu/Makefile
+@@ -18,7 +18,9 @@ obj-$(CONFIG_MTK_IOMMU) += mtk_iommu.o
+ obj-$(CONFIG_MTK_IOMMU_V1) += mtk_iommu_v1.o
+ obj-$(CONFIG_OMAP_IOMMU) += omap-iommu.o
+ obj-$(CONFIG_OMAP_IOMMU_DEBUG) += omap-iommu-debug.o
+-obj-$(CONFIG_ROCKCHIP_IOMMU) += rockchip-iommu.o
++obj-$(CONFIG_ROCKCHIP_IOMMU) += rockchip_iommu.o
++rockchip_iommu-objs := rockchip-iommu.o
++rockchip_iommu-objs += rockchip-iommu-av1d.o
+ obj-$(CONFIG_SUN50I_IOMMU) += sun50i-iommu.o
+ obj-$(CONFIG_TEGRA_IOMMU_GART) += tegra-gart.o
+ obj-$(CONFIG_TEGRA_IOMMU_SMMU) += tegra-smmu.o
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -1379,7 +1379,9 @@ static int rk_iommu_probe(struct platfor
+ 		return -EINVAL;
+ 
+ 	if (device_property_match_string(dev, "compatible", "rockchip,iommu-av1d") >= 0) {
+-		iommu->opt_ops = NULL;
++		iommu->opt_ops = av1d_iommu_get_ops();
++		if (iommu->opt_ops)
++			dev_info(dev, "av1d iommu enabled\n");
+ 		goto alloc_group;
+ 	}
+ 
+@@ -1575,6 +1577,9 @@ static const struct of_device_id rk_iomm
+ 	{	.compatible = "rockchip,rk3568-iommu",
+ 		.data = &iommu_data_ops_v2,
+ 	},
++	{	.compatible = "rockchip,iommu-av1d",
++		.data = &iommu_data_ops_v2,
++	},
+ 	{ /* sentinel */ }
+ };
+ 

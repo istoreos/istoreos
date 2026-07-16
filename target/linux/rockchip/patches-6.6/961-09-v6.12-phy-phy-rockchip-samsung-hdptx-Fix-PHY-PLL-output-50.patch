@@ -1,0 +1,36 @@
+From 36afb795a27c8631a2e34ba1b761f0435eaaed25 Mon Sep 17 00:00:00 2001
+From: Algea Cao <algea.cao@rock-chips.com>
+Date: Sun, 27 Apr 2025 17:51:24 +0800
+Subject: [PATCH 09/11] phy: phy-rockchip-samsung-hdptx: Fix PHY PLL output
+ 50.25MHz error
+
+When using HDMI PLL frequency division coefficient at 50.25MHz
+that is calculated by rk_hdptx_phy_clk_pll_calc(), it fails to
+get PHY LANE lock. Although the calculated values are within the
+allowable range of PHY PLL configuration.
+
+In order to fix the PHY LANE lock error and provide the expected
+50.25MHz output, manually compute the required PHY PLL frequency
+division coefficient and add it to ropll_tmds_cfg configuration
+table.
+
+Signed-off-by: Algea Cao <algea.cao@rock-chips.com>
+Reviewed-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Acked-by: Heiko Stuebner <heiko@sntech.de>
+Link: https://lore.kernel.org/r/20250427095124.3354439-1-algea.cao@rock-chips.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
++++ b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+@@ -291,6 +291,8 @@ static const struct ropll_config ropll_t
+ 	  1, 1, 0, 0x20, 0x0c, 1, 0x0e, 0, 0, },
+ 	{ 65000000ULL, 162, 162, 1, 1, 11, 1, 1, 1, 1, 1, 1, 1, 54, 0, 16, 4, 1,
+ 	  1, 1, 0, 0x20, 0x0c, 1, 0x0e, 0, 0, },
++	{ 50250000ULL, 84, 84, 1, 1, 7, 1, 1, 1, 1, 1, 1, 1, 11, 1, 4, 5,
++	  4, 11, 1, 0, 0x20, 0x0c, 1, 0x0e, 0, 0, },
+ 	{ 33750000ULL, 0x70, 0x70, 1, 1, 0xf, 1, 1, 1, 1, 1, 1, 1, 0x2, 0, 0x01, 5,
+ 	  1, 1, 1, 0, 0x20, 0x0c, 1, 0x0e, 0, 0, },
+ 	{ 40000000ULL, 100, 100, 1, 1, 11, 1, 1, 0, 1, 0, 1, 1, 0x9, 0, 0x05, 0,

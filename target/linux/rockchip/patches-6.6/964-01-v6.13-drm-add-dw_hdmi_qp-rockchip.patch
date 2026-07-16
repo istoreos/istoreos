@@ -1,0 +1,235 @@
+--- a/drivers/gpu/drm/rockchip/Kconfig
++++ b/drivers/gpu/drm/rockchip/Kconfig
+@@ -8,6 +8,7 @@ config DRM_ROCKCHIP
+ 	select VIDEOMODE_HELPERS
+ 	select DRM_ANALOGIX_DP if ROCKCHIP_ANALOGIX_DP
+ 	select DRM_DW_HDMI if ROCKCHIP_DW_HDMI
++	select DRM_DW_HDMI_QP if ROCKCHIP_DW_HDMI_QP
+ 	select DRM_DW_MIPI_DSI if ROCKCHIP_DW_MIPI_DSI
+ 	select GENERIC_PHY if ROCKCHIP_DW_MIPI_DSI
+ 	select GENERIC_PHY_MIPI_DPHY if ROCKCHIP_DW_MIPI_DSI
+@@ -63,6 +64,14 @@ config ROCKCHIP_DW_HDMI
+ 	  enable HDMI on RK3288 or RK3399 based SoC, you should select
+ 	  this option.
+ 
++config ROCKCHIP_DW_HDMI_QP
++	bool "Rockchip specific extensions for Synopsys DW HDMI QP"
++	select DRM_KMS_HELPER
++	help
++	  This selects support for Rockchip SoC specific extensions
++	  for the Synopsys DesignWare HDMI QP driver. If you want to
++	  enable HDMI on RK3588 based SoC, you should select this option.
++
+ config ROCKCHIP_DW_MIPI_DSI
+ 	bool "Rockchip specific extensions for Synopsys DW MIPI DSI"
+ 	select GENERIC_PHY_MIPI_DPHY
+--- a/drivers/gpu/drm/rockchip/Makefile
++++ b/drivers/gpu/drm/rockchip/Makefile
+@@ -11,6 +11,7 @@ rockchipdrm-$(CONFIG_ROCKCHIP_VOP) += ro
+ rockchipdrm-$(CONFIG_ROCKCHIP_ANALOGIX_DP) += analogix_dp-rockchip.o
+ rockchipdrm-$(CONFIG_ROCKCHIP_CDN_DP) += cdn-dp-core.o cdn-dp-reg.o
+ rockchipdrm-$(CONFIG_ROCKCHIP_DW_HDMI) += dw_hdmi-rockchip.o
++rockchipdrm-$(CONFIG_ROCKCHIP_DW_HDMI_QP) += dw_hdmi_qp-rockchip.o
+ rockchipdrm-$(CONFIG_ROCKCHIP_DW_MIPI_DSI) += dw-mipi-dsi-rockchip.o
+ rockchipdrm-$(CONFIG_ROCKCHIP_INNO_HDMI) += inno_hdmi.o
+ rockchipdrm-$(CONFIG_ROCKCHIP_LVDS) += rockchip_lvds.o
+--- a/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
++++ b/drivers/gpu/drm/rockchip/dw_hdmi_qp-rockchip.c
+@@ -19,6 +19,7 @@
+ #include <drm/bridge/dw_hdmi_qp.h>
+ #include <drm/display/drm_hdmi_helper.h>
+ #include <drm/drm_bridge_connector.h>
++#include <drm/drm_edid.h>
+ #include <drm/drm_of.h>
+ #include <drm/drm_probe_helper.h>
+ #include <drm/drm_simple_kms_helper.h>
+@@ -110,6 +111,66 @@ static struct rockchip_hdmi_qp *to_rockc
+ 	return container_of(rkencoder, struct rockchip_hdmi_qp, encoder);
+ }
+ 
++/**
++ * drm_hdmi_compute_mode_clock() - Computes the TMDS Character Rate
++ * @mode: Display mode to compute the clock for
++ * @bpc: Bits per character
++ * @fmt: Output Pixel Format used
++ *
++ * Returns the TMDS Character Rate for a given mode, bpc count and output format.
++ *
++ * RETURNS:
++ * The TMDS Character Rate, in Hertz, or 0 on error.
++ */
++static unsigned long long
++rk_hdmi_compute_mode_clock(const struct drm_display_mode *mode,
++			    unsigned int bpc, enum hdmi_colorspace fmt)
++{
++	unsigned long long clock = mode->clock * 1000ULL;
++	unsigned int vic = drm_match_cea_mode(mode);
++
++	/*
++	 * CTA-861-G Spec, section 5.4 - Color Coding and Quantization
++	 * mandates that VIC 1 always uses 8 bpc.
++	 */
++	if (vic == 1 && bpc != 8)
++		return 0;
++
++	if (fmt == HDMI_COLORSPACE_YUV422) {
++		/*
++		 * HDMI 1.0 Spec, section 6.5 - Pixel Encoding states that
++		 * YUV422 sends 24 bits over three channels, with Cb and Cr
++		 * components being sent on odd and even pixels, respectively.
++		 *
++		 * If fewer than 12 bpc are sent, data are left justified.
++		 */
++		if (bpc > 12)
++			return 0;
++
++		/*
++		 * HDMI 1.0 Spec, section 6.5 - Pixel Encoding
++		 * specifies that YUV422 sends two 12-bits components over
++		 * three TMDS channels per pixel clock, which is equivalent to
++		 * three 8-bits components over three channels used by RGB as
++		 * far as the clock rate goes.
++		 */
++		bpc = 8;
++	}
++
++	/*
++	 * HDMI 2.0 Spec, Section 7.1 - YCbCr 4:2:0 Pixel Encoding
++	 * specifies that YUV420 encoding is carried at a TMDS Character Rate
++	 * equal to half the pixel clock rate.
++	 */
++	if (fmt == HDMI_COLORSPACE_YUV420)
++		clock = clock / 2;
++
++	if (mode->flags & DRM_MODE_FLAG_DBLCLK)
++		clock = clock * 2;
++
++	return DIV_ROUND_CLOSEST_ULL(clock * bpc, 8);
++}
++
+ static void dw_hdmi_qp_rockchip_encoder_enable(struct drm_encoder *encoder)
+ {
+ 	struct rockchip_hdmi_qp *hdmi = to_rockchip_hdmi_qp(encoder);
+@@ -120,7 +181,7 @@ static void dw_hdmi_qp_rockchip_encoder_
+ 	gpiod_set_value(hdmi->enable_gpio, 1);
+ 
+ 	if (crtc && crtc->state) {
+-		rate = drm_hdmi_compute_mode_clock(&crtc->state->adjusted_mode,
++		rate = rk_hdmi_compute_mode_clock(&crtc->state->adjusted_mode,
+ 						   8, HDMI_COLORSPACE_RGB);
+ 		/*
+ 		 * FIXME: Temporary workaround to pass pixel clock rate
+@@ -427,6 +488,51 @@ static const struct of_device_id dw_hdmi
+ };
+ MODULE_DEVICE_TABLE(of, dw_hdmi_qp_rockchip_dt_ids);
+ 
++struct clk_bulk_devres {
++	struct clk_bulk_data *clks;
++	int num_clks;
++};
++
++static void rk_devm_clk_bulk_release_all_enable(struct device *dev, void *res)
++{
++	struct clk_bulk_devres *devres = res;
++
++	clk_bulk_disable_unprepare(devres->num_clks, devres->clks);
++	clk_bulk_put_all(devres->num_clks, devres->clks);
++}
++
++static int __must_check rk_devm_clk_bulk_get_all_enabled(struct device *dev,
++					       struct clk_bulk_data **clks)
++{
++	struct clk_bulk_devres *devres;
++	int ret;
++
++	devres = devres_alloc(rk_devm_clk_bulk_release_all_enable,
++			      sizeof(*devres), GFP_KERNEL);
++	if (!devres)
++		return -ENOMEM;
++
++	ret = clk_bulk_get_all(dev, &devres->clks);
++	if (ret > 0) {
++		*clks = devres->clks;
++		devres->num_clks = ret;
++	} else {
++		devres_free(devres);
++		return ret;
++	}
++
++	ret = clk_bulk_prepare_enable(devres->num_clks, *clks);
++	if (!ret) {
++		devres_add(dev, devres);
++	} else {
++		clk_bulk_put_all(devres->num_clks, devres->clks);
++		devres_free(devres);
++		return ret;
++	}
++
++	return devres->num_clks;
++}
++
+ static int dw_hdmi_qp_rockchip_bind(struct device *dev, struct device *master,
+ 				    void *data)
+ {
+@@ -509,7 +615,7 @@ static int dw_hdmi_qp_rockchip_bind(stru
+ 		return PTR_ERR(hdmi->vo_regmap);
+ 	}
+ 
+-	ret = devm_clk_bulk_get_all_enabled(hdmi->dev, &clks);
++	ret = rk_devm_clk_bulk_get_all_enabled(hdmi->dev, &clks);
+ 	if (ret < 0) {
+ 		dev_err(hdmi->dev, "Failed to get clocks: %d\n", ret);
+ 		return ret;
+@@ -619,7 +725,7 @@ static const struct dev_pm_ops dw_hdmi_q
+ 
+ struct platform_driver dw_hdmi_qp_rockchip_pltfm_driver = {
+ 	.probe = dw_hdmi_qp_rockchip_probe,
+-	.remove = dw_hdmi_qp_rockchip_remove,
++	.remove_new = dw_hdmi_qp_rockchip_remove,
+ 	.driver = {
+ 		.name = "dwhdmiqp-rockchip",
+ 		.pm = &dw_hdmi_qp_rockchip_pm,
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.c
+@@ -503,6 +503,8 @@ static int __init rockchip_drm_init(void
+ 	ADD_ROCKCHIP_SUB_DRIVER(cdn_dp_driver, CONFIG_ROCKCHIP_CDN_DP);
+ 	ADD_ROCKCHIP_SUB_DRIVER(dw_hdmi_rockchip_pltfm_driver,
+ 				CONFIG_ROCKCHIP_DW_HDMI);
++	ADD_ROCKCHIP_SUB_DRIVER(dw_hdmi_qp_rockchip_pltfm_driver,
++				CONFIG_ROCKCHIP_DW_HDMI_QP);
+ 	ADD_ROCKCHIP_SUB_DRIVER(dw_mipi_dsi_rockchip_driver,
+ 				CONFIG_ROCKCHIP_DW_MIPI_DSI);
+ 	ADD_ROCKCHIP_SUB_DRIVER(inno_hdmi_driver, CONFIG_ROCKCHIP_INNO_HDMI);
+--- a/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
++++ b/drivers/gpu/drm/rockchip/rockchip_drm_drv.h
+@@ -87,6 +87,7 @@ int rockchip_drm_encoder_set_crtc_endpoi
+ int rockchip_drm_endpoint_is_subdriver(struct device_node *ep);
+ extern struct platform_driver cdn_dp_driver;
+ extern struct platform_driver dw_hdmi_rockchip_pltfm_driver;
++extern struct platform_driver dw_hdmi_qp_rockchip_pltfm_driver;
+ extern struct platform_driver dw_mipi_dsi_rockchip_driver;
+ extern struct platform_driver inno_hdmi_driver;
+ extern struct platform_driver rockchip_dp_driver;
+--- a/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
++++ b/drivers/gpu/drm/rockchip/rockchip_vop2_reg.c
+@@ -2566,7 +2566,7 @@ static void vop2_remove(struct platform_
+ 
+ struct platform_driver vop2_platform_driver = {
+ 	.probe = vop2_probe,
+-	.remove = vop2_remove,
++	.remove_new = vop2_remove,
+ 	.driver = {
+ 		.name = "rockchip-vop2",
+ 		.of_match_table = vop2_dt_match,
+--- a/include/dt-bindings/soc/rockchip,vop2.h
++++ b/include/dt-bindings/soc/rockchip,vop2.h
+@@ -10,5 +10,9 @@
+ #define ROCKCHIP_VOP2_EP_LVDS0	5
+ #define ROCKCHIP_VOP2_EP_MIPI1	6
+ #define ROCKCHIP_VOP2_EP_LVDS1	7
++#define ROCKCHIP_VOP2_EP_HDMI1	8
++#define ROCKCHIP_VOP2_EP_EDP1	9
++#define ROCKCHIP_VOP2_EP_DP0	10
++#define ROCKCHIP_VOP2_EP_DP1	11
+ 
+ #endif /* __DT_BINDINGS_ROCKCHIP_VOP2_H */

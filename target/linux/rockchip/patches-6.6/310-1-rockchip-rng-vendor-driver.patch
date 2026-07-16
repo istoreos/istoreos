@@ -1,0 +1,32 @@
+From 266a4a72b20ced306e924e8346b09a432decef1e Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 24 Mar 2025 16:08:49 +0800
+Subject: [PATCH] drivers/rockchip-rng: switch to vendor driver
+
+---
+ drivers/char/hw_random/Makefile            | 2 +-
+ drivers/char/hw_random/rockchip-rng-full.c | 4 ++++
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+--- a/drivers/char/hw_random/Makefile
++++ b/drivers/char/hw_random/Makefile
+@@ -48,5 +48,5 @@ obj-$(CONFIG_HW_RANDOM_XIPHERA) += xiphe
+ obj-$(CONFIG_HW_RANDOM_ARM_SMCCC_TRNG) += arm_smccc_trng.o
+ obj-$(CONFIG_HW_RANDOM_CN10K) += cn10k-rng.o
+ obj-$(CONFIG_HW_RANDOM_POLARFIRE_SOC) += mpfs-rng.o
+-obj-$(CONFIG_HW_RANDOM_ROCKCHIP) += rockchip-rng.o
++obj-$(CONFIG_HW_RANDOM_ROCKCHIP) += rockchip-rng-full.o
+ obj-$(CONFIG_HW_RANDOM_JH7110) += jh7110-trng.o
+--- a/drivers/char/hw_random/rockchip-rng-full.c
++++ b/drivers/char/hw_random/rockchip-rng-full.c
+@@ -443,6 +443,10 @@ static const struct of_device_id rk_rng_
+ 		.data = (void *)&crypto_v2_soc_data,
+ 	},
+ 	{
++		.compatible = "rockchip,rk3568-rng",
++		.data = (void *)&crypto_v2_soc_data,
++	},
++	{
+ 		.compatible = "rockchip,trngv1",
+ 		.data = (void *)&trng_v1_soc_data,
+ 	},

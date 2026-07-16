@@ -1,0 +1,22 @@
+From 9c5cfe76c6bf35d8c3f899bd87a914f0fa95bd31 Mon Sep 17 00:00:00 2001
+From: David Wu <david.wu@rock-chips.com>
+Date: Wed, 5 Jun 2024 10:22:38 +0800
+Subject: [PATCH] ethernet: stmmac: dwmac-rk: Fix rebind failed for this driver
+
+Signed-off-by: David Wu <david.wu@rock-chips.com>
+Change-Id: I29f72b36defa3d5b29a00a574073a790c19289d9
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
+@@ -2157,6 +2157,8 @@ static void rk_gmac_remove(struct platfo
+ 	stmmac_dvr_remove(&pdev->dev);
+ 
+ 	rk_gmac_powerdown(bsp_priv);
++	if (bsp_priv->phy_reset)
++		reset_control_put(bsp_priv->phy_reset);
+ }
+ 
+ #ifdef CONFIG_PM_SLEEP

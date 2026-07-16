@@ -1,0 +1,83 @@
+From 83077073d6d217f15fdd5823ddebb6b01b63e79e Mon Sep 17 00:00:00 2001
+From: Quentin Schulz <quentin.schulz@cherry.de>
+Date: Fri, 27 Jun 2025 12:53:54 +0200
+Subject: [PATCH 2/3] mfd: rk8xx-core: Allow to customize RK806 reset mode
+
+The RK806 PMIC has a bitfield for configuring the restart/reset behavior
+(which I assume Rockchip calls "function") whenever the PMIC is reset
+either programmatically (c.f. DEV_RST in the datasheet) or via PWRCTRL
+or RESETB pins.
+
+For RK806, the following values are possible for RST_FUN:
+
+0b00 means "Restart PMU"
+0b01 means "Reset all the power off reset registers, forcing
+	the state to switch to ACTIVE mode"
+0b10 means "Reset all the power off reset registers, forcing
+	the state to switch to ACTIVE mode, and simultaneously
+	pull down the RESETB PIN for 5mS before releasing"
+0b11 means the same as for 0b10 just above.
+
+This adds the appropriate logic in the driver to parse the new
+rockchip,reset-mode DT property to pass this information. It just
+happens that the values in the binding match the values to write in the
+bitfield so no mapping is necessary.
+
+If it is missing, the register is left untouched and relies either on
+the silicon default or on whatever was set earlier in the boot stages
+(e.g. the bootloader).
+
+Signed-off-by: Quentin Schulz <quentin.schulz@cherry.de>
+Link: https://lore.kernel.org/r/20250627-rk8xx-rst-fun-v4-2-ce05d041b45f@cherry.de
+Signed-off-by: Lee Jones <lee@kernel.org>
+---
+ drivers/mfd/rk8xx-core.c  | 12 ++++++++++++
+ include/linux/mfd/rk808.h |  2 ++
+ 2 files changed, 14 insertions(+)
+
+--- a/drivers/mfd/rk8xx-core.c
++++ b/drivers/mfd/rk8xx-core.c
+@@ -10,6 +10,7 @@
+  * Author: Wadim Egorov <w.egorov@phytec.de>
+  */
+ 
++#include <linux/bitfield.h>
+ #include <linux/interrupt.h>
+ #include <linux/mfd/rk808.h>
+ #include <linux/mfd/core.h>
+@@ -602,6 +603,7 @@ int rk8xx_probe(struct device *dev, int
+ 	const struct mfd_cell *cells;
+ 	int dual_support = 0;
+ 	int nr_pre_init_regs;
++	u32 rst_fun = 0;
+ 	int nr_cells;
+ 	int ret;
+ 	int i;
+@@ -629,6 +631,16 @@ int rk8xx_probe(struct device *dev, int
+ 		cells = rk806s;
+ 		nr_cells = ARRAY_SIZE(rk806s);
+ 		dual_support = IRQF_SHARED;
++
++		ret = device_property_read_u32(dev, "rockchip,reset-mode", &rst_fun);
++		if (ret)
++			break;
++
++		ret = regmap_update_bits(rk808->regmap, RK806_SYS_CFG3, RK806_RST_FUN_MSK,
++					 FIELD_PREP(RK806_RST_FUN_MSK, rst_fun));
++		if (ret)
++			return dev_err_probe(dev, ret,
++					     "Failed to configure requested restart/reset behavior\n");
+ 		break;
+ 	case RK808_ID:
+ 		rk808->regmap_irq_chip = &rk808_irq_chip;
+--- a/include/linux/mfd/rk808.h
++++ b/include/linux/mfd/rk808.h
+@@ -670,6 +670,8 @@ enum rk806_pin_dr_sel {
+ #define RK806_INT_POL_H			BIT(1)
+ #define RK806_INT_POL_L			0
+ 
++/* SYS_CFG3 */
++#define RK806_RST_FUN_MSK		GENMASK(7, 6)
+ #define RK806_SLAVE_RESTART_FUN_MSK	BIT(1)
+ #define RK806_SLAVE_RESTART_FUN_EN	BIT(1)
+ #define RK806_SLAVE_RESTART_FUN_OFF	0

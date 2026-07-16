@@ -1,0 +1,24 @@
+From a850eac461f879fd1b506872194c9305b5e40726 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 19 Mar 2025 13:23:59 +0800
+Subject: [PATCH] dma_buf/heaps: switch to rk heaps
+
+---
+ drivers/dma-buf/heaps/Makefile | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+--- a/drivers/dma-buf/heaps/Makefile
++++ b/drivers/dma-buf/heaps/Makefile
+@@ -1,8 +1,8 @@
+ # SPDX-License-Identifier: GPL-2.0
+ ifeq ($(CONFIG_DMA_SHARED_BUFFER),y)
+-obj-$(CONFIG_DMABUF_HEAPS_SYSTEM)	+= system_heap.o
+-obj-$(CONFIG_DMABUF_HEAPS_CMA)		+= cma_heap.o
++obj-$(CONFIG_DMABUF_HEAPS_SYSTEM)	+= rk_system_heap.o page_pool.o
++obj-$(CONFIG_DMABUF_HEAPS_CMA)		+= rk_cma_heap.o
+ else
+-dma-buf-objs-$(CONFIG_DMABUF_HEAPS_SYSTEM)	+= system_heap.o
+-dma-buf-objs-$(CONFIG_DMABUF_HEAPS_CMA)		+= cma_heap.o
++dma-buf-objs-$(CONFIG_DMABUF_HEAPS_SYSTEM)	+= rk_system_heap.o page_pool.o
++dma-buf-objs-$(CONFIG_DMABUF_HEAPS_CMA)		+= rk_cma_heap.o
+ endif

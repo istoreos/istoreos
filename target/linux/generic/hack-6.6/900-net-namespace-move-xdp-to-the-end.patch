@@ -1,0 +1,32 @@
+From 6df1873f346942a0fee7f138b55ecaaba7a74a76 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 14 Jan 2025 18:21:43 +0800
+Subject: [PATCH] header: net_namespace.h: move XDP to the end of struct
+
+for better compatible
+---
+ include/net/net_namespace.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+--- a/include/net/net_namespace.h
++++ b/include/net/net_namespace.h
+@@ -178,9 +178,6 @@ struct net {
+ #if IS_ENABLED(CONFIG_CAN)
+ 	struct netns_can	can;
+ #endif
+-#ifdef CONFIG_XDP_SOCKETS
+-	struct netns_xdp	xdp;
+-#endif
+ #if IS_ENABLED(CONFIG_MCTP)
+ 	struct netns_mctp	mctp;
+ #endif
+@@ -191,6 +188,9 @@ struct net {
+ #if IS_ENABLED(CONFIG_SMC)
+ 	struct netns_smc	smc;
+ #endif
++#ifdef CONFIG_XDP_SOCKETS
++	struct netns_xdp	xdp;
++#endif
+ } __randomize_layout;
+ 
+ #include <linux/seq_file_net.h>

@@ -1,0 +1,48 @@
+From 3511a20fa77ef826c4e66e4476479c742a4b266b Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 10 Jul 2025 11:43:58 +0800
+Subject: [PATCH] header: linux/sched.h: move PSI to the end of struct
+
+Signed-off-by: jjm2473 <jjm2473@gmail.com>
+---
+ include/linux/sched.h | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -944,10 +944,6 @@ struct task_struct {
+ #ifdef CONFIG_BLK_CGROUP
+ 	unsigned			use_memdelay:1;
+ #endif
+-#ifdef CONFIG_PSI
+-	/* Stalled due to lack of memory */
+-	unsigned			in_memstall:1;
+-#endif
+ #ifdef CONFIG_PAGE_OWNER
+ 	/* Used by page_owner=on to detect recursion in page tracking. */
+ 	unsigned			in_page_owner:1;
+@@ -1207,10 +1203,6 @@ struct task_struct {
+ 	kernel_siginfo_t		*last_siginfo;
+ 
+ 	struct task_io_accounting	ioac;
+-#ifdef CONFIG_PSI
+-	/* Pressure stall state */
+-	unsigned int			psi_flags;
+-#endif
+ #ifdef CONFIG_TASK_XACCT
+ 	/* Accumulated RSS usage: */
+ 	u64				acct_rss_mem1;
+@@ -1535,6 +1527,13 @@ struct task_struct {
+ 	struct user_event_mm		*user_event_mm;
+ #endif
+ 
++#ifdef CONFIG_PSI
++	/* Pressure stall state */
++	unsigned int			psi_flags;
++	/* Stalled due to lack of memory */
++	unsigned			in_memstall:1;
++#endif
++
+ #ifdef CONFIG_TRACING
+ 	/* Bitmask and counter of trace recursion: */
+ 	unsigned long			trace_recursion;

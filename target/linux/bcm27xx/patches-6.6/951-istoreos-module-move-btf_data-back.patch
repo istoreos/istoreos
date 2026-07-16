@@ -1,0 +1,33 @@
+From d64fe5dc980f41132d1a3d3225ae6f3cb13135ec Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 21 May 2025 12:39:29 +0800
+Subject: [PATCH] module: move btf_data back to original place
+
+---
+ include/linux/module.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -493,6 +493,10 @@ struct module {
+ 	struct srcu_struct **srcu_struct_ptrs;
+ #endif
+ 
++#if 1
++	unsigned int btf_data_size;
++	void *btf_data;
++#endif
+ #ifdef CONFIG_JUMP_LABEL
+ 	struct jump_entry *jump_entries;
+ 	unsigned int num_jump_entries;
+@@ -582,10 +586,6 @@ struct module {
+ 	unsigned int num_bpf_raw_events;
+ 	struct bpf_raw_event_map *bpf_raw_events;
+ #endif
+-#if 1
+-	unsigned int btf_data_size;
+-	void *btf_data;
+-#endif
+ 
+ #ifdef CONFIG_KALLSYMS
+ 	/* Protected by RCU and/or module_mutex: use rcu_dereference() */

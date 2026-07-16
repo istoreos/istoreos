@@ -1,0 +1,175 @@
+From b1106f22d268bb30a4b3f405b2c0fdcbe5427a1a Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 16 Jan 2025 18:12:37 +0800
+Subject: [PATCH] header: linux/module.h: move trace and bpf to the end of
+ struct
+
+linux/sched.h: move tracing to the end of struct
+---
+ include/linux/module.h | 73 ++++++++++++++++++++++--------------------
+ include/linux/sched.h  | 24 +++++++-------
+ 2 files changed, 51 insertions(+), 46 deletions(-)
+
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -488,26 +488,39 @@ struct module {
+ 	void *noinstr_text_start;
+ 	unsigned int noinstr_text_size;
+ 
+-#ifdef CONFIG_TRACEPOINTS
+-	unsigned int num_tracepoints;
+-	tracepoint_ptr_t *tracepoints_ptrs;
+-#endif
+ #ifdef CONFIG_TREE_SRCU
+ 	unsigned int num_srcu_structs;
+ 	struct srcu_struct **srcu_struct_ptrs;
+ #endif
+-#ifdef CONFIG_BPF_EVENTS
+-	unsigned int num_bpf_raw_events;
+-	struct bpf_raw_event_map *bpf_raw_events;
+-#endif
+-#ifdef CONFIG_DEBUG_INFO_BTF_MODULES
+-	unsigned int btf_data_size;
+-	void *btf_data;
+-#endif
++
+ #ifdef CONFIG_JUMP_LABEL
+ 	struct jump_entry *jump_entries;
+ 	unsigned int num_jump_entries;
+ #endif
++
++#ifdef CONFIG_HAVE_STATIC_CALL_INLINE
++	int num_static_call_sites;
++	struct static_call_site *static_call_sites;
++#endif
++
++#ifdef CONFIG_MODULE_UNLOAD
++	/* What modules depend on me? */
++	struct list_head source_list;
++	/* What modules do I depend on? */
++	struct list_head target_list;
++
++	/* Destruction function. */
++	void (*exit)(void);
++
++	atomic_t refcnt;
++#endif
++
++#ifdef CONFIG_CONSTRUCTORS
++	/* Constructor functions. */
++	ctor_fn_t *ctors;
++	unsigned int num_ctors;
++#endif
++
+ #ifdef CONFIG_TRACING
+ 	unsigned int num_trace_bprintk_fmt;
+ 	const char **trace_bprintk_fmt_start;
+@@ -528,10 +541,7 @@ struct module {
+ 	unsigned long *kprobe_blacklist;
+ 	unsigned int num_kprobe_blacklist;
+ #endif
+-#ifdef CONFIG_HAVE_STATIC_CALL_INLINE
+-	int num_static_call_sites;
+-	struct static_call_site *static_call_sites;
+-#endif
++
+ #if IS_ENABLED(CONFIG_KUNIT)
+ 	int num_kunit_suites;
+ 	struct kunit_suite **kunit_suites;
+@@ -551,29 +561,11 @@ struct module {
+ 	struct pi_entry **printk_index_start;
+ #endif
+ 
+-#ifdef CONFIG_MODULE_UNLOAD
+-	/* What modules depend on me? */
+-	struct list_head source_list;
+-	/* What modules do I depend on? */
+-	struct list_head target_list;
+-
+-	/* Destruction function. */
+-	void (*exit)(void);
+-
+-	atomic_t refcnt;
+-#endif
+-
+ #ifdef CONFIG_MITIGATION_ITS
+ 	int its_num_pages;
+ 	void **its_page_array;
+ #endif
+ 
+-#ifdef CONFIG_CONSTRUCTORS
+-	/* Constructor functions. */
+-	ctor_fn_t *ctors;
+-	unsigned int num_ctors;
+-#endif
+-
+ #ifdef CONFIG_FUNCTION_ERROR_INJECTION
+ 	struct error_injection_entry *ei_funcs;
+ 	unsigned int num_ei_funcs;
+@@ -582,6 +574,19 @@ struct module {
+ 	struct _ddebug_info dyndbg_info;
+ #endif
+ 
++#ifdef CONFIG_TRACEPOINTS
++	unsigned int num_tracepoints;
++	tracepoint_ptr_t *tracepoints_ptrs;
++#endif
++#ifdef CONFIG_BPF_EVENTS
++	unsigned int num_bpf_raw_events;
++	struct bpf_raw_event_map *bpf_raw_events;
++#endif
++#ifdef CONFIG_DEBUG_INFO_BTF_MODULES
++	unsigned int btf_data_size;
++	void *btf_data;
++#endif
++
+ #ifdef CONFIG_KALLSYMS
+ 	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
+ 	struct mod_kallsyms __rcu *kallsyms;
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -1408,11 +1408,6 @@ struct task_struct {
+ 	atomic_t			tracing_graph_pause;
+ #endif
+ 
+-#ifdef CONFIG_TRACING
+-	/* Bitmask and counter of trace recursion: */
+-	unsigned long			trace_recursion;
+-#endif /* CONFIG_TRACING */
+-
+ #ifdef CONFIG_KCOV
+ 	/* See kernel/kcov.c for more details. */
+ 
+@@ -1516,13 +1511,6 @@ struct task_struct {
+ 	int				mce_count;
+ #endif
+ 
+-#ifdef CONFIG_KRETPROBES
+-	struct llist_head               kretprobe_instances;
+-#endif
+-#ifdef CONFIG_RETHOOK
+-	struct llist_head               rethooks;
+-#endif
+-
+ #ifdef CONFIG_ARCH_HAS_PARANOID_L1D_FLUSH
+ 	/*
+ 	 * If L1D flush is supported on mm context switch
+@@ -1547,6 +1535,18 @@ struct task_struct {
+ 	struct user_event_mm		*user_event_mm;
+ #endif
+ 
++#ifdef CONFIG_TRACING
++	/* Bitmask and counter of trace recursion: */
++	unsigned long			trace_recursion;
++#endif /* CONFIG_TRACING */
++
++#ifdef CONFIG_KRETPROBES
++	struct llist_head               kretprobe_instances;
++#endif
++#ifdef CONFIG_RETHOOK
++	struct llist_head               rethooks;
++#endif
++
+ 	/*
+ 	 * New fields for task_struct should be added above here, so that
+ 	 * they are included in the randomized portion of task_struct.

@@ -1,0 +1,40 @@
+From 974e26f58e3d619d96df6e0e0ef53ff388183478 Mon Sep 17 00:00:00 2001
+From: Finley Xiao <finley.xiao@rock-chips.com>
+Date: Sat, 24 Feb 2018 16:57:57 +0800
+Subject: [PATCH] soc: rockchip: power-domain: Fix restore error qos value
+
+Change-Id: I74692018652ed2aa45b666f1598662146beec92e
+Signed-off-by: Finley Xiao <finley.xiao@rock-chips.com>
+Signed-off-by: Elaine Zhang <zhangqing@rock-chips.com>
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -93,6 +93,7 @@ struct rockchip_pm_domain {
+ 	u32 *qos_save_regs[MAX_QOS_REGS_NUM];
+ 	int num_clks;
+ 	struct clk_bulk_data *clks;
++	bool is_qos_saved;
+ };
+ 
+ struct rockchip_pmu {
+@@ -670,6 +671,7 @@ static int rockchip_pd_power(struct rock
+ 
+ 		if (!power_on) {
+ 			rockchip_pmu_save_qos(pd);
++			pd->is_qos_saved = true;
+ 
+ 			/* if powering down, idle request to NIU first */
+ 			rockchip_pmu_set_idle_request(pd, true);
+@@ -681,7 +683,8 @@ static int rockchip_pd_power(struct rock
+ 			/* if powering up, leave idle mode */
+ 			rockchip_pmu_set_idle_request(pd, false);
+ 
+-			rockchip_pmu_restore_qos(pd);
++			if (pd->is_qos_saved)
++				rockchip_pmu_restore_qos(pd);
+ 		}
+ 
+ 		rockchip_pmu_ungate_clk(pd, false);

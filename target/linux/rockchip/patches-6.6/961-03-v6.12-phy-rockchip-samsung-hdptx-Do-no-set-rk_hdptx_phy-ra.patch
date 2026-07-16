@@ -1,0 +1,43 @@
+From 9d47e7deb8f1d42c220afb43ff965a4b11f6c7dc Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Tue, 18 Mar 2025 14:35:38 +0200
+Subject: [PATCH 03/11] phy: rockchip: samsung-hdptx: Do no set
+ rk_hdptx_phy->rate in case of errors
+
+Ensure rk_hdptx_ropll_tmds_cmn_config() updates hdptx->rate only after
+all the other operations have been successful.
+
+Fixes: c4b09c562086 ("phy: phy-rockchip-samsung-hdptx: Add clock provider support")
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Link: https://lore.kernel.org/r/20250318-phy-sam-hdptx-bpc-v6-4-8cb1678e7663@collabora.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+--- a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
++++ b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+@@ -771,9 +771,7 @@ static int rk_hdptx_ropll_tmds_cmn_confi
+ {
+ 	const struct ropll_config *cfg = NULL;
+ 	struct ropll_config rc = {0};
+-	int i;
+-
+-	hdptx->rate = rate * 100;
++	int ret, i;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(ropll_tmds_cfg); i++)
+ 		if (rate == ropll_tmds_cfg[i].bit_rate) {
+@@ -828,7 +826,11 @@ static int rk_hdptx_ropll_tmds_cmn_confi
+ 	regmap_update_bits(hdptx->regmap, CMN_REG(0086), PLL_PCG_CLK_EN_MASK,
+ 			   FIELD_PREP(PLL_PCG_CLK_EN_MASK, 0x1));
+ 
+-	return rk_hdptx_post_enable_pll(hdptx);
++	ret = rk_hdptx_post_enable_pll(hdptx);
++	if (!ret)
++		hdptx->rate = rate * 100;
++
++	return ret;
+ }
+ 
+ static int rk_hdptx_ropll_tmds_mode_config(struct rk_hdptx_phy *hdptx,

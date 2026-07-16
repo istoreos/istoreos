@@ -1,0 +1,55 @@
+From 80ea251077114d94590951e0fc8d67deb9c66e64 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 23 Apr 2025 16:48:20 +0800
+Subject: [PATCH] drivers/dwmac-rk: fix dwmac-rk-tool CE
+
+---
+ drivers/net/ethernet/stmicro/stmmac/dwmac-rk-tool.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk-tool.c
++++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk-tool.c
+@@ -19,7 +19,6 @@
+ #include <net/pkt_cls.h>
+ #include <net/tcp.h>
+ #include <net/udp.h>
+-#include <linux/soc/rockchip/rk_vendor_storage.h>
+ #include "stmmac.h"
+ #include "dwmac1000.h"
+ #include "dwmac_dma.h"
+@@ -174,7 +173,7 @@ static int dwmac_rk_enable_mac_loopback(
+ 	}
+ 
+ 	if (likely(priv->plat->fix_mac_speed))
+-		priv->plat->fix_mac_speed(priv->plat->bsp_priv, speed);
++		priv->plat->fix_mac_speed(priv->plat->bsp_priv, speed, dwmac_rk_get_phy_interface(priv));
+ 
+ 	return 0;
+ }
+@@ -258,7 +257,7 @@ static int dwmac_rk_enable_phy_loopback(
+ 	}
+ 
+ 	if (likely(priv->plat->fix_mac_speed))
+-		priv->plat->fix_mac_speed(priv->plat->bsp_priv, speed);
++		priv->plat->fix_mac_speed(priv->plat->bsp_priv, speed, dwmac_rk_get_phy_interface(priv));
+ 
+ 	return 0;
+ }
+@@ -628,7 +627,7 @@ static int dwmac_rk_get_desc_status(stru
+ 	int tx_status, rx_status;
+ 
+ 	txp = lb_priv->dma_tx;
+-	tx_status = priv->hw->desc->tx_status(&priv->dev->stats,
++	tx_status = stmmac_tx_status(priv,
+ 					      &priv->xstats, txp,
+ 					      priv->ioaddr);
+ 	/* Check if the descriptor is owned by the DMA */
+@@ -637,7 +636,7 @@ static int dwmac_rk_get_desc_status(stru
+ 
+ 	rxp = lb_priv->dma_rx;
+ 	/* read the status of the incoming frame */
+-	rx_status = priv->hw->desc->rx_status(&priv->dev->stats,
++	rx_status = stmmac_rx_status(priv,
+ 					      &priv->xstats, rxp);
+ 	if (unlikely(rx_status & dma_own))
+ 		return -EBUSY;

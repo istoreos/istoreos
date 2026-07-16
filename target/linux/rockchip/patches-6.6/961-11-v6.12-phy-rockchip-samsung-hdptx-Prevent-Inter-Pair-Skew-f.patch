@@ -1,0 +1,49 @@
+From 402fc28c3a92e42200b15d5fac63f78e7a50d2e8 Mon Sep 17 00:00:00 2001
+From: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Date: Tue, 28 Oct 2025 10:00:56 +0200
+Subject: [PATCH 11/11] phy: rockchip: samsung-hdptx: Prevent Inter-Pair Skew
+ from exceeding the limits
+
+Fixup PHY deskew FIFO to prevent the phase of D2 lane going ahead of
+other lanes.  It's worth noting this might only happen when dealing with
+HDMI 2.0 rates.
+
+Fixes: 553be2830c5f ("phy: rockchip: Add Samsung HDMI/eDP Combo PHY driver")
+Co-developed-by: Algea Cao <algea.cao@rock-chips.com>
+Signed-off-by: Algea Cao <algea.cao@rock-chips.com>
+Signed-off-by: Cristian Ciocaltea <cristian.ciocaltea@collabora.com>
+Reviewed-by: Neil Armstrong <neil.armstrong@linaro.org>
+Link: https://patch.msgid.link/20251028-phy-hdptx-fixes-v1-3-ecc642a59d94@collabora.com
+Signed-off-by: Vinod Koul <vkoul@kernel.org>
+---
+ drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+--- a/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
++++ b/drivers/phy/rockchip/phy-rockchip-samsung-hdptx.c
+@@ -515,13 +515,9 @@ static const struct reg_sequence rk_hdtp
+ 
+ static const struct reg_sequence rk_hdtpx_tmds_lane_init_seq[] = {
+ 	REG_SEQ0(LANE_REG(0312), 0x00),
+-	REG_SEQ0(LANE_REG(031e), 0x00),
+ 	REG_SEQ0(LANE_REG(0412), 0x00),
+-	REG_SEQ0(LANE_REG(041e), 0x00),
+ 	REG_SEQ0(LANE_REG(0512), 0x00),
+-	REG_SEQ0(LANE_REG(051e), 0x00),
+ 	REG_SEQ0(LANE_REG(0612), 0x00),
+-	REG_SEQ0(LANE_REG(061e), 0x08),
+ 	REG_SEQ0(LANE_REG(0303), 0x2f),
+ 	REG_SEQ0(LANE_REG(0403), 0x2f),
+ 	REG_SEQ0(LANE_REG(0503), 0x2f),
+@@ -534,6 +530,11 @@ static const struct reg_sequence rk_hdtp
+ 	REG_SEQ0(LANE_REG(0406), 0x1c),
+ 	REG_SEQ0(LANE_REG(0506), 0x1c),
+ 	REG_SEQ0(LANE_REG(0606), 0x1c),
++	/* Keep Inter-Pair Skew in the limits */
++	REG_SEQ0(LANE_REG(031e), 0x02),
++	REG_SEQ0(LANE_REG(041e), 0x02),
++	REG_SEQ0(LANE_REG(051e), 0x02),
++	REG_SEQ0(LANE_REG(061e), 0x0a),
+ };
+ 
+ static bool rk_hdptx_phy_is_rw_reg(struct device *dev, unsigned int reg)

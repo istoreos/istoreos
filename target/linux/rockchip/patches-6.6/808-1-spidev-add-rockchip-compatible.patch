@@ -1,0 +1,23 @@
+From a8cba4da838b533c6fb057044c37c03dc77155ff Mon Sep 17 00:00:00 2001
+From: Huibin Hong <huibin.hong@rock-chips.com>
+Date: Fri, 17 Nov 2017 15:37:09 +0800
+Subject: [PATCH] spi: spidev: Add rockchip spidev compatible string
+
+Change-Id: I0ba866f7f17be3063bbe405ac9d62f83e54443a4
+Signed-off-by: Huibin Hong <huibin.hong@rock-chips.com>
+Signed-off-by: Yifeng Zhao <zyf@rock-chips.com>
+Signed-off-by: Jon Lin <jon.lin@rock-chips.com>
+---
+ drivers/spi/spidev.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/drivers/spi/spidev.c
++++ b/drivers/spi/spidev.c
+@@ -741,6 +741,7 @@ static const struct of_device_id spidev_
+ 	{ .compatible = "lwn,bk4", .data = &spidev_of_check },
+ 	{ .compatible = "menlo,m53cpld", .data = &spidev_of_check },
+ 	{ .compatible = "micron,spi-authenta", .data = &spidev_of_check },
++	{ .compatible = "rockchip,spidev", .data = &spidev_of_check },
+ 	{ .compatible = "rohm,bh2228fv", .data = &spidev_of_check },
+ 	{ .compatible = "rohm,dh2228fv", .data = &spidev_of_check },
+ 	{ .compatible = "semtech,sx1301", .data = &spidev_of_check },

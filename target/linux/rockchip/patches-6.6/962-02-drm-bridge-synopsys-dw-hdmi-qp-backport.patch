@@ -1,0 +1,36 @@
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi-qp.c
+@@ -355,18 +355,18 @@ dw_hdmi_qp_bridge_detect(struct drm_brid
+ 	return hdmi->phy.ops->read_hpd(hdmi, hdmi->phy.data);
+ }
+ 
+-static const struct drm_edid *
+-dw_hdmi_qp_bridge_edid_read(struct drm_bridge *bridge,
++static struct edid *
++dw_hdmi_qp_bridge_get_edid(struct drm_bridge *bridge,
+ 			    struct drm_connector *connector)
+ {
+ 	struct dw_hdmi_qp *hdmi = bridge->driver_private;
+-	const struct drm_edid *drm_edid;
++	struct edid *edid;
+ 
+-	drm_edid = drm_edid_read_ddc(connector, bridge->ddc);
+-	if (!drm_edid)
++	edid = drm_get_edid(connector, bridge->ddc);
++	if (!edid)
+ 		dev_dbg(hdmi->dev, "failed to get edid\n");
+ 
+-	return drm_edid;
++	return edid;
+ }
+ 
+ 
+@@ -414,7 +414,7 @@ static const struct drm_bridge_funcs dw_
+ 	.atomic_enable = dw_hdmi_qp_bridge_atomic_enable,
+ 	.atomic_disable = dw_hdmi_qp_bridge_atomic_disable,
+ 	.detect = dw_hdmi_qp_bridge_detect,
+-	.edid_read = dw_hdmi_qp_bridge_edid_read,
++	.get_edid = dw_hdmi_qp_bridge_get_edid,
+ 	.mode_valid = dw_hdmi_qp_bridge_mode_valid,
+ };
+ 

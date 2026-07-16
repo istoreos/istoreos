@@ -1,0 +1,124 @@
+From e3b12676bb6b3c4fed08f2153749cfc7dd1c4c8b Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 2 Jan 2025 18:39:43 +0800
+Subject: [PATCH] header: linux/module.h: move kallsyms to the end of struct
+
+kernel: compatible modules without kallsyms on KALLSYMS enabled kernel
+
+for better compatible
+---
+ include/linux/module.h | 24 ++++++++++++------------
+ kernel/module/main.c   | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+), 12 deletions(-)
+
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -476,18 +476,6 @@ struct module {
+ 	struct bug_entry *bug_table;
+ #endif
+ 
+-#ifdef CONFIG_KALLSYMS
+-	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
+-	struct mod_kallsyms __rcu *kallsyms;
+-	struct mod_kallsyms core_kallsyms;
+-
+-	/* Section attributes */
+-	struct module_sect_attrs *sect_attrs;
+-
+-	/* Notes attributes */
+-	struct module_notes_attrs *notes_attrs;
+-#endif
+-
+ 	/* The command line arguments (may be mangled).  People like
+ 	   keeping pointers to this stuff */
+ 	char *args;
+@@ -593,6 +581,18 @@ struct module {
+ #ifdef CONFIG_DYNAMIC_DEBUG_CORE
+ 	struct _ddebug_info dyndbg_info;
+ #endif
++
++#ifdef CONFIG_KALLSYMS
++	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
++	struct mod_kallsyms __rcu *kallsyms;
++	struct mod_kallsyms core_kallsyms;
++
++	/* Section attributes */
++	struct module_sect_attrs *sect_attrs;
++
++	/* Notes attributes */
++	struct module_notes_attrs *notes_attrs;
++#endif
+ } ____cacheline_aligned __randomize_layout;
+ #ifndef MODULE_ARCH_INIT
+ #define MODULE_ARCH_INIT {}
+--- a/kernel/module/main.c
++++ b/kernel/module/main.c
+@@ -1559,6 +1559,16 @@ static void __layout_sections(struct mod
+ 			if (WARN_ON_ONCE(type == MOD_INVALID))
+ 				continue;
+ 
++#ifdef CONFIG_KALLSYMS
++			if (i == info->index.mod && sizeof(struct module) > s->sh_size) {
++				pr_warn("%s: module has no kallsyms\n",
++					info->name);
++				Elf_Shdr dummy;
++				dummy.sh_addralign = s->sh_addralign;
++				dummy.sh_size = sizeof(struct module);
++				s->sh_entsize = module_get_offset_and_type(mod, type, &dummy, i);
++			} else
++#endif
+ 			s->sh_entsize = module_get_offset_and_type(mod, type, s, i);
+ 			pr_debug("\t%s\n", sname);
+ 		}
+@@ -1879,11 +1889,19 @@ static int elf_validity_cache_copy(struc
+ 		goto no_exec;
+ 	}
+ 
++#ifdef CONFIG_KALLSYMS
++	if (shdr->sh_size > sizeof(struct module)) {
++		pr_err("module %s: .gnu.linkonce.this_module section size must match the kernel's built struct module size at run time\n",
++		       info->name ?: "(missing .modinfo section or name field)");
++		goto no_exec;
++	}
++#else
+ 	if (shdr->sh_size != sizeof(struct module)) {
+ 		pr_err("module %s: .gnu.linkonce.this_module section size must match the kernel's built struct module size at run time\n",
+ 		       info->name ?: "(missing .modinfo section or name field)");
+ 		goto no_exec;
+ 	}
++#endif
+ 
+ 	info->index.mod = mod_idx;
+ 
+@@ -2286,11 +2304,19 @@ static int move_module(struct module *mo
+ 			 * end up copying over all modifications made to the
+ 			 * userspace copy of the entire struct module.
+ 			 */
++#ifdef CONFIG_KALLSYMS
++			if (i == info->index.mod &&
++			   (WARN_ON_ONCE(shdr->sh_size > sizeof(struct module)))) {
++				ret = -ENOEXEC;
++				goto out_enomem;
++			}
++#else
+ 			if (i == info->index.mod &&
+ 			   (WARN_ON_ONCE(shdr->sh_size != sizeof(struct module)))) {
+ 				ret = -ENOEXEC;
+ 				goto out_enomem;
+ 			}
++#endif
+ 			memcpy(dest, (void *)shdr->sh_addr, shdr->sh_size);
+ 		}
+ 		/*
+@@ -2300,6 +2326,11 @@ static int move_module(struct module *mo
+ 		 * minted official memory area.
+ 		 */
+ 		shdr->sh_addr = (unsigned long)dest;
++
++#ifdef CONFIG_KALLSYMS
++		if (i == info->index.mod && sizeof(struct module) > shdr->sh_size)
++			shdr->sh_size = sizeof(struct module);
++#endif
+ 		pr_debug("\t0x%lx 0x%.8lx %s\n", (long)shdr->sh_addr,
+ 			 (long)shdr->sh_size, info->secstrings + shdr->sh_name);
+ 	}

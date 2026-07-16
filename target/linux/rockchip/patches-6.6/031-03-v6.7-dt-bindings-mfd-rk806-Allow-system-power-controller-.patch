@@ -1,0 +1,28 @@
+From 6243b687417686873322c8391fad39c25f1cfb6a Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <megi@xff.cz>
+Date: Thu, 19 Oct 2023 18:57:24 +0200
+Subject: [PATCH] dt-bindings: mfd: rk806: Allow system-power-controller
+ property
+
+Declare support for this property.
+
+Signed-off-by: Ondrej Jirman <megi@xff.cz>
+Reviewed-by: Rob Herring <robh@kernel.org>
+Reviewed-by: Sebastian Reichel <sebastian.reichel@collabora.com>
+Link: https://lore.kernel.org/r/20231019165732.3818789-3-megi@xff.cz
+Signed-off-by: Lee Jones <lee@kernel.org>
+---
+ Documentation/devicetree/bindings/mfd/rockchip,rk806.yaml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+--- a/Documentation/devicetree/bindings/mfd/rockchip,rk806.yaml
++++ b/Documentation/devicetree/bindings/mfd/rockchip,rk806.yaml
+@@ -29,6 +29,8 @@ properties:
+   '#gpio-cells':
+     const: 2
+ 
++  system-power-controller: true
++
+   vcc1-supply:
+     description:
+       The input supply for dcdc-reg1.

@@ -1,0 +1,35 @@
+From 6fa43a9455017025c5577fa9b99ae52d8f06b707 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 25 Mar 2025 11:40:23 +0800
+Subject: [PATCH] drivers/rockchip-iommu: default use DMA_API type iommu on
+ platform devices
+
+VPU/NPU drivers do not support passthrough iommu.
+---
+ drivers/iommu/rockchip-iommu.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+--- a/drivers/iommu/rockchip-iommu.c
++++ b/drivers/iommu/rockchip-iommu.c
+@@ -1292,6 +1292,13 @@ static int rk_iommu_of_xlate(struct devi
+ 	return 0;
+ }
+ 
++static int rk_iommu_def_domain_type(struct device *dev) {
++	if (dev_is_platform(dev)) {
++		return IOMMU_DOMAIN_DMA;
++	}
++	return 0;
++}
++
+ void rockchip_iommu_mask_irq(struct device *dev)
+ {
+ 	struct rk_iommu *iommu = rk_iommu_from_dev(dev);
+@@ -1334,6 +1341,7 @@ static const struct iommu_ops rk_iommu_o
+ 	.pgsize_bitmap = RK_IOMMU_PGSIZE_BITMAP,
+ 	.of_xlate = rk_iommu_of_xlate,
+ 	.owner = THIS_MODULE,
++	.def_domain_type = rk_iommu_def_domain_type,
+ 	.default_domain_ops = &(const struct iommu_domain_ops) {
+ 		.attach_dev	= rk_iommu_attach_device,
+ 		.map		= rk_iommu_map,

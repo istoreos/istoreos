@@ -1,0 +1,32 @@
+From f79d5c05a829422f7e0c8c621a755bbe908cf183 Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 8 Sep 2024 13:28:04 +0000
+Subject: [PATCH] drm: bridge: dw_hdmi: Only notify connected status on HPD
+ interrupt
+
+drm_helper_hpd_irq_event() and drm_bridge_hpd_notify() may incorrectly
+be called with a connected status when HPD is high and RX sense is
+changed. This typically happen when the HDMI cable is unplugged, shortly
+before the HPD is changed to low.
+
+Fix this by only notify connected status on the HPD interrupt when HPD
+is going high, not on the RX sense interrupt when RX sense is changed.
+
+Fixes: da09daf88108 ("drm: bridge: dw_hdmi: only trigger hotplug event on link change")
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+@@ -3117,7 +3117,8 @@ static irqreturn_t dw_hdmi_irq(int irq,
+ 			mutex_unlock(&hdmi->cec_notifier_mutex);
+ 		}
+ 
+-		if (phy_stat & HDMI_PHY_HPD)
++		if ((intr_stat & HDMI_IH_PHY_STAT0_HPD) &&
++		    (phy_stat & HDMI_PHY_HPD))
+ 			status = connector_status_connected;
+ 
+ 		if (!(phy_stat & (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE)))

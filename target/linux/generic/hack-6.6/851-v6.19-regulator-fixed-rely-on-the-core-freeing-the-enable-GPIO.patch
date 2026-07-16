@@ -1,0 +1,41 @@
+From 79a45ddcdbba330f5139c7c7ff7042d69cf147b2 Mon Sep 17 00:00:00 2001
+From: Mark Brown <broonie@kernel.org>
+Date: Thu, 4 Dec 2025 19:39:34 +0000
+Subject: [PATCH] regulator: fixed: Rely on the core freeing the enable GPIO
+
+In order to simplify ownership rules for enable GPIOs supplied by drivers
+regulator_register() always takes ownership of them, even if it ends up
+failing for some other reason. We therefore should not free the GPIO if
+registration fails but just let the core worry about things.
+
+Fixes: 636f4618b1cd (regulator: fixed: fix GPIO descriptor leak on register failure)
+Reported-by: Diederik de Haas <diederik@cknow-tech.com>
+Closes: https://lore.kernel.org/r/DEPEYUF5BRGY.UKFBWRRE8HNP@cknow-tech.com
+Tested-by: Diederik de Haas <diederik@cknow-tech.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+Link: https://patch.msgid.link/20251204-regulator-fixed-fix-gpiod-leak-v1-1-48efea5b82c2@kernel.org
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/fixed.c | 11 ++++-------
+ 1 file changed, 4 insertions(+), 7 deletions(-)
+
+--- a/drivers/regulator/fixed.c
++++ b/drivers/regulator/fixed.c
+@@ -306,13 +306,10 @@ static int reg_fixed_voltage_probe(struc
+ 
+ 	drvdata->dev = devm_regulator_register(&pdev->dev, &drvdata->desc,
+ 					       &cfg);
+-	if (IS_ERR(drvdata->dev)) {
+-		ret = dev_err_probe(&pdev->dev, PTR_ERR(drvdata->dev),
+-				    "Failed to register regulator: %ld\n",
+-				    PTR_ERR(drvdata->dev));
+-		gpiod_put(cfg.ena_gpiod);
+-		return ret;
+-	}
++	if (IS_ERR(drvdata->dev))
++		return dev_err_probe(&pdev->dev, PTR_ERR(drvdata->dev),
++				     "Failed to register regulator: %ld\n",
++				     PTR_ERR(drvdata->dev));
+ 
+ 	platform_set_drvdata(pdev, drvdata);
+ 

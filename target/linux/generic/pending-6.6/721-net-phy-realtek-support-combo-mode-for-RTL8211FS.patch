@@ -1,0 +1,146 @@
+From 86902340e55e9fd50b82a9729543a56d5e10b5ae Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 14 Aug 2025 18:31:11 +0800
+Subject: [PATCH] net: phy: realtek: add combo mode support for RTL8211FS
+
+The RTL8211FS chip is an ethernet transceiver with both copper MDIX and
+optical (SGMII) port, and it has ability to switch between copper and
+optical mode (combo mode).
+
+On Linux kernel v6.12.1, the driver doesn't support negotiation port mode,
+which causes optical mode unusable, and copper mode works fine.
+
+This patch solved the issue above by add negotiation phase for this
+transceiver chip, allows this transceiver works in combo mode.
+
+ref: https://lkml.org/lkml/2024/12/3/30
+---
+ drivers/net/phy/realtek/realtek_main.c | 77 +++++++++++++++++++++++++-
+ 1 file changed, 76 insertions(+), 1 deletion(-)
+
+--- a/drivers/net/phy/realtek/realtek_main.c
++++ b/drivers/net/phy/realtek/realtek_main.c
+@@ -76,6 +76,9 @@
+ #define RTL8211F_INSR_PAGE			0xa43
+ #define RTL8211F_INSR				0x1d
+ 
++#define RTL8211FS_FIBER_ESR			0x0F
++#define RTL8211FS_MODE_MASK			0xC000
++
+ /* RTL8211F LED configuration */
+ #define RTL8211F_LEDCR_PAGE			0xd04
+ #define RTL8211F_LEDCR				0x10
+@@ -175,6 +178,7 @@ struct rtl821x_priv {
+ 	u16 phycr1;
+ 	u16 phycr2;
+ 	bool has_phycr2;
++	bool supports_fiber;
+ 	struct clk *clk;
+ 	u32 saved_wolopts;
+ };
+@@ -254,11 +258,51 @@ static int rtl821x_probe(struct phy_devi
+ 			priv->phycr2 &= ~RTL8211F_CLKOUT_EN;
+ 	}
+ 
++	priv->supports_fiber = of_property_read_bool(dev->of_node, "realtek,fiber");
++
+ 	phydev->priv = priv;
+ 
+ 	return 0;
+ }
+ 
++static int rtl8211f_mode(struct phy_device *phydev)
++{
++	u16 val;
++
++	val = phy_read(phydev, RTL8211FS_FIBER_ESR);
++	val &= RTL8211FS_MODE_MASK;
++
++	if (val)
++		return PORT_FIBRE;
++	else
++		return PORT_MII;
++}
++
++static int rtl8211f_config_aneg(struct phy_device *phydev)
++{
++	int ret;
++
++	struct rtl821x_priv *priv = phydev->priv;
++
++	if (priv->supports_fiber) {
++		ret = genphy_read_abilities(phydev);
++		if (ret < 0)
++			return ret;
++
++		linkmode_copy(phydev->advertising, phydev->supported);
++
++		if (rtl8211f_mode(phydev) == PORT_FIBRE) {
++			dev_info(&phydev->mdio.dev, "fiber link up");
++			phydev->port = PORT_FIBRE;
++			return genphy_c37_config_aneg(phydev);
++		}
++
++		dev_info(&phydev->mdio.dev, "copper link up");
++		phydev->port = PORT_MII;
++	}
++	return genphy_config_aneg(phydev);
++}
++
+ static int rtl8201_ack_interrupt(struct phy_device *phydev)
+ {
+ 	int err;
+@@ -521,6 +565,11 @@ static int rtl8211f_config_init(struct p
+ 	u16 val_txdly, val_rxdly;
+ 	int ret;
+ 
++	if (priv->supports_fiber)
++		phydev->port = PORT_NONE;
++	else
++		phydev->port = PORT_MII;
++
+ 	ret = phy_modify_paged_changed(phydev, RTL8211F_PHYCR_PAGE, RTL8211F_PHYCR1,
+ 				       RTL8211F_ALDPS_PLL_OFF | RTL8211F_ALDPS_ENABLE | RTL8211F_ALDPS_XTAL_OFF,
+ 				       priv->phycr1);
+@@ -963,6 +1012,31 @@ static int rtlgen_write_vend2(struct phy
+ 				   val);
+ }
+ 
++static int rtl8211f_read_status(struct phy_device *phydev)
++{
++	int ret;
++	struct rtl821x_priv *priv = phydev->priv;
++	bool changed = false;
++	if (!priv->supports_fiber) {
++		return rtlgen_read_status(phydev);
++	}
++
++	if (rtl8211f_mode(phydev) != phydev->port) {
++		ret = rtl8211f_config_aneg(phydev);
++		if (ret < 0)
++			return ret;
++
++		ret = genphy_restart_aneg(phydev);
++		if (ret < 0)
++			return ret;
++	}
++
++	if (phydev->port == PORT_FIBRE)
++		return genphy_c37_read_status(phydev, &changed);
++
++	return genphy_read_status(phydev);
++}
++
+ static int rtlgen_read_mmd(struct phy_device *phydev, int devnum, u16 regnum)
+ {
+ 	int ret;
+@@ -1727,7 +1801,8 @@ static struct phy_driver realtek_drvs[]
+ 		.name		= "RTL8211F Gigabit Ethernet",
+ 		.probe		= rtl821x_probe,
+ 		.config_init	= &rtl8211f_config_init,
+-		.read_status	= rtlgen_read_status,
++		.config_aneg	= rtl8211f_config_aneg,
++		.read_status	= rtl8211f_read_status,
+ 		.config_intr	= &rtl8211f_config_intr,
+ 		.handle_interrupt = rtl8211f_handle_interrupt,
+ 		.set_wol	= rtl8211f_set_wol,

@@ -1,0 +1,96 @@
+From 6a9b93c05b33fca087c86ab7f4aec7af40d9c6b6 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 8 Jan 2025 17:36:18 +0800
+Subject: [PATCH] netdevice.h: move FCOE members to the struct end for better
+ compatibility
+
+---
+ include/linux/netdevice.h | 56 ++++++++++++++++++++-------------------
+ 1 file changed, 29 insertions(+), 27 deletions(-)
+
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -1527,30 +1527,6 @@ struct net_device_ops {
+ 	int			(*ndo_setup_tc)(struct net_device *dev,
+ 						enum tc_setup_type type,
+ 						void *type_data);
+-#if IS_ENABLED(CONFIG_FCOE)
+-	int			(*ndo_fcoe_enable)(struct net_device *dev);
+-	int			(*ndo_fcoe_disable)(struct net_device *dev);
+-	int			(*ndo_fcoe_ddp_setup)(struct net_device *dev,
+-						      u16 xid,
+-						      struct scatterlist *sgl,
+-						      unsigned int sgc);
+-	int			(*ndo_fcoe_ddp_done)(struct net_device *dev,
+-						     u16 xid);
+-	int			(*ndo_fcoe_ddp_target)(struct net_device *dev,
+-						       u16 xid,
+-						       struct scatterlist *sgl,
+-						       unsigned int sgc);
+-	int			(*ndo_fcoe_get_hbainfo)(struct net_device *dev,
+-							struct netdev_fcoe_hbainfo *hbainfo);
+-#endif
+-
+-#if IS_ENABLED(CONFIG_LIBFCOE)
+-#define NETDEV_FCOE_WWNN 0
+-#define NETDEV_FCOE_WWPN 1
+-	int			(*ndo_fcoe_get_wwn)(struct net_device *dev,
+-						    u64 *wwn, int type);
+-#endif
+-
+ #ifdef CONFIG_RFS_ACCEL
+ 	int			(*ndo_rx_flow_steer)(struct net_device *dev,
+ 						     const struct sk_buff *skb,
+@@ -1669,6 +1645,31 @@ struct net_device_ops {
+ 	int			(*ndo_hwtstamp_set)(struct net_device *dev,
+ 						    struct kernel_hwtstamp_config *kernel_config,
+ 						    struct netlink_ext_ack *extack);
++
++#if IS_ENABLED(CONFIG_FCOE)
++	int			(*ndo_fcoe_enable)(struct net_device *dev);
++	int			(*ndo_fcoe_disable)(struct net_device *dev);
++	int			(*ndo_fcoe_ddp_setup)(struct net_device *dev,
++						      u16 xid,
++						      struct scatterlist *sgl,
++						      unsigned int sgc);
++	int			(*ndo_fcoe_ddp_done)(struct net_device *dev,
++						     u16 xid);
++	int			(*ndo_fcoe_ddp_target)(struct net_device *dev,
++						       u16 xid,
++						       struct scatterlist *sgl,
++						       unsigned int sgc);
++	int			(*ndo_fcoe_get_hbainfo)(struct net_device *dev,
++							struct netdev_fcoe_hbainfo *hbainfo);
++#endif
++
++#if IS_ENABLED(CONFIG_LIBFCOE)
++#define NETDEV_FCOE_WWNN 0
++#define NETDEV_FCOE_WWPN 1
++	int			(*ndo_fcoe_get_wwn)(struct net_device *dev,
++						    u64 *wwn, int type);
++#endif
++
+ };
+ 
+ /**
+@@ -2420,9 +2421,6 @@ struct net_device {
+ 	struct netdev_tc_txq	tc_to_txq[TC_MAX_QUEUE];
+ 	u8			prio_tc_map[TC_BITMASK + 1];
+ 
+-#if IS_ENABLED(CONFIG_FCOE)
+-	unsigned int		fcoe_ddp_xid;
+-#endif
+ #if IS_ENABLED(CONFIG_CGROUP_NET_PRIO)
+ 	struct netprio_map __rcu *priomap;
+ #endif
+@@ -2452,6 +2450,10 @@ struct net_device {
+ 	struct rtnl_hw_stats64	*offload_xstats_l3;
+ 
+ 	struct devlink_port	*devlink_port;
++
++#if IS_ENABLED(CONFIG_FCOE)
++	unsigned int		fcoe_ddp_xid;
++#endif
+ };
+ #define to_net_dev(d) container_of(d, struct net_device, dev)
+ 

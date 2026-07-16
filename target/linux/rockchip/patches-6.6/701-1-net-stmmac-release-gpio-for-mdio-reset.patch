@@ -1,0 +1,26 @@
+From 3da227ddfeb0cec5caa32b43a09289b7ef8202bd Mon Sep 17 00:00:00 2001
+From: David Wu <david.wu@rock-chips.com>
+Date: Thu, 28 Mar 2024 11:28:18 +0800
+Subject: [PATCH] ethernet: stmmac: Release reset gpio desc for mdio reset
+
+For some PHYs, it is necessary to reset the PHY after waking up from
+sleep to ensure that it works properly.
+
+Change-Id: I629c12096060c8b5ac1a33dfd5a90a85adddec44
+Signed-off-by: David Wu <david.wu@rock-chips.com>
+---
+ drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
+@@ -481,6 +481,9 @@ int stmmac_mdio_reset(struct mii_bus *bu
+ 		gpiod_set_value_cansleep(reset_gpio, 0);
+ 		if (delays[2])
+ 			msleep(DIV_ROUND_UP(delays[2], 1000));
++
++		/* put reset gpio resource for next time */
++		devm_gpiod_put(priv->device, reset_gpio);
+ 	}
+ #endif
+ 

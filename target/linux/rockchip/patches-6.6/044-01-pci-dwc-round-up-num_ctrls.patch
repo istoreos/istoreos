@@ -1,0 +1,46 @@
+From b9e3578552eefaa1f90acdcab05cbdbd4c95c90c Mon Sep 17 00:00:00 2001
+From: Shawn Lin <shawn.lin@rock-chips.com>
+Date: Mon, 21 Nov 2022 15:17:47 +0800
+Subject: [PATCH] BACKPORT: FROMLIST: PCI: dwc: Round up num_ctrls if
+ num_vectors is less than MAX_MSI_IRQS_PER_CTRL
+
+Some SoCs may only support 1 RC with a few MSIs support that the total number of
+MSIs is less than MAX_MSI_IRQS_PER_CTRL. In this case, num_ctrls will be zero which
+fails setting up MSI support. Fix it by rounding up num_ctrls to at least one.
+
+Signed-off-by: Shawn Lin <shawn.lin@rock-chips.com>
+Link: https://lore.kernel.org/all/1669014996-177686-1-git-send-email-shawn.lin@rock-chips.com/
+Change-Id: I88b69dd4eeed4464a8e48ca8bbe519aea1cafe6e
+---
+ drivers/pci/controller/dwc/pcie-designware-host.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+--- a/drivers/pci/controller/dwc/pcie-designware-host.c
++++ b/drivers/pci/controller/dwc/pcie-designware-host.c
+@@ -62,7 +62,7 @@ irqreturn_t dw_handle_msi_irq(struct dw_
+ 	irqreturn_t ret = IRQ_NONE;
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+ 
+-	num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
++	num_ctrls = DIV_ROUND_UP(pp->num_vectors, MAX_MSI_IRQS_PER_CTRL);
+ 
+ 	for (i = 0; i < num_ctrls; i++) {
+ 		status = dw_pcie_readl_dbi(pci, PCIE_MSI_INTR0_STATUS +
+@@ -343,7 +343,7 @@ static int dw_pcie_msi_host_init(struct
+ 
+ 	if (!pp->num_vectors)
+ 		pp->num_vectors = MSI_DEF_NUM_VECTORS;
+-	num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
++	num_ctrls = DIV_ROUND_UP(pp->num_vectors, MAX_MSI_IRQS_PER_CTRL);
+ 
+ 	if (!pp->msi_irq[0]) {
+ 		pp->msi_irq[0] = platform_get_irq_byname_optional(pdev, "msi");
+@@ -749,7 +749,7 @@ int dw_pcie_setup_rc(struct dw_pcie_rp *
+ 	dw_pcie_setup(pci);
+ 
+ 	if (pp->has_msi_ctrl) {
+-		num_ctrls = pp->num_vectors / MAX_MSI_IRQS_PER_CTRL;
++		num_ctrls = DIV_ROUND_UP(pp->num_vectors, MAX_MSI_IRQS_PER_CTRL);
+ 
+ 		/* Initialize IRQ Status array */
+ 		for (ctrl = 0; ctrl < num_ctrls; ctrl++) {

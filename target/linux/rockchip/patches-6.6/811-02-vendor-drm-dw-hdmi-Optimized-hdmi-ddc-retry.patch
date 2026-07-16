@@ -1,0 +1,148 @@
+From 22e1a386fcc4fbbd3f464807753417656ddee99d Mon Sep 17 00:00:00 2001
+From: Algea Cao <algea.cao@rock-chips.com>
+Date: Mon, 6 Feb 2023 14:50:39 +0800
+Subject: [PATCH] drm: bridge: dw-hdmi: Optimized hdmi ddc retry process
+
+Signed-off-by: Algea Cao <algea.cao@rock-chips.com>
+Change-Id: I1a5a50a22040a6a7226498d5dc8275bc160a7689
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c | 93 ++++++++++++++++++-----
+ 1 file changed, 74 insertions(+), 19 deletions(-)
+
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+@@ -386,7 +386,7 @@ static int dw_hdmi_i2c_read(struct dw_hd
+ 			    unsigned char *buf, unsigned int length)
+ {
+ 	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+-	int ret;
++	int ret, retry;
+ 
+ 	if (!i2c->is_regaddr) {
+ 		dev_dbg(hdmi->dev, "set read register address to 0\n");
+@@ -395,20 +395,45 @@ static int dw_hdmi_i2c_read(struct dw_hd
+ 	}
+ 
+ 	while (length--) {
+-		reinit_completion(&i2c->cmp);
+-
++		retry = 100;
+ 		hdmi_writeb(hdmi, i2c->slave_reg++, HDMI_I2CM_ADDRESS);
+-		if (i2c->is_segment)
+-			hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ_EXT,
+-				    HDMI_I2CM_OPERATION);
+-		else
+-			hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ,
+-				    HDMI_I2CM_OPERATION);
+ 
+-		ret = dw_hdmi_i2c_wait(hdmi);
+-		if (ret)
+-			return ret;
++		while (retry > 0) {
++			if (!(hdmi_readb(hdmi, HDMI_PHY_STAT0) & HDMI_PHY_HPD)) {
++				dev_dbg(hdmi->dev, "hdmi disconnect, stop ddc read\n");
++				return -EPERM;
++			}
++
++			reinit_completion(&i2c->cmp);
++			if (i2c->is_segment)
++				hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ_EXT,
++					    HDMI_I2CM_OPERATION);
++			else
++				hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ,
++					    HDMI_I2CM_OPERATION);
++
++			ret = dw_hdmi_i2c_wait(hdmi);
++			if (ret == -EAGAIN) {
++				dev_dbg(hdmi->dev, "ddc read time out\n");
++				hdmi_writeb(hdmi, 0, HDMI_I2CM_SOFTRSTZ);
++				retry -= 10;
++				continue;
++			} else if (ret == -EIO) {
++				dev_dbg(hdmi->dev, "ddc read err\n");
++				hdmi_writeb(hdmi, 0, HDMI_I2CM_SOFTRSTZ);
++				retry--;
++				mdelay(10);
++				continue;
++			}
+ 
++			/* read success */
++			break;
++		}
++
++		if (retry <= 0) {
++			dev_err(hdmi->dev, "ddc read failed\n");
++			return -EIO;
++		}
+ 		*buf++ = hdmi_readb(hdmi, HDMI_I2CM_DATAI);
+ 	}
+ 	i2c->is_segment = false;
+@@ -420,7 +445,7 @@ static int dw_hdmi_i2c_write(struct dw_h
+ 			     unsigned char *buf, unsigned int length)
+ {
+ 	struct dw_hdmi_i2c *i2c = hdmi->i2c;
+-	int ret;
++	int ret, retry;
+ 
+ 	if (!i2c->is_regaddr) {
+ 		/* Use the first write byte as register address */
+@@ -431,16 +456,43 @@ static int dw_hdmi_i2c_write(struct dw_h
+ 	}
+ 
+ 	while (length--) {
+-		reinit_completion(&i2c->cmp);
++		retry = 100;
+ 
+ 		hdmi_writeb(hdmi, *buf++, HDMI_I2CM_DATAO);
+ 		hdmi_writeb(hdmi, i2c->slave_reg++, HDMI_I2CM_ADDRESS);
+-		hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_WRITE,
+-			    HDMI_I2CM_OPERATION);
+ 
+-		ret = dw_hdmi_i2c_wait(hdmi);
+-		if (ret)
+-			return ret;
++		while (retry > 0) {
++			if (!(hdmi_readb(hdmi, HDMI_PHY_STAT0) & HDMI_PHY_HPD)) {
++				dev_dbg(hdmi->dev, "hdmi disconnect, stop ddc write\n");
++				return -EPERM;
++			}
++
++			reinit_completion(&i2c->cmp);
++			hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_WRITE,
++				    HDMI_I2CM_OPERATION);
++
++			ret = dw_hdmi_i2c_wait(hdmi);
++			if (ret == -EAGAIN) {
++				dev_dbg(hdmi->dev, "ddc write time out\n");
++				hdmi_writeb(hdmi, 0, HDMI_I2CM_SOFTRSTZ);
++				retry -= 10;
++				continue;
++			} else if (ret == -EIO) {
++				dev_dbg(hdmi->dev, "ddc write err\n");
++				hdmi_writeb(hdmi, 0, HDMI_I2CM_SOFTRSTZ);
++				retry--;
++				mdelay(10);
++				continue;
++			}
++
++			/* write success */
++			break;
++		}
++
++		if (retry <= 0) {
++			dev_err(hdmi->dev, "ddc write failed\n");
++			return -EIO;
++		}
+ 	}
+ 
+ 	return 0;
+@@ -476,6 +528,9 @@ static int dw_hdmi_i2c_xfer(struct i2c_a
+ 
+ 	mutex_lock(&i2c->lock);
+ 
++	hdmi_writeb(hdmi, 0, HDMI_I2CM_SOFTRSTZ);
++	udelay(100);
++
+ 	/* Unmute DONE and ERROR interrupts */
+ 	hdmi_writeb(hdmi, 0x00, HDMI_IH_MUTE_I2CM_STAT0);
+ 

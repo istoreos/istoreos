@@ -1,0 +1,35 @@
+From c51beb85d0c2ae69d18d50b9867516861642b4cd Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <megi@xff.cz>
+Date: Sat, 17 Feb 2024 20:56:13 +0100
+Subject: [PATCH] mfd: rk8xx-core: Fix interrupt processing order for power key
+ button
+
+Process rise event last, to avoid stuck keys when multiple interrupts
+are coalesced. This can happen typically when resuming from suspend
+via power key press and holding the power button for a bit too short,
+so that RISE an FALL IRQ flags are set before any interrupt routine
+has a chance to run.
+
+Input subsystem will interpret it as holding down a power key for
+a long time, which leads to unintended initiation of shutdown UI
+on some OSes.
+
+Signed-off-by: Ondrej Jirman <megi@xff.cz>
+Link: https://lore.kernel.org/r/20240217195615.1767907-1-megi@xff.cz
+Signed-off-by: Lee Jones <lee@kernel.org>
+---
+ drivers/mfd/rk8xx-core.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/drivers/mfd/rk8xx-core.c
++++ b/drivers/mfd/rk8xx-core.c
+@@ -43,8 +43,8 @@ static struct resource rk806_pwrkey_reso
+ };
+ 
+ static const struct resource rk817_pwrkey_resources[] = {
+-	DEFINE_RES_IRQ(RK817_IRQ_PWRON_RISE),
+ 	DEFINE_RES_IRQ(RK817_IRQ_PWRON_FALL),
++	DEFINE_RES_IRQ(RK817_IRQ_PWRON_RISE),
+ };
+ 
+ static const struct resource rk817_charger_resources[] = {

@@ -1,0 +1,123 @@
+From 1916e2a97890bb7f51e7f61a44487f438e308bce Mon Sep 17 00:00:00 2001
+From: Algea Cao <algea.cao@rock-chips.com>
+Date: Thu, 8 Aug 2019 10:29:33 +0800
+Subject: [PATCH] drm: bridge: dw-hdmi: optimize edid reading process
+
+1.change SDA high level holding time to 3us.
+2.when plug in,add timer to avoid unstable state.
+
+Change-Id: Idc6faec710137ac9f8e589d75cbc1b85f7a45faf
+Signed-off-by: Algea Cao <algea.cao@rock-chips.com>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c | 44 +++++++++++++++++++----
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.h |  1 +
+ 2 files changed, 39 insertions(+), 6 deletions(-)
+
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+@@ -162,6 +162,10 @@ struct dw_hdmi {
+ 	void __iomem *regs;
+ 	bool sink_is_hdmi;
+ 	bool sink_has_audio;
++	bool hpd_state;
++
++	struct delayed_work work;
++	struct workqueue_struct *workqueue;
+ 
+ 	struct pinctrl *pinctrl;
+ 	struct pinctrl_state *default_state;
+@@ -254,6 +258,24 @@ static void hdmi_mask_writeb(struct dw_h
+ 	hdmi_modb(hdmi, data << shift, mask, reg);
+ }
+ 
++static void repo_hpd_event(struct work_struct *p_work)
++{
++	struct dw_hdmi *hdmi = container_of(p_work, struct dw_hdmi, work.work);
++	enum drm_connector_status status = hdmi->hpd_state ?
++		connector_status_connected : connector_status_disconnected;
++
++	if (hdmi->bridge.dev) {
++		drm_helper_hpd_irq_event(hdmi->bridge.dev);
++		drm_bridge_hpd_notify(&hdmi->bridge, status);
++	}
++}
++
++static void init_hpd_work(struct dw_hdmi *hdmi)
++{
++	hdmi->workqueue = create_workqueue("hpd_queue");
++	INIT_DELAYED_WORK(&hdmi->work, repo_hpd_event);
++}
++
+ static void dw_hdmi_i2c_init(struct dw_hdmi *hdmi)
+ {
+ 	hdmi_writeb(hdmi, HDMI_PHY_I2CM_INT_ADDR_DONE_POL,
+@@ -281,6 +303,12 @@ static void dw_hdmi_i2c_init(struct dw_h
+ 	/* Mute DONE and ERROR interrupts */
+ 	hdmi_writeb(hdmi, HDMI_IH_I2CM_STAT0_ERROR | HDMI_IH_I2CM_STAT0_DONE,
+ 		    HDMI_IH_MUTE_I2CM_STAT0);
++
++	/* Only configure when we use the internal I2C controller */
++	if (hdmi->i2c) {
++		/* set SDA high level holding time */
++		hdmi_writeb(hdmi, 0x48, HDMI_I2CM_SDA_HOLD);
++	}
+ }
+ 
+ static bool dw_hdmi_i2c_unwedge(struct dw_hdmi *hdmi)
+@@ -3140,14 +3168,12 @@ static irqreturn_t dw_hdmi_irq(int irq,
+ 	}
+ 
+ 	if (status != connector_status_unknown) {
++		hdmi->hpd_state = status == connector_status_connected;
+ 		dev_dbg(hdmi->dev, "EVENT=%s\n",
+-			status == connector_status_connected ?
++			hdmi->hpd_state ?
+ 			"plugin" : "plugout");
+ 
+-		if (hdmi->bridge.dev) {
+-			drm_helper_hpd_irq_event(hdmi->bridge.dev);
+-			drm_bridge_hpd_notify(&hdmi->bridge, status);
+-		}
++		mod_delayed_work(hdmi->workqueue, &hdmi->work, msecs_to_jiffies(hdmi->hpd_state?150:20));
+ 	}
+ 
+ 	hdmi_writeb(hdmi, intr_stat, HDMI_IH_PHY_STAT0);
+@@ -3505,7 +3531,7 @@ struct dw_hdmi *dw_hdmi_probe(struct pla
+ 		 prod_id1 & HDMI_PRODUCT_ID1_HDCP ? "with" : "without",
+ 		 hdmi->phy.name);
+ 
+-	dw_hdmi_init_hw(hdmi);
++	init_hpd_work(hdmi);
+ 
+ 	irq = platform_get_irq(pdev, 0);
+ 	if (irq < 0) {
+@@ -3550,6 +3576,8 @@ struct dw_hdmi *dw_hdmi_probe(struct pla
+ 			hdmi->ddc = NULL;
+ 	}
+ 
++	dw_hdmi_init_hw(hdmi);
++
+ 	hdmi->bridge.driver_private = hdmi;
+ 	hdmi->bridge.funcs = &dw_hdmi_bridge_funcs;
+ 	hdmi->bridge.ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID
+@@ -3649,6 +3677,10 @@ EXPORT_SYMBOL_GPL(dw_hdmi_probe);
+ 
+ void dw_hdmi_remove(struct dw_hdmi *hdmi)
+ {
++	cancel_delayed_work(&hdmi->work);
++	flush_workqueue(hdmi->workqueue);
++	destroy_workqueue(hdmi->workqueue);
++
+ 	drm_bridge_remove(&hdmi->bridge);
+ 
+ 	if (hdmi->audio && !IS_ERR(hdmi->audio))
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.h
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.h
+@@ -538,6 +538,7 @@
+ #define HDMI_I2CM_FS_SCL_HCNT_0_ADDR            0x7E10
+ #define HDMI_I2CM_FS_SCL_LCNT_1_ADDR            0x7E11
+ #define HDMI_I2CM_FS_SCL_LCNT_0_ADDR            0x7E12
++#define HDMI_I2CM_SDA_HOLD                      0x7E13
+ 
+ enum {
+ /* PRODUCT_ID0 field values */

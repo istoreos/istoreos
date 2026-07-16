@@ -1,0 +1,38 @@
+From 94871870f19362652b15b91ccf90e2d4195bd8ec Mon Sep 17 00:00:00 2001
+From: Jonas Karlman <jonas@kwiboo.se>
+Date: Sun, 8 Sep 2024 13:28:11 +0000
+Subject: [PATCH] drm: bridge: dw_hdmi: Update EDID during hotplug processing
+
+Update successfully read EDID during hotplug processing to ensure the
+connector diplay_info is always up-to-date.
+
+Signed-off-by: Jonas Karlman <jonas@kwiboo.se>
+---
+ drivers/gpu/drm/bridge/synopsys/dw-hdmi.c | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+--- a/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
++++ b/drivers/gpu/drm/bridge/synopsys/dw-hdmi.c
+@@ -2486,7 +2486,21 @@ dw_hdmi_connector_detect(struct drm_conn
+ {
+ 	struct dw_hdmi *hdmi = container_of(connector, struct dw_hdmi,
+ 					     connector);
+-	return dw_hdmi_detect(hdmi);
++	enum drm_connector_status status;
++	status = dw_hdmi_detect(hdmi);
++
++	/* Update EDID during hotplug processing (force=false) */
++	if (status == connector_status_connected && !force) {
++		struct edid *edid;
++
++		edid = dw_hdmi_get_edid(hdmi, connector);
++		if (edid) {
++			drm_connector_update_edid_property(connector, edid);
++			kfree(edid);
++		}
++	}
++
++	return status;
+ }
+ 
+ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)

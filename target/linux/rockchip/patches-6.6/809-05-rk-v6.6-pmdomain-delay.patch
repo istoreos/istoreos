@@ -1,0 +1,28 @@
+From 1ee9d2abfe8b2274f5c48359434cf4702073b0d4 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Fri, 12 Sep 2025 20:23:09 +0800
+Subject: [PATCH] pmdomain: rockchip: Add delay support
+
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -53,6 +53,7 @@ struct rockchip_domain_info {
+ 	u32 pwr_offset;
+ 	u32 mem_offset;
+ 	u32 req_offset;
++	u32 delay_us;
+ };
+ 
+ struct rockchip_pmu_info {
+@@ -683,6 +684,8 @@ static int rockchip_pd_power(struct rock
+ 			/* if powering up, leave idle mode */
+ 			rockchip_pmu_set_idle_request(pd, false);
+ 
++			if (pd->info->delay_us)
++				udelay(pd->info->delay_us);
+ 			if (pd->is_qos_saved)
+ 				rockchip_pmu_restore_qos(pd);
+ 		}

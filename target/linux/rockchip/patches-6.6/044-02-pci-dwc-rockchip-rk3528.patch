@@ -1,0 +1,63 @@
+From 7da114ad2d28bd6269407c3e94d56f2ba6669721 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 19 Jun 2025 13:14:57 +0800
+Subject: [PATCH] PCI: dw-rockchip: supports rk3528 pcie
+
+---
+ drivers/pci/controller/dwc/pcie-dw-rockchip.c | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+--- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -62,6 +62,10 @@ struct rockchip_pcie {
+ 	struct irq_domain		*irq_domain;
+ };
+ 
++struct rockchip_pcie_of_data {
++	u32 msi_vector_num;
++};
++
+ static int rockchip_pcie_readl_apb(struct rockchip_pcie *rockchip,
+ 					     u32 reg)
+ {
+@@ -296,9 +300,12 @@ static int rockchip_pcie_probe(struct pl
+ {
+ 	struct device *dev = &pdev->dev;
+ 	struct rockchip_pcie *rockchip;
++	const struct rockchip_pcie_of_data *data;
+ 	struct dw_pcie_rp *pp;
+ 	int ret;
+ 
++	data = of_device_get_match_data(dev);
++
+ 	rockchip = devm_kzalloc(dev, sizeof(*rockchip), GFP_KERNEL);
+ 	if (!rockchip)
+ 		return -ENOMEM;
+@@ -346,6 +353,11 @@ static int rockchip_pcie_probe(struct pl
+ 	if (ret)
+ 		goto deinit_phy;
+ 
++	if (data && data->msi_vector_num > 0) {
++		dev_info(dev, "max MSI vector is %d\n", data->msi_vector_num);
++		pp->num_vectors = data->msi_vector_num;
++	}
++
+ 	ret = dw_pcie_host_init(pp);
+ 	if (!ret)
+ 		return 0;
+@@ -360,7 +372,15 @@ disable_regulator:
+ 	return ret;
+ }
+ 
++static const struct rockchip_pcie_of_data rockchip_pcie_rc_of_data_rk3528 = {
++	.msi_vector_num = 8,
++};
++
+ static const struct of_device_id rockchip_pcie_of_match[] = {
++	{
++		.compatible = "rockchip,rk3528-pcie",
++		.data = &rockchip_pcie_rc_of_data_rk3528,
++	},
+ 	{ .compatible = "rockchip,rk3568-pcie", },
+ 	{},
+ };

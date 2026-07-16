@@ -1,0 +1,165 @@
+From bcc2b76f57192e74d0758bcecf6c7771ca5706d8 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Fri, 12 Sep 2025 20:27:54 +0800
+Subject: [PATCH] pmdomain: rockchip: Add delay for rk3576
+
+mainly for fixing crash on `nputop` power up:
+```
+[   10.702866] RKNPU 27700000.npu: Adding to iommu group 7
+[   10.703415] RKNPU 27700000.npu: RKNPU: rknpu iommu is enabled, using iommu mode
+[   10.704709] RKNPU 27700000.npu: can't request region for resource [mem 0x27700000-0x27707fff]
+[   10.705469] RKNPU 27700000.npu: can't request region for resource [mem 0x27708000-0x2770ffff]
+[   10.706405] [drm] Initialized rknpu 0.9.8 20240828 for 27700000.npu on minor 0
+[   10.707177] genpd genpd:0:27700000.npu: attaching to power domain 'npu0'
+[   10.707836] genpd genpd:1:27700000.npu: attaching to power domain 'npu1'
+[   10.708466] rockchip-pm-domain 27380000.power-management:power-controller: changing power state of domain 'npu' to 1
+[   10.709392] rockchip-pm-domain 27380000.power-management:power-controller: changing power state of domain 'nputop' to 1
+[   10.710346] SError Interrupt on CPU4, code 0x00000000bf000000 -- SError
+[   10.710351] CPU: 4 PID: 762 Comm: kmodloader Tainted: G           O       6.6.93 #0
+[   10.710355] Hardware name: FriendlyElec NanoPi R76S (DT)
+[   10.710356] pstate: 20400005 (nzCv daif +PAN -UAO -TCO -DIT -SSBS BTYPE=--)
+[   10.710360] pc : rockchip_pmu_restore_qos+0x4c/0xc0
+[   10.710368] lr : rockchip_pmu_restore_qos+0x3c/0xc0
+[   10.710372] sp : ffff8000841a3570
+[   10.710374] x29: ffff8000841a3570 x28: 0000000000000001 x27: ffff8000817b01b0
+[   10.710379] x26: 0000000000000000 x25: 0000000000000000 x24: 0000000000000001
+[   10.710383] x23: ffff000002ac6480 x22: ffff000002ac6498 x21: 0000000000000001
+[   10.710388] x20: ffff000002b06880 x19: 0000000000000000 x18: 000000000000096d
+[   10.710392] x17: 63203a72656c6c6f x16: 72746e6f632d7265 x15: ffff8000815e9da0
+[   10.710396] x14: 0000000000001c47 x13: 000000000000096d x12: 00000000ffffffea
+[   10.710400] x11: 00000000ffffbfff x10: ffff800081749da0 x9 : ffff8000815e9d48
+[   10.710404] x8 : 000000000005ffe8 x7 : c0000000ffffbfff x6 : 000000000015ffa8
+[   10.710408] x5 : ffff80008063bb3c x4 : 0000000000000008 x3 : ffff80008063b590
+[   10.710412] x2 : ffff000002a6d740 x1 : 000000000000000c x0 : ffff000002b09000
+[   10.710417] Kernel panic - not syncing: Asynchronous SError Interrupt
+[   10.710419] CPU: 4 PID: 762 Comm: kmodloader Tainted: G           O       6.6.93 #0
+[   10.710422] Hardware name: FriendlyElec NanoPi R76S (DT)
+[   10.710424] Call trace:
+[   10.710425]  dump_backtrace+0xa0/0xe0
+[   10.710431]  show_stack+0x18/0x24
+[   10.710436]  dump_stack_lvl+0x48/0x60
+[   10.710440]  dump_stack+0x18/0x24
+[   10.710442]  panic+0x2e4/0x34c
+[   10.710446]  nmi_panic+0x70/0x74
+[   10.710450]  arm64_serror_panic+0x6c/0x78
+[   10.710452]  do_serror+0x28/0x68
+[   10.710455]  el1h_64_error_handler+0x30/0x48
+[   10.710458]  el1h_64_error+0x68/0x6c
+[   10.710461]  rockchip_pmu_restore_qos+0x4c/0xc0
+[   10.710465]  rockchip_pd_power+0x388/0x4c4
+[   10.710469]  rockchip_pd_power_on+0x14/0x20
+[   10.710473]  genpd_power_on+0x198/0x254
+[   10.710476]  genpd_power_on+0x84/0x254
+[   10.710479]  genpd_runtime_resume+0xcc/0x244
+[   10.710481]  __rpm_callback+0x40/0x1bc
+[   10.710486]  rpm_callback+0x6c/0x78
+[   10.710490]  rpm_resume+0x56c/0x758
+[   10.710494]  __pm_runtime_resume+0x74/0x9c
+[   10.710498]  rknpu_power_on+0xcc/0x2e8 [rknpu]
+[   10.710517]  rknpu_probe+0x3f8/0x8b8 [rknpu]
+[   10.710529]  platform_probe+0x68/0xc4
+[   10.710533]  really_probe+0x148/0x2b0
+[   10.710536]  __driver_probe_device+0xcc/0x128
+[   10.710538]  driver_probe_device+0x40/0xdc
+[   10.710540]  __driver_attach+0x90/0x160
+[   10.710543]  bus_for_each_dev+0x64/0xa8
+[   10.710547]  driver_attach+0x24/0x30
+[   10.710550]  bus_add_driver+0xe4/0x208
+[   10.710554]  driver_register+0x5c/0x124
+[   10.710557]  __platform_driver_register+0x28/0x34
+[   10.710560]  rknpu_init+0x20/0x2c [rknpu]
+[   10.710571]  do_one_initcall+0x1d0/0x264
+[   10.710574]  do_init_module+0x58/0x1e0
+[   10.710578]  load_module+0x1a70/0x1b78
+[   10.710582]  __do_sys_init_module+0x218/0x264
+[   10.710585]  __arm64_sys_init_module+0x1c/0x28
+[   10.710588]  invoke_syscall.constprop.0+0x50/0xec
+[   10.710593]  do_el0_svc+0x40/0xc4
+[   10.710597]  el0_svc+0x34/0xf8
+[   10.710600]  el0t_64_sync_handler+0x120/0x12c
+[   10.710603]  el0t_64_sync+0x178/0x17c
+[   10.710606] SMP: stopping secondary CPUs
+[   10.710666] Kernel Offset: disabled
+[   10.710668] CPU features: 0x0,80000000,20020000,0000400b
+[   10.710670] Memory Limit: none
+[   10.737949] ---[ end Kernel panic - not syncing: Asynchronous SError Interrupt ]---
+```
+---
+ drivers/pmdomain/rockchip/pm-domains.c | 45 +++++++++++++-------------
+ 1 file changed, 23 insertions(+), 22 deletions(-)
+
+--- a/drivers/pmdomain/rockchip/pm-domains.c
++++ b/drivers/pmdomain/rockchip/pm-domains.c
+@@ -162,7 +162,7 @@ static void rockchip_pmu_unlock(struct r
+ 	.active_wakeup = wakeup,			\
+ }
+ 
+-#define DOMAIN_M_O_R_G(_name, p_offset, pwr, status, m_offset, m_status, r_status, r_offset, req, idle, ack, g_mask, wakeup)	\
++#define DOMAIN_M_O_R_G(_name, p_offset, pwr, status, m_offset, m_status, r_status, r_offset, req, idle, ack, g_mask, delay, wakeup)	\
+ {							\
+ 	.name = _name,					\
+ 	.pwr_offset = p_offset,				\
+@@ -178,6 +178,7 @@ static void rockchip_pmu_unlock(struct r
+ 	.idle_mask = (idle),				\
+ 	.clk_ungate_mask = (g_mask),			\
+ 	.ack_mask = (ack),				\
++	.delay_us = delay,				\
+ 	.active_wakeup = wakeup,			\
+ }
+ 
+@@ -212,8 +213,8 @@ static void rockchip_pmu_unlock(struct r
+ #define DOMAIN_RK3568(name, pwr, req, wakeup)		\
+ 	DOMAIN_M(name, pwr, pwr, req, req, req, wakeup)
+ 
+-#define DOMAIN_RK3576(name, p_offset, pwr, status, r_status, r_offset, req, idle, g_mask, wakeup)	\
+-	DOMAIN_M_O_R_G(name, p_offset, pwr, status, 0, r_status, r_status, r_offset, req, idle, idle, g_mask, wakeup)
++#define DOMAIN_RK3576(name, p_offset, pwr, status, r_status, r_offset, req, idle, g_mask, delay, wakeup)	\
++	DOMAIN_M_O_R_G(name, p_offset, pwr, status, 0, r_status, r_status, r_offset, req, idle, idle, g_mask, delay, wakeup)
+ 
+ /*
+  * Dynamic Memory Controller may need to coordinate with us -- see
+@@ -1302,25 +1303,25 @@ static const struct rockchip_domain_info
+ };
+ 
+ static const struct rockchip_domain_info rk3576_pm_domains[] = {
+-	[RK3576_PD_NPU]		= DOMAIN_RK3576("npu",    0x0, BIT(0),  BIT(0), 0,       0x0, 0,       0,       0,       false),
+-	[RK3576_PD_NVM]		= DOMAIN_RK3576("nvm",    0x0, BIT(6),  0,      BIT(6),  0x4, BIT(2),  BIT(18), BIT(2),  false),
+-	[RK3576_PD_SDGMAC]	= DOMAIN_RK3576("sdgmac", 0x0, BIT(7),  0,      BIT(7),  0x4, BIT(1),  BIT(17), 0x6,     false),
+-	[RK3576_PD_AUDIO]	= DOMAIN_RK3576("audio",  0x0, BIT(8),  0,      BIT(8),  0x4, BIT(0),  BIT(16), BIT(0),  false),
+-	[RK3576_PD_PHP]		= DOMAIN_RK3576("php",    0x0, BIT(9),  0,      BIT(9),  0x0, BIT(15), BIT(15), BIT(15), false),
+-	[RK3576_PD_SUBPHP]	= DOMAIN_RK3576("subphp", 0x0, BIT(10), 0,      BIT(10), 0x0, 0,       0,       0,       false),
+-	[RK3576_PD_VOP]		= DOMAIN_RK3576("vop",    0x0, BIT(11), 0,      BIT(11), 0x0, 0x6000,  0x6000,  0x6000,  false),
+-	[RK3576_PD_VO1]		= DOMAIN_RK3576("vo1",    0x0, BIT(14), 0,      BIT(14), 0x0, BIT(12), BIT(12), 0x7000,  false),
+-	[RK3576_PD_VO0]		= DOMAIN_RK3576("vo0",    0x0, BIT(15), 0,      BIT(15), 0x0, BIT(11), BIT(11), 0x6800,  false),
+-	[RK3576_PD_USB]		= DOMAIN_RK3576("usb",    0x4, BIT(0),  0,      BIT(16), 0x0, BIT(10), BIT(10), 0x6400,  true),
+-	[RK3576_PD_VI]		= DOMAIN_RK3576("vi",     0x4, BIT(1),  0,      BIT(17), 0x0, BIT(9),  BIT(9),  BIT(9),  false),
+-	[RK3576_PD_VEPU0]	= DOMAIN_RK3576("vepu0",  0x4, BIT(2),  0,      BIT(18), 0x0, BIT(7),  BIT(7),  0x280,   false),
+-	[RK3576_PD_VEPU1]	= DOMAIN_RK3576("vepu1",  0x4, BIT(3),  0,      BIT(19), 0x0, BIT(8),  BIT(8),  BIT(8),  false),
+-	[RK3576_PD_VDEC]	= DOMAIN_RK3576("vdec",   0x4, BIT(4),  0,      BIT(20), 0x0, BIT(6),  BIT(6),  BIT(6),  false),
+-	[RK3576_PD_VPU]		= DOMAIN_RK3576("vpu",    0x4, BIT(5),  0,      BIT(21), 0x0, BIT(5),  BIT(5),  BIT(5),  false),
+-	[RK3576_PD_NPUTOP]	= DOMAIN_RK3576("nputop", 0x4, BIT(6),  0,      BIT(22), 0x0, 0x18,    0x18,    0x18,    false),
+-	[RK3576_PD_NPU0]	= DOMAIN_RK3576("npu0",   0x4, BIT(7),  0,      BIT(23), 0x0, BIT(1),  BIT(1),  0x1a,    false),
+-	[RK3576_PD_NPU1]	= DOMAIN_RK3576("npu1",   0x4, BIT(8),  0,      BIT(24), 0x0, BIT(2),  BIT(2),  0x1c,    false),
+-	[RK3576_PD_GPU]		= DOMAIN_RK3576("gpu",    0x4, BIT(9),  0,      BIT(25), 0x0, BIT(0),  BIT(0),  BIT(0),  false),
++	[RK3576_PD_NPU]		= DOMAIN_RK3576("npu",    0x0, BIT(0),  BIT(0), 0,       0x0, 0,       0,       0,       0,    false),
++	[RK3576_PD_NVM]		= DOMAIN_RK3576("nvm",    0x0, BIT(6),  0,      BIT(6),  0x4, BIT(2),  BIT(18), BIT(2),  0,    false),
++	[RK3576_PD_SDGMAC]	= DOMAIN_RK3576("sdgmac", 0x0, BIT(7),  0,      BIT(7),  0x4, BIT(1),  BIT(17), 0x6,     0,    false),
++	[RK3576_PD_AUDIO]	= DOMAIN_RK3576("audio",  0x0, BIT(8),  0,      BIT(8),  0x4, BIT(0),  BIT(16), BIT(0),  0,    false),
++	[RK3576_PD_PHP]		= DOMAIN_RK3576("php",    0x0, BIT(9),  0,      BIT(9),  0x0, BIT(15), BIT(15), BIT(15), 0,    false),
++	[RK3576_PD_SUBPHP]	= DOMAIN_RK3576("subphp", 0x0, BIT(10), 0,      BIT(10), 0x0, 0,       0,       0,       0,    false),
++	[RK3576_PD_VOP]		= DOMAIN_RK3576("vop",    0x0, BIT(11), 0,      BIT(11), 0x0, 0x6000,  0x6000,  0x6000,  15,   false),
++	[RK3576_PD_VO1]		= DOMAIN_RK3576("vo1",    0x0, BIT(14), 0,      BIT(14), 0x0, BIT(12), BIT(12), 0x7000,  0,    false),
++	[RK3576_PD_VO0]		= DOMAIN_RK3576("vo0",    0x0, BIT(15), 0,      BIT(15), 0x0, BIT(11), BIT(11), 0x6800,  0,    false),
++	[RK3576_PD_USB]		= DOMAIN_RK3576("usb",    0x4, BIT(0),  0,      BIT(16), 0x0, BIT(10), BIT(10), 0x6400,  0,    true),
++	[RK3576_PD_VI]		= DOMAIN_RK3576("vi",     0x4, BIT(1),  0,      BIT(17), 0x0, BIT(9),  BIT(9),  BIT(9),  0,    false),
++	[RK3576_PD_VEPU0]	= DOMAIN_RK3576("vepu0",  0x4, BIT(2),  0,      BIT(18), 0x0, BIT(7),  BIT(7),  0x280,   0,    false),
++	[RK3576_PD_VEPU1]	= DOMAIN_RK3576("vepu1",  0x4, BIT(3),  0,      BIT(19), 0x0, BIT(8),  BIT(8),  BIT(8),  0,    false),
++	[RK3576_PD_VDEC]	= DOMAIN_RK3576("vdec",   0x4, BIT(4),  0,      BIT(20), 0x0, BIT(6),  BIT(6),  BIT(6),  0,    false),
++	[RK3576_PD_VPU]		= DOMAIN_RK3576("vpu",    0x4, BIT(5),  0,      BIT(21), 0x0, BIT(5),  BIT(5),  BIT(5),  0,    false),
++	[RK3576_PD_NPUTOP]	= DOMAIN_RK3576("nputop", 0x4, BIT(6),  0,      BIT(22), 0x0, 0x18,    0x18,    0x18,    15,   false),
++	[RK3576_PD_NPU0]	= DOMAIN_RK3576("npu0",   0x4, BIT(7),  0,      BIT(23), 0x0, BIT(1),  BIT(1),  0x1a,    0,    false),
++	[RK3576_PD_NPU1]	= DOMAIN_RK3576("npu1",   0x4, BIT(8),  0,      BIT(24), 0x0, BIT(2),  BIT(2),  0x1c,    0,    false),
++	[RK3576_PD_GPU]		= DOMAIN_RK3576("gpu",    0x4, BIT(9),  0,      BIT(25), 0x0, BIT(0),  BIT(0),  BIT(0),  0,    false),
+ };
+ 
+ static const struct rockchip_domain_info rk3588_pm_domains[] = {

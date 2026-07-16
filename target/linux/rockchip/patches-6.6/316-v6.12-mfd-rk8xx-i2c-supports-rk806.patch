@@ -1,0 +1,69 @@
+From d6f584595a323d0e7b07f2118a3d1758e11f1dff Mon Sep 17 00:00:00 2001
+From: Detlev Casanova <detlev.casanova@collabora.com>
+Date: Fri, 2 Aug 2024 09:47:36 -0400
+Subject: [PATCH] mfd: rk8xx: Add support for rk806 on i2c bus
+
+The ArmSoM Sige 5 board connects the rk806 PMIC on an i2c bus.
+
+Signed-off-by: Detlev Casanova <detlev.casanova@collabora.com>
+Link: https://lore.kernel.org/r/20240802134736.283851-1-detlev.casanova@collabora.com
+Signed-off-by: Lee Jones <lee@kernel.org>
+---
+ drivers/mfd/rk8xx-i2c.c | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+--- a/drivers/mfd/rk8xx-i2c.c
++++ b/drivers/mfd/rk8xx-i2c.c
+@@ -21,6 +21,17 @@ struct rk8xx_i2c_platform_data {
+ 	int variant;
+ };
+ 
++static bool rk806_is_volatile_reg(struct device *dev, unsigned int reg)
++{
++	switch (reg) {
++	case RK806_POWER_EN0 ... RK806_POWER_EN5:
++	case RK806_DVS_START_CTRL ... RK806_INT_MSK1:
++		return true;
++	}
++
++	return false;
++}
++
+ static bool rk808_is_volatile_reg(struct device *dev, unsigned int reg)
+ {
+ 	/*
+@@ -92,6 +103,14 @@ static const struct regmap_config rk805_
+ 	.volatile_reg = rk808_is_volatile_reg,
+ };
+ 
++static const struct regmap_config rk806_regmap_config = {
++	.reg_bits = 8,
++	.val_bits = 8,
++	.max_register = RK806_BUCK_RSERVE_REG5,
++	.cache_type = REGCACHE_MAPLE,
++	.volatile_reg = rk806_is_volatile_reg,
++};
++
+ static const struct regmap_config rk808_regmap_config = {
+ 	.reg_bits = 8,
+ 	.val_bits = 8,
+@@ -113,6 +132,11 @@ static const struct rk8xx_i2c_platform_d
+ 	.variant = RK805_ID,
+ };
+ 
++static const struct rk8xx_i2c_platform_data rk806_data = {
++	.regmap_cfg = &rk806_regmap_config,
++	.variant = RK806_ID,
++};
++
+ static const struct rk8xx_i2c_platform_data rk808_data = {
+ 	.regmap_cfg = &rk808_regmap_config,
+ 	.variant = RK808_ID,
+@@ -159,6 +183,7 @@ static SIMPLE_DEV_PM_OPS(rk8xx_i2c_pm_op
+ 
+ static const struct of_device_id rk8xx_i2c_of_match[] = {
+ 	{ .compatible = "rockchip,rk805", .data = &rk805_data },
++	{ .compatible = "rockchip,rk806", .data = &rk806_data },
+ 	{ .compatible = "rockchip,rk808", .data = &rk808_data },
+ 	{ .compatible = "rockchip,rk809", .data = &rk809_data },
+ 	{ .compatible = "rockchip,rk817", .data = &rk817_data },
