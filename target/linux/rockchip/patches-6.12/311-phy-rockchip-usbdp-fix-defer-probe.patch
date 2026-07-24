@@ -1,0 +1,29 @@
+From d961cc453c1e8441f5be52ed22557c4bacc3df1c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 16 Apr 2025 16:52:53 +0800
+Subject: [PATCH] drivers/phy-rockchip-usbdp: fix -EPROBE_DEFER not propagating
+ upwards
+
+```
+...
+[    0.169301] /phy@fed90000: Failed to get clk index: 3 ret: -517
+...
+[   22.889392] platform fc400000.usb: deferred probe pending
+...
+```
+---
+ drivers/phy/rockchip/phy-rockchip-usbdp.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+--- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
++++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
+@@ -426,7 +426,8 @@ static int rk_udphy_clk_init(struct rk_u
+ 
+ 	udphy->num_clks = devm_clk_bulk_get_all(dev, &udphy->clks);
+ 	if (udphy->num_clks < 1)
+-		return -ENODEV;
++		return dev_err_probe(dev, udphy->num_clks,
++			"Failed to get clks property\n");
+ 
+ 	/* used for configure phy reference clock frequency */
+ 	for (i = 0; i < udphy->num_clks; i++) {

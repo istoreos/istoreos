@@ -1,0 +1,47 @@
+--- a/drivers/regulator/fixed.c
++++ b/drivers/regulator/fixed.c
+@@ -20,6 +20,7 @@
+ #include <linux/platform_device.h>
+ #include <linux/pm_domain.h>
+ #include <linux/pm_opp.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/regulator/driver.h>
+ #include <linux/regulator/fixed.h>
+ #include <linux/gpio/consumer.h>
+@@ -171,6 +172,25 @@ static const struct regulator_ops fixed_
+ 	.is_enabled = reg_is_enabled,
+ };
+ 
++static int reg_fixed_check_input_supply(struct device *dev,
++					 const char *supply_name)
++{
++	struct regulator *supply;
++
++	if (!supply_name)
++		return 0;
++
++	supply = regulator_get_optional(dev, supply_name);
++	if (IS_ERR(supply))
++		return dev_err_probe(dev, PTR_ERR(supply),
++				     "input supply \"%s\" is not ready\n",
++				     supply_name);
++
++	regulator_put(supply);
++
++	return 0;
++}
++
+ static int reg_fixed_voltage_probe(struct platform_device *pdev)
+ {
+ 	struct device *dev = &pdev->dev;
+@@ -198,6 +218,10 @@ static int reg_fixed_voltage_probe(struc
+ 	if (!config)
+ 		return -ENOMEM;
+ 
++	ret = reg_fixed_check_input_supply(dev, config->input_supply);
++	if (ret)
++		return ret;
++
+ 	drvdata->desc.name = devm_kstrdup(&pdev->dev,
+ 					  config->supply_name,
+ 					  GFP_KERNEL);

@@ -1,0 +1,50 @@
+From d19b7e21d2936b728e298420132627bbefe462aa Mon Sep 17 00:00:00 2001
+From: Yifeng Zhao <yifeng.zhao@rock-chips.com>
+Date: Tue, 22 Apr 2025 11:38:08 +0800
+Subject: [PATCH] drivers/ahci_dwc: enable FBS for RK3588
+
+Because the CAP parameters of AHCI are incorrect, FBS cannot
+be started automatically and needs to be configured manually.
+This configuration can improve the read-write performance
+when connecting multiple SATA hard disks through the PM chip.
+
+Signed-off-by: Yifeng Zhao <yifeng.zhao@rock-chips.com>
+Change-Id: I66ff92dce1711e3d189801c8caa3219217a50dda
+---
+ drivers/ata/ahci_dwc.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+--- a/drivers/ata/ahci_dwc.c
++++ b/drivers/ata/ahci_dwc.c
+@@ -155,6 +155,12 @@ static int ahci_bt1_init(struct ahci_hos
+ 	return 0;
+ }
+ 
++static int ahci_rockchip_init(struct ahci_host_priv *hpriv)
++{
++	hpriv->flags |= AHCI_HFLAG_YES_FBS;
++	return 0;
++}
++
+ static struct ahci_host_priv *ahci_dwc_get_resources(struct platform_device *pdev)
+ {
+ 	struct ahci_dwc_host_priv *dpriv;
+@@ -468,10 +474,18 @@ static struct ahci_dwc_plat_data ahci_bt
+ 	.init = ahci_bt1_init,
+ };
+ 
++static struct ahci_dwc_plat_data ahci_rockchip_plat = {
++	.pflags = AHCI_PLATFORM_GET_RESETS,
++	.init = ahci_rockchip_init,
++};
++
+ static const struct of_device_id ahci_dwc_of_match[] = {
+ 	{ .compatible = "snps,dwc-ahci", &ahci_dwc_plat },
+ 	{ .compatible = "snps,spear-ahci", &ahci_dwc_plat },
+ 	{ .compatible = "baikal,bt1-ahci", &ahci_bt1_plat },
++	{ .compatible = "rockchip,rk-ahci", &ahci_rockchip_plat },
++	{ .compatible = "rockchip,rk3568-dwc-ahci", &ahci_rockchip_plat },
++	{ .compatible = "rockchip,rk3588-dwc-ahci", &ahci_rockchip_plat },
+ 	{},
+ };
+ MODULE_DEVICE_TABLE(of, ahci_dwc_of_match);

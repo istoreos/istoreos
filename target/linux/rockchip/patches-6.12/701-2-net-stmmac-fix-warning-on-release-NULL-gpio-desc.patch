@@ -1,0 +1,24 @@
+From b4662490d4945aa5c0bd6507f5af63d4022a29c3 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 16 Apr 2025 12:46:21 +0800
+Subject: [PATCH] ethernet: stmmac: Fix release reset gpio desc warning
+
+rk3588 dts move snps,reset-gpio to mdio phy node, reset_gpio is NULL.
+
+Fixes: ("ethernet: stmmac: Release reset gpio desc for mdio reset")
+---
+ drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_mdio.c
+@@ -483,7 +483,8 @@ int stmmac_mdio_reset(struct mii_bus *bu
+ 			msleep(DIV_ROUND_UP(delays[2], 1000));
+ 
+ 		/* put reset gpio resource for next time */
+-		devm_gpiod_put(priv->device, reset_gpio);
++		if (reset_gpio)
++			devm_gpiod_put(priv->device, reset_gpio);
+ 	}
+ #endif
+ 

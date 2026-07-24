@@ -1,0 +1,20 @@
+From 933396174af61753db4d90240fc54347f7b173f4 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 20 May 2025 14:54:59 +0800
+Subject: [PATCH] make MODULES_TREE_LOOKUP configurable
+
+---
+ kernel/module/Kconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+--- a/kernel/module/Kconfig
++++ b/kernel/module/Kconfig
+@@ -387,7 +387,7 @@ config UNUSED_KSYMS_WHITELIST
+ 	  source tree.
+ 
+ config MODULES_TREE_LOOKUP
+-	def_bool y
++	bool "Speedup find the module which contains an address"
+ 	depends on PERF_EVENTS || TRACING || CFI_CLANG
+ 
+ config MODULE_STRIPPED

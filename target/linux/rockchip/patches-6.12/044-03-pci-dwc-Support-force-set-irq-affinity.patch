@@ -1,0 +1,87 @@
+From fc5f30b02fb5f418e3e9495afcfad4dbc4dd2133 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Fri, 13 Mar 2026 22:38:17 +0800
+Subject: [PATCH] HACK: PCI: dwc: Support force set irq affinity by dts
+
+This allows certain big-little core SoCs to handle interrupts using big cores, such as the RK3576.
+
+(This patch was developed with AI assistance.)
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ .../pci/controller/dwc/pcie-designware-host.c | 50 +++++++++++++++++++
+ 1 file changed, 50 insertions(+)
+
+--- a/drivers/pci/controller/dwc/pcie-designware-host.c
++++ b/drivers/pci/controller/dwc/pcie-designware-host.c
+@@ -8,6 +8,8 @@
+  * Author: Jingoo Han <jg1.han@samsung.com>
+  */
+ 
++#include <linux/cpumask.h>
++#include <linux/interrupt.h>
+ #include <linux/iopoll.h>
+ #include <linux/irqchip/chained_irq.h>
+ #include <linux/irqdomain.h>
+@@ -323,6 +325,52 @@ static int dw_pcie_parse_split_msi_irq(s
+ 	return 0;
+ }
+ 
++static void dw_pcie_set_msi_affinity(struct dw_pcie_rp *pp, u32 num_ctrls)
++{
++	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
++	struct device *dev = pci->dev;
++	cpumask_t affinity_cpumask;
++	cpumask_t online_affinity_cpumask;
++	cpumask_t selected_cpumask;
++	u32 affinity_mask;
++	unsigned int cpu;
++	int ctrl, ret;
++
++	if (of_property_read_u32(dev->of_node, "rockchip,irq-affinity",
++				 &affinity_mask))
++		return;
++
++	cpumask_clear(&affinity_cpumask);
++	for (cpu = 0; cpu < 32 && cpu < nr_cpu_ids; cpu++) {
++		if (affinity_mask & BIT(cpu))
++			cpumask_set_cpu(cpu, &affinity_cpumask);
++	}
++
++	cpumask_and(&online_affinity_cpumask, &affinity_cpumask,
++		    cpu_online_mask);
++	cpu = cpumask_first(&online_affinity_cpumask);
++	if (cpu >= nr_cpu_ids) {
++		dev_warn(dev,
++			 "no online CPUs in rockchip,irq-affinity for PCIe MSI affinity\n");
++		return;
++	}
++
++	cpumask_clear(&selected_cpumask);
++	cpumask_set_cpu(cpu, &selected_cpumask);
++
++	for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
++		if (pp->msi_irq[ctrl] <= 0)
++			continue;
++
++		ret = irq_set_affinity(pp->msi_irq[ctrl], &selected_cpumask);
++		if (ret) {
++			dev_warn(dev,
++				 "failed to set MSI parent IRQ%d affinity: %d\n",
++				 pp->msi_irq[ctrl], ret);
++		}
++	}
++}
++
+ static int dw_pcie_msi_host_init(struct dw_pcie_rp *pp)
+ {
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+@@ -368,6 +416,8 @@ static int dw_pcie_msi_host_init(struct
+ 						    dw_chained_msi_isr, pp);
+ 	}
+ 
++	dw_pcie_set_msi_affinity(pp, num_ctrls);
++
+ 	/*
+ 	 * Even though the iMSI-RX Module supports 64-bit addresses some
+ 	 * peripheral PCIe devices may lack 64-bit message support. In

@@ -1,0 +1,227 @@
+From 9ebada0adea894db97a9460180860e45ca4d2f78 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Fri, 21 Mar 2025 16:31:21 +0800
+Subject: [PATCH] rockchip/clk: add rockchip_pll_clk api
+
+---
+ drivers/clk/rockchip/clk-pll.c | 110 +++++++++++++++++++++++++++++++--
+ drivers/clk/rockchip/clk.h     |   3 +
+ 2 files changed, 109 insertions(+), 4 deletions(-)
+
+--- a/drivers/clk/rockchip/clk-pll.c
++++ b/drivers/clk/rockchip/clk-pll.c
+@@ -38,6 +38,8 @@ struct rockchip_clk_pll {
+ 	u8			flags;
+ 	const struct rockchip_pll_rate_table *rate_table;
+ 	unsigned int		rate_count;
++	int			sel;
++	unsigned long		scaling;
+ 	spinlock_t		*lock;
+ 
+ 	struct rockchip_clk_provider *ctx;
+@@ -47,6 +49,72 @@ struct rockchip_clk_pll {
+ #define to_rockchip_clk_pll_nb(nb) \
+ 			container_of(nb, struct rockchip_clk_pll, clk_nb)
+ 
++int rockchip_pll_clk_adaptive_scaling(struct clk *clk, int sel)
++{
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	pll->sel = sel;
++
++	return 0;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_adaptive_scaling);
++
++int rockchip_pll_clk_rate_to_scale(struct clk *clk, unsigned long rate)
++{
++	const struct rockchip_pll_rate_table *rate_table;
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++	unsigned int i;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	rate_table = pll->rate_table;
++	for (i = 0; i < pll->rate_count; i++) {
++		if (rate >= rate_table[i].rate)
++			return i;
++	}
++
++	return -EINVAL;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_rate_to_scale);
++
++int rockchip_pll_clk_scale_to_rate(struct clk *clk, unsigned int scale)
++{
++	const struct rockchip_pll_rate_table *rate_table;
++	struct clk *parent = clk_get_parent(clk);
++	struct rockchip_clk_pll *pll;
++	unsigned int i;
++
++	if (IS_ERR_OR_NULL(parent))
++		return -EINVAL;
++
++	pll = to_rockchip_clk_pll(__clk_get_hw(parent));
++	if (!pll)
++		return -EINVAL;
++
++	rate_table = pll->rate_table;
++	for (i = 0; i < pll->rate_count; i++) {
++		if (i == scale)
++			return rate_table[i].rate;
++	}
++
++	return -EINVAL;
++}
++EXPORT_SYMBOL(rockchip_pll_clk_scale_to_rate);
++
+ static const struct rockchip_pll_rate_table *rockchip_get_pll_settings(
+ 			    struct rockchip_clk_pll *pll, unsigned long rate)
+ {
+@@ -54,9 +122,16 @@ static const struct rockchip_pll_rate_ta
+ 	int i;
+ 
+ 	for (i = 0; i < pll->rate_count; i++) {
+-		if (rate == rate_table[i].rate)
++		if (rate == rate_table[i].rate) {
++			if (i < pll->sel) {
++				pll->scaling = rate;
++				return &rate_table[pll->sel];
++			}
++			pll->scaling = 0;
+ 			return &rate_table[i];
++		}
+ 	}
++	pll->scaling = 0;
+ 
+ 	return NULL;
+ }
+@@ -167,6 +242,9 @@ static unsigned long rockchip_rk3036_pll
+ 	struct rockchip_pll_rate_table cur;
+ 	u64 rate64 = prate;
+ 
++	if (pll->sel && pll->scaling)
++		return pll->scaling;
++
+ 	rockchip_rk3036_pll_get_params(pll, &cur);
+ 
+ 	rate64 *= cur.fbdiv;
+@@ -414,6 +492,9 @@ static unsigned long rockchip_rk3066_pll
+ 		return prate;
+ 	}
+ 
++	if (pll->sel && pll->scaling)
++		return pll->scaling;
++
+ 	rockchip_rk3066_pll_get_params(pll, &cur);
+ 
+ 	rate64 *= cur.nf;
+@@ -487,6 +568,7 @@ static int rockchip_rk3066_pll_set_rate(
+ {
+ 	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
+ 	const struct rockchip_pll_rate_table *rate;
++	int ret;
+ 
+ 	pr_debug("%s: changing %s to %lu with a parent rate of %lu\n",
+ 		 __func__, clk_hw_get_name(hw), drate, prate);
+@@ -499,7 +581,11 @@ static int rockchip_rk3066_pll_set_rate(
+ 		return -EINVAL;
+ 	}
+ 
+-	return rockchip_rk3066_pll_set_params(pll, rate);
++	ret = rockchip_rk3066_pll_set_params(pll, rate);
++	if (ret)
++		pll->scaling = 0;
++
++	return ret;
+ }
+ 
+ static int rockchip_rk3066_pll_enable(struct clk_hw *hw)
+@@ -651,6 +737,9 @@ static unsigned long rockchip_rk3399_pll
+ 	struct rockchip_pll_rate_table cur;
+ 	u64 rate64 = prate;
+ 
++	if (pll->sel && pll->scaling)
++		return pll->scaling;
++
+ 	rockchip_rk3399_pll_get_params(pll, &cur);
+ 
+ 	rate64 *= cur.fbdiv;
+@@ -736,6 +825,7 @@ static int rockchip_rk3399_pll_set_rate(
+ {
+ 	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
+ 	const struct rockchip_pll_rate_table *rate;
++	int ret;
+ 
+ 	pr_debug("%s: changing %s to %lu with a parent rate of %lu\n",
+ 		 __func__, __clk_get_name(hw->clk), drate, prate);
+@@ -748,7 +838,11 @@ static int rockchip_rk3399_pll_set_rate(
+ 		return -EINVAL;
+ 	}
+ 
+-	return rockchip_rk3399_pll_set_params(pll, rate);
++	ret = rockchip_rk3399_pll_set_params(pll, rate);
++	if (ret)
++		pll->scaling = 0;
++
++	return ret;
+ }
+ 
+ static int rockchip_rk3399_pll_enable(struct clk_hw *hw)
+@@ -901,6 +995,9 @@ static unsigned long rockchip_rk3588_pll
+ 	struct rockchip_pll_rate_table cur;
+ 	u64 rate64 = prate, postdiv;
+ 
++	if (pll->sel && pll->scaling)
++		return pll->scaling;
++
+ 	rockchip_rk3588_pll_get_params(pll, &cur);
+ 
+ 	rate64 *= cur.m;
+@@ -985,6 +1082,7 @@ static int rockchip_rk3588_pll_set_rate(
+ {
+ 	struct rockchip_clk_pll *pll = to_rockchip_clk_pll(hw);
+ 	const struct rockchip_pll_rate_table *rate;
++	int ret;
+ 
+ 	pr_debug("%s: changing %s to %lu with a parent rate of %lu\n",
+ 		 __func__, __clk_get_name(hw->clk), drate, prate);
+@@ -997,7 +1095,11 @@ static int rockchip_rk3588_pll_set_rate(
+ 		return -EINVAL;
+ 	}
+ 
+-	return rockchip_rk3588_pll_set_params(pll, rate);
++	ret = rockchip_rk3588_pll_set_params(pll, rate);
++	if (ret)
++		pll->scaling = 0;
++
++	return ret;
+ }
+ 
+ static int rockchip_rk3588_pll_enable(struct clk_hw *hw)
+--- a/drivers/clk/rockchip/clk.h
++++ b/drivers/clk/rockchip/clk.h
+@@ -1169,6 +1169,9 @@ void rockchip_clk_register_armclk(struct
+ 			const struct rockchip_cpuclk_reg_data *reg_data,
+ 			const struct rockchip_cpuclk_rate_table *rates,
+ 			int nrates);
++int rockchip_pll_clk_rate_to_scale(struct clk *clk, unsigned long rate);
++int rockchip_pll_clk_scale_to_rate(struct clk *clk, unsigned int scale);
++int rockchip_pll_clk_adaptive_scaling(struct clk *clk, int sel);
+ void rockchip_clk_protect_critical(const char *const clocks[], int nclocks);
+ void rockchip_register_restart_notifier(struct rockchip_clk_provider *ctx,
+ 					unsigned int reg, void (*cb)(void));

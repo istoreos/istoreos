@@ -1,0 +1,142 @@
+From d9acd0718ccf0c455b73cf44d2a0fb805c520fe7 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 19 Mar 2025 12:47:47 +0800
+Subject: [PATCH] dma_buf/heaps: fix rk heaps build
+
+---
+ drivers/dma-buf/heaps/rk_cma_heap.c    |  8 ++++----
+ drivers/dma-buf/heaps/rk_system_heap.c | 22 +++++++++++++++-------
+ 2 files changed, 19 insertions(+), 11 deletions(-)
+
+--- a/drivers/dma-buf/heaps/rk_cma_heap.c
++++ b/drivers/dma-buf/heaps/rk_cma_heap.c
+@@ -107,7 +107,7 @@ static struct sg_table *cma_heap_map_dma
+ {
+ 	struct dma_heap_attachment *a = attachment->priv;
+ 	struct sg_table *table = &a->table;
+-	int attrs = attachment->dma_map_attrs;
++	int attrs = 0; //attachment->dma_map_attrs;
+ 	int ret;
+ 
+ 	if (a->uncached)
+@@ -125,7 +125,7 @@ static void cma_heap_unmap_dma_buf(struc
+ 				   enum dma_data_direction direction)
+ {
+ 	struct dma_heap_attachment *a = attachment->priv;
+-	int attrs = attachment->dma_map_attrs;
++	int attrs = 0; //attachment->dma_map_attrs;
+ 
+ 	a->mapped = false;
+ 
+@@ -595,11 +595,11 @@ static int __add_cma_heap(struct cma *cm
+ 	return 0;
+ 
+ put_uncached_cma_heap:
+-	dma_heap_put(cma_uncached_heap->heap);
++	//dma_heap_put(cma_uncached_heap->heap);
+ free_uncached_cma_heap:
+ 	kfree(cma_uncached_heap);
+ put_cma_heap:
+-	dma_heap_put(cma_heap->heap);
++	//dma_heap_put(cma_heap->heap);
+ free_cma_heap:
+ 	kfree(cma_heap);
+ 
+--- a/drivers/dma-buf/heaps/rk_system_heap.c
++++ b/drivers/dma-buf/heaps/rk_system_heap.c
+@@ -22,9 +22,12 @@
+ #include <linux/slab.h>
+ #include <linux/swiotlb.h>
+ #include <linux/vmalloc.h>
++#if IS_REACHABLE(CONFIG_ROCKCHIP_SIP)
+ #include <linux/rockchip/rockchip_sip.h>
++#endif
++#if defined(CONFIG_CPU_RK3568)
+ #include <linux/rockchip/cpu.h>
+-
++#endif
+ #include "page_pool.h"
+ 
+ static struct dma_heap *sys_heap;
+@@ -150,7 +153,7 @@ static struct sg_table *system_heap_map_
+ {
+ 	struct dma_heap_attachment *a = attachment->priv;
+ 	struct sg_table *table = a->table;
+-	int attr = attachment->dma_map_attrs;
++	int attr = 0; // attachment->dma_map_attrs;
+ 	int ret;
+ 
+ 	if (a->uncached)
+@@ -169,7 +172,7 @@ static void system_heap_unmap_dma_buf(st
+ 				      enum dma_data_direction direction)
+ {
+ 	struct dma_heap_attachment *a = attachment->priv;
+-	int attr = attachment->dma_map_attrs;
++	int attr = 0; // attachment->dma_map_attrs;
+ 
+ 	if (a->uncached)
+ 		attr |= DMA_ATTR_SKIP_CPU_SYNC;
+@@ -644,6 +647,7 @@ static struct dma_buf *system_heap_alloc
+ 	return system_heap_do_allocate(heap, len, fd_flags, heap_flags, false, soc_need_dma32);
+ }
+ 
++/*
+ static long system_get_pool_size(struct dma_heap *heap)
+ {
+ 	unsigned long num_bytes = 0;
+@@ -655,10 +659,11 @@ static long system_get_pool_size(struct
+ 
+ 	return num_bytes;
+ }
++*/
+ 
+ static const struct dma_heap_ops system_heap_ops = {
+ 	.allocate = system_heap_allocate,
+-	.get_pool_size = system_get_pool_size,
++	//.get_pool_size = system_get_pool_size,
+ };
+ 
+ static struct dma_buf *system_heap_dma32_allocate(struct dma_heap *heap,
+@@ -671,7 +676,7 @@ static struct dma_buf *system_heap_dma32
+ 
+ static const struct dma_heap_ops system_dma32_heap_ops = {
+ 	.allocate = system_heap_dma32_allocate,
+-	.get_pool_size = system_get_pool_size,
++	//.get_pool_size = system_get_pool_size,
+ };
+ 
+ static struct dma_buf *system_uncached_heap_allocate(struct dma_heap *heap,
+@@ -739,8 +744,9 @@ static int system_heap_create(void)
+ {
+ 	struct dma_heap_export_info exp_info;
+ 	int i, err = 0;
++#if IS_REACHABLE(CONFIG_ROCKCHIP_SIP)
+ 	struct dram_addrmap_info *ddr_map_info;
+-
++#endif
+ 	/*
+ 	 * Since swiotlb has memory size limitation, this will calculate
+ 	 * the maximum size locally.
+@@ -751,7 +757,7 @@ static int system_heap_create(void)
+ 	 *
+ 	 * FIX: fix the orders[] as a workaround.
+ 	 */
+-	if (swiotlb_max_segment()) {
++	if (is_swiotlb_allocated()) {
+ 		unsigned int max_size = (1 << IO_TLB_SHIFT) * IO_TLB_SEGSIZE;
+ 		int max_order = MAX_ORDER;
+ 		int i;
+@@ -841,11 +847,13 @@ static int system_heap_create(void)
+ 	system_uncached_heap_ops.allocate = system_uncached_heap_allocate;
+ 	system_uncached_dma32_heap_ops.allocate = system_uncached_heap_dma32_allocate;
+ 
++#if IS_REACHABLE(CONFIG_ROCKCHIP_SIP)
+ 	ddr_map_info = sip_smc_get_dram_map();
+ 	if (ddr_map_info) {
+ 		bank_bit_first = ddr_map_info->bank_bit_first;
+ 		bank_bit_mask = ddr_map_info->bank_bit_mask;
+ 	}
++#endif
+ 
+ 	return 0;
+ err_dma32_pool:

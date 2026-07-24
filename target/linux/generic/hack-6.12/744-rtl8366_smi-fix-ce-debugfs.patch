@@ -1,0 +1,41 @@
+From 0f3ca4a933f28732daad4d8b030497b03965a8a2 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Tue, 19 Dec 2023 14:14:57 +0800
+Subject: [PATCH] rtl8366_smi: fix CE on debugfs enabled
+
+---
+ drivers/net/phy/rtl8366_smi.c | 14 ++------------
+ 1 file changed, 2 insertions(+), 12 deletions(-)
+
+--- a/drivers/net/phy/rtl8366_smi.c
++++ b/drivers/net/phy/rtl8366_smi.c
+@@ -941,13 +941,8 @@ static void rtl8366_debugfs_init(struct
+ 	}
+ 	root = smi->debugfs_root;
+ 
+-	node = debugfs_create_x16("reg", S_IRUGO | S_IWUSR, root,
++	debugfs_create_x16("reg", S_IRUGO | S_IWUSR, root,
+ 				  &smi->dbg_reg);
+-	if (!node) {
+-		dev_err(smi->parent, "Creating debugfs file '%s' failed\n",
+-			"reg");
+-		return;
+-	}
+ 
+ 	node = debugfs_create_file("val", S_IRUGO | S_IWUSR, root, smi,
+ 				   &fops_rtl8366_regs);
+@@ -965,13 +960,8 @@ static void rtl8366_debugfs_init(struct
+ 		return;
+ 	}
+ 
+-	node = debugfs_create_u8("vlan_4k_page", S_IRUGO | S_IWUSR, root,
++	debugfs_create_u8("vlan_4k_page", S_IRUGO | S_IWUSR, root,
+ 				  &smi->dbg_vlan_4k_page);
+-	if (!node) {
+-		dev_err(smi->parent, "Creating debugfs file '%s' failed\n",
+-			"vlan_4k_page");
+-		return;
+-	}
+ 
+ 	node = debugfs_create_file("vlan_4k", S_IRUSR, root, smi,
+ 				   &fops_rtl8366_vlan_4k);

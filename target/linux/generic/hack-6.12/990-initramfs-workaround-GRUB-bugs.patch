@@ -1,0 +1,38 @@
+From ef8813a84bb3f63ba8d69dc01592a82f475c164c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 14 Jan 2025 14:37:40 +0800
+Subject: [PATCH] initramfs.c: workaround GRUB initrd bugs
+
+rework Ventoy boot
+---
+ init/initramfs.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
+
+--- a/init/initramfs.c
++++ b/init/initramfs.c
+@@ -361,10 +361,8 @@ static int __init do_name(void)
+ 
+ 	/* name_len > 0 && name_len <= PATH_MAX checked in do_header */
+ 	if (collected[name_len - 1] != '\0') {
+-		pr_err("initramfs name without nulterm: %.*s\n",
+-		       (int)name_len, collected);
+-		error("malformed archive");
+-		return 1;
++		pr_err("initramfs name without nulterm (%d): %.*s\n",
++		       (int)name_len, (int)name_len, collected);
+ 	}
+ 
+ 	if (strcmp(collected, "TRAILER!!!") == 0) {
+@@ -432,10 +430,8 @@ static int __init do_copy(void)
+ static int __init do_symlink(void)
+ {
+ 	if (collected[name_len - 1] != '\0') {
+-		pr_err("initramfs symlink without nulterm: %.*s\n",
+-		       (int)name_len, collected);
+-		error("malformed archive");
+-		return 1;
++		pr_err("initramfs symlink without nulterm (%d): %.*s\n",
++		       (int)name_len, (int)name_len, collected);
+ 	}
+ 	collected[N_ALIGN(name_len) + body_len] = '\0';
+ 	clean_path(collected, 0);

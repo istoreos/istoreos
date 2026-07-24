@@ -1,0 +1,112 @@
+From 28b8f1a9b9c1674cdfe554dd47d2d2fc91394ff0 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Tue, 8 Jul 2025 11:11:51 +0800
+Subject: [PATCH] r8169: add LED configuration from OF
+
+Signed-off-by: jjm2473 <jjm2473@gmail.com>
+---
+ drivers/net/ethernet/realtek/r8169_main.c | 72 +++++++++++++++++++++++
+ 1 file changed, 72 insertions(+)
+
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -17,6 +17,7 @@
+ #include <linux/delay.h>
+ #include <linux/ethtool.h>
+ #include <linux/phy.h>
++#include <linux/of.h>
+ #include <linux/if_vlan.h>
+ #include <linux/in.h>
+ #include <linux/io.h>
+@@ -408,6 +409,7 @@ enum rtl8125_registers {
+ 	LEDSEL2			= 0x84,
+ 	LEDSEL1			= 0x86,
+ 	TxPoll_8125		= 0x90,
++	LEDFEATURE		= 0x94,
+ 	LEDSEL3			= 0x96,
+ 	MAC0_BKP		= 0x19e0,
+ 	RSS_CTRL_8125		= 0x4500,
+@@ -5385,6 +5387,71 @@ static bool rtl_aspm_is_safe(struct rtl8
+ 	return false;
+ }
+ 
++/*
++ * Refer to RTL8125 datasheet 5.Customizable LED Configuration
++ * Register Name	IO Address
++ * LEDSEL0		0x18
++ * LEDSEL1		0x86
++ * LEDSEL2		0x84
++ * LEDSEL3		0x96
++ * LEDFEATURE		0x94
++ *
++ * LEDSEL Bit[]		Description
++ * Bit0			Link10M
++ * Bit1			Link100M
++ * Bit3			Link1000M
++ * Bit5			Link2.5G
++ * Bit9			ACT
++ * Bit10		preboot enable
++ * Bit11		lp enable
++ * Bit12		active low/high
++ *
++ * LEDFEATURE		Description
++ * Bit0			LED Table V1/V2
++ * Bit1~3		Reserved
++ * Bit4~5		LED Blinking Duty Cycle	12.5%/ 25%/ 50%/ 75%
++ * Bit6~7		LED Blinking Freq. 240ms/160ms/80ms/Link-Speed-Dependent
++ */
++static int
++rtl8125_led_configuration(struct rtl8169_private *tp)
++{
++	const int led_regs[] = { LEDSEL0, LEDSEL1, LEDSEL2, LEDSEL3 }; /* LEDSEL 0-3 */
++	u32 led_data[4];
++	u8 led_feature;
++	int ret, i;
++
++	ret = of_property_read_u32_array(tp->pci_dev->dev.of_node,
++		    "realtek,led-data", led_data, 4);
++
++	if (!ret) {
++		for (i = 0; i < 4; i++)
++			RTL_W16(tp, led_regs[i], led_data[i]);
++	}
++
++	ret = of_property_read_u8(tp->pci_dev->dev.of_node,
++		    "realtek,led-feature", &led_feature);
++
++	if (!ret)
++		RTL_W8(tp, LEDFEATURE, led_feature);
++
++	return 0;
++}
++
++static int
++rtl8168_led_configuration(struct rtl8169_private *tp)
++{
++	u32 led_data;
++	int ret;
++
++	ret = of_property_read_u32(tp->pci_dev->dev.of_node,
++		    "realtek,led-data", &led_data);
++
++	if (!ret)
++		RTL_W16(tp, LED_CTRL, led_data);
++
++	return 0;
++}
++
+ static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
+ {
+ 	const struct rtl_chip_info *chip;
+@@ -5566,6 +5633,11 @@ static int rtl_init_one(struct pci_dev *
+ 	if (rc)
+ 		return rc;
+ 
++	if (rtl_is_8125(tp))
++		rtl8125_led_configuration(tp);
++	else if (tp->mac_version > RTL_GIGA_MAC_VER_06)
++		rtl8168_led_configuration(tp);
++
+ 	if (IS_ENABLED(CONFIG_R8169_LEDS)) {
+ 		if (rtl_is_8125(tp))
+ 			tp->leds = rtl8125_init_leds(dev);

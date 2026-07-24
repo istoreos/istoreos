@@ -1,0 +1,34 @@
+--- a/drivers/usb/typec/tcpm/Kconfig
++++ b/drivers/usb/typec/tcpm/Kconfig
+@@ -20,6 +20,20 @@ config TYPEC_TCPCI
+ 
+ if TYPEC_TCPCI
+ 
++config TYPEC_ET7303
++	tristate "Etek ET7303 Type-C chip driver"
++	help
++	  Etek ET7303 Type-C chip driver that works with
++	  Type-C Port Controller Manager to provide USB PD and USB
++	  Type-C functionalities.
++
++config TYPEC_HUSB311
++	tristate "Hynetek HUSB311 Type-C chip driver"
++	help
++	  Hynetek HUSB311 Type-C chip driver that works with
++	  Type-C Port Controller Manager to provide USB PD and USB
++	  Type-C functionalities.
++
+ config TYPEC_RT1711H
+ 	tristate "Richtek RT1711H Type-C chip driver"
+ 	help
+--- a/drivers/usb/typec/tcpm/Makefile
++++ b/drivers/usb/typec/tcpm/Makefile
+@@ -4,6 +4,8 @@ obj-$(CONFIG_TYPEC_FUSB302)		+= fusb302.
+ obj-$(CONFIG_TYPEC_WCOVE)		+= typec_wcove.o
+ typec_wcove-y				:= wcove.o
+ obj-$(CONFIG_TYPEC_TCPCI)		+= tcpci.o
++obj-$(CONFIG_TYPEC_ET7303)		+= tcpci_et7303.o
++obj-$(CONFIG_TYPEC_HUSB311)		+= tcpci_husb311.o
+ obj-$(CONFIG_TYPEC_RT1711H)		+= tcpci_rt1711h.o
+ obj-$(CONFIG_TYPEC_MT6360)		+= tcpci_mt6360.o
+ obj-$(CONFIG_TYPEC_TCPCI_MT6370)	+= tcpci_mt6370.o
