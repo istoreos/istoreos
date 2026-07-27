@@ -1,0 +1,193 @@
+From e37a4fda9f406824400539455aa069b7d5a76f8d Mon Sep 17 00:00:00 2001
+From: jannson <jannon.wei@gmail.com>
+Date: Fri, 24 Jul 2026 09:58:59 +0000
+Subject: [PATCH 2/2] fix: force backend close for proxied http
+
+---
+ proxy_prefix.c | 156 +++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 156 insertions(+)
+
+diff --git a/proxy_prefix.c b/proxy_prefix.c
+index 0c206e4..fd3cb78 100644
+--- a/proxy_prefix.c
++++ b/proxy_prefix.c
+@@ -16,6 +16,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <strings.h>
+ 
+ #include "uhttpd.h"
+ 
+@@ -186,6 +187,156 @@ static int proxy_find_header_end(const char *buf, int len)
+ 	return -1;
+ }
+ 
++static bool proxy_header_name_eq(const char *name, size_t len,
++				 const char *expected)
++{
++	return strlen(expected) == len && !strncasecmp(name, expected, len);
++}
++
++static bool proxy_header_value_has_token(const char *value, size_t len,
++					 const char *token)
++{
++	size_t token_len = strlen(token);
++	const char *end = value + len;
++	const char *p = value;
++
++	while (p < end) {
++		while (p < end && (*p == ' ' || *p == '\t' || *p == ','))
++			p++;
++
++		value = p;
++		while (p < end && *p != ',')
++			p++;
++
++		while (p > value && (p[-1] == ' ' || p[-1] == '\t'))
++			p--;
++
++		if ((size_t)(p - value) == token_len &&
++		    !strncasecmp(value, token, token_len))
++			return true;
++
++		while (p < end && *p != ',')
++			p++;
++	}
++
++	return false;
++}
++
++static bool proxy_request_is_websocket(const char *buf, int header_end)
++{
++	const char *headers_end = buf + header_end - 2;
++	const char *line;
++	const char *line_end;
++	bool has_connection_upgrade = false;
++	bool has_upgrade_websocket = false;
++	size_t line_len, name_len;
++	const char *colon, *value;
++
++	line = memmem(buf, header_end, "\r\n", 2);
++	if (!line)
++		return false;
++
++	line += 2;
++
++	while (line < headers_end) {
++		line_end = memmem(line, headers_end - line, "\r\n", 2);
++		if (!line_end)
++			return false;
++
++		line_len = line_end - line;
++		colon = memchr(line, ':', line_len);
++		if (colon) {
++			name_len = colon - line;
++			value = colon + 1;
++			while (value < line_end &&
++			       (*value == ' ' || *value == '\t'))
++				value++;
++
++			if (proxy_header_name_eq(line, name_len, "Connection")) {
++				if (proxy_header_value_has_token(value,
++								 line_end - value,
++								 "upgrade"))
++					has_connection_upgrade = true;
++			} else if (proxy_header_name_eq(line, name_len, "Upgrade")) {
++				if (proxy_header_value_has_token(value,
++								 line_end - value,
++								 "websocket"))
++					has_upgrade_websocket = true;
++			}
++		}
++
++		line = line_end + 2;
++	}
++
++	return has_connection_upgrade && has_upgrade_websocket;
++}
++
++static bool proxy_rewrite_connection_close(struct client *cl, int header_end)
++{
++	static const char close_header[] = "Connection: close\r\n";
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++	const char *headers_end = p->initial + header_end - 2;
++	const char *line, *line_end;
++	const char *colon;
++	char *rewritten, *out;
++	size_t line_len, name_len, body_len;
++
++	if (proxy_request_is_websocket(p->initial, header_end))
++		return true;
++
++	line_end = memmem(p->initial, header_end, "\r\n", 2);
++	if (!line_end)
++		return false;
++
++	rewritten = malloc(p->initial_len + sizeof(close_header));
++	if (!rewritten)
++		return false;
++
++	out = rewritten;
++	memcpy(out, p->initial, line_end + 2 - p->initial);
++	out += line_end + 2 - p->initial;
++
++	line = line_end + 2;
++	while (line < headers_end) {
++		line_end = memmem(line, headers_end - line, "\r\n", 2);
++		if (!line_end) {
++			free(rewritten);
++			return false;
++		}
++
++		line_len = line_end - line;
++		colon = memchr(line, ':', line_len);
++		name_len = colon ? (size_t)(colon - line) : 0;
++
++		if (!colon ||
++		    (!proxy_header_name_eq(line, name_len, "Connection") &&
++		     !proxy_header_name_eq(line, name_len, "Proxy-Connection"))) {
++			memcpy(out, line, line_end + 2 - line);
++			out += line_end + 2 - line;
++		}
++
++		line = line_end + 2;
++	}
++
++	memcpy(out, close_header, sizeof(close_header) - 1);
++	out += sizeof(close_header) - 1;
++	memcpy(out, "\r\n", 2);
++	out += 2;
++
++	body_len = p->initial_len - header_end;
++	if (body_len) {
++		memcpy(out, p->initial + header_end, body_len);
++		out += body_len;
++	}
++
++	free(p->initial);
++	p->initial = rewritten;
++	p->initial_len = out - rewritten;
++	p->initial_off = 0;
++
++	return true;
++}
++
+ static bool proxy_append_initial(struct client *cl, const char *buf, int len)
+ {
+ 	struct dispatch_proxy *p = &cl->dispatch.proxy;
+@@ -224,6 +375,11 @@ static bool proxy_append_initial(struct client *cl, const char *buf, int len)
+ 	p->header_complete = true;
+ 	ustream_set_read_blocked(cl->us, true);
+ 
++	if (!proxy_rewrite_connection_close(cl, header_end)) {
++		proxy_error_response(cl, 502, "Bad Gateway");
++		return false;
++	}
++
+ 	if (proxy_connect_backend(cl)) {
+ 		proxy_error_response(cl, 502, "Bad Gateway");
+ 		return false;
+-- 
+2.54.0
+

@@ -1,0 +1,840 @@
+From 363e62f925f3fb15367e09c8983912fea731e317 Mon Sep 17 00:00:00 2001
+From: jannson <jannon.wei@gmail.com>
+Date: Fri, 24 Jul 2026 07:48:51 +0000
+Subject: [PATCH 1/2] feat: add raw proxy
+
+---
+ CMakeLists.txt |   2 +-
+ client.c       |  17 ++
+ main.c         |  12 +-
+ proxy_prefix.c | 628 +++++++++++++++++++++++++++++++++++++++++++++++++
+ uhttpd.h       |  38 +++
+ 5 files changed, 695 insertions(+), 2 deletions(-)
+ create mode 100644 proxy_prefix.c
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 58eb6dd..05b1648 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -25,7 +25,7 @@ ENDIF()
+ FIND_PATH(ubox_include_dir libubox/usock.h)
+ INCLUDE_DIRECTORIES(${ubox_include_dir})
+ 
+-SET(SOURCES main.c listen.c client.c utils.c file.c auth.c cgi.c relay.c proc.c plugin.c handler.c)
++SET(SOURCES main.c listen.c client.c utils.c file.c auth.c cgi.c relay.c proc.c plugin.c handler.c proxy_prefix.c)
+ IF(TLS_SUPPORT)
+ 	SET(SOURCES ${SOURCES} tls.c)
+ 	ADD_DEFINITIONS(-DHAVE_TLS)
+diff --git a/client.c b/client.c
+index 1d302d7..053bf15 100644
+--- a/client.c
++++ b/client.c
+@@ -213,12 +213,17 @@ static int client_parse_request(struct client *cl, char *data)
+ 
+ static bool client_init_cb(struct client *cl, char *buf, int len)
+ {
++	enum proxy_prefix_init_result proxy_ret;
+ 	char *newline;
+ 
+ 	newline = strstr(buf, "\r\n");
+ 	if (!newline)
+ 		return false;
+ 
++	proxy_ret = uh_proxy_prefix_try_init(cl, buf, len);
++	if (proxy_ret == PROXY_PREFIX_INIT_HANDLED)
++		return true;
++
+ 	if (newline == buf) {
+ 		ustream_consume(cl->us, 2);
+ 		return true;
+@@ -547,6 +552,7 @@ static read_cb_t read_cbs[] = {
+ 	[CLIENT_STATE_INIT] = client_init_cb,
+ 	[CLIENT_STATE_HEADER] = client_header_cb,
+ 	[CLIENT_STATE_DATA] = client_data_cb,
++	[CLIENT_STATE_PROXY] = uh_proxy_prefix_client_cb,
+ };
+ 
+ void uh_client_read_cb(struct client *cl)
+@@ -567,6 +573,7 @@ void uh_client_read_cb(struct client *cl)
+ 		if (!read_cbs[cl->state](cl, str, len)) {
+ 			if (len == us->r.buffer_len &&
+ 			    cl->state != CLIENT_STATE_DATA &&
++			    cl->state != CLIENT_STATE_PROXY &&
+ 			    cl->state != CLIENT_STATE_DONE)
+ 				uh_header_error(cl, 413, "Request Entity Too Large");
+ 			break;
+@@ -605,6 +612,16 @@ void uh_client_notify_state(struct client *cl)
+ 		if (cl->state == CLIENT_STATE_DATA)
+ 			return;
+ 
++		if (cl->state == CLIENT_STATE_PROXY) {
++			if (!s->eof)
++				return;
++
++			if (uh_proxy_prefix_client_eof(cl))
++				return client_close(cl);
++
++			return;
++		}
++
+ 		if (!s->eof || s->w.data_bytes)
+ 			return;
+ 
+diff --git a/main.c b/main.c
+index de5f2c3..7957df9 100644
+--- a/main.c
++++ b/main.c
+@@ -144,6 +144,7 @@ static int usage(const char *name)
+ #endif
+ 		"	-h directory    Specify the document root, default is '.'\n"
+ 		"	-E string       Use given virtual URL as 404 error handler\n"
++		"	-F pfx=url      Proxy URL prefix as raw stream, e.g. /apps=http://127.0.0.1:19290\n"
+ 		"	-b string       Use given charset for directory listings, default to UTF-8\n"
+ 		"	-I string       Use given filename as index for directories, multiple allowed\n"
+ 		"	-S              Do not follow symbolic links outside of the docroot\n"
+@@ -193,6 +194,7 @@ static void init_defaults_pre(void)
+ 	conf.cgi_path = "/sbin:/usr/sbin:/bin:/usr/bin";
+ 	INIT_LIST_HEAD(&conf.cgi_alias);
+ 	INIT_LIST_HEAD(&conf.lua_prefix);
++	INIT_LIST_HEAD(&conf.proxy_prefixes);
+ #if HAVE_UCODE
+ 	INIT_LIST_HEAD(&conf.ucode_prefix);
+ #endif
+@@ -293,7 +295,7 @@ int main(int argc, char **argv)
+ 	init_defaults_pre();
+ 	signal(SIGPIPE, SIG_IGN);
+ 
+-	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
++	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:F:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
+ 		switch(ch) {
+ #ifdef HAVE_TLS
+ 		case 'C':
+@@ -357,6 +359,14 @@ int main(int argc, char **argv)
+ 			conf.error_handler = optarg;
+ 			break;
+ 
++		case 'F':
++			if (uh_proxy_prefix_add(optarg)) {
++				fprintf(stderr, "Error: Invalid proxy prefix: %s\n",
++						optarg);
++				exit(1);
++			}
++			break;
++
+ 		case 'I':
+ 			if (optarg[0] == '/') {
+ 				fprintf(stderr, "Error: Invalid index page: %s\n",
+diff --git a/proxy_prefix.c b/proxy_prefix.c
+new file mode 100644
+index 0000000..0c206e4
+--- /dev/null
++++ b/proxy_prefix.c
+@@ -0,0 +1,628 @@
++/*
++ * uhttpd - early raw proxy by URL prefix
++ */
++
++#ifndef _DEFAULT_SOURCE
++# define _DEFAULT_SOURCE
++#endif
++
++#define _GNU_SOURCE
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netdb.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <errno.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include "uhttpd.h"
++
++#define PROXY_PREFIX_HEADER_MAX (16 * 1024)
++
++static bool proxy_prefix_path_match(struct proxy_prefix *target,
++				    const char *path, size_t len)
++{
++	if (len < target->prefix_len ||
++	    strncmp(path, target->prefix, target->prefix_len))
++		return false;
++
++	if (len == target->prefix_len)
++		return true;
++
++	return path[target->prefix_len] == '/' || path[target->prefix_len] == '?';
++}
++
++static struct proxy_prefix *proxy_prefix_find_target(const char *path, size_t len)
++{
++	struct proxy_prefix *target, *best = NULL;
++
++	list_for_each_entry(target, &conf.proxy_prefixes, list) {
++		if (!proxy_prefix_path_match(target, path, len))
++			continue;
++
++		if (!best || target->prefix_len > best->prefix_len)
++			best = target;
++	}
++
++	return best;
++}
++
++static int set_nonblock(int fd)
++{
++	int flags = fcntl(fd, F_GETFL);
++
++	if (flags < 0)
++		return -1;
++
++	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
++}
++
++static void proxy_close_client(struct client *cl)
++{
++	cl->request.connection_close = true;
++	cl->state = CLIENT_STATE_CLOSE;
++	cl->us->eof = true;
++	ustream_state_change(cl->us);
++}
++
++static void proxy_error_response(struct client *cl, int code, const char *summary)
++{
++	ustream_printf(cl->us,
++		"HTTP/1.1 %d %s\r\n"
++		"Connection: close\r\n"
++		"Content-Length: 0\r\n"
++		"\r\n",
++		code, summary);
++	proxy_close_client(cl);
++}
++
++static void proxy_free(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (p->connecting) {
++		uloop_fd_delete(&p->conn);
++		close(p->conn.fd);
++		p->connecting = false;
++	}
++
++	if (p->upstream_open) {
++		ustream_free(&p->sfd.stream);
++		close(p->sfd.fd.fd);
++		p->upstream_open = false;
++	}
++
++	free(p->initial);
++	p->initial = NULL;
++}
++
++static void proxy_close_fds(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (p->connecting)
++		close(p->conn.fd);
++
++	if (p->upstream_open)
++		close(p->sfd.fd.fd);
++}
++
++static void proxy_maybe_close_after_upstream_eof(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (!p->upstream_eof)
++		return;
++
++	if (ustream_pending_data(cl->us, true))
++		return;
++
++	proxy_close_client(cl);
++}
++
++static int proxy_connect_backend(struct client *cl);
++static void proxy_drain_client(struct client *cl);
++static void proxy_forward_upstream(struct dispatch_proxy *p);
++
++static void proxy_shutdown_upstream_write(struct dispatch_proxy *p)
++{
++	if (!p->upstream_open || p->upstream_write_shutdown || p->initial)
++		return;
++
++	if (ustream_pending_data(&p->sfd.stream, true))
++		return;
++
++	if (shutdown(p->sfd.fd.fd, SHUT_WR) && errno != ENOTCONN) {
++		p->upstream_eof = true;
++		proxy_maybe_close_after_upstream_eof(p->cl);
++		return;
++	}
++
++	p->upstream_write_shutdown = true;
++	ustream_set_read_blocked(p->cl->us, true);
++}
++
++static void proxy_flush_initial(struct dispatch_proxy *p)
++{
++	struct ustream *us = &p->sfd.stream;
++	int len, ret;
++
++	while (p->initial && p->initial_off < p->initial_len) {
++		len = p->initial_len - p->initial_off;
++		ret = ustream_write(us, p->initial + p->initial_off, len, false);
++		if (ret <= 0)
++			break;
++
++		p->initial_off += ret;
++	}
++
++	if (p->initial && p->initial_off >= p->initial_len) {
++		free(p->initial);
++		p->initial = NULL;
++		p->initial_len = 0;
++		p->initial_off = 0;
++		if (p->client_eof) {
++			proxy_drain_client(p->cl);
++			proxy_shutdown_upstream_write(p);
++			return;
++		}
++
++		ustream_set_read_blocked(p->cl->us, false);
++		uh_client_read_cb(p->cl);
++	}
++}
++
++static int proxy_find_header_end(const char *buf, int len)
++{
++	int i;
++
++	for (i = 3; i < len; i++)
++		if (buf[i - 3] == '\r' && buf[i - 2] == '\n' &&
++		    buf[i - 1] == '\r' && buf[i] == '\n')
++			return i + 1;
++
++	return -1;
++}
++
++static bool proxy_append_initial(struct client *cl, const char *buf, int len)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++	char *new_buf;
++	int header_end;
++
++	if (len <= 0)
++		return true;
++
++	new_buf = realloc(p->initial, p->initial_len + len);
++	if (!new_buf) {
++		proxy_error_response(cl, 502, "Bad Gateway");
++		return false;
++	}
++
++	p->initial = new_buf;
++	memcpy(p->initial + p->initial_len, buf, len);
++	p->initial_len += len;
++	ustream_consume(cl->us, len);
++
++	header_end = proxy_find_header_end(p->initial, p->initial_len);
++	if (header_end < 0) {
++		if (p->initial_len >= PROXY_PREFIX_HEADER_MAX) {
++			proxy_error_response(cl, 431, "Request Header Fields Too Large");
++			return false;
++		}
++
++		return true;
++	}
++
++	if (header_end > PROXY_PREFIX_HEADER_MAX) {
++		proxy_error_response(cl, 431, "Request Header Fields Too Large");
++		return false;
++	}
++
++	p->header_complete = true;
++	ustream_set_read_blocked(cl->us, true);
++
++	if (proxy_connect_backend(cl)) {
++		proxy_error_response(cl, 502, "Bad Gateway");
++		return false;
++	}
++
++	return true;
++}
++
++static void proxy_drain_client(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++	struct ustream *upstream = &p->sfd.stream;
++	char *buf;
++	int len, ret;
++
++	if (!p->upstream_open || p->initial) {
++		ustream_set_read_blocked(cl->us, true);
++		return;
++	}
++
++	if (ustream_pending_data(upstream, true)) {
++		ustream_set_read_blocked(cl->us, true);
++		return;
++	}
++
++	while (1) {
++		buf = ustream_get_read_buf(cl->us, &len);
++		if (!buf || !len)
++			break;
++
++		ret = ustream_write(upstream, buf, len, false);
++		if (ret <= 0) {
++			ustream_set_read_blocked(cl->us, true);
++			break;
++		}
++
++		ustream_consume(cl->us, ret);
++
++		if (ret < len) {
++			ustream_set_read_blocked(cl->us, true);
++			break;
++		}
++	}
++}
++
++static void proxy_forward_client(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (p->client_eof) {
++		ustream_set_read_blocked(cl->us, true);
++		return;
++	}
++
++	proxy_drain_client(cl);
++}
++
++static void proxy_forward_upstream(struct dispatch_proxy *p)
++{
++	struct client *cl = p->cl;
++	struct ustream *us = &p->sfd.stream;
++	char *buf;
++	int len, ret;
++
++	if (ustream_pending_data(cl->us, true)) {
++		ustream_set_read_blocked(us, true);
++		return;
++	}
++
++	while (1) {
++		buf = ustream_get_read_buf(us, &len);
++		if (!buf || !len)
++			break;
++
++		ret = ustream_write(cl->us, buf, len, false);
++		if (ret <= 0) {
++			ustream_set_read_blocked(us, true);
++			break;
++		}
++
++		ustream_consume(us, ret);
++
++		if (ret < len) {
++			ustream_set_read_blocked(us, true);
++			break;
++		}
++	}
++
++	proxy_maybe_close_after_upstream_eof(cl);
++}
++
++static void proxy_upstream_read_cb(struct ustream *us, int bytes)
++{
++	struct dispatch_proxy *p = container_of(us, struct dispatch_proxy, sfd.stream);
++
++	uloop_timeout_set(&p->cl->timeout, conf.network_timeout * 1000);
++	proxy_forward_upstream(p);
++}
++
++static void proxy_upstream_write_cb(struct ustream *us, int bytes)
++{
++	struct dispatch_proxy *p = container_of(us, struct dispatch_proxy, sfd.stream);
++
++	if (p->initial)
++		proxy_flush_initial(p);
++
++	if (!p->initial) {
++		if (p->client_eof) {
++			proxy_drain_client(p->cl);
++			proxy_shutdown_upstream_write(p);
++			return;
++		}
++
++		ustream_set_read_blocked(p->cl->us, false);
++		uh_client_read_cb(p->cl);
++	}
++}
++
++static void proxy_upstream_state_cb(struct ustream *us)
++{
++	struct dispatch_proxy *p = container_of(us, struct dispatch_proxy, sfd.stream);
++
++	if (us->eof || us->write_error) {
++		p->upstream_eof = true;
++		proxy_maybe_close_after_upstream_eof(p->cl);
++	}
++}
++
++static void proxy_open_upstream(struct client *cl, int fd)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++	struct ustream *us = &p->sfd.stream;
++
++	p->upstream_open = true;
++	us->notify_read = proxy_upstream_read_cb;
++	us->notify_write = proxy_upstream_write_cb;
++	us->notify_state = proxy_upstream_state_cb;
++	us->string_data = false;
++	ustream_fd_init(&p->sfd, fd);
++
++	proxy_flush_initial(p);
++}
++
++static void proxy_connect_cb(struct uloop_fd *fd, unsigned int events)
++{
++	struct dispatch_proxy *p = container_of(fd, struct dispatch_proxy, conn);
++	struct client *cl = p->cl;
++	int error = 0;
++	socklen_t len = sizeof(error);
++
++	uloop_fd_delete(fd);
++	p->connecting = false;
++
++	if (getsockopt(fd->fd, SOL_SOCKET, SO_ERROR, &error, &len) || error) {
++		close(fd->fd);
++		proxy_error_response(cl, 502, "Bad Gateway");
++		return;
++	}
++
++	proxy_open_upstream(cl, fd->fd);
++}
++
++static int proxy_connect_backend(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++	struct addrinfo hints = {};
++	struct addrinfo *res = NULL, *rp;
++	int fd = -1;
++	int ret;
++
++	hints.ai_socktype = SOCK_STREAM;
++	hints.ai_family = AF_UNSPEC;
++
++	ret = getaddrinfo(p->target->host, p->target->port, &hints, &res);
++	if (ret)
++		return -1;
++
++	for (rp = res; rp; rp = rp->ai_next) {
++		fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
++		if (fd < 0)
++			continue;
++
++		if (set_nonblock(fd)) {
++			close(fd);
++			fd = -1;
++			continue;
++		}
++
++		ret = connect(fd, rp->ai_addr, rp->ai_addrlen);
++		if (!ret) {
++			freeaddrinfo(res);
++			proxy_open_upstream(cl, fd);
++			return 0;
++		}
++
++		if (errno == EINPROGRESS) {
++			freeaddrinfo(res);
++			p->conn.fd = fd;
++			p->conn.cb = proxy_connect_cb;
++			p->connecting = true;
++			if (uloop_fd_add(&p->conn, ULOOP_WRITE)) {
++				p->connecting = false;
++				close(fd);
++				return -1;
++			}
++			return 0;
++		}
++
++		close(fd);
++		fd = -1;
++	}
++
++	freeaddrinfo(res);
++	return -1;
++}
++
++static struct proxy_prefix *proxy_check_request_target(char *buf, int len)
++{
++	struct proxy_prefix *target;
++	char *newline;
++	char *method_end;
++	char *request_target;
++	char *request_target_end;
++
++	newline = strstr(buf, "\r\n");
++	if (!newline)
++		return NULL;
++
++	method_end = memchr(buf, ' ', newline - buf);
++	if (!method_end)
++		return NULL;
++
++	request_target = method_end + 1;
++	request_target_end = memchr(request_target, ' ', newline - request_target);
++	if (!request_target_end || request_target_end == request_target)
++		return NULL;
++
++	if (*request_target != '/')
++		return NULL;
++
++	target = proxy_prefix_find_target(request_target,
++					  request_target_end - request_target);
++	if (!target)
++		return NULL;
++
++	return target;
++}
++
++static bool proxy_prefix_exists(const char *prefix)
++{
++	struct proxy_prefix *target;
++
++	list_for_each_entry(target, &conf.proxy_prefixes, list)
++		if (!strcmp(target->prefix, prefix))
++			return true;
++
++	return false;
++}
++
++int uh_proxy_prefix_add(const char *spec)
++{
++	static const char http_prefix[] = "http://";
++	struct proxy_prefix *target;
++	char *copy, *eq, *backend, *colon;
++	char *prefix, *host, *port;
++
++	copy = strdup(spec);
++	if (!copy)
++		return -1;
++
++	eq = strchr(copy, '=');
++	if (!eq || eq == copy) {
++		free(copy);
++		return -1;
++	}
++
++	*eq++ = 0;
++	backend = eq;
++
++	if (*copy != '/' || !copy[1] || copy[strlen(copy) - 1] == '/') {
++		free(copy);
++		return -1;
++	}
++
++	if (proxy_prefix_exists(copy)) {
++		free(copy);
++		return -1;
++	}
++
++	if (strncmp(backend, http_prefix, sizeof(http_prefix) - 1)) {
++		free(copy);
++		return -1;
++	}
++
++	backend += sizeof(http_prefix) - 1;
++	if (strchr(backend, '/')) {
++		free(copy);
++		return -1;
++	}
++
++	colon = strrchr(backend, ':');
++	if (!colon || colon == backend || !colon[1]) {
++		free(copy);
++		return -1;
++	}
++
++	*colon++ = 0;
++
++	target = calloc(1, sizeof(*target));
++	prefix = strdup(copy);
++	host = strdup(backend);
++	port = strdup(colon);
++	if (!target || !prefix || !host || !port) {
++		free(target);
++		free(prefix);
++		free(host);
++		free(port);
++		free(copy);
++		return -1;
++	}
++
++	target->prefix = prefix;
++	target->host = host;
++	target->port = port;
++	target->prefix_len = strlen(prefix);
++	list_add_tail(&target->list, &conf.proxy_prefixes);
++	free(copy);
++
++	return 0;
++}
++
++enum proxy_prefix_init_result uh_proxy_prefix_try_init(struct client *cl, char *buf, int len)
++{
++	struct proxy_prefix *target;
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (list_empty(&conf.proxy_prefixes))
++		return PROXY_PREFIX_INIT_NO_MATCH;
++
++	target = proxy_check_request_target(buf, len);
++	if (!target)
++		return PROXY_PREFIX_INIT_NO_MATCH;
++
++	memset(&cl->dispatch, 0, sizeof(cl->dispatch));
++	p = &cl->dispatch.proxy;
++	p->cl = cl;
++	p->target = target;
++	cl->dispatch.free = proxy_free;
++	cl->dispatch.close_fds = proxy_close_fds;
++	cl->dispatch.write_cb = uh_proxy_prefix_client_write_cb;
++	cl->state = CLIENT_STATE_PROXY;
++
++	proxy_append_initial(cl, buf, len);
++
++	return PROXY_PREFIX_INIT_HANDLED;
++}
++
++bool uh_proxy_prefix_client_cb(struct client *cl, char *buf, int len)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (p->client_eof) {
++		proxy_drain_client(cl);
++		proxy_shutdown_upstream_write(p);
++		return false;
++	}
++
++	if (!p->header_complete) {
++		proxy_append_initial(cl, buf, len);
++		return true;
++	}
++
++	proxy_forward_client(cl);
++	return false;
++}
++
++void uh_proxy_prefix_client_write_cb(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	if (p->upstream_open) {
++		ustream_set_read_blocked(&p->sfd.stream, false);
++		proxy_forward_upstream(p);
++	}
++
++	proxy_maybe_close_after_upstream_eof(cl);
++}
++
++bool uh_proxy_prefix_client_eof(struct client *cl)
++{
++	struct dispatch_proxy *p = &cl->dispatch.proxy;
++
++	p->client_eof = true;
++	ustream_set_read_blocked(cl->us, true);
++
++	if (!p->header_complete)
++		return true;
++
++	proxy_drain_client(cl);
++	proxy_shutdown_upstream_write(p);
++	return false;
++}
+diff --git a/uhttpd.h b/uhttpd.h
+index c755df6..c0e0546 100644
+--- a/uhttpd.h
++++ b/uhttpd.h
+@@ -98,6 +98,7 @@ struct config {
+ 	int events_retry;
+ 	struct list_head cgi_alias;
+ 	struct list_head lua_prefix;
++	struct list_head proxy_prefixes;
+ #ifdef HAVE_UCODE
+ 	struct list_head ucode_prefix;
+ #endif
+@@ -155,6 +156,7 @@ enum client_state {
+ 	CLIENT_STATE_INIT,
+ 	CLIENT_STATE_HEADER,
+ 	CLIENT_STATE_DATA,
++	CLIENT_STATE_PROXY,
+ 	CLIENT_STATE_DONE,
+ 	CLIENT_STATE_CLOSE,
+ 	CLIENT_STATE_CLEANUP,
+@@ -209,6 +211,30 @@ struct dispatch_proc {
+ 	char *status_msg;
+ };
+ 
++struct proxy_prefix {
++	struct list_head list;
++	char *prefix;
++	char *host;
++	char *port;
++	size_t prefix_len;
++};
++
++struct dispatch_proxy {
++	struct client *cl;
++	struct proxy_prefix *target;
++	struct uloop_fd conn;
++	struct ustream_fd sfd;
++	char *initial;
++	int initial_len;
++	int initial_off;
++	bool connecting;
++	bool client_eof;
++	bool header_complete;
++	bool upstream_open;
++	bool upstream_eof;
++	bool upstream_write_shutdown;
++};
++
+ struct dispatch_handler {
+ 	struct list_head list;
+ 	bool script;
+@@ -261,6 +287,7 @@ struct dispatch {
+ 			int fd;
+ 		} file;
+ 		struct dispatch_proc proc;
++		struct dispatch_proxy proxy;
+ #ifdef HAVE_UBUS
+ 		struct dispatch_ubus ubus;
+ #endif
+@@ -328,6 +355,17 @@ void client_poll_post_data(struct client *cl);
+ void uh_client_read_cb(struct client *cl);
+ void uh_client_notify_state(struct client *cl);
+ 
++enum proxy_prefix_init_result {
++	PROXY_PREFIX_INIT_NO_MATCH,
++	PROXY_PREFIX_INIT_HANDLED,
++};
++
++int uh_proxy_prefix_add(const char *spec);
++enum proxy_prefix_init_result uh_proxy_prefix_try_init(struct client *cl, char *buf, int len);
++bool uh_proxy_prefix_client_cb(struct client *cl, char *buf, int len);
++void uh_proxy_prefix_client_write_cb(struct client *cl);
++bool uh_proxy_prefix_client_eof(struct client *cl);
++
+ void uh_auth_add(const char *path, const char *user, const char *pass);
+ bool uh_auth_check(struct client *cl, const char *path, const char *auth,
+                    char **uptr, char **pptr);
+-- 
+2.54.0
+
