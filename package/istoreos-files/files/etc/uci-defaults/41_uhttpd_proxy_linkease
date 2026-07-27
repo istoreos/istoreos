@@ -1,0 +1,9 @@
+#!/bin/sh
+
+uci -q show uhttpd.main.proxy_prefix | grep -qF "'/apps=" || \
+uci -q batch <<-EOF >/dev/null
+    add_list uhttpd.main.proxy_prefix='/apps=http://127.0.0.1:19290'
+    commit uhttpd
+EOF
+
+exit 0
