@@ -1,0 +1,356 @@
+From af979db97448772af0348a4b7c9ee3a2d115cc46 Mon Sep 17 00:00:00 2001
+From: jannson <jannon.wei@gmail.com>
+Date: Tue, 28 Jul 2026 03:13:31 +0000
+Subject: [PATCH 3/3] feat: forward original request headers to backend
+
+---
+ proxy_prefix.c | 285 ++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 270 insertions(+), 15 deletions(-)
+
+--- a/proxy_prefix.c
++++ b/proxy_prefix.c
+@@ -141,6 +141,17 @@ static void proxy_maybe_close_after_upst
+ static int proxy_connect_backend(struct client *cl);
+ static void proxy_drain_client(struct client *cl);
+ static void proxy_forward_upstream(struct dispatch_proxy *p);
++static bool proxy_parse_port(const char *str, unsigned int *port);
++
++struct proxy_forwarded_state {
++	const char *host;
++	size_t host_len;
++	unsigned int port;
++	bool has_proto;
++	bool has_host;
++	bool has_port;
++	bool has_for;
++};
+ 
+ static void proxy_shutdown_upstream_write(struct dispatch_proxy *p)
+ {
+@@ -237,6 +248,203 @@ static bool proxy_header_value_has_token
+ 	return false;
+ }
+ 
++static bool proxy_parse_port_n(const char *str, size_t len, unsigned int *port)
++{
++	char buf[6];
++
++	if (!len || len >= sizeof(buf))
++		return false;
++
++	memcpy(buf, str, len);
++	buf[len] = 0;
++	return proxy_parse_port(buf, port);
++}
++
++static bool proxy_addr_to_string(struct uh_addr *addr, char *buf, size_t len,
++				 bool bracket)
++{
++	char tmp[INET6_ADDRSTRLEN];
++	const void *src;
++	int ret;
++
++	if (addr->family == AF_INET) {
++		src = &addr->in;
++		if (!inet_ntop(AF_INET, src, buf, len))
++			return false;
++		return true;
++	}
++
++	if (addr->family != AF_INET6)
++		return false;
++
++	src = &addr->in6;
++	if (!inet_ntop(AF_INET6, src, tmp, sizeof(tmp)))
++		return false;
++
++	if (bracket) {
++		ret = snprintf(buf, len, "[%s]", tmp);
++		return ret >= 0 && ret < (int)len;
++	}
++
++	ret = snprintf(buf, len, "%s", tmp);
++	return ret >= 0 && ret < (int)len;
++}
++
++static void proxy_scan_forwarded_state(struct client *cl, const char *buf,
++				       int header_end, bool trusted_peer,
++				       struct proxy_forwarded_state *state)
++{
++	const char *headers_end = buf + header_end - 2;
++	const char *line, *line_end;
++	const char *colon, *value, *value_end;
++	size_t line_len, name_len;
++	const char *last_colon;
++
++	memset(state, 0, sizeof(*state));
++	state->port = cl->srv_addr.port;
++
++	line = memmem(buf, header_end, "\r\n", 2);
++	if (!line)
++		return;
++
++	line += 2;
++	while (line < headers_end) {
++		line_end = memmem(line, headers_end - line, "\r\n", 2);
++		if (!line_end)
++			return;
++
++		line_len = line_end - line;
++		colon = memchr(line, ':', line_len);
++		if (!colon) {
++			line = line_end + 2;
++			continue;
++		}
++
++		name_len = colon - line;
++		if (proxy_header_name_eq(line, name_len, "X-Forwarded-Proto"))
++			state->has_proto = true;
++		else if (proxy_header_name_eq(line, name_len, "X-Forwarded-Host"))
++			state->has_host = true;
++		else if (proxy_header_name_eq(line, name_len, "X-Forwarded-Port"))
++			state->has_port = true;
++		else if (trusted_peer &&
++			 proxy_header_name_eq(line, name_len, "X-Forwarded-For"))
++			state->has_for = true;
++
++		if (!proxy_header_name_eq(line, name_len, "Host")) {
++			line = line_end + 2;
++			continue;
++		}
++
++		value = colon + 1;
++		while (value < line_end && (*value == ' ' || *value == '\t'))
++			value++;
++
++		value_end = line_end;
++		while (value_end > value &&
++		       (value_end[-1] == ' ' || value_end[-1] == '\t'))
++			value_end--;
++
++		state->host = value;
++		state->host_len = value_end - value;
++
++		if (value < value_end && *value == '[') {
++			const char *end = memchr(value, ']', value_end - value);
++
++			if (end && end + 1 < value_end && end[1] == ':')
++				proxy_parse_port_n(end + 2, value_end - end - 2,
++						   &state->port);
++			line = line_end + 2;
++			continue;
++		}
++
++		last_colon = memrchr(value, ':', value_end - value);
++		if (last_colon && memchr(value, ':', last_colon - value) == NULL)
++			proxy_parse_port_n(last_colon + 1,
++					   value_end - last_colon - 1,
++					   &state->port);
++
++		line = line_end + 2;
++	}
++}
++
++static char *proxy_build_forwarded_headers(struct client *cl, const char *buf,
++					   int header_end, bool trusted_peer,
++					   size_t *len)
++{
++	const char *proto = cl->tls ? "https" : "http";
++	struct proxy_forwarded_state state;
++	char fallback_host[INET6_ADDRSTRLEN + 2];
++	char fallback_with_port[INET6_ADDRSTRLEN + 8];
++	char port_buf[6];
++	char peer[INET6_ADDRSTRLEN];
++	char *headers, *out;
++	size_t needed = 0;
++	int fallback_len, ret;
++
++	proxy_scan_forwarded_state(cl, buf, header_end, trusted_peer, &state);
++	if (!state.host_len) {
++		if (!proxy_addr_to_string(&cl->srv_addr, fallback_host,
++					  sizeof(fallback_host), true))
++			return NULL;
++
++		fallback_len = snprintf(fallback_with_port,
++					sizeof(fallback_with_port), "%s:%u",
++					fallback_host, cl->srv_addr.port);
++		if (fallback_len < 0 ||
++		    fallback_len >= (int)sizeof(fallback_with_port))
++			return NULL;
++
++		state.host = fallback_with_port;
++		state.host_len = fallback_len;
++		state.port = cl->srv_addr.port;
++	}
++
++	if (!proxy_addr_to_string(&cl->peer_addr, peer, sizeof(peer), false))
++		return NULL;
++
++	snprintf(port_buf, sizeof(port_buf), "%u", state.port);
++	if (!state.has_proto)
++		needed += sizeof("X-Forwarded-Proto: \r\n") - 1 +
++			  strlen(proto);
++	if (!state.has_host)
++		needed += sizeof("X-Forwarded-Host: \r\n") - 1 +
++			  state.host_len;
++	if (!state.has_port)
++		needed += sizeof("X-Forwarded-Port: \r\n") - 1 +
++			  strlen(port_buf);
++	if (!state.has_for)
++		needed += sizeof("X-Forwarded-For: \r\n") - 1 +
++			  strlen(peer);
++
++	headers = malloc(needed + 1);
++	if (!headers)
++		return NULL;
++
++	out = headers;
++	if (!state.has_proto) {
++		ret = sprintf(out, "X-Forwarded-Proto: %s\r\n", proto);
++		out += ret;
++	}
++	if (!state.has_host) {
++		ret = sprintf(out, "X-Forwarded-Host: %.*s\r\n",
++			      (int)state.host_len, state.host);
++		out += ret;
++	}
++	if (!state.has_port) {
++		ret = sprintf(out, "X-Forwarded-Port: %s\r\n", port_buf);
++		out += ret;
++	}
++	if (!state.has_for) {
++		ret = sprintf(out, "X-Forwarded-For: %s\r\n", peer);
++		out += ret;
++	}
++
++	*out = 0;
++	*len = needed;
++	return headers;
++}
++
+ static bool proxy_request_is_websocket(const char *buf, int header_end)
+ {
+ 	const char *headers_end = buf + header_end - 2;
+@@ -286,26 +494,55 @@ static bool proxy_request_is_websocket(c
+ 	return has_connection_upgrade && has_upgrade_websocket;
+ }
+ 
+-static bool proxy_rewrite_connection_close(struct client *cl, int header_end)
++static bool is_trusted_peer(struct uh_addr *addr)
++{
++	uint32_t a;
++
++	if (addr->family != AF_INET)
++		return false;
++
++	a = htonl(addr->in.s_addr);
++	return ((a >= 0x7F000000) && (a <= 0x7FFFFFFF)) ||
++	       ((a >= 0x0A000000) && (a <= 0x0AFFFFFF)) ||
++	       ((a >= 0xAC100000) && (a <= 0xAC1FFFFF)) ||
++	       ((a >= 0xC0A80000) && (a <= 0xC0A8FFFF));
++
++	return 0;
++}
++
++static bool proxy_rewrite_request_headers(struct client *cl, int header_end)
+ {
+ 	static const char close_header[] = "Connection: close\r\n";
+ 	struct dispatch_proxy *p = &cl->dispatch.proxy;
+ 	const char *headers_end = p->initial + header_end - 2;
+ 	const char *line, *line_end;
+ 	const char *colon;
+-	char *rewritten, *out;
+-	size_t line_len, name_len, body_len;
+-
+-	if (proxy_request_is_websocket(p->initial, header_end))
+-		return true;
++	char *rewritten, *out, *forwarded_headers;
++	size_t line_len, name_len, body_len, forwarded_len;
++	bool is_websocket;
++	bool trusted_peer;
++	bool skip;
++
++	is_websocket = proxy_request_is_websocket(p->initial, header_end);
++	trusted_peer = is_trusted_peer(&cl->peer_addr);
++	forwarded_headers = proxy_build_forwarded_headers(cl, p->initial,
++							  header_end,
++							  trusted_peer,
++							  &forwarded_len);
++	if (!forwarded_headers)
++		return false;
+ 
+ 	line_end = memmem(p->initial, header_end, "\r\n", 2);
+-	if (!line_end)
++	if (!line_end) {
++		free(forwarded_headers);
+ 		return false;
++	}
+ 
+-	rewritten = malloc(p->initial_len + sizeof(close_header));
+-	if (!rewritten)
++	rewritten = malloc(p->initial_len + sizeof(close_header) + forwarded_len);
++	if (!rewritten) {
++		free(forwarded_headers);
+ 		return false;
++	}
+ 
+ 	out = rewritten;
+ 	memcpy(out, p->initial, line_end + 2 - p->initial);
+@@ -316,16 +553,27 @@ static bool proxy_rewrite_connection_clo
+ 		line_end = memmem(line, headers_end - line, "\r\n", 2);
+ 		if (!line_end) {
+ 			free(rewritten);
++			free(forwarded_headers);
+ 			return false;
+ 		}
+ 
+ 		line_len = line_end - line;
+ 		colon = memchr(line, ':', line_len);
+ 		name_len = colon ? (size_t)(colon - line) : 0;
++		skip = false;
++
++		if (colon) {
++			if (!is_websocket &&
++			    (proxy_header_name_eq(line, name_len, "Connection") ||
++			     proxy_header_name_eq(line, name_len, "Proxy-Connection")))
++				skip = true;
++
++			if (!trusted_peer &&
++			    proxy_header_name_eq(line, name_len, "X-Forwarded-For"))
++				skip = true;
++		}
+ 
+-		if (!colon ||
+-		    (!proxy_header_name_eq(line, name_len, "Connection") &&
+-		     !proxy_header_name_eq(line, name_len, "Proxy-Connection"))) {
++		if (!skip) {
+ 			memcpy(out, line, line_end + 2 - line);
+ 			out += line_end + 2 - line;
+ 		}
+@@ -333,8 +581,15 @@ static bool proxy_rewrite_connection_clo
+ 		line = line_end + 2;
+ 	}
+ 
+-	memcpy(out, close_header, sizeof(close_header) - 1);
+-	out += sizeof(close_header) - 1;
++	memcpy(out, forwarded_headers, forwarded_len);
++	out += forwarded_len;
++	free(forwarded_headers);
++
++	if (!is_websocket) {
++		memcpy(out, close_header, sizeof(close_header) - 1);
++		out += sizeof(close_header) - 1;
++	}
++
+ 	memcpy(out, "\r\n", 2);
+ 	out += 2;
+ 
+@@ -390,7 +645,7 @@ static bool proxy_append_initial(struct
+ 	p->header_complete = true;
+ 	ustream_set_read_blocked(cl->us, true);
+ 
+-	if (!proxy_rewrite_connection_close(cl, header_end)) {
++	if (!proxy_rewrite_request_headers(cl, header_end)) {
+ 		proxy_error_response(cl, 502, "Bad Gateway");
+ 		return false;
+ 	}
