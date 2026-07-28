@@ -11,7 +11,7 @@ Subject: [PATCH] odhcpd: support rewrite dns server to local ipv6 address
 
 --- a/src/dhcpv6.c
 +++ b/src/dhcpv6.c
-@@ -821,7 +821,7 @@ static void relay_server_response(uint8_
+@@ -858,7 +858,7 @@ static void relay_server_response(uint8_
  	}
  
  	/* Rewrite DNS servers if requested */
@@ -22,7 +22,7 @@ Subject: [PATCH] odhcpd: support rewrite dns server to local ipv6 address
  
 --- a/src/router.c
 +++ b/src/router.c
-@@ -1138,7 +1138,7 @@ static void forward_router_advertisement
+@@ -1162,7 +1162,7 @@ static void forward_router_advertisement
  			odhcpd_get_mac(c, mac_ptr);
  
  		/* If we have to rewrite DNS entries */
