@@ -13,7 +13,7 @@ Signed-off-by: Jon Lin <jon.lin@rock-chips.com>
 
 --- a/drivers/spi/spidev.c
 +++ b/drivers/spi/spidev.c
-@@ -741,6 +741,7 @@ static const struct of_device_id spidev_
+@@ -723,6 +723,7 @@ static const struct of_device_id spidev_
  	{ .compatible = "lwn,bk4", .data = &spidev_of_check },
  	{ .compatible = "menlo,m53cpld", .data = &spidev_of_check },
  	{ .compatible = "micron,spi-authenta", .data = &spidev_of_check },

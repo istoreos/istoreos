@@ -12,7 +12,7 @@ Signed-off-by: Jon Lin <jon.lin@rock-chips.com>
 
 --- a/drivers/spi/spidev.c
 +++ b/drivers/spi/spidev.c
-@@ -714,6 +714,7 @@ static const struct spi_device_id spidev
+@@ -696,6 +696,7 @@ static const struct spi_device_id spidev
  	{ .name = "m53cpld" },
  	{ .name = "spi-petra" },
  	{ .name = "spi-authenta" },
