@@ -13,7 +13,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
 
 --- a/src/dhcpv6.c
 +++ b/src/dhcpv6.c
-@@ -115,6 +115,9 @@ static uint8_t reconf_key[16];
+@@ -118,6 +118,9 @@ static bool reconf_replay_seen;
  // client options
  static unsigned int client_options = 0;
  
@@ -23,7 +23,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  static uint32_t ntohl_unaligned(const uint8_t *data)
  {
  	uint32_t buf;
-@@ -664,6 +667,11 @@ int dhcpv6_request(enum dhcpv6_msg type)
+@@ -673,6 +676,11 @@ int dhcpv6_request(enum dhcpv6_msg type)
  	ssize_t len = -1;
  	int64_t rto = 0;
  
@@ -35,7 +35,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  	do {
  		if (rto == 0) {
  			int64_t delay = dhcpv6_rand_delay(retx->init_timeo * 1000);
-@@ -732,8 +740,30 @@ int dhcpv6_request(enum dhcpv6_msg type)
+@@ -741,8 +749,30 @@ int dhcpv6_request(enum dhcpv6_msg type)
  
  			// Receive cycle
  			len = recvmsg(sock, &msg, 0);
@@ -67,7 +67,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  
  			for (struct cmsghdr *ch = CMSG_FIRSTHDR(&msg); ch != NULL;
  				ch = CMSG_NXTHDR(&msg, ch)) {
-@@ -1571,7 +1601,8 @@ static void dhcpv6_handle_status_code(co
+@@ -1596,7 +1626,8 @@ static void dhcpv6_handle_status_code(co
  
  	case DHCPV6_NoAddrsAvail:
  	case DHCPV6_NoPrefixAvail:
@@ -87,7 +87,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  
  static int urandom_fd = -1, allow_slaac_only = 0;
  static bool bound = false, release = true, ra = false;
-@@ -688,11 +689,53 @@ static uint8_t* odhcp6c_resize_state(enu
+@@ -704,11 +705,53 @@ static uint8_t* odhcp6c_resize_state(enu
  	return n;
  }
  
@@ -141,7 +141,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  		bool ra_updated = ra_process();
  
  		if (ra_link_up()) {
-@@ -704,12 +747,26 @@ bool odhcp6c_signal_process(void)
+@@ -720,12 +763,26 @@ bool odhcp6c_signal_process(void)
  			script_call("ra-updated", (!ra && !bound) ?
  					script_sync_delay : script_accu_delay, false);
  			ra = true;
@@ -170,7 +170,7 @@ Signed-off-by: jjm2473 <jjm2473@gmail.com>
  	state_len[state] = 0;
 --- a/src/odhcp6c.h
 +++ b/src/odhcp6c.h
-@@ -417,6 +417,7 @@ uint64_t odhcp6c_get_milli_time(void);
+@@ -419,6 +419,7 @@ uint64_t odhcp6c_get_milli_time(void);
  int odhcp6c_random(void *buf, size_t len);
  bool odhcp6c_is_bound(void);
  bool odhcp6c_addr_in_scope(const struct in6_addr *addr);

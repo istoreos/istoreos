@@ -42,7 +42,7 @@ Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
 
 --- a/src/script.c
 +++ b/src/script.c
-@@ -180,11 +180,14 @@ static void entry_to_env(const char *nam
+@@ -193,11 +193,14 @@ static void entry_to_env(const char *nam
  
  	for (size_t i = 0; i < len / sizeof(*e); ++i) {
  		/*

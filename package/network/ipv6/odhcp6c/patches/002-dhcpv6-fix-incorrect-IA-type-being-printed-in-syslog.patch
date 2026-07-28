@@ -25,7 +25,7 @@ Signed-off-by: Álvaro Fernández Rojas <noltari@gmail.com>
 
 --- a/src/dhcpv6.c
 +++ b/src/dhcpv6.c
-@@ -1585,7 +1585,7 @@ static void dhcpv6_handle_ia_status_code
+@@ -1610,7 +1610,7 @@ static void dhcpv6_handle_ia_status_code
  		const void *status_msg, const int len,
  		bool handled_status_codes[_DHCPV6_Status_Max], int *ret)
  {
