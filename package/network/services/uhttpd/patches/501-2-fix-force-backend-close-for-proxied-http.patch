@@ -7,8 +7,6 @@ Subject: [PATCH 2/2] fix: force backend close for proxied http
  proxy_prefix.c | 156 +++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 156 insertions(+)
 
-diff --git a/proxy_prefix.c b/proxy_prefix.c
-index 0c206e4..fd3cb78 100644
 --- a/proxy_prefix.c
 +++ b/proxy_prefix.c
 @@ -16,6 +16,7 @@
@@ -19,7 +17,7 @@ index 0c206e4..fd3cb78 100644
  
  #include "uhttpd.h"
  
-@@ -186,6 +187,156 @@ static int proxy_find_header_end(const char *buf, int len)
+@@ -186,6 +187,156 @@ static int proxy_find_header_end(const c
  	return -1;
  }
  
@@ -176,7 +174,7 @@ index 0c206e4..fd3cb78 100644
  static bool proxy_append_initial(struct client *cl, const char *buf, int len)
  {
  	struct dispatch_proxy *p = &cl->dispatch.proxy;
-@@ -224,6 +375,11 @@ static bool proxy_append_initial(struct client *cl, const char *buf, int len)
+@@ -224,6 +375,11 @@ static bool proxy_append_initial(struct
  	p->header_complete = true;
  	ustream_set_read_blocked(cl->us, true);
  
@@ -188,6 +186,3 @@ index 0c206e4..fd3cb78 100644
  	if (proxy_connect_backend(cl)) {
  		proxy_error_response(cl, 502, "Bad Gateway");
  		return false;
--- 
-2.54.0
-

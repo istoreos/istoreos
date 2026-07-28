@@ -12,8 +12,6 @@ Subject: [PATCH 1/2] feat: add raw proxy
  5 files changed, 695 insertions(+), 2 deletions(-)
  create mode 100644 proxy_prefix.c
 
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 58eb6dd..05b1648 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -25,7 +25,7 @@ ENDIF()
@@ -25,11 +23,9 @@ index 58eb6dd..05b1648 100644
  IF(TLS_SUPPORT)
  	SET(SOURCES ${SOURCES} tls.c)
  	ADD_DEFINITIONS(-DHAVE_TLS)
-diff --git a/client.c b/client.c
-index 1d302d7..053bf15 100644
 --- a/client.c
 +++ b/client.c
-@@ -213,12 +213,17 @@ static int client_parse_request(struct client *cl, char *data)
+@@ -215,12 +215,17 @@ static int client_parse_request(struct c
  
  static bool client_init_cb(struct client *cl, char *buf, int len)
  {
@@ -47,7 +43,7 @@ index 1d302d7..053bf15 100644
  	if (newline == buf) {
  		ustream_consume(cl->us, 2);
  		return true;
-@@ -547,6 +552,7 @@ static read_cb_t read_cbs[] = {
+@@ -572,6 +577,7 @@ static read_cb_t read_cbs[] = {
  	[CLIENT_STATE_INIT] = client_init_cb,
  	[CLIENT_STATE_HEADER] = client_header_cb,
  	[CLIENT_STATE_DATA] = client_data_cb,
@@ -55,7 +51,7 @@ index 1d302d7..053bf15 100644
  };
  
  void uh_client_read_cb(struct client *cl)
-@@ -567,6 +573,7 @@ void uh_client_read_cb(struct client *cl)
+@@ -592,6 +598,7 @@ void uh_client_read_cb(struct client *cl
  		if (!read_cbs[cl->state](cl, str, len)) {
  			if (len == us->r.buffer_len &&
  			    cl->state != CLIENT_STATE_DATA &&
@@ -63,7 +59,7 @@ index 1d302d7..053bf15 100644
  			    cl->state != CLIENT_STATE_DONE)
  				uh_header_error(cl, 413, "Request Entity Too Large");
  			break;
-@@ -605,6 +612,16 @@ void uh_client_notify_state(struct client *cl)
+@@ -630,6 +637,16 @@ void uh_client_notify_state(struct clien
  		if (cl->state == CLIENT_STATE_DATA)
  			return;
  
@@ -80,8 +76,6 @@ index 1d302d7..053bf15 100644
  		if (!s->eof || s->w.data_bytes)
  			return;
  
-diff --git a/main.c b/main.c
-index de5f2c3..7957df9 100644
 --- a/main.c
 +++ b/main.c
 @@ -144,6 +144,7 @@ static int usage(const char *name)
@@ -124,9 +118,6 @@ index de5f2c3..7957df9 100644
  		case 'I':
  			if (optarg[0] == '/') {
  				fprintf(stderr, "Error: Invalid index page: %s\n",
-diff --git a/proxy_prefix.c b/proxy_prefix.c
-new file mode 100644
-index 0000000..0c206e4
 --- /dev/null
 +++ b/proxy_prefix.c
 @@ -0,0 +1,628 @@
@@ -758,8 +749,6 @@ index 0000000..0c206e4
 +	proxy_shutdown_upstream_write(p);
 +	return false;
 +}
-diff --git a/uhttpd.h b/uhttpd.h
-index c755df6..c0e0546 100644
 --- a/uhttpd.h
 +++ b/uhttpd.h
 @@ -98,6 +98,7 @@ struct config {
@@ -779,7 +768,7 @@ index c755df6..c0e0546 100644
  	CLIENT_STATE_CLOSE,
  	CLIENT_STATE_CLEANUP,
 @@ -209,6 +211,30 @@ struct dispatch_proc {
- 	char *status_msg;
+ 	char status_msg[64];
  };
  
 +struct proxy_prefix {
@@ -817,7 +806,7 @@ index c755df6..c0e0546 100644
  #ifdef HAVE_UBUS
  		struct dispatch_ubus ubus;
  #endif
-@@ -328,6 +355,17 @@ void client_poll_post_data(struct client *cl);
+@@ -328,6 +355,17 @@ void client_poll_post_data(struct client
  void uh_client_read_cb(struct client *cl);
  void uh_client_notify_state(struct client *cl);
  
@@ -835,6 +824,3 @@ index c755df6..c0e0546 100644
  void uh_auth_add(const char *path, const char *user, const char *pass);
  bool uh_auth_check(struct client *cl, const char *path, const char *auth,
                     char **uptr, char **pptr);
--- 
-2.54.0
-
