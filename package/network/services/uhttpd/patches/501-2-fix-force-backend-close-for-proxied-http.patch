@@ -1,7 +1,7 @@
-From e37a4fda9f406824400539455aa069b7d5a76f8d Mon Sep 17 00:00:00 2001
+From 0e3641ab5cc47412625bcdaadf770ce240d4e377 Mon Sep 17 00:00:00 2001
 From: jannson <jannon.wei@gmail.com>
 Date: Fri, 24 Jul 2026 09:58:59 +0000
-Subject: [PATCH 2/2] fix: force backend close for proxied http
+Subject: [PATCH 2/3] fix: force backend close for proxied http
 
 ---
  proxy_prefix.c | 156 +++++++++++++++++++++++++++++++++++++++++++++++++
@@ -9,7 +9,7 @@ Subject: [PATCH 2/2] fix: force backend close for proxied http
 
 --- a/proxy_prefix.c
 +++ b/proxy_prefix.c
-@@ -16,6 +16,7 @@
+@@ -31,6 +31,7 @@
  #include <stdio.h>
  #include <stdlib.h>
  #include <string.h>
@@ -17,7 +17,7 @@ Subject: [PATCH 2/2] fix: force backend close for proxied http
  
  #include "uhttpd.h"
  
-@@ -186,6 +187,156 @@ static int proxy_find_header_end(const c
+@@ -201,6 +202,156 @@ static int proxy_find_header_end(const c
  	return -1;
  }
  
@@ -174,7 +174,7 @@ Subject: [PATCH 2/2] fix: force backend close for proxied http
  static bool proxy_append_initial(struct client *cl, const char *buf, int len)
  {
  	struct dispatch_proxy *p = &cl->dispatch.proxy;
-@@ -224,6 +375,11 @@ static bool proxy_append_initial(struct
+@@ -239,6 +390,11 @@ static bool proxy_append_initial(struct
  	p->header_complete = true;
  	ustream_set_read_blocked(cl->us, true);
  

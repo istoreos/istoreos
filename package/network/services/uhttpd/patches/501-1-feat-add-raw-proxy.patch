@@ -1,15 +1,15 @@
-From 363e62f925f3fb15367e09c8983912fea731e317 Mon Sep 17 00:00:00 2001
+From 43be1a7ec4db3f0b316b2834b2500bbb9d6df54f Mon Sep 17 00:00:00 2001
 From: jannson <jannon.wei@gmail.com>
 Date: Fri, 24 Jul 2026 07:48:51 +0000
-Subject: [PATCH 1/2] feat: add raw proxy
+Subject: [PATCH 1/3] feat: add raw proxy
 
 ---
  CMakeLists.txt |   2 +-
  client.c       |  17 ++
- main.c         |  12 +-
- proxy_prefix.c | 628 +++++++++++++++++++++++++++++++++++++++++++++++++
- uhttpd.h       |  38 +++
- 5 files changed, 695 insertions(+), 2 deletions(-)
+ main.c         |  11 +-
+ proxy_prefix.c | 710 +++++++++++++++++++++++++++++++++++++++++++++++++
+ uhttpd.h       |  41 +++
+ 5 files changed, 779 insertions(+), 2 deletions(-)
  create mode 100644 proxy_prefix.c
 
 --- a/CMakeLists.txt
@@ -82,7 +82,7 @@ Subject: [PATCH 1/2] feat: add raw proxy
  #endif
  		"	-h directory    Specify the document root, default is '.'\n"
  		"	-E string       Use given virtual URL as 404 error handler\n"
-+		"	-F pfx=url      Proxy URL prefix as raw stream, e.g. /apps=http://127.0.0.1:19290\n"
++		"	-F pfx=url      Proxy raw stream to http://IP:port, e.g. /apps=http://127.0.0.1:19290\n"
  		"	-b string       Use given charset for directory listings, default to UTF-8\n"
  		"	-I string       Use given filename as index for directories, multiple allowed\n"
  		"	-S              Do not follow symbolic links outside of the docroot\n"
@@ -103,15 +103,14 @@ Subject: [PATCH 1/2] feat: add raw proxy
  		switch(ch) {
  #ifdef HAVE_TLS
  		case 'C':
-@@ -357,6 +359,14 @@ int main(int argc, char **argv)
+@@ -357,6 +359,13 @@ int main(int argc, char **argv)
  			conf.error_handler = optarg;
  			break;
  
 +		case 'F':
 +			if (uh_proxy_prefix_add(optarg)) {
-+				fprintf(stderr, "Error: Invalid proxy prefix: %s\n",
++				fprintf(stderr, "uhttpd: ignoring invalid proxy prefix: %s\n",
 +						optarg);
-+				exit(1);
 +			}
 +			break;
 +
@@ -120,9 +119,24 @@ Subject: [PATCH 1/2] feat: add raw proxy
  				fprintf(stderr, "Error: Invalid index page: %s\n",
 --- /dev/null
 +++ b/proxy_prefix.c
-@@ -0,0 +1,628 @@
+@@ -0,0 +1,710 @@
 +/*
-+ * uhttpd - early raw proxy by URL prefix
++ * uhttpd - Tiny single-threaded httpd
++ *
++ *   Copyright (C) 2010-2013 Jo-Philipp Wich <xm@subsignal.org>
++ *   Copyright (C) 2013 Felix Fietkau <nbd@openwrt.org>
++ *
++ * Permission to use, copy, modify, and/or distribute this software for any
++ * purpose with or without fee is hereby granted, provided that the above
++ * copyright notice and this permission notice appear in all copies.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
++ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
++ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
++ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
++ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
++ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
++ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 + */
 +
 +#ifndef _DEFAULT_SOURCE
@@ -132,7 +146,7 @@ Subject: [PATCH 1/2] feat: add raw proxy
 +#define _GNU_SOURCE
 +#include <sys/types.h>
 +#include <sys/socket.h>
-+#include <netdb.h>
++#include <arpa/inet.h>
 +#include <fcntl.h>
 +#include <unistd.h>
 +#include <errno.h>
@@ -512,55 +526,127 @@ Subject: [PATCH 1/2] feat: add raw proxy
 +static int proxy_connect_backend(struct client *cl)
 +{
 +	struct dispatch_proxy *p = &cl->dispatch.proxy;
-+	struct addrinfo hints = {};
-+	struct addrinfo *res = NULL, *rp;
 +	int fd = -1;
 +	int ret;
 +
-+	hints.ai_socktype = SOCK_STREAM;
-+	hints.ai_family = AF_UNSPEC;
-+
-+	ret = getaddrinfo(p->target->host, p->target->port, &hints, &res);
-+	if (ret)
++	if (!p->target->backend_valid)
 +		return -1;
 +
-+	for (rp = res; rp; rp = rp->ai_next) {
-+		fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-+		if (fd < 0)
-+			continue;
++	fd = socket(p->target->family, SOCK_STREAM, 0);
++	if (fd < 0)
++		return -1;
 +
-+		if (set_nonblock(fd)) {
-+			close(fd);
-+			fd = -1;
-+			continue;
-+		}
++	if (set_nonblock(fd))
++		goto error;
 +
-+		ret = connect(fd, rp->ai_addr, rp->ai_addrlen);
-+		if (!ret) {
-+			freeaddrinfo(res);
-+			proxy_open_upstream(cl, fd);
-+			return 0;
-+		}
-+
-+		if (errno == EINPROGRESS) {
-+			freeaddrinfo(res);
-+			p->conn.fd = fd;
-+			p->conn.cb = proxy_connect_cb;
-+			p->connecting = true;
-+			if (uloop_fd_add(&p->conn, ULOOP_WRITE)) {
-+				p->connecting = false;
-+				close(fd);
-+				return -1;
-+			}
-+			return 0;
-+		}
-+
-+		close(fd);
-+		fd = -1;
++	ret = connect(fd, (struct sockaddr *)&p->target->addr, p->target->addrlen);
++	if (!ret) {
++		proxy_open_upstream(cl, fd);
++		return 0;
 +	}
 +
-+	freeaddrinfo(res);
++	if (errno == EINPROGRESS) {
++		p->conn.fd = fd;
++		p->conn.cb = proxy_connect_cb;
++		p->connecting = true;
++		if (uloop_fd_add(&p->conn, ULOOP_WRITE)) {
++			p->connecting = false;
++			goto error;
++		}
++		return 0;
++	}
++
++error:
++	close(fd);
 +	return -1;
++}
++
++static bool proxy_parse_port(const char *str, unsigned int *port)
++{
++	unsigned long val;
++	char *end;
++
++	if (!str || !*str)
++		return false;
++
++	errno = 0;
++	val = strtoul(str, &end, 10);
++	if (errno || *end || val == 0 || val > 65535)
++		return false;
++
++	*port = val;
++	return true;
++}
++
++static bool proxy_parse_backend_addr(const char *backend,
++				     struct sockaddr_storage *addr,
++				     socklen_t *addrlen,
++				     int *family)
++{
++	char host[INET6_ADDRSTRLEN];
++	const char *port_str;
++	const char *colon;
++	unsigned int port;
++	size_t host_len;
++
++	memset(addr, 0, sizeof(*addr));
++
++	if (*backend == '[') {
++		const char *end = strchr(backend, ']');
++		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)addr;
++
++		if (!end || end[1] != ':')
++			return false;
++
++		host_len = end - backend - 1;
++		if (!host_len || host_len >= sizeof(host))
++			return false;
++
++		memcpy(host, backend + 1, host_len);
++		host[host_len] = 0;
++		port_str = end + 2;
++		if (!proxy_parse_port(port_str, &port))
++			return false;
++
++		if (inet_pton(AF_INET6, host, &sin6->sin6_addr) != 1)
++			return false;
++
++		sin6->sin6_family = AF_INET6;
++		sin6->sin6_port = htons(port);
++		*addrlen = sizeof(*sin6);
++		*family = AF_INET6;
++		return true;
++	}
++
++	colon = strrchr(backend, ':');
++	if (!colon || colon == backend || !colon[1])
++		return false;
++
++	if (strchr(backend, ':') != colon)
++		return false;
++
++	host_len = colon - backend;
++	if (host_len >= sizeof(host))
++		return false;
++
++	memcpy(host, backend, host_len);
++	host[host_len] = 0;
++	port_str = colon + 1;
++	if (!proxy_parse_port(port_str, &port))
++		return false;
++
++	{
++		struct sockaddr_in *sin = (struct sockaddr_in *)addr;
++
++		if (inet_pton(AF_INET, host, &sin->sin_addr) != 1)
++			return false;
++
++		sin->sin_family = AF_INET;
++		sin->sin_port = htons(port);
++		*addrlen = sizeof(*sin);
++		*family = AF_INET;
++		return true;
++	}
 +}
 +
 +static struct proxy_prefix *proxy_check_request_target(char *buf, int len)
@@ -610,8 +696,12 @@ Subject: [PATCH 1/2] feat: add raw proxy
 +{
 +	static const char http_prefix[] = "http://";
 +	struct proxy_prefix *target;
-+	char *copy, *eq, *backend, *colon;
-+	char *prefix, *host, *port;
++	struct sockaddr_storage addr;
++	char *copy, *eq, *backend;
++	char *prefix;
++	socklen_t addrlen = 0;
++	int family = 0;
++	bool backend_valid = false;
 +
 +	copy = strdup(spec);
 +	if (!copy)
@@ -636,42 +726,33 @@ Subject: [PATCH 1/2] feat: add raw proxy
 +		return -1;
 +	}
 +
-+	if (strncmp(backend, http_prefix, sizeof(http_prefix) - 1)) {
-+		free(copy);
-+		return -1;
++	if (!strncmp(backend, http_prefix, sizeof(http_prefix) - 1)) {
++		backend += sizeof(http_prefix) - 1;
++		if (!strchr(backend, '/'))
++			backend_valid = proxy_parse_backend_addr(backend, &addr,
++								 &addrlen, &family);
 +	}
-+
-+	backend += sizeof(http_prefix) - 1;
-+	if (strchr(backend, '/')) {
-+		free(copy);
-+		return -1;
-+	}
-+
-+	colon = strrchr(backend, ':');
-+	if (!colon || colon == backend || !colon[1]) {
-+		free(copy);
-+		return -1;
-+	}
-+
-+	*colon++ = 0;
 +
 +	target = calloc(1, sizeof(*target));
 +	prefix = strdup(copy);
-+	host = strdup(backend);
-+	port = strdup(colon);
-+	if (!target || !prefix || !host || !port) {
++	if (!target || !prefix) {
 +		free(target);
 +		free(prefix);
-+		free(host);
-+		free(port);
 +		free(copy);
 +		return -1;
 +	}
 +
 +	target->prefix = prefix;
-+	target->host = host;
-+	target->port = port;
 +	target->prefix_len = strlen(prefix);
++	target->backend_valid = backend_valid;
++	if (backend_valid) {
++		memcpy(&target->addr, &addr, sizeof(target->addr));
++		target->addrlen = addrlen;
++		target->family = family;
++	} else {
++		fprintf(stderr, "uhttpd: proxy prefix %s has invalid backend, returning 502\n",
++			target->prefix);
++	}
 +	list_add_tail(&target->list, &conf.proxy_prefixes);
 +	free(copy);
 +
@@ -751,15 +832,23 @@ Subject: [PATCH 1/2] feat: add raw proxy
 +}
 --- a/uhttpd.h
 +++ b/uhttpd.h
-@@ -98,6 +98,7 @@ struct config {
- 	int events_retry;
- 	struct list_head cgi_alias;
- 	struct list_head lua_prefix;
-+	struct list_head proxy_prefixes;
+@@ -20,6 +20,7 @@
+ #ifndef __UHTTPD_H
+ #define __UHTTPD_H
+ 
++#include <sys/socket.h>
+ #include <netinet/in.h>
+ #include <limits.h>
+ #include <dirent.h>
+@@ -101,6 +102,7 @@ struct config {
  #ifdef HAVE_UCODE
  	struct list_head ucode_prefix;
  #endif
-@@ -155,6 +156,7 @@ enum client_state {
++	struct list_head proxy_prefixes;
+ };
+ 
+ struct auth_realm {
+@@ -155,6 +157,7 @@ enum client_state {
  	CLIENT_STATE_INIT,
  	CLIENT_STATE_HEADER,
  	CLIENT_STATE_DATA,
@@ -767,16 +856,18 @@ Subject: [PATCH 1/2] feat: add raw proxy
  	CLIENT_STATE_DONE,
  	CLIENT_STATE_CLOSE,
  	CLIENT_STATE_CLEANUP,
-@@ -209,6 +211,30 @@ struct dispatch_proc {
+@@ -209,6 +212,32 @@ struct dispatch_proc {
  	char status_msg[64];
  };
  
 +struct proxy_prefix {
 +	struct list_head list;
 +	char *prefix;
-+	char *host;
-+	char *port;
 +	size_t prefix_len;
++	struct sockaddr_storage addr;
++	socklen_t addrlen;
++	int family;
++	bool backend_valid;
 +};
 +
 +struct dispatch_proxy {
@@ -798,7 +889,7 @@ Subject: [PATCH 1/2] feat: add raw proxy
  struct dispatch_handler {
  	struct list_head list;
  	bool script;
-@@ -261,6 +287,7 @@ struct dispatch {
+@@ -261,6 +290,7 @@ struct dispatch {
  			int fd;
  		} file;
  		struct dispatch_proc proc;
@@ -806,7 +897,7 @@ Subject: [PATCH 1/2] feat: add raw proxy
  #ifdef HAVE_UBUS
  		struct dispatch_ubus ubus;
  #endif
-@@ -328,6 +355,17 @@ void client_poll_post_data(struct client
+@@ -328,6 +358,17 @@ void client_poll_post_data(struct client
  void uh_client_read_cb(struct client *cl);
  void uh_client_notify_state(struct client *cl);
  
