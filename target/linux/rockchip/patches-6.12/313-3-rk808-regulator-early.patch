@@ -9,7 +9,7 @@ Subject: [PATCH] drivers/rk808-regulator: initcall early
 
 --- a/drivers/regulator/rk808-regulator.c
 +++ b/drivers/regulator/rk808-regulator.c
-@@ -1746,7 +1746,17 @@ static struct platform_driver rk808_regu
+@@ -1954,7 +1954,17 @@ static struct platform_driver rk808_regu
  	},
  };
  

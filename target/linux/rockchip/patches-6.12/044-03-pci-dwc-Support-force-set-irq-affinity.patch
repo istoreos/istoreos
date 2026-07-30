@@ -23,7 +23,7 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
  #include <linux/iopoll.h>
  #include <linux/irqchip/chained_irq.h>
  #include <linux/irqdomain.h>
-@@ -323,6 +325,52 @@ static int dw_pcie_parse_split_msi_irq(s
+@@ -317,6 +319,52 @@ static int dw_pcie_parse_split_msi_irq(s
  	return 0;
  }
  
@@ -76,7 +76,7 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
  static int dw_pcie_msi_host_init(struct dw_pcie_rp *pp)
  {
  	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
-@@ -368,6 +416,8 @@ static int dw_pcie_msi_host_init(struct
+@@ -362,6 +410,8 @@ static int dw_pcie_msi_host_init(struct
  						    dw_chained_msi_isr, pp);
  	}
  

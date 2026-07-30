@@ -9,9 +9,9 @@ Subject: [PATCH] net: phy: realtek: add LED configuration from OF for 8211f
 
 --- a/drivers/net/phy/realtek/realtek_main.c
 +++ b/drivers/net/phy/realtek/realtek_main.c
-@@ -90,6 +90,10 @@
- #define RTL8211F_LEDCR_MASK			GENMASK(4, 0)
- #define RTL8211F_LEDCR_SHIFT			5
+@@ -101,6 +101,10 @@
+ #define RTL8211FVD_CLKOUT_REG			0x11
+ #define RTL8211FVD_CLKOUT_EN			BIT(8)
  
 +#define RTL8211F_EEELEDCR                          0x11
 +
@@ -20,8 +20,8 @@ Subject: [PATCH] net: phy: realtek: add LED configuration from OF for 8211f
  /* RTL8211F RGMII configuration */
  #define RTL8211F_RGMII_PAGE			0xd08
  
-@@ -558,11 +562,25 @@ static int rtl8211c_config_init(struct p
- 			    CTL1000_ENABLE_MASTER | CTL1000_AS_MASTER);
+@@ -744,9 +748,23 @@ static int rtl8211f_config_phy_eee(struc
+ 				RTL8211F_PHYCR2_PHY_EEE_ENABLE, 0);
  }
  
 +static void rtl8211f_set_led_data(struct phy_device *phydev, u16 val)
@@ -39,14 +39,12 @@ Subject: [PATCH] net: phy: realtek: add LED configuration from OF for 8211f
 +
  static int rtl8211f_config_init(struct phy_device *phydev)
  {
- 	struct rtl821x_priv *priv = phydev->priv;
  	struct device *dev = &phydev->mdio.dev;
- 	u16 val_txdly, val_rxdly;
 +	u32 led_data;
  	int ret;
  
- 	if (priv->supports_fiber)
-@@ -579,6 +597,13 @@ static int rtl8211f_config_init(struct p
+ 	if (((struct rtl821x_priv *)phydev->priv)->supports_fiber)
+@@ -761,6 +779,12 @@ static int rtl8211f_config_init(struct p
  		return ret;
  	}
  
@@ -56,7 +54,6 @@ Subject: [PATCH] net: phy: realtek: add LED configuration from OF for 8211f
 +	if (!of_property_read_u32(dev->of_node, "realtek,flcr-data", &led_data))
 +		phy_write_paged(phydev, RTL8211F_LEDCR_PAGE, RTL8211FS_FLCR, led_data);
 +
-+
- 	switch (phydev->interface) {
- 	case PHY_INTERFACE_MODE_RGMII:
- 		val_txdly = 0;
+ 	ret = rtl8211f_config_rgmii_delay(phydev);
+ 	if (ret)
+ 		return ret;

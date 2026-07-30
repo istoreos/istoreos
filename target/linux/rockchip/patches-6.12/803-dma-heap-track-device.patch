@@ -23,15 +23,15 @@ Signed-off-by: Palmer Dabbelt <palmerdabbelt@google.com>
 
 --- a/drivers/dma-buf/dma-heap.c
 +++ b/drivers/dma-buf/dma-heap.c
-@@ -31,6 +31,7 @@
-  * @heap_devt		heap device node
-  * @list		list head connecting to list of heaps
-  * @heap_cdev		heap char device
-+ * @heap_dev		heap device struct
+@@ -30,6 +30,7 @@
+  * @heap_devt:		heap device node
+  * @list:		list head connecting to list of heaps
+  * @heap_cdev:		heap char device
++ * @heap_dev:		heap device struct
   *
   * Represents a heap of memory from which buffers can be made.
   */
-@@ -41,6 +42,7 @@ struct dma_heap {
+@@ -40,6 +41,7 @@ struct dma_heap {
  	dev_t heap_devt;
  	struct list_head list;
  	struct cdev heap_cdev;
@@ -39,11 +39,10 @@ Signed-off-by: Palmer Dabbelt <palmerdabbelt@google.com>
  };
  
  static LIST_HEAD(heap_list);
-@@ -216,10 +218,21 @@ const char *dma_heap_get_name(struct dma
- 	return heap->name;
+@@ -216,13 +218,24 @@ const char *dma_heap_get_name(struct dma
  }
  
-+/**
+ /**
 + * dma_heap_get_dev() - get device struct for the heap
 + * @heap: DMA-Heap to retrieve device struct from
 + *
@@ -55,6 +54,10 @@ Signed-off-by: Palmer Dabbelt <palmerdabbelt@google.com>
 +	return heap->heap_dev;
 +}
 +
++/**
+  * dma_heap_add - adds a heap to dmabuf heaps
+  * @exp_info: information needed to register this heap
+  */
  struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info)
  {
  	struct dma_heap *heap, *h, *err_ret;
@@ -62,7 +65,7 @@ Signed-off-by: Palmer Dabbelt <palmerdabbelt@google.com>
  	unsigned int minor;
  	int ret;
  
-@@ -261,17 +274,20 @@ struct dma_heap *dma_heap_add(const stru
+@@ -264,17 +277,20 @@ struct dma_heap *dma_heap_add(const stru
  		goto err1;
  	}
  
@@ -88,19 +91,12 @@ Signed-off-by: Palmer Dabbelt <palmerdabbelt@google.com>
  	list_for_each_entry(h, &heap_list, list) {
 --- a/include/linux/dma-heap.h
 +++ b/include/linux/dma-heap.h
-@@ -60,6 +60,15 @@ void *dma_heap_get_drvdata(struct dma_he
+@@ -44,6 +44,8 @@ void *dma_heap_get_drvdata(struct dma_he
+ 
  const char *dma_heap_get_name(struct dma_heap *heap);
  
- /**
-+ * dma_heap_get_dev() - get device struct for the heap
-+ * @heap: DMA-Heap to retrieve device struct from
-+ *
-+ * Returns:
-+ * The device struct for the heap.
-+ */
 +struct device *dma_heap_get_dev(struct dma_heap *heap);
 +
-+/**
-  * dma_heap_add - adds a heap to dmabuf heaps
-  * @exp_info:		information needed to register this heap
-  */
+ struct dma_heap *dma_heap_add(const struct dma_heap_export_info *exp_info);
+ 
+ #endif /* _DMA_HEAPS_H */

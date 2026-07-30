@@ -10,15 +10,15 @@ Subject: [PATCH] rockchip/pm-domains: export APIs
 
 --- a/drivers/pmdomain/rockchip/pm-domains.c
 +++ b/drivers/pmdomain/rockchip/pm-domains.c
-@@ -20,6 +20,7 @@
+@@ -21,6 +21,7 @@
  #include <linux/regmap.h>
  #include <linux/mfd/syscon.h>
  #include <soc/rockchip/pm_domains.h>
 +#include <soc/rockchip/rockchip_dmc.h>
+ #include <soc/rockchip/rockchip_sip.h>
  #include <dt-bindings/power/px30-power.h>
  #include <dt-bindings/power/rockchip,rv1126-power.h>
- #include <dt-bindings/power/rk3036-power.h>
-@@ -100,6 +101,18 @@ struct rockchip_pmu {
+@@ -106,6 +107,18 @@ struct rockchip_pmu {
  	struct generic_pm_domain *domains[];
  };
  
@@ -37,7 +37,7 @@ Subject: [PATCH] rockchip/pm-domains: export APIs
  #define to_rockchip_pd(gpd) container_of(gpd, struct rockchip_pm_domain, genpd)
  
  #define DOMAIN(_name, pwr, status, req, idle, ack, wakeup)	\
-@@ -347,6 +360,29 @@ static int rockchip_pmu_set_idle_request
+@@ -398,6 +411,29 @@ static int rockchip_pmu_set_idle_request
  	return 0;
  }
  
@@ -67,7 +67,7 @@ Subject: [PATCH] rockchip/pm-domains: export APIs
  static int rockchip_pmu_save_qos(struct rockchip_pm_domain *pd)
  {
  	int i;
-@@ -396,6 +432,52 @@ static int rockchip_pmu_restore_qos(stru
+@@ -447,6 +483,52 @@ static int rockchip_pmu_restore_qos(stru
  	return 0;
  }
  
@@ -120,7 +120,7 @@ Subject: [PATCH] rockchip/pm-domains: export APIs
  static bool rockchip_pmu_domain_is_on(struct rockchip_pm_domain *pd)
  {
  	struct rockchip_pmu *pmu = pd->pmu;
-@@ -576,6 +658,65 @@ static int rockchip_pd_power_off(struct
+@@ -637,6 +719,65 @@ static int rockchip_pd_power_off(struct
  	return rockchip_pd_power(pd, false);
  }
  

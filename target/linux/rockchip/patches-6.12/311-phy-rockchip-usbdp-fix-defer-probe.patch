@@ -17,7 +17,7 @@ Subject: [PATCH] drivers/phy-rockchip-usbdp: fix -EPROBE_DEFER not propagating
 
 --- a/drivers/phy/rockchip/phy-rockchip-usbdp.c
 +++ b/drivers/phy/rockchip/phy-rockchip-usbdp.c
-@@ -426,7 +426,8 @@ static int rk_udphy_clk_init(struct rk_u
+@@ -428,7 +428,8 @@ static int rk_udphy_clk_init(struct rk_u
  
  	udphy->num_clks = devm_clk_bulk_get_all(dev, &udphy->clks);
  	if (udphy->num_clks < 1)

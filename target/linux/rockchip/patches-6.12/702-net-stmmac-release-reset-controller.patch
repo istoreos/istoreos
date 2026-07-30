@@ -11,7 +11,7 @@ Change-Id: I29f72b36defa3d5b29a00a574073a790c19289d9
 
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-@@ -2157,6 +2157,8 @@ static void rk_gmac_remove(struct platfo
+@@ -1964,6 +1964,8 @@ static void rk_gmac_remove(struct platfo
  	stmmac_dvr_remove(&pdev->dev);
  
  	rk_gmac_powerdown(bsp_priv);

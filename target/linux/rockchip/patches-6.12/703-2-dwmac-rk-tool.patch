@@ -11,9 +11,9 @@ Subject: [PATCH] drivers/dwmac-rk: supports rockchip dwmac tool
 
 --- a/drivers/net/ethernet/stmicro/stmmac/Kconfig
 +++ b/drivers/net/ethernet/stmicro/stmmac/Kconfig
-@@ -142,6 +142,16 @@ config DWMAC_ROCKCHIP
- 	  This selects the Rockchip RK3288 SoC glue layer support for
- 	  the stmmac device driver.
+@@ -154,6 +154,16 @@ config DWMAC_RZN1
+ 	  the stmmac device driver. This support can make use of a custom MII
+ 	  converter PCS device.
  
 +config DWMAC_ROCKCHIP_TOOL
 +	bool "Rockchip dwmac tool support"
@@ -38,12 +38,12 @@ Subject: [PATCH] drivers/dwmac-rk: supports rockchip dwmac tool
 +obj-$(CONFIG_DWMAC_ROCKCHIP)	+= dwmac-rockchip.o
 +dwmac-rockchip-objs := dwmac-rk.o
 +dwmac-rockchip-$(CONFIG_DWMAC_ROCKCHIP_TOOL) += dwmac-rk-tool.o
+ obj-$(CONFIG_DWMAC_RZN1)	+= dwmac-rzn1.o
  obj-$(CONFIG_DWMAC_SOCFPGA)	+= dwmac-altr-socfpga.o
  obj-$(CONFIG_DWMAC_STARFIVE)	+= dwmac-starfive.o
- obj-$(CONFIG_DWMAC_STI)		+= dwmac-sti.o
 --- a/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
 +++ b/drivers/net/ethernet/stmicro/stmmac/dwmac-rk.c
-@@ -25,6 +25,10 @@
+@@ -23,6 +23,10 @@
  
  #include "stmmac_platform.h"
  
@@ -54,7 +54,7 @@ Subject: [PATCH] drivers/dwmac-rk: supports rockchip dwmac tool
  struct rk_priv_data;
  struct rk_gmac_ops {
  	void (*set_to_rgmii)(struct rk_priv_data *bsp_priv,
-@@ -2094,6 +2098,39 @@ static void rk_fix_speed(void *priv, uns
+@@ -1905,6 +1909,39 @@ static void rk_fix_speed(void *priv, uns
  	}
  }
  
@@ -94,7 +94,7 @@ Subject: [PATCH] drivers/dwmac-rk: supports rockchip dwmac tool
  static int rk_gmac_probe(struct platform_device *pdev)
  {
  	struct plat_stmmacenet_data *plat_dat;
-@@ -2140,6 +2177,12 @@ static int rk_gmac_probe(struct platform
+@@ -1949,6 +1986,12 @@ static int rk_gmac_probe(struct platform
  	if (ret)
  		goto err_gmac_powerdown;
  
@@ -107,7 +107,7 @@ Subject: [PATCH] drivers/dwmac-rk: supports rockchip dwmac tool
  	return 0;
  
  err_gmac_powerdown:
-@@ -2157,6 +2200,9 @@ static void rk_gmac_remove(struct platfo
+@@ -1964,6 +2007,9 @@ static void rk_gmac_remove(struct platfo
  	stmmac_dvr_remove(&pdev->dev);
  
  	rk_gmac_powerdown(bsp_priv);

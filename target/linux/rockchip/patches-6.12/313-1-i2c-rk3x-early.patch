@@ -9,7 +9,7 @@ Subject: [PATCH] drivers/i2c-rk3x: initcall early
 
 --- a/drivers/i2c/busses/i2c-rk3x.c
 +++ b/drivers/i2c/busses/i2c-rk3x.c
-@@ -1408,7 +1408,17 @@ static struct platform_driver rk3x_i2c_d
+@@ -1406,7 +1406,17 @@ static struct platform_driver rk3x_i2c_d
  	},
  };
  

@@ -45,7 +45,7 @@ Signed-off-by: Lee Jones <lee@kernel.org>
  #include <linux/interrupt.h>
  #include <linux/mfd/rk808.h>
  #include <linux/mfd/core.h>
-@@ -602,6 +603,7 @@ int rk8xx_probe(struct device *dev, int
+@@ -699,6 +700,7 @@ int rk8xx_probe(struct device *dev, int
  	const struct mfd_cell *cells;
  	int dual_support = 0;
  	int nr_pre_init_regs;
@@ -53,7 +53,7 @@ Signed-off-by: Lee Jones <lee@kernel.org>
  	int nr_cells;
  	int ret;
  	int i;
-@@ -629,6 +631,16 @@ int rk8xx_probe(struct device *dev, int
+@@ -726,6 +728,16 @@ int rk8xx_probe(struct device *dev, int
  		cells = rk806s;
  		nr_cells = ARRAY_SIZE(rk806s);
  		dual_support = IRQF_SHARED;
@@ -72,7 +72,7 @@ Signed-off-by: Lee Jones <lee@kernel.org>
  		rk808->regmap_irq_chip = &rk808_irq_chip;
 --- a/include/linux/mfd/rk808.h
 +++ b/include/linux/mfd/rk808.h
-@@ -670,6 +670,8 @@ enum rk806_pin_dr_sel {
+@@ -812,6 +812,8 @@ enum rk806_pin_dr_sel {
  #define RK806_INT_POL_H			BIT(1)
  #define RK806_INT_POL_L			0
  

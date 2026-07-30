@@ -9,7 +9,7 @@ Subject: [PATCH] drivers/rockchip/io-domain: initcall early
 
 --- a/drivers/soc/rockchip/io-domain.c
 +++ b/drivers/soc/rockchip/io-domain.c
-@@ -752,7 +752,17 @@ static struct platform_driver rockchip_i
+@@ -750,7 +750,17 @@ static struct platform_driver rockchip_i
  	},
  };
  

@@ -10,7 +10,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
 
 --- a/drivers/mfd/rk8xx-core.c
 +++ b/drivers/mfd/rk8xx-core.c
-@@ -602,6 +602,8 @@ int rk8xx_probe(struct device *dev, int
+@@ -699,6 +699,8 @@ int rk8xx_probe(struct device *dev, int
  	const struct rk808_reg_data *pre_init_reg;
  	const struct mfd_cell *cells;
  	int dual_support = 0;
@@ -19,7 +19,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  	int nr_pre_init_regs;
  	u32 rst_fun = 0;
  	int nr_cells;
-@@ -618,6 +620,7 @@ int rk8xx_probe(struct device *dev, int
+@@ -715,6 +717,7 @@ int rk8xx_probe(struct device *dev, int
  
  	switch (rk808->variant) {
  	case RK805_ID:
@@ -27,7 +27,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  		rk808->regmap_irq_chip = &rk805_irq_chip;
  		pre_init_reg = rk805_pre_init_reg;
  		nr_pre_init_regs = ARRAY_SIZE(rk805_pre_init_reg);
-@@ -625,6 +628,7 @@ int rk8xx_probe(struct device *dev, int
+@@ -722,6 +725,7 @@ int rk8xx_probe(struct device *dev, int
  		nr_cells = ARRAY_SIZE(rk805s);
  		break;
  	case RK806_ID:
@@ -35,7 +35,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  		rk808->regmap_irq_chip = &rk806_irq_chip;
  		pre_init_reg = rk806_pre_init_reg;
  		nr_pre_init_regs = ARRAY_SIZE(rk806_pre_init_reg);
-@@ -643,6 +647,7 @@ int rk8xx_probe(struct device *dev, int
+@@ -740,6 +744,7 @@ int rk8xx_probe(struct device *dev, int
  					     "Failed to configure requested restart/reset behavior\n");
  		break;
  	case RK808_ID:
@@ -43,15 +43,15 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  		rk808->regmap_irq_chip = &rk808_irq_chip;
  		pre_init_reg = rk808_pre_init_reg;
  		nr_pre_init_regs = ARRAY_SIZE(rk808_pre_init_reg);
-@@ -650,6 +655,7 @@ int rk8xx_probe(struct device *dev, int
- 		nr_cells = ARRAY_SIZE(rk808s);
+@@ -754,6 +759,7 @@ int rk8xx_probe(struct device *dev, int
+ 		nr_cells = ARRAY_SIZE(rk816s);
  		break;
  	case RK818_ID:
 +		pwron_key = RK808_DEVCTRL_REG;
  		rk808->regmap_irq_chip = &rk818_irq_chip;
  		pre_init_reg = rk818_pre_init_reg;
  		nr_pre_init_regs = ARRAY_SIZE(rk818_pre_init_reg);
-@@ -658,6 +664,7 @@ int rk8xx_probe(struct device *dev, int
+@@ -762,6 +768,7 @@ int rk8xx_probe(struct device *dev, int
  		break;
  	case RK809_ID:
  	case RK817_ID:
@@ -59,7 +59,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  		rk808->regmap_irq_chip = &rk817_irq_chip;
  		pre_init_reg = rk817_pre_init_reg;
  		nr_pre_init_regs = ARRAY_SIZE(rk817_pre_init_reg);
-@@ -688,6 +695,20 @@ int rk8xx_probe(struct device *dev, int
+@@ -792,6 +799,20 @@ int rk8xx_probe(struct device *dev, int
  					     pre_init_reg[i].addr);
  	}
  
@@ -94,7 +94,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  #define RK808_INT_STS_REG1	0x4c
  #define RK808_INT_STS_MSK_REG1	0x4d
  #define RK808_INT_STS_REG2	0x4e
-@@ -680,6 +685,8 @@ enum rk806_pin_dr_sel {
+@@ -822,6 +827,8 @@ enum rk806_pin_dr_sel {
  #define RK806_SYS_ENB2_2M_EN		BIT(1)
  #define RK806_SYS_ENB2_2M_OFF		0
  
@@ -103,7 +103,7 @@ Subject: [PATCH] mfd: rk8xx-core: supports setting pwrkey long press off time
  enum rk806_int_fun {
  	RK806_INT_ONLY,
  	RK806_INT_ADN_WKUP,
-@@ -1053,6 +1060,7 @@ enum rk809_reg_id {
+@@ -1196,6 +1203,7 @@ enum rk809_reg_id {
  
  #define RK817_ON_SOURCE_REG		0xf5
  #define RK817_OFF_SOURCE_REG		0xf6

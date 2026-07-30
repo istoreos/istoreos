@@ -14,7 +14,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -91,11 +91,6 @@ struct rk_iommu_domain {
+@@ -93,11 +93,6 @@ struct rk_iommu_domain {
  	struct iommu_domain domain;
  };
  
@@ -26,7 +26,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  struct rk_iommu_ops {
  	phys_addr_t (*pt_address)(u32 dte);
  	u32 (*mk_dtentries)(dma_addr_t pt_dma);
-@@ -1409,25 +1404,18 @@ static int rk_iommu_probe(struct platfor
+@@ -1384,25 +1379,18 @@ static int rk_iommu_probe(struct platfor
  	iommu->reset_disabled = device_property_read_bool(dev,
  					"rockchip,disable-mmu-reset");
  

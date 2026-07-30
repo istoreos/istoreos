@@ -9,7 +9,7 @@ Subject: [PATCH] drivers/rk8xx-i2c: initcall early
 
 --- a/drivers/mfd/rk8xx-i2c.c
 +++ b/drivers/mfd/rk8xx-i2c.c
-@@ -176,7 +176,18 @@ static struct i2c_driver rk8xx_i2c_drive
+@@ -244,7 +244,18 @@ static struct i2c_driver rk8xx_i2c_drive
  	.probe = rk8xx_i2c_probe,
  	.shutdown  = rk8xx_i2c_shutdown,
  };

@@ -11,15 +11,15 @@ Subject: [PATCH] rockchip-iommu: export APIs
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -114,6 +114,7 @@ struct rk_iommu {
+@@ -115,6 +115,7 @@ struct rk_iommu {
+ 	struct iommu_device iommu;
  	struct list_head node; /* entry in rk_iommu_domain.iommus */
  	struct iommu_domain *domain; /* domain to which iommu is attached */
- 	struct iommu_group *group;
 +	bool iommu_enabled;
  };
  
  struct rk_iommudata {
-@@ -916,7 +917,23 @@ static void rk_iommu_disable(struct rk_i
+@@ -920,7 +921,23 @@ static void rk_iommu_disable(struct rk_i
  	}
  	rk_iommu_disable_stall(iommu);
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -43,7 +43,7 @@ Subject: [PATCH] rockchip-iommu: export APIs
  
  /* Must be called with iommu powered on and attached */
  static int rk_iommu_enable(struct rk_iommu *iommu)
-@@ -950,9 +967,59 @@ out_disable_stall:
+@@ -954,8 +971,58 @@ out_disable_stall:
  	rk_iommu_disable_stall(iommu);
  out_disable_clocks:
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -51,9 +51,9 @@ Subject: [PATCH] rockchip-iommu: export APIs
 +	if (!ret)
 +		iommu->iommu_enabled = true;
 +
- 	return ret;
- }
- 
++	return ret;
++}
++
 +int rockchip_iommu_enable(struct device *dev)
 +{
 +	struct rk_iommu *iommu;
@@ -95,15 +95,14 @@ Subject: [PATCH] rockchip-iommu: export APIs
 +
 +	rk_iommu_disable_stall(iommu);
 +
-+	return ret;
+ 	return ret;
 +
-+}
+ }
 +EXPORT_SYMBOL(rockchip_iommu_force_reset);
-+
+ 
  static int rk_iommu_identity_attach(struct iommu_domain *identity_domain,
  				    struct device *dev)
- {
-@@ -1184,6 +1251,37 @@ static int rk_iommu_of_xlate(struct devi
+@@ -1161,6 +1228,37 @@ static int rk_iommu_of_xlate(struct devi
  	return 0;
  }
  
@@ -139,8 +138,8 @@ Subject: [PATCH] rockchip-iommu: export APIs
 +EXPORT_SYMBOL(rockchip_iommu_unmask_irq);
 +
  static const struct iommu_ops rk_iommu_ops = {
- 	.domain_alloc = rk_iommu_domain_alloc,
- 	.probe_device = rk_iommu_probe_device,
+ 	.identity_domain = &rk_identity_domain,
+ 	.domain_alloc_paging = rk_iommu_domain_alloc_paging,
 --- /dev/null
 +++ b/include/soc/rockchip/rockchip_iommu.h
 @@ -0,0 +1,50 @@
