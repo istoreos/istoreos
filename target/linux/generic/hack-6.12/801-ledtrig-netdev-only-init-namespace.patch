@@ -11,7 +11,7 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
 
 --- a/drivers/leds/trigger/ledtrig-netdev.c
 +++ b/drivers/leds/trigger/ledtrig-netdev.c
-@@ -476,8 +476,9 @@ static int netdev_trig_notify(struct not
+@@ -580,8 +580,9 @@ static int netdev_trig_notify(struct not
  		return NOTIFY_DONE;
  
  	if (!(dev == trigger_data->net_dev ||
@@ -23,7 +23,7 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
  		return NOTIFY_DONE;
  
  	cancel_delayed_work_sync(&trigger_data->work);
-@@ -497,8 +498,10 @@ static int netdev_trig_notify(struct not
+@@ -601,8 +602,10 @@ static int netdev_trig_notify(struct not
  			get_device_state(trigger_data);
  		break;
  	case NETDEV_UNREGISTER:

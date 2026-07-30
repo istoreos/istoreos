@@ -13,12 +13,12 @@ Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
 
 --- a/drivers/leds/trigger/ledtrig-netdev.c
 +++ b/drivers/leds/trigger/ledtrig-netdev.c
-@@ -207,7 +207,7 @@ static void get_device_state(struct led_
+@@ -226,7 +226,7 @@ static void get_device_state(struct led_
  {
  	struct ethtool_link_ksettings cmd;
  
 -	trigger_data->carrier_link_up = netif_carrier_ok(trigger_data->net_dev);
 +	trigger_data->carrier_link_up = netif_running(trigger_data->net_dev) && netif_carrier_ok(trigger_data->net_dev);
- 	if (!trigger_data->carrier_link_up)
- 		return;
  
+ 	if (__ethtool_get_link_ksettings(trigger_data->net_dev, &cmd))
+ 		return;

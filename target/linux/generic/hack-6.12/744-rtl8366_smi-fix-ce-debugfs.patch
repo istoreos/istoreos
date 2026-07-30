@@ -9,7 +9,7 @@ Subject: [PATCH] rtl8366_smi: fix CE on debugfs enabled
 
 --- a/drivers/net/phy/rtl8366_smi.c
 +++ b/drivers/net/phy/rtl8366_smi.c
-@@ -941,13 +941,8 @@ static void rtl8366_debugfs_init(struct
+@@ -940,13 +940,8 @@ static void rtl8366_debugfs_init(struct
  	}
  	root = smi->debugfs_root;
  
@@ -24,7 +24,7 @@ Subject: [PATCH] rtl8366_smi: fix CE on debugfs enabled
  
  	node = debugfs_create_file("val", S_IRUGO | S_IWUSR, root, smi,
  				   &fops_rtl8366_regs);
-@@ -965,13 +960,8 @@ static void rtl8366_debugfs_init(struct
+@@ -964,13 +959,8 @@ static void rtl8366_debugfs_init(struct
  		return;
  	}
  

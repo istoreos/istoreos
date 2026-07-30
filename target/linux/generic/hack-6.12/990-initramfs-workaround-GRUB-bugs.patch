@@ -10,7 +10,7 @@ rework Ventoy boot
 
 --- a/init/initramfs.c
 +++ b/init/initramfs.c
-@@ -361,10 +361,8 @@ static int __init do_name(void)
+@@ -363,10 +363,8 @@ static int __init do_name(void)
  
  	/* name_len > 0 && name_len <= PATH_MAX checked in do_header */
  	if (collected[name_len - 1] != '\0') {
@@ -23,7 +23,7 @@ rework Ventoy boot
  	}
  
  	if (strcmp(collected, "TRAILER!!!") == 0) {
-@@ -432,10 +430,8 @@ static int __init do_copy(void)
+@@ -434,10 +432,8 @@ static int __init do_copy(void)
  static int __init do_symlink(void)
  {
  	if (collected[name_len - 1] != '\0') {

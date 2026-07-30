@@ -1,14 +1,14 @@
 --- a/drivers/regulator/fixed.c
 +++ b/drivers/regulator/fixed.c
-@@ -20,6 +20,7 @@
- #include <linux/platform_device.h>
- #include <linux/pm_domain.h>
- #include <linux/pm_opp.h>
-+#include <linux/regulator/consumer.h>
- #include <linux/regulator/driver.h>
- #include <linux/regulator/fixed.h>
+@@ -26,6 +26,7 @@
  #include <linux/gpio/consumer.h>
-@@ -171,6 +172,25 @@ static const struct regulator_ops fixed_
+ #include <linux/slab.h>
+ #include <linux/of.h>
++#include <linux/regulator/consumer.h>
+ #include <linux/regulator/of_regulator.h>
+ #include <linux/regulator/machine.h>
+ #include <linux/clk.h>
+@@ -219,6 +220,25 @@ static const struct regulator_ops fixed_
  	.is_enabled = reg_is_enabled,
  };
  
@@ -34,7 +34,7 @@
  static int reg_fixed_voltage_probe(struct platform_device *pdev)
  {
  	struct device *dev = &pdev->dev;
-@@ -198,6 +218,10 @@ static int reg_fixed_voltage_probe(struc
+@@ -246,6 +266,10 @@ static int reg_fixed_voltage_probe(struc
  	if (!config)
  		return -ENOMEM;
  

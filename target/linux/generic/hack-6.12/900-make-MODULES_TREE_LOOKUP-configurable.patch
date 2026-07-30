@@ -9,8 +9,8 @@ Subject: [PATCH] make MODULES_TREE_LOOKUP configurable
 
 --- a/kernel/module/Kconfig
 +++ b/kernel/module/Kconfig
-@@ -387,7 +387,7 @@ config UNUSED_KSYMS_WHITELIST
- 	  source tree.
+@@ -399,7 +399,7 @@ config UNUSED_KSYMS_WHITELIST
+ 	  source or obj tree.
  
  config MODULES_TREE_LOOKUP
 -	def_bool y

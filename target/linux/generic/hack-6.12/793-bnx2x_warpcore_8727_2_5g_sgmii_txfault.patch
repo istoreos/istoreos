@@ -218,7 +218,7 @@ https://www.dslreports.com/forum/r32230041-Internet-Bypassing-the-HH3K-up-to-2-5
  	/* Reduce memory usage in kdump environment by disabling TPA */
 --- a/drivers/net/ethernet/broadcom/bnx2x/bnx2x_reg.h
 +++ b/drivers/net/ethernet/broadcom/bnx2x/bnx2x_reg.h
-@@ -7169,7 +7169,8 @@ Theotherbitsarereservedandshouldbezero*/
+@@ -7171,7 +7171,8 @@ Theotherbitsarereservedandshouldbezero*/
  #define MDIO_PMA_REG_8727_PCS_GP		0xc842
  #define MDIO_PMA_REG_8727_OPT_CFG_REG		0xc8e4
  

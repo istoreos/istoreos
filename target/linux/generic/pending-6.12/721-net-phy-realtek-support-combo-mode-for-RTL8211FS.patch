@@ -20,7 +20,7 @@ ref: https://lkml.org/lkml/2024/12/3/30
 
 --- a/drivers/net/phy/realtek/realtek_main.c
 +++ b/drivers/net/phy/realtek/realtek_main.c
-@@ -76,6 +76,9 @@
+@@ -79,6 +79,9 @@
  #define RTL8211F_INSR_PAGE			0xa43
  #define RTL8211F_INSR				0x1d
  
@@ -30,23 +30,21 @@ ref: https://lkml.org/lkml/2024/12/3/30
  /* RTL8211F LED configuration */
  #define RTL8211F_LEDCR_PAGE			0xd04
  #define RTL8211F_LEDCR				0x10
-@@ -175,6 +178,7 @@ struct rtl821x_priv {
- 	u16 phycr1;
- 	u16 phycr2;
- 	bool has_phycr2;
-+	bool supports_fiber;
+@@ -210,6 +213,7 @@ struct rtl821x_priv {
  	struct clk *clk;
- 	u32 saved_wolopts;
+ 	/* rtl8211f */
+ 	u16 iner;
++	bool supports_fiber;
  };
-@@ -254,11 +258,51 @@ static int rtl821x_probe(struct phy_devi
- 			priv->phycr2 &= ~RTL8211F_CLKOUT_EN;
+ 
+ static int rtl821x_read_page(struct phy_device *phydev)
+@@ -301,9 +305,49 @@ static int rtl8211f_probe(struct phy_dev
+ 		devm_pm_set_wake_irq(dev, phydev->irq);
  	}
  
-+	priv->supports_fiber = of_property_read_bool(dev->of_node, "realtek,fiber");
++	phydev->priv->supports_fiber = of_property_read_bool(dev->of_node, "realtek,fiber");
 +
- 	phydev->priv = priv;
- 
- 	return 0;
+ 	return ret;
  }
  
 +static int rtl8211f_mode(struct phy_device *phydev)
@@ -90,8 +88,8 @@ ref: https://lkml.org/lkml/2024/12/3/30
  static int rtl8201_ack_interrupt(struct phy_device *phydev)
  {
  	int err;
-@@ -521,6 +565,11 @@ static int rtl8211f_config_init(struct p
- 	u16 val_txdly, val_rxdly;
+@@ -705,6 +749,11 @@ static int rtl8211f_config_init(struct p
+ 	struct device *dev = &phydev->mdio.dev;
  	int ret;
  
 +	if (priv->supports_fiber)
@@ -99,10 +97,10 @@ ref: https://lkml.org/lkml/2024/12/3/30
 +	else
 +		phydev->port = PORT_MII;
 +
- 	ret = phy_modify_paged_changed(phydev, RTL8211F_PHYCR_PAGE, RTL8211F_PHYCR1,
- 				       RTL8211F_ALDPS_PLL_OFF | RTL8211F_ALDPS_ENABLE | RTL8211F_ALDPS_XTAL_OFF,
- 				       priv->phycr1);
-@@ -963,6 +1012,31 @@ static int rtlgen_write_vend2(struct phy
+ 	ret = rtl8211f_config_aldps(phydev);
+ 	if (ret) {
+ 		dev_err(dev, "aldps mode configuration failed: %pe\n",
+@@ -1169,6 +1218,31 @@ static int rtlgen_write_vend2(struct phy
  				   val);
  }
  
@@ -134,9 +132,9 @@ ref: https://lkml.org/lkml/2024/12/3/30
  static int rtlgen_read_mmd(struct phy_device *phydev, int devnum, u16 regnum)
  {
  	int ret;
-@@ -1727,7 +1801,8 @@ static struct phy_driver realtek_drvs[]
+@@ -2136,7 +2210,8 @@ static struct phy_driver realtek_drvs[]
  		.name		= "RTL8211F Gigabit Ethernet",
- 		.probe		= rtl821x_probe,
+ 		.probe		= rtl8211f_probe,
  		.config_init	= &rtl8211f_config_init,
 -		.read_status	= rtlgen_read_status,
 +		.config_aneg	= rtl8211f_config_aneg,
