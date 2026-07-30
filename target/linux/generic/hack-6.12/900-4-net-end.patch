@@ -1,0 +1,25 @@
+--- a/include/net/net_namespace.h
++++ b/include/net/net_namespace.h
+@@ -176,9 +176,7 @@ struct net {
+ #if IS_ENABLED(CONFIG_CAN)
+ 	struct netns_can	can;
+ #endif
+-#ifdef CONFIG_XDP_SOCKETS
+-	struct netns_xdp	xdp;
+-#endif
++
+ #if IS_ENABLED(CONFIG_MCTP)
+ 	struct netns_mctp	mctp;
+ #endif
+@@ -189,6 +187,11 @@ struct net {
+ #if IS_ENABLED(CONFIG_SMC)
+ 	struct netns_smc	smc;
+ #endif
++
++// iStoreOS move
++#ifdef CONFIG_XDP_SOCKETS
++	struct netns_xdp	xdp;
++#endif
+ } __randomize_layout;
+ 
+ #include <linux/seq_file_net.h>

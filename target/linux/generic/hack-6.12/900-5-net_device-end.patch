@@ -1,0 +1,92 @@
+--- a/include/linux/netdevice.h
++++ b/include/linux/netdevice.h
+@@ -1457,29 +1457,6 @@ struct net_device_ops {
+ 	int			(*ndo_setup_tc)(struct net_device *dev,
+ 						enum tc_setup_type type,
+ 						void *type_data);
+-#if IS_ENABLED(CONFIG_FCOE)
+-	int			(*ndo_fcoe_enable)(struct net_device *dev);
+-	int			(*ndo_fcoe_disable)(struct net_device *dev);
+-	int			(*ndo_fcoe_ddp_setup)(struct net_device *dev,
+-						      u16 xid,
+-						      struct scatterlist *sgl,
+-						      unsigned int sgc);
+-	int			(*ndo_fcoe_ddp_done)(struct net_device *dev,
+-						     u16 xid);
+-	int			(*ndo_fcoe_ddp_target)(struct net_device *dev,
+-						       u16 xid,
+-						       struct scatterlist *sgl,
+-						       unsigned int sgc);
+-	int			(*ndo_fcoe_get_hbainfo)(struct net_device *dev,
+-							struct netdev_fcoe_hbainfo *hbainfo);
+-#endif
+-
+-#if IS_ENABLED(CONFIG_LIBFCOE)
+-#define NETDEV_FCOE_WWNN 0
+-#define NETDEV_FCOE_WWPN 1
+-	int			(*ndo_fcoe_get_wwn)(struct net_device *dev,
+-						    u64 *wwn, int type);
+-#endif
+ 
+ #ifdef CONFIG_RFS_ACCEL
+ 	int			(*ndo_rx_flow_steer)(struct net_device *dev,
+@@ -1605,6 +1582,32 @@ struct net_device_ops {
+ 	int			(*ndo_hwtstamp_set)(struct net_device *dev,
+ 						    struct kernel_hwtstamp_config *kernel_config,
+ 						    struct netlink_ext_ack *extack);
++
++// iStoreOS move
++#if IS_ENABLED(CONFIG_FCOE)
++	int			(*ndo_fcoe_enable)(struct net_device *dev);
++	int			(*ndo_fcoe_disable)(struct net_device *dev);
++	int			(*ndo_fcoe_ddp_setup)(struct net_device *dev,
++						      u16 xid,
++						      struct scatterlist *sgl,
++						      unsigned int sgc);
++	int			(*ndo_fcoe_ddp_done)(struct net_device *dev,
++						     u16 xid);
++	int			(*ndo_fcoe_ddp_target)(struct net_device *dev,
++						       u16 xid,
++						       struct scatterlist *sgl,
++						       unsigned int sgc);
++	int			(*ndo_fcoe_get_hbainfo)(struct net_device *dev,
++							struct netdev_fcoe_hbainfo *hbainfo);
++#endif
++
++#if IS_ENABLED(CONFIG_LIBFCOE)
++#define NETDEV_FCOE_WWNN 0
++#define NETDEV_FCOE_WWPN 1
++	int			(*ndo_fcoe_get_wwn)(struct net_device *dev,
++						    u64 *wwn, int type);
++#endif
++
+ };
+ 
+ /**
+@@ -2362,12 +2365,6 @@ struct net_device {
+ #endif
+ 	u8			prio_tc_map[TC_BITMASK + 1];
+ 
+-#if IS_ENABLED(CONFIG_FCOE)
+-	unsigned int		fcoe_ddp_xid;
+-#endif
+-#if IS_ENABLED(CONFIG_CGROUP_NET_PRIO)
+-	struct netprio_map __rcu *priomap;
+-#endif
+ 	struct phy_link_topology	*link_topo;
+ 	struct phy_device	*phydev;
+ 	struct sfp_bus		*sfp_bus;
+@@ -2414,6 +2411,13 @@ struct net_device {
+ 	/** @irq_moder: dim parameters used if IS_ENABLED(CONFIG_DIMLIB). */
+ 	struct dim_irq_moder	*irq_moder;
+ 
++// iStoreOS move
++#if IS_ENABLED(CONFIG_FCOE)
++	unsigned int		fcoe_ddp_xid;
++#endif
++#if IS_ENABLED(CONFIG_CGROUP_NET_PRIO)
++	struct netprio_map __rcu *priomap;
++#endif
+ 	u8			priv[] ____cacheline_aligned
+ 				       __counted_by(priv_len);
+ } ____cacheline_aligned;

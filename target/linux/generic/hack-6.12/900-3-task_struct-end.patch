@@ -1,0 +1,103 @@
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -996,10 +996,7 @@ struct task_struct {
+ #ifdef CONFIG_BLK_CGROUP
+ 	unsigned			use_memdelay:1;
+ #endif
+-#ifdef CONFIG_PSI
+-	/* Stalled due to lack of memory */
+-	unsigned			in_memstall:1;
+-#endif
++
+ #ifdef CONFIG_PAGE_OWNER
+ 	/* Used by page_owner=on to detect recursion in page tracking. */
+ 	unsigned			in_page_owner:1;
+@@ -1018,6 +1015,13 @@ struct task_struct {
+ 	/* delay due to memory thrashing */
+ 	unsigned                        in_thrashing:1;
+ #endif
++
++// iStoreOS move
++#ifdef CONFIG_PSI
++	/* Stalled due to lack of memory */
++	unsigned			in_memstall:1;
++#endif
++
+ #ifdef CONFIG_PREEMPT_RT
+ 	struct netdev_xmit		net_xmit;
+ #endif
+@@ -1260,10 +1264,7 @@ struct task_struct {
+ 	kernel_siginfo_t		*last_siginfo;
+ 
+ 	struct task_io_accounting	ioac;
+-#ifdef CONFIG_PSI
+-	/* Pressure stall state */
+-	unsigned int			psi_flags;
+-#endif
++
+ #ifdef CONFIG_TASK_XACCT
+ 	/* Accumulated RSS usage: */
+ 	u64				acct_rss_mem1;
+@@ -1299,12 +1300,7 @@ struct task_struct {
+ 	struct mutex			futex_exit_mutex;
+ 	unsigned int			futex_state;
+ #endif
+-#ifdef CONFIG_PERF_EVENTS
+-	u8				perf_recursion[PERF_NR_CONTEXTS];
+-	struct perf_event_context	*perf_event_ctxp;
+-	struct mutex			perf_event_mutex;
+-	struct list_head		perf_event_list;
+-#endif
++
+ #ifdef CONFIG_DEBUG_PREEMPT
+ 	unsigned long			preempt_disable_ip;
+ #endif
+@@ -1462,11 +1458,6 @@ struct task_struct {
+ 	atomic_t			tracing_graph_pause;
+ #endif
+ 
+-#ifdef CONFIG_TRACING
+-	/* Bitmask and counter of trace recursion: */
+-	unsigned long			trace_recursion;
+-#endif /* CONFIG_TRACING */
+-
+ #ifdef CONFIG_KCOV
+ 	/* See kernel/kcov.c for more details. */
+ 
+@@ -1575,9 +1566,7 @@ struct task_struct {
+ 	int				mce_count;
+ #endif
+ 
+-#ifdef CONFIG_KRETPROBES
+-	struct llist_head               kretprobe_instances;
+-#endif
++
+ #ifdef CONFIG_RETHOOK
+ 	struct llist_head               rethooks;
+ #endif
+@@ -1606,6 +1595,25 @@ struct task_struct {
+ 	struct user_event_mm		*user_event_mm;
+ #endif
+ 
++// iStoreOS move
++#ifdef CONFIG_PSI
++	/* Pressure stall state */
++	unsigned int			psi_flags;
++#endif
++#ifdef CONFIG_PERF_EVENTS
++	u8				perf_recursion[PERF_NR_CONTEXTS];
++	struct perf_event_context	*perf_event_ctxp;
++	struct mutex			perf_event_mutex;
++	struct list_head		perf_event_list;
++#endif
++#ifdef CONFIG_TRACING
++	/* Bitmask and counter of trace recursion: */
++	unsigned long			trace_recursion;
++#endif /* CONFIG_TRACING */
++#ifdef CONFIG_KRETPROBES
++	struct llist_head               kretprobe_instances;
++#endif
++
+ 	/*
+ 	 * New fields for task_struct should be added above here, so that
+ 	 * they are included in the randomized portion of task_struct.

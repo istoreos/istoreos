@@ -1,0 +1,93 @@
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -494,48 +494,21 @@ struct module {
+ 	void *noinstr_text_start;
+ 	unsigned int noinstr_text_size;
+ 
+-#ifdef CONFIG_TRACEPOINTS
+-	unsigned int num_tracepoints;
+-	tracepoint_ptr_t *tracepoints_ptrs;
+-#endif
+ #ifdef CONFIG_TREE_SRCU
+ 	unsigned int num_srcu_structs;
+ 	struct srcu_struct **srcu_struct_ptrs;
+ #endif
+-#ifdef CONFIG_BPF_EVENTS
+-	unsigned int num_bpf_raw_events;
+-	struct bpf_raw_event_map *bpf_raw_events;
+-#endif
+-#ifdef CONFIG_DEBUG_INFO_BTF_MODULES
+-	unsigned int btf_data_size;
+-	unsigned int btf_base_data_size;
+-	void *btf_data;
+-	void *btf_base_data;
+-#endif
++
+ #ifdef CONFIG_JUMP_LABEL
+ 	struct jump_entry *jump_entries;
+ 	unsigned int num_jump_entries;
+ #endif
+-#ifdef CONFIG_TRACING
+-	unsigned int num_trace_bprintk_fmt;
+-	const char **trace_bprintk_fmt_start;
+-#endif
+-#ifdef CONFIG_EVENT_TRACING
+-	struct trace_event_call **trace_events;
+-	unsigned int num_trace_events;
+-	struct trace_eval_map **trace_evals;
+-	unsigned int num_trace_evals;
+-#endif
++
+ #ifdef CONFIG_FTRACE_MCOUNT_RECORD
+ 	unsigned int num_ftrace_callsites;
+ 	unsigned long *ftrace_callsites;
+ #endif
+-#ifdef CONFIG_KPROBES
+-	void *kprobes_text_start;
+-	unsigned int kprobes_text_size;
+-	unsigned long *kprobe_blacklist;
+-	unsigned int num_kprobe_blacklist;
+-#endif
++
+ #ifdef CONFIG_HAVE_STATIC_CALL_INLINE
+ 	int num_static_call_sites;
+ 	struct static_call_site *static_call_sites;
+@@ -592,6 +565,38 @@ struct module {
+ 	struct _ddebug_info dyndbg_info;
+ #endif
+ 
++// iStoreOS move
++#ifdef CONFIG_TRACEPOINTS
++	unsigned int num_tracepoints;
++	tracepoint_ptr_t *tracepoints_ptrs;
++#endif
++#ifdef CONFIG_BPF_EVENTS
++	unsigned int num_bpf_raw_events;
++	struct bpf_raw_event_map *bpf_raw_events;
++#endif
++#ifdef CONFIG_DEBUG_INFO_BTF_MODULES
++	unsigned int btf_data_size;
++	unsigned int btf_base_data_size;
++	void *btf_data;
++	void *btf_base_data;
++#endif
++#ifdef CONFIG_TRACING
++	unsigned int num_trace_bprintk_fmt;
++	const char **trace_bprintk_fmt_start;
++#endif
++#ifdef CONFIG_EVENT_TRACING
++	struct trace_event_call **trace_events;
++	unsigned int num_trace_events;
++	struct trace_eval_map **trace_evals;
++	unsigned int num_trace_evals;
++#endif
++#ifdef CONFIG_KPROBES
++	void *kprobes_text_start;
++	unsigned int kprobes_text_size;
++	unsigned long *kprobe_blacklist;
++	unsigned int num_kprobe_blacklist;
++#endif
++
+ #ifdef CONFIG_KALLSYMS
+ 	/* Protected by RCU and/or module_mutex: use rcu_dereference() */
+ 	struct mod_kallsyms __rcu *kallsyms;
