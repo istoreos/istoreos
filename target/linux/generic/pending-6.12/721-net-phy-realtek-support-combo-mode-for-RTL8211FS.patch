@@ -42,7 +42,7 @@ ref: https://lkml.org/lkml/2024/12/3/30
  		devm_pm_set_wake_irq(dev, phydev->irq);
  	}
  
-+	phydev->priv->supports_fiber = of_property_read_bool(dev->of_node, "realtek,fiber");
++	((struct rtl821x_priv *)phydev->priv)->supports_fiber = of_property_read_bool(dev->of_node, "realtek,fiber");
 +
  	return ret;
  }
@@ -92,7 +92,7 @@ ref: https://lkml.org/lkml/2024/12/3/30
  	struct device *dev = &phydev->mdio.dev;
  	int ret;
  
-+	if (priv->supports_fiber)
++	if (((struct rtl821x_priv *)phydev->priv)->supports_fiber)
 +		phydev->port = PORT_NONE;
 +	else
 +		phydev->port = PORT_MII;
