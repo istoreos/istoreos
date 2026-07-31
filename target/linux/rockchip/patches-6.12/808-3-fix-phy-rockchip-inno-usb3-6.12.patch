@@ -1,0 +1,254 @@
+--- a/drivers/phy/rockchip/phy-rockchip-inno-usb3.c
++++ b/drivers/phy/rockchip/phy-rockchip-inno-usb3.c
+@@ -819,125 +819,6 @@ static int rockchip_u3phy_on_disconnect(
+ 	return 0;
+ }
+ 
+-static int rockchip_u3phy_probe(struct platform_device *pdev)
+-{
+-	struct device *dev = &pdev->dev;
+-	struct device_node *np = dev->of_node;
+-	struct device_node *child_np;
+-	struct phy_provider *provider;
+-	struct rockchip_u3phy *u3phy;
+-	const struct rockchip_u3phy_cfg *phy_cfgs;
+-	const struct of_device_id *match;
+-	unsigned int reg[2];
+-	int index, ret;
+-
+-	match = of_match_device(dev->driver->of_match_table, dev);
+-	if (!match || !match->data) {
+-		dev_err(dev, "phy-cfgs are not assigned!\n");
+-		return -EINVAL;
+-	}
+-
+-	u3phy = devm_kzalloc(dev, sizeof(*u3phy), GFP_KERNEL);
+-	if (!u3phy)
+-		return -ENOMEM;
+-
+-	u3phy->u3phy_grf =
+-		syscon_regmap_lookup_by_phandle(np, "rockchip,u3phygrf");
+-	if (IS_ERR(u3phy->u3phy_grf))
+-		return PTR_ERR(u3phy->u3phy_grf);
+-
+-	u3phy->grf =
+-		syscon_regmap_lookup_by_phandle(np, "rockchip,grf");
+-	if (IS_ERR(u3phy->grf)) {
+-		dev_err(dev, "Missing rockchip,grf property\n");
+-		return PTR_ERR(u3phy->grf);
+-	}
+-
+-	if (of_property_read_u32_array(np, "reg", reg, 2)) {
+-		dev_err(dev, "the reg property is not assigned in %s node\n",
+-			np->name);
+-		return -EINVAL;
+-	}
+-
+-	u3phy->dev = dev;
+-	u3phy->vbus_enabled = false;
+-	phy_cfgs = match->data;
+-	platform_set_drvdata(pdev, u3phy);
+-
+-	/* find out a proper config which can be matched with dt. */
+-	index = 0;
+-	while (phy_cfgs[index].reg) {
+-		if (phy_cfgs[index].reg == reg[1]) {
+-			u3phy->cfgs = &phy_cfgs[index];
+-			break;
+-		}
+-
+-		++index;
+-	}
+-
+-	if (!u3phy->cfgs) {
+-		dev_err(dev, "no phy-cfgs can be matched with %s node\n",
+-			np->name);
+-		return -EINVAL;
+-	}
+-
+-	ret = rockchip_u3phy_parse_dt(u3phy, pdev);
+-	if (ret) {
+-		dev_err(dev, "parse dt failed, ret(%d)\n", ret);
+-		return ret;
+-	}
+-
+-	ret = rockchip_u3phy_clk_enable(u3phy);
+-	if (ret) {
+-		dev_err(dev, "clk enable failed, ret(%d)\n", ret);
+-		return ret;
+-	}
+-
+-	rockchip_u3phy_rest_assert(u3phy);
+-	rockchip_u3phy_rest_deassert(u3phy, U3PHY_APB_RST | U3PHY_POR_RST);
+-
+-	index = 0;
+-	for_each_available_child_of_node(np, child_np) {
+-		struct rockchip_u3phy_port *u3phy_port = &u3phy->ports[index];
+-
+-		u3phy_port->index = index;
+-		ret = rockchip_u3phy_port_init(u3phy, u3phy_port, child_np);
+-		if (ret) {
+-			dev_err(dev, "u3phy port init failed,ret(%d)\n", ret);
+-			goto put_child;
+-		}
+-
+-		/* to prevent out of boundary */
+-		if (++index >= U3PHY_PORT_NUM)
+-			break;
+-	}
+-
+-	provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
+-	if (IS_ERR(provider)) {
+-		ret = PTR_ERR(provider);
+-		goto put_child;
+-	}
+-
+-	rockchip_u3phy_rest_deassert(u3phy, U3PHY_MAC_RST);
+-	rockchip_u3phy_clk_disable(u3phy);
+-
+-	u3phy->usb_phy.dev = dev;
+-	u3phy->usb_phy.init = rockchip_u3phy_on_init;
+-	u3phy->usb_phy.shutdown = rockchip_u3phy_on_shutdown;
+-	u3phy->usb_phy.notify_disconnect = rockchip_u3phy_on_disconnect;
+-	usb_add_phy(&u3phy->usb_phy, USB_PHY_TYPE_USB3);
+-	ATOMIC_INIT_NOTIFIER_HEAD(&u3phy->usb_phy.notifier);
+-
+-	rockchip_u3phy_debugfs_init(u3phy);
+-
+-	dev_info(dev, "Rockchip u3phy initialized successfully\n");
+-	return 0;
+-
+-put_child:
+-	of_node_put(child_np);
+-	return ret;
+-}
+-
+ static int rk3328_u3phy_pipe_power(struct rockchip_u3phy *u3phy,
+ 				   struct rockchip_u3phy_port *u3phy_port,
+ 				   bool on)
+@@ -1099,6 +980,125 @@ static const struct of_device_id rockchi
+ };
+ MODULE_DEVICE_TABLE(of, rockchip_u3phy_dt_match);
+ 
++static int rockchip_u3phy_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct device_node *np = dev->of_node;
++	struct device_node *child_np;
++	struct phy_provider *provider;
++	struct rockchip_u3phy *u3phy;
++	const struct rockchip_u3phy_cfg *phy_cfgs;
++	const struct of_device_id *match;
++	unsigned int reg[2];
++	int index, ret;
++
++	match = of_match_node(rockchip_u3phy_dt_match, np);
++	if (!match || !match->data) {
++		dev_err(dev, "phy-cfgs are not assigned!\n");
++		return -EINVAL;
++	}
++
++	u3phy = devm_kzalloc(dev, sizeof(*u3phy), GFP_KERNEL);
++	if (!u3phy)
++		return -ENOMEM;
++
++	u3phy->u3phy_grf =
++		syscon_regmap_lookup_by_phandle(np, "rockchip,u3phygrf");
++	if (IS_ERR(u3phy->u3phy_grf))
++		return PTR_ERR(u3phy->u3phy_grf);
++
++	u3phy->grf =
++		syscon_regmap_lookup_by_phandle(np, "rockchip,grf");
++	if (IS_ERR(u3phy->grf)) {
++		dev_err(dev, "Missing rockchip,grf property\n");
++		return PTR_ERR(u3phy->grf);
++	}
++
++	if (of_property_read_u32_array(np, "reg", reg, 2)) {
++		dev_err(dev, "the reg property is not assigned in %s node\n",
++			np->name);
++		return -EINVAL;
++	}
++
++	u3phy->dev = dev;
++	u3phy->vbus_enabled = false;
++	phy_cfgs = match->data;
++	platform_set_drvdata(pdev, u3phy);
++
++	/* find out a proper config which can be matched with dt. */
++	index = 0;
++	while (phy_cfgs[index].reg) {
++		if (phy_cfgs[index].reg == reg[1]) {
++			u3phy->cfgs = &phy_cfgs[index];
++			break;
++		}
++
++		++index;
++	}
++
++	if (!u3phy->cfgs) {
++		dev_err(dev, "no phy-cfgs can be matched with %s node\n",
++			np->name);
++		return -EINVAL;
++	}
++
++	ret = rockchip_u3phy_parse_dt(u3phy, pdev);
++	if (ret) {
++		dev_err(dev, "parse dt failed, ret(%d)\n", ret);
++		return ret;
++	}
++
++	ret = rockchip_u3phy_clk_enable(u3phy);
++	if (ret) {
++		dev_err(dev, "clk enable failed, ret(%d)\n", ret);
++		return ret;
++	}
++
++	rockchip_u3phy_rest_assert(u3phy);
++	rockchip_u3phy_rest_deassert(u3phy, U3PHY_APB_RST | U3PHY_POR_RST);
++
++	index = 0;
++	for_each_available_child_of_node(np, child_np) {
++		struct rockchip_u3phy_port *u3phy_port = &u3phy->ports[index];
++
++		u3phy_port->index = index;
++		ret = rockchip_u3phy_port_init(u3phy, u3phy_port, child_np);
++		if (ret) {
++			dev_err(dev, "u3phy port init failed,ret(%d)\n", ret);
++			goto put_child;
++		}
++
++		/* to prevent out of boundary */
++		if (++index >= U3PHY_PORT_NUM)
++			break;
++	}
++
++	provider = devm_of_phy_provider_register(dev, of_phy_simple_xlate);
++	if (IS_ERR(provider)) {
++		ret = PTR_ERR(provider);
++		goto put_child;
++	}
++
++	rockchip_u3phy_rest_deassert(u3phy, U3PHY_MAC_RST);
++	rockchip_u3phy_clk_disable(u3phy);
++
++	u3phy->usb_phy.dev = dev;
++	u3phy->usb_phy.init = rockchip_u3phy_on_init;
++	u3phy->usb_phy.shutdown = rockchip_u3phy_on_shutdown;
++	u3phy->usb_phy.notify_disconnect = rockchip_u3phy_on_disconnect;
++	usb_add_phy(&u3phy->usb_phy, USB_PHY_TYPE_USB3);
++	ATOMIC_INIT_NOTIFIER_HEAD(&u3phy->usb_phy.notifier);
++
++	rockchip_u3phy_debugfs_init(u3phy);
++
++	dev_info(dev, "Rockchip u3phy initialized successfully\n");
++	return 0;
++
++put_child:
++	of_node_put(child_np);
++	return ret;
++}
++
+ static struct platform_driver rockchip_u3phy_driver = {
+ 	.probe		= rockchip_u3phy_probe,
+ 	.driver		= {

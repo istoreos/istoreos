@@ -11,7 +11,15 @@ Subject: [PATCH] rockchip-iommu: export APIs
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -115,6 +115,7 @@ struct rk_iommu {
+@@ -25,6 +25,7 @@
+ #include <linux/pm_runtime.h>
+ #include <linux/slab.h>
+ #include <linux/spinlock.h>
++#include <soc/rockchip/rockchip_iommu.h>
+ 
+ #include "iommu-pages.h"
+ 
+@@ -115,6 +116,7 @@ struct rk_iommu {
  	struct iommu_device iommu;
  	struct list_head node; /* entry in rk_iommu_domain.iommus */
  	struct iommu_domain *domain; /* domain to which iommu is attached */
@@ -19,7 +27,7 @@ Subject: [PATCH] rockchip-iommu: export APIs
  };
  
  struct rk_iommudata {
-@@ -920,7 +921,23 @@ static void rk_iommu_disable(struct rk_i
+@@ -920,7 +922,23 @@ static void rk_iommu_disable(struct rk_i
  	}
  	rk_iommu_disable_stall(iommu);
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -43,7 +51,7 @@ Subject: [PATCH] rockchip-iommu: export APIs
  
  /* Must be called with iommu powered on and attached */
  static int rk_iommu_enable(struct rk_iommu *iommu)
-@@ -954,8 +971,58 @@ out_disable_stall:
+@@ -954,8 +972,58 @@ out_disable_stall:
  	rk_iommu_disable_stall(iommu);
  out_disable_clocks:
  	clk_bulk_disable(iommu->num_clocks, iommu->clocks);
@@ -102,7 +110,7 @@ Subject: [PATCH] rockchip-iommu: export APIs
  
  static int rk_iommu_identity_attach(struct iommu_domain *identity_domain,
  				    struct device *dev)
-@@ -1161,6 +1228,37 @@ static int rk_iommu_of_xlate(struct devi
+@@ -1161,6 +1229,37 @@ static int rk_iommu_of_xlate(struct devi
  	return 0;
  }
  

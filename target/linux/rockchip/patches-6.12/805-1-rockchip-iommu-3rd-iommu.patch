@@ -18,15 +18,15 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
 
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -25,6 +25,7 @@
- #include <linux/pm_runtime.h>
+@@ -26,6 +26,7 @@
  #include <linux/slab.h>
  #include <linux/spinlock.h>
+ #include <soc/rockchip/rockchip_iommu.h>
 +#include "rockchip_iommu.h"
  
  #include "iommu-pages.h"
  
-@@ -87,7 +88,8 @@ struct rk_iommu_domain {
+@@ -88,7 +89,8 @@ struct rk_iommu_domain {
  	dma_addr_t dt_dma;
  	spinlock_t iommus_lock; /* lock for iommus list */
  	spinlock_t dt_lock; /* lock for modifying page directory table */
@@ -36,7 +36,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	struct iommu_domain domain;
  };
  
-@@ -115,6 +117,7 @@ struct rk_iommu {
+@@ -116,6 +118,7 @@ struct rk_iommu {
  	struct iommu_device iommu;
  	struct list_head node; /* entry in rk_iommu_domain.iommus */
  	struct iommu_domain *domain; /* domain to which iommu is attached */
@@ -44,7 +44,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	bool iommu_enabled;
  };
  
-@@ -657,6 +660,10 @@ static phys_addr_t rk_iommu_iova_to_phys
+@@ -658,6 +661,10 @@ static phys_addr_t rk_iommu_iova_to_phys
  	u32 dte, pte;
  	u32 *page_table;
  
@@ -55,7 +55,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	dte = rk_domain->dt[rk_iova_dte_index(iova)];
-@@ -829,6 +836,10 @@ static int rk_iommu_map(struct iommu_dom
+@@ -830,6 +837,10 @@ static int rk_iommu_map(struct iommu_dom
  	u32 dte_index, pte_index;
  	int ret;
  
@@ -66,7 +66,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	/*
-@@ -870,6 +881,10 @@ static size_t rk_iommu_unmap(struct iomm
+@@ -871,6 +882,10 @@ static size_t rk_iommu_unmap(struct iomm
  	u32 *pte_addr;
  	size_t unmap_size;
  
@@ -77,7 +77,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	spin_lock_irqsave(&rk_domain->dt_lock, flags);
  
  	/*
-@@ -928,11 +943,18 @@ static void rk_iommu_disable(struct rk_i
+@@ -929,11 +944,18 @@ static void rk_iommu_disable(struct rk_i
  int rockchip_iommu_disable(struct device *dev)
  {
  	struct rk_iommu *iommu;
@@ -96,7 +96,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	rk_iommu_disable(iommu);
  
  	return 0;
-@@ -981,11 +1003,18 @@ out_disable_clocks:
+@@ -982,11 +1004,18 @@ out_disable_clocks:
  int rockchip_iommu_enable(struct device *dev)
  {
  	struct rk_iommu *iommu;
@@ -115,7 +115,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	return rk_iommu_enable(iommu);
  }
  EXPORT_SYMBOL(rockchip_iommu_enable);
-@@ -1085,6 +1114,20 @@ static int rk_iommu_attach_device(struct
+@@ -1086,6 +1115,20 @@ static int rk_iommu_attach_device(struct
  	if (!iommu)
  		return 0;
  
@@ -136,7 +136,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	dev_dbg(dev, "Attaching to iommu domain\n");
  
  	/* iommu already attached */
-@@ -1164,6 +1207,9 @@ static void rk_iommu_domain_free(struct
+@@ -1165,6 +1208,9 @@ static void rk_iommu_domain_free(struct
  	struct rk_iommu_domain *rk_domain = to_rk_domain(domain);
  	int i;
  
@@ -146,7 +146,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	WARN_ON(!list_empty(&rk_domain->iommus));
  
  	for (i = 0; i < NUM_DT_ENTRIES; i++) {
-@@ -1267,6 +1313,7 @@ static const struct iommu_ops rk_iommu_o
+@@ -1268,6 +1314,7 @@ static const struct iommu_ops rk_iommu_o
  	.device_group = generic_single_device_group,
  	.pgsize_bitmap = RK_IOMMU_PGSIZE_BITMAP,
  	.of_xlate = rk_iommu_of_xlate,
@@ -154,7 +154,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	.default_domain_ops = &(const struct iommu_domain_ops) {
  		.attach_dev	= rk_iommu_attach_device,
  		.map_pages	= rk_iommu_map,
-@@ -1306,6 +1353,11 @@ static int rk_iommu_probe(struct platfor
+@@ -1307,6 +1354,11 @@ static int rk_iommu_probe(struct platfor
  	if (WARN_ON(rk_ops != ops))
  		return -EINVAL;
  
@@ -166,7 +166,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	iommu->bases = devm_kcalloc(dev, num_res, sizeof(*iommu->bases),
  				    GFP_KERNEL);
  	if (!iommu->bases)
-@@ -1354,6 +1406,7 @@ static int rk_iommu_probe(struct platfor
+@@ -1355,6 +1407,7 @@ static int rk_iommu_probe(struct platfor
  	if (err)
  		return err;
  
@@ -174,7 +174,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	err = iommu_device_sysfs_add(&iommu->iommu, dev, NULL, dev_name(dev));
  	if (err)
  		goto err_unprepare_clocks;
-@@ -1370,6 +1423,9 @@ static int rk_iommu_probe(struct platfor
+@@ -1371,6 +1424,9 @@ static int rk_iommu_probe(struct platfor
  	if (!dma_dev)
  		dma_dev = &pdev->dev;
  
@@ -184,7 +184,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	pm_runtime_enable(dev);
  
  	for (i = 0; i < iommu->num_irq; i++) {
-@@ -1386,6 +1442,13 @@ static int rk_iommu_probe(struct platfor
+@@ -1387,6 +1443,13 @@ static int rk_iommu_probe(struct platfor
  			goto err_pm_disable;
  	}
  
@@ -198,7 +198,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	dma_set_mask_and_coherent(dev, rk_ops->dma_bit_mask);
  
  	return 0;
-@@ -1402,6 +1465,13 @@ static void rk_iommu_shutdown(struct pla
+@@ -1403,6 +1466,13 @@ static void rk_iommu_shutdown(struct pla
  {
  	struct rk_iommu *iommu = platform_get_drvdata(pdev);
  	int i;
@@ -212,7 +212,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  
  	for (i = 0; i < iommu->num_irq; i++) {
  		int irq = platform_get_irq(pdev, i);
-@@ -1415,10 +1485,15 @@ static void rk_iommu_shutdown(struct pla
+@@ -1416,10 +1486,15 @@ static void rk_iommu_shutdown(struct pla
  static int __maybe_unused rk_iommu_suspend(struct device *dev)
  {
  	struct rk_iommu *iommu = dev_get_drvdata(dev);
@@ -228,7 +228,7 @@ Signed-off-by: Simon Xue <xxm@rock-chips.com>
  	rk_iommu_disable(iommu);
  	return 0;
  }
-@@ -1426,10 +1501,15 @@ static int __maybe_unused rk_iommu_suspe
+@@ -1427,10 +1502,15 @@ static int __maybe_unused rk_iommu_suspe
  static int __maybe_unused rk_iommu_resume(struct device *dev)
  {
  	struct rk_iommu *iommu = dev_get_drvdata(dev);

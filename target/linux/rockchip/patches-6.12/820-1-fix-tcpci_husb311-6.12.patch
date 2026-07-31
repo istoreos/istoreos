@@ -1,0 +1,28 @@
+--- a/drivers/usb/typec/tcpm/tcpci_husb311.c
++++ b/drivers/usb/typec/tcpm/tcpci_husb311.c
+@@ -188,21 +188,19 @@ static irqreturn_t husb311_irq(int irq,
+ 	if (status & TCPC_ALERT_CC_STATUS) {
+ 		husb311_read8(chip, TCPC_ROLE_CTRL, &role_ctrl);
+ 		husb311_read8(chip, TCPC_CC_STATUS, &reg);
+-		cc1 = tcpci_to_typec_cc((reg >> TCPC_CC_STATUS_CC1_SHIFT) &
+-					 TCPC_CC_STATUS_CC1_MASK,
++		cc1 = tcpci_to_typec_cc(FIELD_GET(TCPC_CC_STATUS_CC1, reg),
+ 					 reg & TCPC_CC_STATUS_TERM ||
+ 					 tcpc_presenting_rd(role_ctrl, CC1));
+-		cc2 = tcpci_to_typec_cc((reg >> TCPC_CC_STATUS_CC2_SHIFT) &
+-					 TCPC_CC_STATUS_CC2_MASK,
++		cc2 = tcpci_to_typec_cc(FIELD_GET(TCPC_CC_STATUS_CC2, reg),
+ 					 reg & TCPC_CC_STATUS_TERM ||
+ 					 tcpc_presenting_rd(role_ctrl, CC2));
+ 
+ 		dev_dbg(chip->dev, "CC1 %u, CC2 %u", cc1, cc2);
+ 		if (cc1 == TYPEC_CC_RP_DEF) {
+-			role_ctrl |= TCPC_ROLE_CTRL_CC_OPEN << TCPC_ROLE_CTRL_CC2_SHIFT;
++			role_ctrl |= FIELD_PREP(TCPC_ROLE_CTRL_CC2, TCPC_ROLE_CTRL_CC_OPEN);
+ 			husb311_write8(chip, TCPC_ROLE_CTRL, role_ctrl);
+ 		} else if (cc2 == TYPEC_CC_RP_DEF) {
+-			role_ctrl |= TCPC_ROLE_CTRL_CC_OPEN << TCPC_ROLE_CTRL_CC1_SHIFT;
++			role_ctrl |= FIELD_PREP(TCPC_ROLE_CTRL_CC1, TCPC_ROLE_CTRL_CC_OPEN);
+ 			husb311_write8(chip, TCPC_ROLE_CTRL, role_ctrl);
+ 		}
+ 	}

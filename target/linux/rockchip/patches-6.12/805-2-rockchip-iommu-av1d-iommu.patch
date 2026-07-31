@@ -25,7 +25,7 @@ Change-Id: Ic7cbb95b83cef361ea4d62c969d5585318ec0dac
  obj-$(CONFIG_EXYNOS_IOMMU) += exynos-iommu.o
 --- a/drivers/iommu/rockchip-iommu.c
 +++ b/drivers/iommu/rockchip-iommu.c
-@@ -1354,7 +1354,9 @@ static int rk_iommu_probe(struct platfor
+@@ -1355,7 +1355,9 @@ static int rk_iommu_probe(struct platfor
  		return -EINVAL;
  
  	if (device_property_match_string(dev, "compatible", "rockchip,iommu-av1d") >= 0) {
@@ -36,7 +36,7 @@ Change-Id: Ic7cbb95b83cef361ea4d62c969d5585318ec0dac
  		goto alloc_group;
  	}
  
-@@ -1542,6 +1544,9 @@ static const struct of_device_id rk_iomm
+@@ -1543,6 +1545,9 @@ static const struct of_device_id rk_iomm
  	{	.compatible = "rockchip,rk3568-iommu",
  		.data = &iommu_data_ops_v2,
  	},
