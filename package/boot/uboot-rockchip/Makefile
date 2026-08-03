@@ -181,6 +181,12 @@ define U-Boot/rk3528/Default
   TPL:=rk3528_ddr_1056MHz_v1.11.bin
 endef
 
+define U-Boot/easepi-rk3528
+  $(U-Boot/rk3528/Default)
+  NAME:=Easepi RK3528
+  DEFAULT:=y
+endef
+
 define U-Boot/hinlink-h28k-rk3528
   $(U-Boot/rk3528/Default)
   NAME:=HINLINK H28K
@@ -453,6 +459,7 @@ UBOOT_TARGETS := \
   rock64-rk3328 \
   rock-pi-e-rk3328 \
   rock-pi-e-v3-rk3328 \
+  easepi-rk3528 \
   hinlink-h28k-rk3528 \
   radxa-e20c-rk3528 \
   rock-2-rk3528 \
