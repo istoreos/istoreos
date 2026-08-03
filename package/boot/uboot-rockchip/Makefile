@@ -342,8 +342,7 @@ endef
 define U-Boot/generic-rk3576
   $(U-Boot/rk3576/Default)
   NAME:=Generic RK3576
-  BUILD_DEVICES:= \
-    friendlyarm_nanopi-r76s
+  DEFAULT:=y
 endef
 
 define U-Boot/rock-4d-rk3576
