@@ -1,0 +1,82 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2026 jjm2473
+ *
+ */
+
+/dts-v1/;
+
+#include <rockchip/rk3582-radxa-e52c.dts>
+#include "rk3588-rk806-single.dtsi"
+#include "rk3588s-ip.dtsi"
+#include "rk3588s-ip-supply.dtsi"
+
+/ {
+	model = "Radxa E52C";
+	compatible = "radxa,e52c", "rockchip,rk3588s";
+
+	aliases {
+		ethernet0 = &rtl8125_1;
+		ethernet1 = &rtl8125_2;
+	};
+};
+
+/* PCIe */
+#define ETH_LED_SPEED_INDICATOR
+
+&pcie2x1l2 { // pcie@fe190000
+	pcie@40 {
+		reg = <0x00400000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_2: pcie-eth@40,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+
+			// LED0 => G+ , LED1 => G- , LED2 => Y-
+#ifndef ETH_LED_SPEED_INDICATOR
+			// Option 1
+			// LED0=High active, blink on every speed act
+			// LED1=Low active, always on every speed link
+			// LED2=LED1
+			realtek,led-data = <0x1200 0x2b 0x2b 0>;
+#else
+			// Option 2
+			// LED0=High active, blink on all act, always on 10/100/2500 link
+			// LED1=Low active, always on every speed link
+			// LED2=Low active, always on 1000/2500
+			realtek,led-data = <0x1223 0x2b 0x28 0>;
+			realtek,led-feature = /bits/ 8 <0xc1>;
+#endif
+		};
+	};
+};
+
+&pcie2x1l1 { // pcie@fe180000
+	pcie@30 {
+		reg = <0x00300000 0 0 0 0>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+
+		rtl8125_1: pcie-eth@30,0 {
+			compatible = "pci10ec,8125";
+			reg = <0x000000 0 0 0 0>;
+			// LED0 => G+ , LED1 => G- , LED2 => Y-
+#ifndef ETH_LED_SPEED_INDICATOR
+			// Option 1
+			// LED0=High active, blink on every speed act
+			// LED1=Low active, always on every speed link
+			// LED2=LED1
+			realtek,led-data = <0x1200 0x2b 0x2b 0>;
+#else
+			// Option 2
+			// LED0=High active, blink on all act, always on 10/100/2500 link
+			// LED1=Low active, always on every speed link
+			// LED2=Low active, always on 1000/2500
+			realtek,led-data = <0x1223 0x2b 0x28 0>;
+			realtek,led-feature = /bits/ 8 <0xc1>;
+#endif
+		};
+	};
+};

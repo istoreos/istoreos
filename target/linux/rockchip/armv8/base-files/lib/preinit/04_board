@@ -40,4 +40,18 @@ preinit_gpio() {
 	esac
 }
 
+preinit_rebind_drivers() {
+	case $(board_name) in
+	radxa,e54c)
+		# rebind e54c hym8563 if previously bound failed
+		[ -e /sys/bus/i2c/drivers/rtc-hym8563/4-0051 ] || { echo "4-0051" > /sys/bus/i2c/drivers/rtc-hym8563/bind; }
+	;;
+	radxa,e52c)
+		# rebind e52c hym8563 if previously bound failed
+		[ -e /sys/bus/i2c/drivers/rtc-hym8563/5-0051 ] || { echo "5-0051" > /sys/bus/i2c/drivers/rtc-hym8563/bind; }
+	;;
+	esac
+}
+
 boot_hook_add preinit_main preinit_gpio
+boot_hook_add preinit_main preinit_rebind_drivers

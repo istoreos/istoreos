@@ -61,8 +61,14 @@ radxa,e20c)
 	ucidef_set_led_netdev "wan-1" "WAN-1" "eth1-1::lan" "eth1" "link_1000"
 	;;
 radxa,e52c)
-	ucidef_set_led_netdev "wan" "WAN" "green:wan" "wan"
-	ucidef_set_led_netdev "lan" "LAN" "green:lan" "lan"
+	ucidef_set_led_netdev "wan" "WAN" "green:wan" "eth0"
+	ucidef_set_led_netdev "lan" "LAN" "green:lan" "eth1"
+	;;
+radxa,e54c)
+	ucidef_set_led_switch "wan" "wan" "green:wan" "switch0" "0x8"
+	ucidef_set_led_switch "lan1" "lan1" "green:lan:1" "switch0" "0x4"
+	ucidef_set_led_switch "lan2" "lan2" "green:lan:2" "switch0" "0x2"
+	ucidef_set_led_switch "lan3" "lan3" "green:lan:3" "switch0" "0x1"
 	;;
 esac
 
