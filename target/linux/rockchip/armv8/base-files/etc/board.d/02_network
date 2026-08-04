@@ -18,6 +18,7 @@ rockchip_setup_interfaces()
 	friendlyarm,nanopi-r4se|\
 	friendlyarm,nanopi-r4s-enterprise|\
 	friendlyarm,nanopi-r6c|\
+	friendlyarm,nanopi-r76s|\
 	hinlink,opc-h66k|\
 	hinlink,h88k-v2|\
 	hinlink,h88k|\
@@ -120,7 +121,6 @@ rockchip_setup_macs()
 	friendlyarm,nanopc-t6|\
 	friendlyarm,nanopi-r2c|\
 	friendlyarm,nanopi-r2s|\
-	friendlyarm,nanopi-r76s|\
 	hinlink,h28k|\
 	linkease,easepi-r1|\
 	lunzn,fastrhino-r66s|\

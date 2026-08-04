@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include <rockchip/rk3576-nanopi-r76s.dts>
+#include "rk3576-patch.dtsi"
+#include "rk3576-ip.dtsi"
+#include "rk3576-ip-rk806.dtsi"
+
+/ {
+	eth_order = "0001:21:00.0,0000:01:00.0";
+};

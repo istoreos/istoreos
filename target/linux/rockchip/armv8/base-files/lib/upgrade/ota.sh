@@ -6,7 +6,8 @@ export_ota_url() {
 	case "$board" in
 	friendlyarm,nanopi-r3s|\
 	friendlyarm,nanopi-r4s|\
-	friendlyarm,nanopi-r4se)
+	friendlyarm,nanopi-r4se|\
+	friendlyarm,nanopi-r76s)
 		export -n OTA_URL_BASE="https://fw0.koolcenter.com/iStoreOS/${board##*-}"
 		;;
 	hlink,h28k|\
