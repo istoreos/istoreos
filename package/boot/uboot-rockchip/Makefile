@@ -383,7 +383,7 @@ endef
 define U-Boot/easepi-rk3588-uart2-115200
   $(U-Boot/rk3588/Default)
   NAME:=Easepi RK3588 UART2 115200
-  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3588-uart2-115200
+  DEPENDS:=+PACKAGE_u-boot-$(1):trusted-firmware-a-rk3588-tpl-uart2-115200
   TPL:=rk3588_ddr_lp4_2112MHz_lp5_2400MHz_uart2_115200_v1.19.bin
   UBOOT_CONFIG:=easepi-rk3588-uart2-115200
   BUILD_DEVICES:= \
