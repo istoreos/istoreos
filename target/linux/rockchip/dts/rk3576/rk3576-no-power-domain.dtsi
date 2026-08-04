@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device tree override to remove power-domains properties
+ * Auto-generated on 2026-08-04 05:22:18 UTC
+ * Source: ${TOPDIR}/build_dir/target-aarch64_generic_musl/linux-rockchip_armv8/linux-6.12.94/arch/arm64/boot/dts/rockchip/rk3576.dtsi
+ */
+
+#define DT_RK3576_NO_POWER_DOMAINS
+
+&power {
+	status = "disabled";
+};
+
+&dsi {
+	/delete-property/ power-domains;
+};
+
+&gmac0 {
+	/delete-property/ power-domains;
+};
+
+&gmac1 {
+	/delete-property/ power-domains;
+};
+
+&gpu {
+	/delete-property/ power-domains;
+};
+
+&hdmi {
+	/delete-property/ power-domains;
+};
+
+&pcie0 {
+	/delete-property/ power-domains;
+};
+
+&pcie1 {
+	/delete-property/ power-domains;
+};
+
+&sai0 {
+	/delete-property/ power-domains;
+};
+
+&sai1 {
+	/delete-property/ power-domains;
+};
+
+&sai2 {
+	/delete-property/ power-domains;
+};
+
+&sai3 {
+	/delete-property/ power-domains;
+};
+
+&sai4 {
+	/delete-property/ power-domains;
+};
+
+&sai5 {
+	/delete-property/ power-domains;
+};
+
+&sai6 {
+	/delete-property/ power-domains;
+};
+
+&sai7 {
+	/delete-property/ power-domains;
+};
+
+&sai8 {
+	/delete-property/ power-domains;
+};
+
+&sai9 {
+	/delete-property/ power-domains;
+};
+
+&sata0 {
+	/delete-property/ power-domains;
+};
+
+&sata1 {
+	/delete-property/ power-domains;
+};
+
+&sdhci {
+	/delete-property/ power-domains;
+};
+
+&sdio {
+	/delete-property/ power-domains;
+};
+
+&sdmmc {
+	/delete-property/ power-domains;
+};
+
+&sfc0 {
+	/delete-property/ power-domains;
+};
+
+&sfc1 {
+	/delete-property/ power-domains;
+};
+
+&ufshc {
+	/delete-property/ power-domains;
+};
+
+&usb_drd0_dwc3 {
+	/delete-property/ power-domains;
+};
+
+&usb_drd1_dwc3 {
+	/delete-property/ power-domains;
+};
+
+&vop {
+	/delete-property/ power-domains;
+};
+
+&vop_mmu {
+	/delete-property/ power-domains;
+};
+

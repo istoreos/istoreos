@@ -1,0 +1,48 @@
+//#include "rk3576-no-power-domain.dtsi"
+//#include "rk3576-nvm-power-domain.dtsi"
+
+/ {
+	rockchip_system_monitor: rockchip-system-monitor {
+		compatible = "rockchip,system-monitor";
+
+		rockchip,thermal-zone = "littlecore-thermal";
+		rockchip,polling-delay = <1000>;
+		status = "disabled";
+	};
+
+	soc {
+		crypto: crypto@2a400000 {
+			compatible = "rockchip,crypto-v4";
+			reg = <0x0 0x2a400000 0x0 0x2000>;
+			interrupts = <GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru ACLK_CRYPTO_NS>, <&cru HCLK_CRYPTO_NS>,
+				<&cru CLK_PKA_CRYPTO_NS>;
+			clock-names = "aclk", "hclk", "pka";
+			assigned-clocks = <&cru ACLK_CRYPTO_NS>, <&cru CLK_PKA_CRYPTO_NS>;
+			assigned-clock-rates = <300000000>, <300000000>;
+			resets = <&cru SRST_H_CRYPTO_NS>;
+			reset-names = "crypto-rst";
+			status = "disabled";
+		};
+
+		rng: rng@2a410000 {
+			compatible = "rockchip,rk3576-rng", "rockchip,rkrng";
+			reg = <0x0 0x2a410000 0x0 0x200>;
+			interrupts = <GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru HCLK_TRNG_NS>;
+			clock-names = "hclk_trng";
+			resets = <&cru SRST_H_TRNG_NS>;
+			reset-names = "reset";
+			status = "disabled";
+		};
+
+	};
+};
+
+&crypto {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
