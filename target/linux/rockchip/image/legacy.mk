@@ -185,7 +185,7 @@ TARGET_DEVICES += lyt_t68m
 define Device/Legacy/rk3576
 $(call Device/Legacy,$(1))
   SOC := rk3576
-  UBOOT_DEVICE_NAME := easepi-rk3576
+  UBOOT_DEVICE_NAME := generic-rk3576
   BOOT_SCRIPT := rk3576
   DEVICE_PACKAGES := kmod-rga3 kmod-rk_vcodec kmod-rkgpu-bifrost kmod-rknpu kmod-iio-rockchip-saradc
 endef
