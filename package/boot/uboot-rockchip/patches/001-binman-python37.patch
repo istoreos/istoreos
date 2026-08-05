@@ -1,0 +1,18 @@
+--- a/tools/binman/control.py
++++ b/tools/binman/control.py
+@@ -9,9 +9,15 @@ from collections import OrderedDict
+ import glob
+ try:
+     import importlib.resources as importlib_resources
++    importlib_resources.files
+ except ImportError:  # pragma: no cover
+     # for Python 3.6
+     import importlib_resources
++except AttributeError:  # pragma: no cover
++    # for Python 3.7
++    import importlib_resources as importlib_resources_bp
++    setattr(importlib_resources, "files", importlib_resources_bp.files)
++    setattr(importlib_resources, "as_file", importlib_resources_bp.as_file)
+ import os
+ import re
+ 
