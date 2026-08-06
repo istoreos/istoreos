@@ -7,7 +7,6 @@
 /dts-v1/;
 
 #include <rockchip/rk3582-radxa-e52c.dts>
-#include "rk3588-rk806-single.dtsi"
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
 
