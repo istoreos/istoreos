@@ -13,6 +13,11 @@
 	model = "EasePi R1";
 	eth_order = "fe010000.ethernet,fe2a0000.ethernet,0001:*1:00.0,0000:01:00.0";
 
+	aliases {
+		ethernet2 = &pcie_eth2;
+		ethernet3 = &pcie_eth3;
+	};
+
 	chosen {
 		default-firewall = "dual";
 		power-key-factory-reset;

@@ -10,7 +10,11 @@
 	eth_order = "0000:01:00.0";
 
 	aliases {
-		ethernet0 = &pcie_eth0;
+		ethernet0 = &pcie_eth3;
+		/delete-property/ ethernet1;
+		/delete-property/ ethernet2;
+		/delete-property/ ethernet3;
+
 		mmc0 = &sdmmc0;
 		mmc1 = &sdhci;
 		mmc2 = &sdmmc2;
