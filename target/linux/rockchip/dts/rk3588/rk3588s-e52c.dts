@@ -7,6 +7,8 @@
 /dts-v1/;
 
 #include <rockchip/rk3582-radxa-e52c.dts>
+#define vdd_gpu_mem_s0 vdd_gpu_s0
+#define vdd_vdenc_mem_s0 vdd_vdenc_s0
 #include "rk3588s-ip.dtsi"
 #include "rk3588s-ip-supply.dtsi"
 
