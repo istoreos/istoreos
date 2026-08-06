@@ -270,7 +270,7 @@
 
 };
 
-&combphy_pu {
+&combphy {
 	status = "okay";
 };
 
@@ -351,11 +351,11 @@
 	status = "okay";
 };
 
-&u2phy_host {
+&usb2phy_host {
 	status = "okay";
 };
 
-&u2phy_otg {
+&usb2phy_otg {
 	status = "okay";
 };
 
@@ -450,7 +450,7 @@
 	pinctrl-0 = <&i2c6m0_xfer>;
 };
 
-&pcie2x1 {
+&pcie {
 	status = "okay";
 	reset-gpios = <&gpio4 RK_PA3 GPIO_ACTIVE_HIGH>;
 	vpcie3v3-supply = <&vcc_3v3_s3>;
