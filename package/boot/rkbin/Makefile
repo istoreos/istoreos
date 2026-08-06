@@ -137,7 +137,7 @@ $(eval $(call Trusted-Firmware-A/rk3588-tpl,$(BUILD_VARIANT)))
 
 	$(STAGING_DIR_HOST)/bin/sed 's/^lp4_freq=.*/lp4_freq=1866/' $(PKG_BUILD_DIR)/tools/ddrbin_param.txt > $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt
 	$(CP) $(PKG_BUILD_DIR)/bin/$(SRC_TPL) $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
-	$(PKG_BUILD_DIR)/tools/ddrbin_tool rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
+	$(PKG_BUILD_DIR)/tools/ddrbin_tool.py rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_lp4-1866.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
   endef
 endif
 
@@ -151,7 +151,7 @@ $(eval $(call Trusted-Firmware-A/rk3588-tpl,$(BUILD_VARIANT)))
 
 	$(STAGING_DIR_HOST)/bin/sed 's/^uart baudrate=.*/uart baudrate=115200/' $(PKG_BUILD_DIR)/tools/ddrbin_param.txt > $(PKG_BUILD_DIR)/tools/ddrbin_param_uart2-115200.txt
 	$(CP) $(PKG_BUILD_DIR)/bin/$(SRC_TPL) $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
-	$(PKG_BUILD_DIR)/tools/ddrbin_tool rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_uart2-115200.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
+	$(PKG_BUILD_DIR)/tools/ddrbin_tool.py rk3588 $(PKG_BUILD_DIR)/tools/ddrbin_param_uart2-115200.txt $(PKG_BUILD_DIR)/bin/$(MOD_TPL)
   endef
 endif
 
