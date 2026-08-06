@@ -4,11 +4,10 @@
  */
 
 &otp {
-	npu_leakage: npu-leakage@1c {
-		reg = <0x1c 0x1>;
-	};
-	npu_opp_info: npu-opp-info@42 {
-		reg = <0x42 0x6>;
+	nvmem-layout {
+		npu_opp_info: npu-opp-info@42 {
+			reg = <0x42 0x6>;
+		};
 	};
 };
 

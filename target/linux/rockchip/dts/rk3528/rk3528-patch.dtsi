@@ -51,37 +51,39 @@
 };
 
 &otp {
-	cpu_mbist_vmin: cpu-mbist-vmin@9 {
-		reg = <0x09 0x1>;
-		bits = <0 3>;
-	};
-	gpu_mbist_vmin: gpu-mbist-vmin@9 {
-		reg = <0x09 0x1>;
-		bits = <3 2>;
-	};
-	logic_mbist_vmin: logic-mbist-vmin@9 {
-		reg = <0x09 0x1>;
-		bits = <5 2>;
-	};
-	test_version: test-version@29 {
-		reg = <0x29 0x1>;
-	};
-	macphy_bgs: macphy-bgs@2d {
-		reg = <0x2d 0x1>;
-	};
-	macphy_txlevel: macphy-txlevel@2e {
-		reg = <0x2e 0x2>;
-	};
-	vdac_out_current: vdac-out-current@30 {
-		reg = <0x30 0x1>;
-	};
-	cpu_opp_info: cpu-opp-info@32 {
-		reg = <0x32 0x6>;
-	};
-	gpu_opp_info: gpu-opp-info@38 {
-		reg = <0x38 0x6>;
-	};
-	dmc_opp_info: dmc-opp-info@3e {
-		reg = <0x3e 0x6>;
+	nvmem-layout {
+		cpu_mbist_vmin: cpu-mbist-vmin@9 {
+			reg = <0x09 0x1>;
+			bits = <0 3>;
+		};
+		gpu_mbist_vmin: gpu-mbist-vmin@9 {
+			reg = <0x09 0x1>;
+			bits = <3 2>;
+		};
+		logic_mbist_vmin: logic-mbist-vmin@9 {
+			reg = <0x09 0x1>;
+			bits = <5 2>;
+		};
+		test_version: test-version@29 {
+			reg = <0x29 0x1>;
+		};
+		macphy_bgs: macphy-bgs@2d {
+			reg = <0x2d 0x1>;
+		};
+		macphy_txlevel: macphy-txlevel@2e {
+			reg = <0x2e 0x2>;
+		};
+		vdac_out_current: vdac-out-current@30 {
+			reg = <0x30 0x1>;
+		};
+		cpu_opp_info: cpu-opp-info@32 {
+			reg = <0x32 0x6>;
+		};
+		gpu_opp_info: gpu-opp-info@38 {
+			reg = <0x38 0x6>;
+		};
+		dmc_opp_info: dmc-opp-info@3e {
+			reg = <0x3e 0x6>;
+		};
 	};
 };
