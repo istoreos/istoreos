@@ -6,21 +6,21 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=aic8800
-PKG_VERSION:=2025-07-02
-PKG_RELEASE:=10
+PKG_RELEASE:=1
 
-PKG_SOURCE_VERSION:=4e9cd23d44c7fedb845bbeaaa53675e90aed57e7
-PKG_HASH:=491f04535ba3cf74f8352db23c333612120f0a3a41865388348fbfa38fded3db
+PKG_SOURCE_DATE:=2026-03-10
+PKG_SOURCE_VERSION:=89f865b80f5f2ba6c0711c560e1d0191e87a1bf0
+PKG_HASH:=a1987f531b863f48167e2f7555584f1ef8fc3bc96fc685bb8ae2bc223c714011
 PKG_SOURCE_URL_FILE:=$(PKG_SOURCE_VERSION).tar.gz
-PKG_SOURCE:=aic8800-$(PKG_VERSION).tar.gz
+PKG_SOURCE:=aic8800-$(PKG_SOURCE_DATE).tar.gz
 PKG_SOURCE_URL:=https://github.com/radxa-pkg/aic8800/archive/
 
 ifeq ($(BUILD_VARIANT),sdio)
 MAKE_PATH:=src/SDIO/driver_fw/driver/aic8800
-PATCH_DIR:=$(CURDIR)/patches-sdio
+FW_PATH="/lib/firmware/aic8800/sdio"
 else
 MAKE_PATH:=src/USB/driver_fw/drivers/aic8800
-PATCH_DIR:=$(CURDIR)/patches-usb
+FW_PATH="/lib/firmware/aic8800/usb"
 endif
 
 PKG_EXTMOD_SUBDIRS:=$(MAKE_PATH)
@@ -50,13 +50,19 @@ define KernelPackage/aic8800u
 	+@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT
   FILES:= \
 	$(PKG_BUILD_DIR)/$(MAKE_PATH)/aic_load_fw/aic_load_fw.ko \
-	$(PKG_BUILD_DIR)/$(MAKE_PATH)/aic8800_fdrv/aic8800_usb.ko
-  AUTOLOAD:=$(call AutoProbe,aic_load_fw aic8800_usb)
+	$(PKG_BUILD_DIR)/$(MAKE_PATH)/aic8800_fdrv/aic8800DC_fdrv.ko
+  AUTOLOAD:=$(call AutoProbe,aic_load_fw aic8800DC_fdrv)
   VARIANT:=usb
 endef
 
 NOSTDINC_FLAGS := \
 	$(KERNEL_NOSTDINC_FLAGS) \
+	-Wno-error=missing-prototypes \
+	-Wno-error=expansion-to-defined \
+	-Wno-error=attribute-warning \
+	-Wno-error=unused-function \
+	-Wno-error=unused-variable \
+	-Wno-error=unused-label \
 	-I$(PKG_BUILD_DIR) \
 	-I$(STAGING_DIR)/usr/include/mac80211-backport/uapi \
 	-I$(STAGING_DIR)/usr/include/mac80211-backport \
@@ -72,17 +78,18 @@ define Build/Compile
 		EXTRA_CFLAGS="$(EXTRA_CFLAGS)" \
 		$(KERNEL_MAKE_FLAGS) \
 		M="$(PKG_BUILD_DIR)/$(MAKE_PATH)/" \
+		CONFIG_AIC_FW_PATH="$(FW_PATH)" \
 		modules
 endef
 
 define KernelPackage/aic8800s/install
-	$(INSTALL_DIR) $(1)/lib/firmware/aic8800
-	$(CP) $(PKG_BUILD_DIR)/src/SDIO/driver_fw/fw/aic8800D80/* $(1)/lib/firmware/aic8800
+	$(INSTALL_DIR) $(1)/lib/firmware/aic8800/sdio
+	$(CP) $(PKG_BUILD_DIR)/src/SDIO/driver_fw/fw/aic8800D80/* $(1)/lib/firmware/aic8800/sdio
 endef
 
 define KernelPackage/aic8800u/install
-	$(INSTALL_DIR) $(1)/lib/firmware
-	$(CP) $(PKG_BUILD_DIR)/src/USB/driver_fw/fw/* $(1)/lib/firmware
+	$(INSTALL_DIR) $(1)/lib/firmware/aic8800/usb
+	$(CP) $(PKG_BUILD_DIR)/src/USB/driver_fw/fw/*/* $(1)/lib/firmware/aic8800/usb
 endef
 
 $(eval $(call KernelPackage,aic8800s))
