@@ -143,23 +143,18 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 istoreos_pre_upgrade() {
 	if [ -n "$UPGRADE_BACKUP" ]; then
 		local running_ver=$(grep 'DISTRIB_RELEASE=' /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | sed -E "s/.*='(.+)'.*/\1/")
-		touch /usr/lib/opkg/.upgrading 2>/dev/null && sync /
+		touch /etc/uci-defaults/.upgrading 2>/dev/null && sync /
 		# reset rom uuid in ext_overlay
-		if [ -e /ext_overlay/etc ]; then
-			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] || {
-				rm -f /ext_overlay/upper/usr/lib/opkg/.upgrading
-				mkdir -p /ext_overlay/upper/usr/lib/opkg
-				touch /ext_overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
-			}
+		if [ -f /ext_overlay/upper/etc/uci-defaults/.upgrading ]; then
 			echo "$running_ver" >/ext_overlay/.upgrading
-			[ -f /ext_overlay/upper/usr/lib/opkg/.upgrading ] && rm -f /ext_overlay/etc/.extroot-uuid
+			rm -f /ext_overlay/etc/.extroot-uuid
 			sync /ext_overlay
 		fi
 		echo "$running_ver" >/overlay/.upgrading
-		[ -f /overlay/upper/usr/lib/opkg/.upgrading ] || {
-			rm -f /overlay/upper/usr/lib/opkg/.upgrading
-			mkdir -p /overlay/upper/usr/lib/opkg
-			touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+		[ -f /overlay/upper/etc/uci-defaults/.upgrading ] || {
+			rm -f /overlay/upper/etc/uci-defaults/.upgrading
+			mkdir -p /overlay/upper/etc/uci-defaults
+			touch /overlay/upper/etc/uci-defaults/.upgrading 2>/dev/null
 		}
 		sync /overlay
 	fi
