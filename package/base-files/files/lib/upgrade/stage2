@@ -151,6 +151,10 @@ istoreos_pre_upgrade() {
 			sync /ext_overlay
 		fi
 		echo "$running_ver" >/overlay/.upgrading
+		# Snapshot the world of the ROM being replaced. After the flash /rom
+		# holds the new one, and the difference against this snapshot is what
+		# the user installed on top.
+		[ -f /rom/etc/apk/world ] && cp /rom/etc/apk/world /overlay/.apk-world-rom
 		[ -f /overlay/upper/etc/uci-defaults/.upgrading ] || {
 			rm -f /overlay/upper/etc/uci-defaults/.upgrading
 			mkdir -p /overlay/upper/etc/uci-defaults
