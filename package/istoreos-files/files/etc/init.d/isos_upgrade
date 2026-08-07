@@ -95,6 +95,22 @@ upgrade_opkg_distfeeds() {
 	sed -E 's# https?://.*/releases/#'"$userrepo"'#g' /rom/etc/opkg/distfeeds.conf >> /etc/opkg/distfeeds.conf
 }
 
+upgrade_apk_distfeeds() {
+	local feeds=/etc/apk/repositories.d/distfeeds.list
+	local newrelease=$(grep -m1 '/base/packages\.adb$' /rom$feeds | grep -Eo '/releases/[^/]+/')
+	local oldrelease=$(grep -m1 '/base/packages\.adb$' $feeds | grep -Eo '/releases/[^/]+/')
+	[ -z "$newrelease" -o -z "$oldrelease" ] && return 0
+	[ "$newrelease" = "$oldrelease" ] && return 0
+
+	local romrepo="$(grep -m1 '/base/packages\.adb$' /rom$feeds | grep -Eo '^https?://.*/releases/')"
+	local userrepo="$(grep -m1 '/base/packages\.adb$' $feeds | grep -Eo '^https?://.*/releases/')"
+	if [ -z "$romrepo" -o -z "$userrepo" ]; then
+		cat /rom$feeds > $feeds
+		return 0
+	fi
+	sed -E 's#^https?://.*/releases/#'"$userrepo"'#g' /rom$feeds > $feeds
+}
+
 boot() {
 	[ -f /.recovery_mode ] && return 0
 
@@ -110,6 +126,9 @@ boot() {
 		}
 		is_overlayed /etc/opkg/distfeeds.conf && {
 			upgrade_opkg_distfeeds
+		}
+		is_overlayed /etc/apk/repositories.d/distfeeds.list && {
+			upgrade_apk_distfeeds
 		}
 	fi
 }
