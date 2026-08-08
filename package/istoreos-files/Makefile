@@ -57,7 +57,7 @@ HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 
 [ -n "$${IPKG_INSTROOT}" ] && {
 	$${HOST_SED} 's,^src/gz istoreos_,src/gz openwrt_,g' -e '/^src\/gz openwrt_\(core\|base\|kmods\|luci\|packages\|routing\|telephony\) /!d' "$${IPKG_INSTROOT}/etc/opkg/distfeeds.conf"
-	$${HOST_SED} '\#/(base|kmods/.+|luci|packages|routing|telephony|video)/packages\.adb$$#!d' "$${IPKG_INSTROOT}/etc/apk/repositories.d/distfeeds.list"
+	$${HOST_SED} '\#/\(base\|kmods/.*\|luci\|packages\|routing\|telephony\|video\)/packages\.adb$$#!d' "$${IPKG_INSTROOT}/etc/apk/repositories.d/distfeeds.list"
 
 	$${HOST_SED} 's/"192.168.1.1"/"192.168.100.1"/' \
 		"$${IPKG_INSTROOT}/usr/lib/lua/luci/controller/admin/system.lua" \
