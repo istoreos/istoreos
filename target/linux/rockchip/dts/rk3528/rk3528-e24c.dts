@@ -107,10 +107,12 @@
 	};
 
 	rtl8367rb {
+		status = "disabled";
 		compatible = "realtek,rtl8367c", "realtek,rtl8367b";
 		cpu_port = <6>;
 		cpu-port = <6>;
 		realtek,extif1 = <1 0 1 1 1 1 1 1 2>;
+		// CPU_PORT txdelay rxdelay mode
 		realtek,extif = <6 1 0 1 1 1 1 1 1 2>;
 		mii-bus = <&mdio1>;
 		phy_id = <29>;
@@ -232,13 +234,19 @@
 
 &mdio1 {
 	switch0: switch0@29 {
-		status = "disabled";
-		compatible = "realtek,rtl8367rb", "realtek,rtl8365mb";
+		compatible = "realtek,rtl8367rb-vb", "realtek,rtl8367rb", "realtek,rtl8365mb";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		reg = <29 0>;
-		dsa,member = <1 0>;
+		reg = <29>;
 		reset = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+
+		switch_intc: interrupt-controller {
+			interrupt-parent = <&gpio1>;
+			interrupts = <RK_PC2 IRQ_TYPE_LEVEL_LOW>;
+			interrupt-controller;
+			#address-cells = <0>;
+			#interrupt-cells = <1>;
+		};
 
 		ports {
 			#address-cells = <1>;
@@ -279,12 +287,13 @@
 				local-mac-address = [00 48 54 20 00 33];
 				phy-mode = "rgmii";
 				tx-internal-delay-ps = <2000>;
-				rx-internal-delay-ps = <2000>;
+				rx-internal-delay-ps = <0>;
 
 				fixed-link {
 					speed = <1000>;
 					full-duplex;
-					pause;
+					// control frames produce many "net eth0: non-realtek ethertype 0x8808" log, so disable it
+					// pause;
 				};
 			};
 		};
@@ -293,21 +302,26 @@
 			compatible = "realtek,smi-mdio";
 			#address-cells = <1>;
 			#size-cells = <0>;
+			interrupt-parent = <&switch_intc>;
 
 			phy0: phy@0 {
 				reg = <0>;
+				interrupts = <0>;
 			};
 
 			phy1: phy@1 {
 				reg = <1>;
+				interrupts = <1>;
 			};
 
 			phy2: phy@2 {
 				reg = <2>;
+				interrupts = <2>;
 			};
 
 			phy3: phy@3 {
 				reg = <3>;
+				interrupts = <3>;
 			};
 		};
 	};
@@ -332,6 +346,9 @@
 
 	tx_delay = <0x3f>;
 	rx_delay = <0x10>;
+
+	// TSO cause rtl8367rb (with DSA driver) TX slow down to 1Mbps, so disable it
+	/delete-property/ snps,tso;
 
 	fixed-link {
 		speed = <1000>;

@@ -49,7 +49,9 @@ define Device/radxa_e24c
 $(call Device/Legacy/rk3528,$(1))
   DEVICE_VENDOR := Radxa
   DEVICE_MODEL := E24C
-  DEVICE_PACKAGES += kmod-nvme kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+  DEVICE_PACKAGES += kmod-nvme kmod-hwmon-pwmfan kmod-thermal kmod-dsa-rtl8365mb
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Network interface names have been changed
 endef
 TARGET_DEVICES += radxa_e24c
 
@@ -268,7 +270,9 @@ define Device/radxa_e54c
 $(call Device/Legacy/rk3588s,$(1))
   DEVICE_VENDOR := Radxa
   DEVICE_MODEL := E54C
-  DEVICE_PACKAGES += kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-switch-rtl8367b swconfig
+  DEVICE_PACKAGES += kmod-nvme kmod-ata-ahci-dwc kmod-hwmon-pwmfan kmod-thermal kmod-dsa-rtl8365mb
+  DEVICE_COMPAT_VERSION := 1.1
+  DEVICE_COMPAT_MESSAGE := Network interface names have been changed
 endef
 TARGET_DEVICES += radxa_e54c
 
