@@ -21,7 +21,15 @@ Signed-off-by: Mark Brown <broonie@kernel.org>
 
 --- a/drivers/regulator/fixed.c
 +++ b/drivers/regulator/fixed.c
-@@ -306,13 +306,10 @@ static int reg_fixed_voltage_probe(struc
+@@ -179,7 +179,6 @@ static int reg_fixed_voltage_probe(struc
+ 	const struct fixed_dev_type *drvtype = of_device_get_match_data(dev);
+ 	struct regulator_config cfg = { };
+ 	enum gpiod_flags gflags;
+-	int ret;
+ 
+ 	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct fixed_voltage_data),
+ 			       GFP_KERNEL);
+@@ -282,13 +281,10 @@ static int reg_fixed_voltage_probe(struc
  
  	drvdata->dev = devm_regulator_register(&pdev->dev, &drvdata->desc,
  					       &cfg);
