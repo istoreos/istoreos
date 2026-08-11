@@ -1,0 +1,28 @@
+--- a/include/linux/module.h
++++ b/include/linux/module.h
+@@ -499,6 +499,12 @@ struct module {
+ 	struct srcu_struct **srcu_struct_ptrs;
+ #endif
+ 
++#if 1
++	unsigned int btf_data_size;
++	unsigned int btf_base_data_size;
++	void *btf_data;
++	void *btf_base_data;
++#endif
+ #ifdef CONFIG_JUMP_LABEL
+ 	struct jump_entry *jump_entries;
+ 	unsigned int num_jump_entries;
+@@ -574,12 +580,6 @@ struct module {
+ 	unsigned int num_bpf_raw_events;
+ 	struct bpf_raw_event_map *bpf_raw_events;
+ #endif
+-#if 1
+-	unsigned int btf_data_size;
+-	unsigned int btf_base_data_size;
+-	void *btf_data;
+-	void *btf_base_data;
+-#endif
+ #ifdef CONFIG_TRACING
+ 	unsigned int num_trace_bprintk_fmt;
+ 	const char **trace_bprintk_fmt_start;
