@@ -1,0 +1,52 @@
+--- a/src/config.c
++++ b/src/config.c
+@@ -330,6 +330,7 @@ bool config_set_auth_token(const char* t
+ void config_set_client_opt_cfg(struct odhcp6c_opt_cfg *opt_cfg)
+ {
+ 	config_dhcp.strict_rfc7550 = opt_cfg->strict_rfc7550 != 0;
++	config_dhcp.log_syslog = opt_cfg->force_syslog != 0;
+ }
+ 
+ static int config_parse_opt_u8(const char *src, uint8_t **dst)
+--- a/src/odhcp6c.c
++++ b/src/odhcp6c.c
+@@ -212,10 +212,12 @@ static struct odhcp6c_opt opts[] = {
+ 
+ static struct odhcp6c_opt_cfg opt_cfg = {
+ 	.strict_rfc7550 = 0,
++	.force_syslog = 0,
+ };
+ 
+ static struct option opt_long[] = {
+ 	{ "strict-rfc7550", no_argument, &opt_cfg.strict_rfc7550, 1 },
++	{ "syslog", no_argument, &opt_cfg.force_syslog, 1 },
+ 	{ NULL, 0, NULL, 0 },
+ };
+ 
+@@ -551,8 +553,6 @@ int main(_o_unused int argc, char* const
+ 				close(pidfd);
+ 			}
+ 		}
+-	} else {
+-		config_dhcp->log_syslog = false;
+ 	}
+ 
+ 	if (deprecated_opt)
+@@ -910,6 +910,7 @@ static int usage(void)
+ 	"	-p <pidfile>	Set pidfile (/var/run/odhcp6c.pid)\n"
+ 	"	-d		Daemonize\n"
+ 	"	-e		Write logmessages to stderr\n"
++	"	--syslog	Write logmessages to syslog\n"
+ 	"	-l <level>	Set logging level (0-7)\n"
+ 	"	-h		Show this help\n\n";
+ 	fputs(buf, stderr);
+--- a/src/odhcp6c.h
++++ b/src/odhcp6c.h
+@@ -556,6 +556,7 @@ struct odhcp6c_opt {
+ 
+ struct odhcp6c_opt_cfg {
+ 	int strict_rfc7550;
++	int force_syslog;
+ };
+ 
+ int init_dhcpv6(const char *ifname);
