@@ -222,7 +222,7 @@ static void
 print_usage(void)
 {
 	printf("swconfig list\n");
-	printf("swconfig dev <dev> [port <port>|vlan <vlan>] (help|set <key> <value>|get <key>|load <config>|show)\n");
+	printf("swconfig dev <dev> [port <port>|vlan <vlan>|ports] (help|set <key> <value>|get <key>|load <config>|show)\n");
 	exit(1);
 }
 
@@ -311,6 +311,8 @@ int main(int argc, char **argv)
 			cmd = CMD_PORTMAP;
 		} else if (!strcmp(arg, "show")) {
 			cmd = CMD_SHOW;
+		} else if (!strcmp(arg, "ports")) {
+			cport = -2;
 		} else {
 			print_usage();
 		}
@@ -396,6 +398,8 @@ int main(int argc, char **argv)
 			show_global(dev);
 			for (i=0; i < dev->ports; i++)
 				show_port(dev, i);
+			if (cport == -2)
+				break;
 			for (i=0; i < dev->vlans; i++)
 				show_vlan(dev, i, true);
 		}
