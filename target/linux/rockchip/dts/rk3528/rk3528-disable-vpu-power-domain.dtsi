@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device tree override to remove RK3528_PD_VPU power domain (so it will always on)
+ * RK3528_PD_VPU power domain affects gpio1&3
+ * Auto-generated on 2026-08-13 13:00:31 UTC
+ * Source: arch/arm64/boot/dts/rockchip/rk3528.dtsi
+ */
+
+&power {
+	power-domain@RK3528_PD_VPU {
+		status = "disabled";
+	};
+};
+
+&combphy {
+	/delete-property/ power-domains;
+};
+
+&gmac1 {
+	/delete-property/ power-domains;
+};
+
+&gpio1 {
+	/delete-property/ power-domains;
+};
+
+&gpio3 {
+	/delete-property/ power-domains;
+};
+
+&i2c3 {
+	/delete-property/ power-domains;
+};
+
+&i2c5 {
+	/delete-property/ power-domains;
+};
+
+&i2c6 {
+	/delete-property/ power-domains;
+};
+
+&pcie {
+	/delete-property/ power-domains;
+};
+
+&saradc {
+	/delete-property/ power-domains;
+};
+
+&sdhci {
+	/delete-property/ power-domains;
+};
+
+&sdio0 {
+	/delete-property/ power-domains;
+};
+
+&sdio1 {
+	/delete-property/ power-domains;
+};
+
+&spi1 {
+	/delete-property/ power-domains;
+};
+
+&tsadc {
+	/delete-property/ power-domains;
+};
+
+&uart2 {
+	/delete-property/ power-domains;
+};
+
+&uart5 {
+	/delete-property/ power-domains;
+};
+
+&uart6 {
+	/delete-property/ power-domains;
+};
+
+&uart7 {
+	/delete-property/ power-domains;
+};
+
+&usb_host0_xhci {
+	/delete-property/ power-domains;
+};
+

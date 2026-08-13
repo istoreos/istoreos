@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Device tree override to remove RK3528_PD_RKVENC power domain (so it will always on)
+ * RK3528_PD_RKVENC power domain affects i2c0 and i2c1, which may used by PMIC
+ * Auto-generated on 2026-08-13 12:46:02 UTC
+ * Source: arch/arm64/boot/dts/rockchip/rk3528.dtsi
+ */
+
+&power {
+	power-domain@RK3528_PD_RKVENC {
+		status = "disabled";
+	};
+};
+
+&gpio4 {
+	/delete-property/ power-domains;
+};
+
+&i2c0 {
+	/delete-property/ power-domains;
+};
+
+&i2c1 {
+	/delete-property/ power-domains;
+};
+
+&spi0 {
+	/delete-property/ power-domains;
+};
+
+&uart1 {
+	/delete-property/ power-domains;
+};
+
+&uart3 {
+	/delete-property/ power-domains;
+};
+
