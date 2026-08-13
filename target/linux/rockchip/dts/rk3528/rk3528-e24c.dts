@@ -17,6 +17,9 @@
 
 #include "rk3528-ramoops.dtsi"
 
+// Fix boot issue. Disable RK3528_PD_VPU power domain, so it will always on
+#include "rk3528-disable-vpu-power-domain.dtsi"
+
 / {
 	model = "Radxa E24C";
 	compatible = "radxa,e24c", "radxa,rock-2", "rockchip,rk3528a";
