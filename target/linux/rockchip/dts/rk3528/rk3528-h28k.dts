@@ -29,3 +29,10 @@
 &combphy {
 	rockchip,dis-u3otg0-port; /* disable USB3.0 */
 };
+
+&gmac1 {
+	snps,reset-gpio = <&gpio4 RK_PC2 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+};
