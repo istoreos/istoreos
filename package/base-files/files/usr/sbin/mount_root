@@ -185,8 +185,40 @@ clean_os_version_files()
 	cd - >/dev/null 2>&1
 }
 
+APK_PKGDIR=/lib/apk/packages
+APK_DB=/lib/apk/db/installed
+
+use_apk() {
+	[ -d $APK_PKGDIR ]
+}
+
+# $1 database, $2 package, $3 field prefix such as D: or V:. P: lines are
+# compared literally, since package names carry characters awk would read as
+# regular expression operators.
+apk_db_field() {
+	awk -v RS='' -v want="$2" -v f="$3" '
+		{
+			n = split($0, l, "\n")
+			hit = 0
+			for (i = 1; i <= n; i++)
+				if (substr(l[i], 1, 2) == "P:" && substr(l[i], 3) == want) { hit = 1; break }
+			if (!hit) next
+			for (i = 1; i <= n; i++)
+				if (substr(l[i], 1, 2) == f) { print substr(l[i], 3); exit }
+		}' "$1" 2>/dev/null
+}
+
 nonconf_files_of_pkg() {
 	local pkgname="$1"
+	if use_apk; then
+		if [ -s $APK_PKGDIR/${pkgname}.conffiles ]; then
+			grep -hvxFf $APK_PKGDIR/${pkgname}.conffiles \
+				$APK_PKGDIR/${pkgname}.list
+		else
+			cat $APK_PKGDIR/${pkgname}.list
+		fi
+		return
+	fi
 	if [ -s /usr/lib/opkg/info/${pkgname}.conffiles ]; then
 		grep -hvxFf /usr/lib/opkg/info/${pkgname}.conffiles \
 			/usr/lib/opkg/info/${pkgname}.list
@@ -200,6 +232,18 @@ clean_pkg_content() {
 	local pkgname="$2"
 	local line
 
+	if use_apk; then
+		# .list is to apk what .control is to opkg: it exists once per installed
+		# package and its name matches the P: field one to one.
+		if [ -f $APK_PKGDIR/${pkgname}.list ]; then
+			nonconf_files_of_pkg "${pkgname}" | grep -v '^/etc/uci-defaults/' | while read; do
+				line="$REPLY"
+				rm -f "$overlay/upper/${line}"
+			done
+			rm -f $overlay/upper$APK_PKGDIR/${pkgname}.*
+		fi
+		return
+	fi
 	if [ -f /usr/lib/opkg/info/${pkgname}.control ]; then
 		if [ -f /usr/lib/opkg/info/${pkgname}.list ]; then
 			nonconf_files_of_pkg "${pkgname}" | grep -v '^/etc/uci-defaults/' | while read; do
@@ -219,6 +263,21 @@ pkg_depends_rec() {
 	local deps
 
 	echo "${pkgname}" | grep -q '^kmod-' && return
+
+	if use_apk; then
+		[ -f $APK_PKGDIR/${pkgname}.list -a ! -f /tmp/reset_core_packages/${pkgname} ] || return
+		# D:kernel=6.12.94~<vermagic>-r1 kmod-libphy kmod-ptp
+		# A leading '!' marks a conflict, not a dependency. Drop the whole
+		# token: with a version bound such as !foo<1.0 the named package can
+		# legitimately be installed, so stripping only the '!' would pull it
+		# in as a dependency and reset a package the user upgraded.
+		deps=$(apk_db_field $APK_DB "${pkgname}" 'D:' | sed -e 's/![^ ]*//g' -e 's/[=<>~][^ ]*//g')
+		touch /tmp/reset_core_packages/${pkgname}
+		for dep in $deps ; do
+			pkg_depends_rec "$dep"
+		done
+		return
+	fi
 
 	if [ -f /usr/lib/opkg/info/${pkgname}.control -a ! -f /tmp/reset_core_packages/${pkgname} ]; then
 		deps=`grep '^Depends: ' /usr/lib/opkg/info/${pkgname}.control | sed -e 's/^Depends: //' -e 's/ ([^)]*)//g' -e 's/,/ /g'`
@@ -259,9 +318,53 @@ reset_core_packages()
 	done
 }
 
+# apk needs no equivalent of the opkg DUMMY_VERSION marker. There the version
+# lives in each package's .control and rebuild_opkg_status reads it back, so a
+# staled kmod has to stay behind as a marked file. Under apk the version lives
+# in the database record and isos_upgrade decides purely on whether the package
+# has a .list in the overlay upper, so removing the upper copies is the whole
+# signal: the ROM copy shows through again and the ROM record is taken, or the
+# package is gone from the merged view and its record is dropped. Re-entry is
+# covered for free, since a package with nothing left in upper is no longer a
+# candidate on the next boot. mount_root works on the raw upper directory
+# rather than through the overlay, so these removals leave no whiteout.
+clean_kmods_apk()
+{
+	local upper="$1/upper"
+	local compat pkg deps
+	[ -d "$upper$APK_PKGDIR" ] || return 0
+	[ -f "$upper$APK_DB" ] || return 0
+
+	compat=$(apk_db_field $APK_DB kernel 'V:')
+	[ -n "$compat" ] || return 0
+
+	( cd "$upper$APK_PKGDIR" && ls kmod-*.list 2>/dev/null | sed 's/\.list$//' ) | while read pkg; do
+		deps=$(apk_db_field "$upper$APK_DB" "$pkg" 'D:')
+		case " $deps " in
+			*" kernel=$compat "*) [ -f $APK_PKGDIR/${pkg}.list ] && echo "$pkg" ;;
+			*) echo "$pkg" ;;
+		esac
+	done > /tmp/del_kmods.txt
+
+	[ -s /tmp/del_kmods.txt ] || { rm -f /tmp/del_kmods.txt; return 0; }
+
+	echo "Clean kmods in $1: `cat /tmp/del_kmods.txt | xargs echo`" | dd bs=960 2>/dev/null
+
+	cat /tmp/del_kmods.txt | while read pkg; do
+		[ -f "$upper$APK_PKGDIR/${pkg}.list" ] && \
+			sed "s#^/#$upper/#" "$upper$APK_PKGDIR/${pkg}.list" | xargs -r rm -f
+		rm -f "$upper$APK_PKGDIR/${pkg}."*
+	done
+	rm -f /tmp/del_kmods.txt
+}
+
 clean_kmods()
 {
 	local DUMMY_VERSION=0.0.0-r1
+	if use_apk; then
+		clean_kmods_apk "$1"
+		return 0
+	fi
 	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
 		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`
 		if [ -n "$compat" ]; then

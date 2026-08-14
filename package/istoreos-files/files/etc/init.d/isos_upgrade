@@ -62,6 +62,112 @@ clean_tmp_files() {
 	rm -rf /tmp/romopkgstatus
 }
 
+APK_DB=/lib/apk/db/installed
+APK_PKGDIR=/lib/apk/packages
+APK_WORLD=/etc/apk/world
+APK_WORLD_BASE=/overlay/.apk-world-rom
+
+# The apk database is a sequence of blank line separated records, so it splits
+# and rejoins byte for byte. Records are copied verbatim: a duplicated C: value
+# makes apk fault and truncate the database without reporting anything.
+split_apk_db() {
+	rm -rf $2
+	mkdir -p $2
+	awk -v out="$2" 'BEGIN{RS="";ORS=""}
+		{
+			name=""
+			n=split($0, line, "\n")
+			for (i = 1; i <= n; i++)
+				if (substr(line[i], 1, 2) == "P:") { name = substr(line[i], 3); break }
+			if (name != "") { f = out "/" name; printf "%s\n\n", $0 > f; close(f) }
+		}' $1
+}
+
+split_both_apk_db() {
+	split_apk_db $APK_DB /tmp/newapkdb &
+	split_apk_db /rom$APK_DB /tmp/romapkdb &
+	wait
+}
+
+ls_all_apk_pkgs() {
+	( cd $APK_PKGDIR ; find . -maxdepth 1 -name '*.list' | sed -E 's#\./(.*)\.list#\1#g' | grep -v '^kernel$' )
+}
+
+# world pins kernel to an exact vermagic and is refreshed from the new ROM, so a
+# stale kernel record would contradict it and apk would refuse every kmod. The
+# opkg path carries the same special case.
+rebuild_apk_db() {
+	local line
+	[ -f /tmp/romapkdb/kernel ] && cat /tmp/romapkdb/kernel
+	ls_all_apk_pkgs | while read; do
+		line="$REPLY"
+		if [ -f /overlay/upper$APK_PKGDIR/$line.list -o -f /ext_overlay/upper$APK_PKGDIR/$line.list ]; then
+			echo /tmp/newapkdb/$line
+		else
+			echo /tmp/romapkdb/$line
+		fi
+	done | xargs cat
+}
+
+# Keep the new ROM world, which carries fresh version pins, and re-add only the
+# packages the user installed on top of it. Those are emitted without a version
+# constraint: a pin inherited from the old image would name a version the new
+# repository no longer offers.
+rebuild_apk_world() {
+	local base=$APK_WORLD_BASE
+	[ -f /rom$APK_WORLD ] || return 1
+	[ -f $base ] || base=/rom$APK_WORLD
+	sed -E 's/[=<>~].*$//' $base | sort -u > /tmp/apkworldbase
+	{
+		cat /rom$APK_WORLD
+		sed -E 's/[=<>~].*$//' $APK_WORLD | grep -vxFf /tmp/apkworldbase
+	} | awk '!seen[$0]++'
+	rm -f /tmp/apkworldbase
+}
+
+clean_apk_tmp_files() {
+	rm -rf /tmp/newapkdb
+	rm -rf /tmp/romapkdb
+}
+
+# The database, the trigger list and the maintainer scripts are rewritten as a
+# set on every transaction, so a stale copy of any of them in the overlay hides
+# the whole set shipped by the new ROM.
+rebuild_apk_state() {
+	local ok=1
+
+	cp $APK_DB $APK_DB.isos-bak || return 1
+	cp $APK_WORLD $APK_WORLD.isos-bak || return 1
+
+	split_both_apk_db
+	rebuild_apk_db > $APK_DB.isos-new && [ -s $APK_DB.isos-new ] || ok=0
+	rebuild_apk_world > $APK_WORLD.isos-new && [ -s $APK_WORLD.isos-new ] || ok=0
+	clean_apk_tmp_files
+
+	if [ "$ok" = 1 ]; then
+		mv $APK_DB.isos-new $APK_DB
+		mv $APK_WORLD.isos-new $APK_WORLD
+		rm -f /overlay/upper/lib/apk/db/triggers /overlay/upper/lib/apk/db/scripts.tar.gz
+		rm -f /ext_overlay/upper/lib/apk/db/triggers /ext_overlay/upper/lib/apk/db/scripts.tar.gz
+	fi
+
+	rm -f $APK_DB.isos-new $APK_WORLD.isos-new
+
+	# apk fix -s reports an inconsistent installed set without needing the
+	# network, which matters because this runs at START=14, before network.
+	# apk info counts packages and stays quiet on exactly this fault.
+	if [ "$ok" = 1 ] && apk --no-network fix -s >/dev/null 2>&1; then
+		rm -f $APK_DB.isos-bak $APK_WORLD.isos-bak
+		rm -f $APK_WORLD_BASE
+		return 0
+	fi
+
+	mv $APK_DB.isos-bak $APK_DB
+	mv $APK_WORLD.isos-bak $APK_WORLD
+	logger -t isos_upgrade "apk database rebuild rejected by fix -s, restored"
+	return 1
+}
+
 clean_themes() {
 	local line
 	local name
@@ -104,6 +210,9 @@ boot() {
 			split_both_status
 			rebuild_opkg_status > /usr/lib/opkg/status
 			clean_tmp_files
+		}
+		is_overlayed /lib/apk/db/installed && {
+			rebuild_apk_state
 		}
 		is_overlayed /etc/config/luci && {
 			clean_themes
