@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. /lib/functions/system.sh
+
+case "$(board_name)" in
+innotek-gmbh-virtualbox)
+	if [ "static" = "$(uci -q get network.lan.proto)" ]; then
+		uci -q batch <<-EOF
+			delete network.lan.ipaddr
+			add_list network.lan.ipaddr="192.168.56.2/24"
+			commit network
+		EOF
+	fi
+	;;
+esac
+
+exit 0
