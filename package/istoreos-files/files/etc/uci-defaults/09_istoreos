@@ -5,6 +5,8 @@ if [ ! -f /etc/config/fstab ]; then
     /usr/libexec/blockmount.sh detect 2>/dev/null
 fi
 
+[ -e /bin/rescan_nic ] && /bin/rescan_nic -k
+
 uci -q batch <<-EOF >/dev/null
     set system.@system[-1].zonename='Asia/Shanghai'
     commit system
