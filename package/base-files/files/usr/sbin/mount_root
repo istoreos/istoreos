@@ -173,11 +173,11 @@ clean_overlayfs_redundant_whiteout_marker()
 clean_overlayfs_redundant_whiteout_marker_luci()
 {
 	local line
-	[ -d "$1/upper/usr/lib/lua/luci" ] || return 0
-	cd "$1/upper/usr/lib/lua"
-	find luci -xdev -type c -perm 0 -user 0 -group 0 | while read; do
+	[ -d "$1/upper/usr/lib/lua/luci" ] || [ -d "$1/upper/usr/share/luci/menu.d" ] || return 0
+	cd "$1/upper"
+	find usr/lib/lua/luci usr/share/luci/menu.d -xdev -type c -perm 0 -user 0 -group 0 | while read; do
 		line="$REPLY"
-		[ ! -e "/usr/lib/lua/$line" -a \( -z "$2" -o ! -e "$2/upper/usr/lib/lua/$line" \) ] && \
+		[ ! -e "/$line" -a \( -z "$2" -o ! -e "$2/upper/$line" \) ] && \
 			rm -f "$line"
 	done
 	cd - >/dev/null 2>&1
