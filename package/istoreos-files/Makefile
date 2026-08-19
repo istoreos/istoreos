@@ -56,6 +56,12 @@ HOST_SED="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(SED))"
 HOST_LN="$(subst ${STAGING_DIR_HOST},$${STAGING_DIR_HOST},$(LN))"
 
 [ -n "$${IPKG_INSTROOT}" ] && {
+	[ -s "$${IPKG_INSTROOT}/etc/apk/arch" ] && grep -q '^aarch64_' "$${IPKG_INSTROOT}/etc/apk/arch" && {
+		grep -Fxq "aarch64_generic" "$${IPKG_INSTROOT}/etc/apk/arch" || {
+			echo "add aarch64_generic to /etc/apk/arch"
+			echo "aarch64_generic" >> "$${IPKG_INSTROOT}/etc/apk/arch"
+		}
+	}
 	$${HOST_SED} 's,^src/gz istoreos_,src/gz openwrt_,g' -e '/^src\/gz openwrt_\(core\|base\|kmods\|luci\|packages\|routing\|telephony\) /!d' "$${IPKG_INSTROOT}/etc/opkg/distfeeds.conf"
 	$${HOST_SED} '\#/\(base\|kmods/.*\|luci\|packages\|routing\|telephony\|video\)/packages\.adb$$#!d' "$${IPKG_INSTROOT}/etc/apk/repositories.d/distfeeds.list"
 
