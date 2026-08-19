@@ -8,6 +8,13 @@ OVERLAY_LABEL="etc"
 OVERLAY_FS=${DEFAULT_OVERLAY_FS}
 OVERLAY_DEV=
 
+APK=false
+PKG_BASE=usr/lib/opkg/info
+[ -s /etc/apk/arch ] && {
+	APK=true
+	PKG_BASE=lib/apk/packages
+}
+
 log() {
 	echo "<1>mount_root: $1" >/dev/kmsg
 }
@@ -187,12 +194,22 @@ clean_os_version_files()
 
 nonconf_files_of_pkg() {
 	local pkgname="$1"
-	if [ -s /usr/lib/opkg/info/${pkgname}.conffiles ]; then
-		grep -hvxFf /usr/lib/opkg/info/${pkgname}.conffiles \
-			/usr/lib/opkg/info/${pkgname}.list
+	if [ -s /$PKG_BASE/${pkgname}.conffiles ]; then
+		grep -hvxFf /$PKG_BASE/${pkgname}.conffiles \
+			/$PKG_BASE/${pkgname}.list
 	else
-		cat /usr/lib/opkg/info/${pkgname}.list
+		cat /$PKG_BASE/${pkgname}.list
 	fi
+}
+
+_pkg_exists() {
+	local pkgname="$1"
+	if $APK; then
+		[ -f "/$PKG_BASE/${pkgname}.list" ] && return 0
+	else
+		[ -f "/$PKG_BASE/${pkgname}.control" ] && return 0
+	fi
+	return 1
 }
 
 clean_pkg_content() {
@@ -200,15 +217,15 @@ clean_pkg_content() {
 	local pkgname="$2"
 	local line
 
-	if [ -f /usr/lib/opkg/info/${pkgname}.control ]; then
-		if [ -f /usr/lib/opkg/info/${pkgname}.list ]; then
+	if _pkg_exists ${pkgname} ; then
+		if [ -f /$PKG_BASE/${pkgname}.list ]; then
 			nonconf_files_of_pkg "${pkgname}" | grep -v '^/etc/uci-defaults/' | while read; do
 				line="$REPLY"
 				rm -f "$overlay/upper/${line}"
 			done
-			rm -f $overlay/upper/usr/lib/opkg/info/${pkgname}.list
+			rm -f "$overlay/upper/$PKG_BASE/${pkgname}.list"
 		fi
-		rm -f $overlay/upper/usr/lib/opkg/info/${pkgname}.*
+		rm -f "$overlay/upper/$PKG_BASE/${pkgname}.*"
 	fi
 }
 
@@ -219,10 +236,17 @@ pkg_depends_rec() {
 	local deps
 
 	echo "${pkgname}" | grep -q '^kmod-' && return
+	_pkg_exists ${pkgname} && [ ! -f /tmp/reset_core_packages/${pkgname} ] || return
+	touch /tmp/reset_core_packages/${pkgname}
 
-	if [ -f /usr/lib/opkg/info/${pkgname}.control -a ! -f /tmp/reset_core_packages/${pkgname} ]; then
+	if $APK; then
+		deps=`apk info --installed --recursive -R "${pkgname}" | grep -v 'depends on:' | grep . | sort -u`
+		for dep in $deps ; do
+			dep=${dep%%[@=<>~]*}
+			[ -f /tmp/reset_core_packages/${dep} ] || echo "${dep}" | grep -q '^kmod-' || touch /tmp/reset_core_packages/${dep}
+		done
+	else
 		deps=`grep '^Depends: ' /usr/lib/opkg/info/${pkgname}.control | sed -e 's/^Depends: //' -e 's/ ([^)]*)//g' -e 's/,/ /g'`
-		touch /tmp/reset_core_packages/${pkgname}
 		for dep in $deps ; do
 			pkg_depends_rec "$dep"
 		done
@@ -261,6 +285,8 @@ reset_core_packages()
 
 clean_kmods()
 {
+	# apk system will clean kmods on isos_upgrade
+	$APK && return 0
 	local DUMMY_VERSION=0.0.0-r1
 	if [ -d "$1/upper/usr/lib/opkg/info" ]; then
 		local compat=`grep -m1 '^Version: ' /usr/lib/opkg/info/kernel.control | sed 's/^Version: //'`

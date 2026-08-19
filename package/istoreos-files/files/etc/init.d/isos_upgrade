@@ -4,7 +4,11 @@
 
 START=14
 
-split_opkg_status() {
+is_overlayed() {
+	[ -e "/overlay/upper$1" -o -e "/ext_overlay/upper$1" ]
+}
+
+split_installed_db() {
 	local line
 	local gap=1
 	exec 3>/dev/null
@@ -12,42 +16,64 @@ split_opkg_status() {
 	mkdir -p $2
 	cat $1 | while read; do
 		line="$REPLY"
-		if [ -z "$line" ]; then
+		if [[ -z "$line" ]]; then
 			echo >&3
 			exec 3>&-
 			exec 3>/dev/null
 			gap=1
 		else
-			if [[ "x1" = "x$gap" && "$line" = "Package: *" ]]; then
+			if [[ "x1" = "x$gap" ]]; then
 				exec 3>&-
-				exec 3>$2/${line##Package: }
+				exec 3>$2/.tmp
 				gap=0
 			fi
 			echo "$line" >&3
+			if [[ -e $2/.tmp && \( "$line" = "Package: "* || "$line" = "P:"* \) ]]; then
+				line="${line#*:}"
+				line=${line##* }
+				mv $2/.tmp $2/$line
+			fi
 		fi
 	done
 	exec 3>&-
 }
 
 split_both_status() {
-	split_opkg_status /usr/lib/opkg/status /tmp/newopkgstatus &
-	split_opkg_status /rom/usr/lib/opkg/status /tmp/romopkgstatus &
+	split_installed_db /$PKG_INSTALLED /tmp/newopkgstatus &
+	split_installed_db /rom/$PKG_INSTALLED /tmp/romopkgstatus &
 	wait
 }
 
 ls_all_pkgs() {
-	( cd /usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' | grep -v '^kernel$' )
+	( cd /$PKG_BASE ; find . -maxdepth 1 -name "*.$PKG_EXT" | sed -E 's#./(.*).'"$PKG_EXT"'#\1#g' | sort )
 }
 
-rebuild_opkg_status() {
+rebuild_installed_db() {
 	local DUMMY_VERSION=0.0.0-r1
 	local line
-	[ -f /tmp/romopkgstatus/kernel ] && cat /tmp/romopkgstatus/kernel
+	local compat
+	$APK && compat=`apk --root /rom query --installed --fields version kernel | cut -d' ' -f2`
 	ls_all_pkgs | while read line; do
-		if [ -f /overlay/upper/usr/lib/opkg/info/$line.control -o -f /ext_overlay/upper/usr/lib/opkg/info/$line.control ]; then
-			if [[ $line = "kmod-*" ]] && \
-				grep -qm1 '^Version: '$DUMMY_VERSION'$' /usr/lib/opkg/info/$line.control; then
-				[ -e /tmp/romopkgstatus/$line ] && echo /tmp/romopkgstatus/$line
+		if [[ $line = kernel ]]; then
+			[ -e /tmp/romopkgstatus/$line ] && echo /tmp/romopkgstatus/$line
+			continue
+		fi
+		if is_overlayed "/$PKG_BASE/$line.$PKG_EXT"; then
+			if [[ $line = "kmod-*" ]]; then
+				if [[ -n "$compat" ]]; then
+					if grep -qm1 '^V:'$DUMMY_VERSION'$' /tmp/newopkgstatus/$line || grep -qFm1 "kernel=$compat" /tmp/newopkgstatus/$line; then
+						echo /tmp/newopkgstatus/$line
+					elif [[ -e /tmp/romopkgstatus/$line ]]; then
+						echo /tmp/romopkgstatus/$line
+					else
+						sed -i -e '/^D:/d' -e 's/^V:.*$/V:'$DUMMY_VERSION'/g' /tmp/newopkgstatus/$line
+						echo /tmp/newopkgstatus/$line
+					fi
+				elif grep -qm1 '^Version: '$DUMMY_VERSION'$' /usr/lib/opkg/info/$line.control; then
+					[ -e /tmp/romopkgstatus/$line ] && echo /tmp/romopkgstatus/$line
+				else
+					echo /tmp/newopkgstatus/$line
+				fi
 			else
 				echo /tmp/newopkgstatus/$line
 			fi
@@ -75,24 +101,39 @@ clean_themes() {
 	uci commit luci
 }
 
-is_overlayed() {
-	[ -e "/overlay/upper$1" -o -e "/ext_overlay/upper$1" ]
-}
-
 upgrade_opkg_distfeeds() {
-	local newrelease=$(grep -m1 '/base$' /rom/etc/opkg/distfeeds.conf | grep -Eo '/releases/[^/]+/')
-	local oldrelease=$(grep -m1 '/base$' /etc/opkg/distfeeds.conf | grep -Eo '/releases/[^/]+/')
+	local newrelease=$(grep -m1 -e '/base$' -e '/base/' /rom$DIST_FEEDS | grep -Eo '/releases/[^/]+/')
+	local oldrelease=$(grep -m1 -e '/base$' -e '/base/' $DIST_FEEDS | grep -Eo '/releases/[^/]+/')
 	[ -z "$newrelease" -o -z "$oldrelease" ] && return 0
 	[ "$newrelease" = "$oldrelease" ] && return 0
 
-	local romrepo="$(grep -m1 '/base$' /rom/etc/opkg/distfeeds.conf | grep -Eo ' https?://.*/releases/')"
-	local userrepo="$(grep -m1 '/base$' /etc/opkg/distfeeds.conf | grep -Eo ' https?://.*/releases/')"
-	echo "# Generated file, do not edit" > /etc/opkg/distfeeds.conf
+	local romrepo="$(grep -m1 -e '/base$' -e '/base/' /rom$DIST_FEEDS | grep -Eo 'https?://.*/releases/')"
+	local userrepo="$(grep -m1 -e '/base$' -e '/base/' $DIST_FEEDS | grep -Eo 'https?://.*/releases/')"
+	echo "# Generated file, do not edit" > $DIST_FEEDS
 	if [ -z "$romrepo" -o -z "$userrepo" ]; then
-		cat /rom/etc/opkg/distfeeds.conf >> /etc/opkg/distfeeds.conf
+		cat /rom$DIST_FEEDS >> $DIST_FEEDS
 		return 0
 	fi
-	sed -E 's# https?://.*/releases/#'"$userrepo"'#g' /rom/etc/opkg/distfeeds.conf >> /etc/opkg/distfeeds.conf
+	sed -E 's#https?://.*/releases/#'"$userrepo"'#g' /rom$DIST_FEEDS >> $DIST_FEEDS
+}
+
+rebuild_apk_world(){
+	local line pkgname
+	{ grep -vE \
+		-e '^base-files([@<>=~].*)?$' \
+		-e '^libc([@<>=~].*)?$' \
+		-e '^kernel([@<>=~].*)?$' \
+		/etc/apk/world; echo ; cat /rom/etc/apk/world; } | grep . | sort -u | while read; do
+		line="$REPLY"
+
+		[[ "$line" = '!*' ]] && echo "$line" && continue
+
+		pkgname=${line%%[@=<>~]*}
+
+		[ -f "/$PKG_BASE/$pkgname.$PKG_EXT" ] && echo "$line"
+	done > /tmp/apk_world
+	[ -s /tmp/apk_world ] && cat /tmp/apk_world > /etc/apk/world
+	rm -f /tmp/apk_world
 }
 
 boot() {
@@ -100,15 +141,33 @@ boot() {
 
 	if [ -f /etc/uci-defaults/.upgrading ]; then
 		rm -f /etc/uci-defaults/.upgrading
-		is_overlayed /usr/lib/opkg/status && {
+
+		APK=false
+		PKG_BASE=usr/lib/opkg/info
+		PKG_EXT=control
+		PKG_INSTALLED=usr/lib/opkg/status
+		DIST_FEEDS=/etc/opkg/distfeeds.conf
+
+		[ -s /etc/apk/arch ] && {
+			APK=true
+			PKG_BASE=lib/apk/packages
+			PKG_EXT=list
+			PKG_INSTALLED=lib/apk/db/installed
+			DIST_FEEDS=/etc/apk/repositories.d/distfeeds.list
+		}
+
+		is_overlayed "/$PKG_INSTALLED" && {
 			split_both_status
-			rebuild_opkg_status > /usr/lib/opkg/status
+			rebuild_installed_db > "/$PKG_INSTALLED"
 			clean_tmp_files
 		}
+		if $APK && is_overlayed "/etc/apk/world"; then
+			rebuild_apk_world
+		fi
 		is_overlayed /etc/config/luci && {
 			clean_themes
 		}
-		is_overlayed /etc/opkg/distfeeds.conf && {
+		is_overlayed $DIST_FEEDS && {
 			upgrade_opkg_distfeeds
 		}
 	fi
