@@ -142,21 +142,10 @@ kill_remaining() { # [ <signal> [ <loop> ] ]
 
 istoreos_pre_upgrade() {
 	if [ -n "$UPGRADE_BACKUP" ]; then
-		local running_ver=$(grep 'DISTRIB_RELEASE=' /rom/etc/openwrt_release /etc/openwrt_release 2>/dev/null | head -n1 | sed -E "s/.*='(.+)'.*/\1/")
-		touch /etc/uci-defaults/.upgrading 2>/dev/null && sync /
-		# reset rom uuid in ext_overlay
-		if [ -f /ext_overlay/upper/etc/uci-defaults/.upgrading ]; then
-			echo "$running_ver" >/ext_overlay/.upgrading
+		if [ -f /ext_overlay/etc/.extroot-uuid ]; then
 			rm -f /ext_overlay/etc/.extroot-uuid
 			sync /ext_overlay
 		fi
-		echo "$running_ver" >/overlay/.upgrading
-		[ -f /overlay/upper/etc/uci-defaults/.upgrading ] || {
-			rm -f /overlay/upper/etc/uci-defaults/.upgrading
-			mkdir -p /overlay/upper/etc/uci-defaults
-			touch /overlay/upper/etc/uci-defaults/.upgrading 2>/dev/null
-		}
-		sync /overlay
 	fi
 }
 

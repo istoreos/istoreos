@@ -137,6 +137,28 @@ update_overlay_lower_uuid() {
 	return 1
 }
 
+OPENWRT_RELEASE=""
+openwrt_release() {
+	if [ -z "$OPENWRT_RELEASE" ]; then
+		OPENWRT_RELEASE=`grep 'DISTRIB_RELEASE=' /etc/openwrt_release 2>/dev/null | sed -E "s/.*='(.+)'.*/\1/"`
+		[ -z "$OPENWRT_RELEASE" ] && OPENWRT_RELEASE="UNKNOWN"
+	fi
+	echo "$OPENWRT_RELEASE"
+}
+
+update_overlay_lower_release() {
+	local realrelease=`openwrt_release`
+	local lastrelease="NULL"
+	if [ -f "$1/.rootfs-release" ]; then
+		lastrelease=`cat "$1/.rootfs-release"`
+	fi
+	if [ "$realrelease" != "$lastrelease" ]; then
+		echo "$realrelease" >"$1/.rootfs-release"
+		return 0
+	fi
+	return 1
+}
+
 clean_overlayfs_origin() {
 	local line
 	cd "$1"
@@ -272,8 +294,7 @@ list_core_packages()
 reset_core_packages()
 {
 	local overlay="$1"
-	local running_ver=$(grep 'DISTRIB_RELEASE=' /etc/openwrt_release 2>/dev/null | sed -E "s/.*='(.+)'.*/\1/")
-	[ "v$(cat "$overlay/.upgrading" 2>/dev/null)" = "v$running_ver" ] && return
+	update_overlay_lower_release "$overlay" || return
 	local pkg
 	[ -d /tmp/reset_core_packages ] || list_core_packages
 	echo "Reset packages in $overlay: `ls /tmp/reset_core_packages/ | xargs echo`" | dd bs=960 2>/dev/null
@@ -340,13 +361,17 @@ prepare_primary_overlay()
 
 prepare_primary_overlay_after_merge()
 {
+	local upgrading=false
+	update_overlay_lower_uuid /overlay && upgrading=true
 	if [ -d /overlay/upper ]; then
-		if update_overlay_lower_uuid /overlay || [ -f /overlay/.upgrading ] ; then
+		if $upgrading ; then
 			clean_os_version_files /overlay
 			reset_core_packages /overlay
-			touch /overlay/.upgrading
+			mkdir -p /overlay/upper/etc/uci-defaults
+			rm -f /overlay/upper/etc/uci-defaults/.upgrading
+			touch /overlay/upper/etc/uci-defaults/.upgrading
 		fi
-		if [ -f /overlay/.upgrading -o -f /overlay/.merged ] ; then
+		if $upgrading || [ -f /overlay/.merged ] ; then
 			if is_overlayfs_use_xattr ; then
 				clean_overlayfs_origin /overlay/upper
 				clean_overlayfs_redundant_opaque /overlay/upper
@@ -356,13 +381,13 @@ prepare_primary_overlay_after_merge()
 			clean_overlayfs_redundant_whiteout_marker_luci /overlay
 		fi
 	else
-		update_overlay_lower_uuid /overlay
+		update_overlay_lower_release "/overlay"
 	fi
 	if [ -f /overlay/upper/etc/uci-defaults/.upgrading ]; then
 		clean_kmods /overlay
 	fi
 
-	rm -f /overlay/.upgrading /overlay/.merged
+	rm -f /overlay/.merged
 
 	mkdir -p /overlay/upper /overlay/work
 }
@@ -412,10 +437,13 @@ prepare_ext_overlay()
 {
 	local newoverlaydir=$1
 	local overlaydir=$2
+	local upgrading=false
+	update_overlay_lower_uuid "$newoverlaydir" && upgrading=true
 
 	if [ -f "$newoverlaydir/.reset" ]; then
 		rm -rf "$newoverlaydir/upper"
 		rm -f "$newoverlaydir/.commit" "$newoverlaydir/.reset"
+		update_overlay_lower_release "$newoverlaydir"
 	elif [ -f "$newoverlaydir/.commit" ]; then
 		if [ -d "$newoverlaydir/upper" ]; then
 			apply_overlayfs_opaque "$newoverlaydir" "$overlaydir"
@@ -425,29 +453,34 @@ prepare_ext_overlay()
 			rmdir "$overlaydir/upper/ext_overlay"
 			rm -rf "$newoverlaydir/upper"
 			mkdir -m 0755 -p "$newoverlaydir/upper/ext_overlay"
+			rm -f "$overlaydir/upper/etc/uci-defaults/.upgrading" "$overlaydir/.rootfs-uuid" "$overlaydir/.rootfs-release"
+			update_overlay_lower_release "$newoverlaydir"
 		}
 		rm -f "$newoverlaydir/.commit"
 	else
 		prepare_primary_overlay_after_merge
 		touch "$overlaydir/.clean"
-		if [ -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading" ]; then
-			clean_kmods "$newoverlaydir"
-		elif [ -c "$newoverlaydir/upper/etc/uci-defaults/.upgrading" -a ! -f "$overlaydir/upper/etc/uci-defaults/.upgrading" ]; then
-			rm -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading"
-		fi
-		if [ -f "$newoverlaydir/.upgrading" ]; then
-			clean_os_version_files "$newoverlaydir"
-			reset_core_packages "$newoverlaydir"
-			is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
-		fi
-		if [ -d "$newoverlaydir/upper" -a \( -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading" -o ! -f "$overlaydir/.sandbox" \) ]; then
-			clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
+		if [ -d "$newoverlaydir/upper" ]; then
+			if $upgrading; then
+				clean_kmods "$newoverlaydir"
+				clean_os_version_files "$newoverlaydir"
+				reset_core_packages "$newoverlaydir"
+				mkdir -p "$newoverlaydir/upper/etc/uci-defaults"
+				rm -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading"
+				touch "$newoverlaydir/upper/etc/uci-defaults/.upgrading"
+				is_overlayfs_use_xattr && clean_overlayfs_origin "$newoverlaydir/upper"
+			elif [ -c "$newoverlaydir/upper/etc/uci-defaults/.upgrading" -a ! -f "$overlaydir/upper/etc/uci-defaults/.upgrading" ]; then
+				rm -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading"
+			fi
+			if $upgrading || [ ! -f "$overlaydir/.sandbox" ]; then
+				clean_overlayfs_redundant_whiteout_marker "$newoverlaydir" "$overlaydir"
+			else
+				clean_overlayfs_redundant_whiteout_marker_luci "$newoverlaydir" "$overlaydir"
+			fi
 		else
-			clean_overlayfs_redundant_whiteout_marker_luci "$newoverlaydir" "$overlaydir"
+			update_overlay_lower_release "$newoverlaydir"
 		fi
 	fi
-
-	rm -f "$newoverlaydir/.upgrading"
 
 	( mkdir -m 0755 -p $newoverlaydir/upper/ext_overlay && \
 		  mkdir -m 0755 -p $newoverlaydir/work ) || return 1
