@@ -432,6 +432,8 @@ prepare_ext_overlay()
 		touch "$overlaydir/.clean"
 		if [ -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading" ]; then
 			clean_kmods "$newoverlaydir"
+		elif [ -c "$newoverlaydir/upper/etc/uci-defaults/.upgrading" -a ! -f "$overlaydir/upper/etc/uci-defaults/.upgrading" ]; then
+			rm -f "$newoverlaydir/upper/etc/uci-defaults/.upgrading"
 		fi
 		if [ -f "$newoverlaydir/.upgrading" ]; then
 			clean_os_version_files "$newoverlaydir"
