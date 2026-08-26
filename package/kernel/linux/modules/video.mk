@@ -347,6 +347,23 @@ endef
 
 $(eval $(call KernelPackage,drm-exec))
 
+define KernelPackage/drm-gpuvm
+  SUBMENU:=$(VIDEO_MENU)
+  HIDDEN:=1
+  TITLE:=GPU-VM
+  DEPENDS:=@DISPLAY_SUPPORT +kmod-drm +kmod-drm-exec
+  KCONFIG:=CONFIG_DRM_GPUVM
+  FILES:=$(LINUX_DIR)/drivers/gpu/drm/drm_gpuvm.ko
+  AUTOLOAD:=$(call AutoProbe,drm_gpuvm)
+endef
+
+define KernelPackage/drm-gpuvm/description
+  GPU-VM representation providing helpers to manage a GPUs virtual
+  address space
+endef
+
+$(eval $(call KernelPackage,drm-gpuvm))
+
 define KernelPackage/drm-dma-helper
   SUBMENU:=$(VIDEO_MENU)
   HIDDEN:=1
@@ -753,6 +770,43 @@ endef
 
 $(eval $(call KernelPackage,drm-udl))
 
+
+define KernelPackage/drm-xe
+  SUBMENU:=$(VIDEO_MENU)
+  TITLE:=Intel Xe DRM support
+  DEPENDS:=@(TARGET_x86_64||TARGET_x86_generic||TARGET_x86_legacy) \
+	@DISPLAY_SUPPORT +kmod-backlight +kmod-drm-ttm \
+	+kmod-drm-ttm-helper +kmod-drm-kms-helper +kmod-i2c-algo-bit +xe-firmware \
+	+kmod-drm-display-helper +kmod-drm-buddy +kmod-acpi-video \
+	+kmod-drm-exec +kmod-drm-gpuvm +kmod-drm-sched +kmod-drm-suballoc-helper
+  KCONFIG:=CONFIG_DRM_XE \
+	CONFIG_DRM_XE_DEBUG=n \
+	CONFIG_DRM_XE_DEBUG_MEM=n \
+	CONFIG_DRM_XE_DEBUG_SRIOV=n \
+	CONFIG_DRM_XE_DEBUG_VM=n \
+	CONFIG_DRM_XE_DISPLAY=y \
+	CONFIG_DRM_XE_ENABLE_SCHEDTIMEOUT_LIMIT=y \
+	CONFIG_DRM_XE_FORCE_PROBE="" \
+	CONFIG_DRM_XE_JOB_TIMEOUT_MAX=10000 \
+	CONFIG_DRM_XE_JOB_TIMEOUT_MIN=1 \
+	CONFIG_DRM_XE_LARGE_GUC_BUFFER=n \
+	CONFIG_DRM_XE_PREEMPT_TIMEOUT=640000 \
+	CONFIG_DRM_XE_PREEMPT_TIMEOUT_MAX=10000000 \
+	CONFIG_DRM_XE_PREEMPT_TIMEOUT_MIN=1 \
+	CONFIG_DRM_XE_TIMESLICE_MAX=10000000 \
+	CONFIG_DRM_XE_TIMESLICE_MIN=1 \
+	CONFIG_DRM_XE_USERPTR_INVAL_INJECT=n \
+	CONFIG_DRM_XE_WERROR=n
+  FILES:=$(LINUX_DIR)/drivers/gpu/drm/xe/xe.ko
+  AUTOLOAD:=$(call AutoProbe,xe)
+  MODPARAMS.xe:=force_probe=*
+endef
+
+define KernelPackage/drm-xe/description
+  Direct Rendering Manager (DRM) support for Intel Xe GPU
+endef
+
+$(eval $(call KernelPackage,drm-xe))
 
 #
 # Video Capture

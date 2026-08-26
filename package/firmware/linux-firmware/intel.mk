@@ -343,3 +343,12 @@ define Package/ivpu-firmware/install
 	done
 endef
 $(eval $(call BuildPackage,ivpu-firmware))
+
+Package/xe-firmware = $(call Package/firmware-default,Intel Xe firmware,i915-firmware,LICENSE.xe)
+define Package/xe-firmware/install
+	$(INSTALL_DIR) $(1)/lib/firmware/xe
+	$(CP) \
+		$(PKG_BUILD_DIR)/xe/*.bin \
+		$(1)/lib/firmware/xe
+endef
+$(eval $(call BuildPackage,xe-firmware))
