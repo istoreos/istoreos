@@ -1,0 +1,66 @@
+From 5a487303c48747cf5de72fb328022a81703dedb0 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 27 Aug 2026 16:43:51 +0800
+Subject: [PATCH 3/3] fix build without CONFIG_KVM_EXTERNAL_WRITE_TRACKING
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/gpu/drm/i915/Makefile | 12 ++++++++++--
+ include/config.h              |  7 +++++++
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/Makefile b/drivers/gpu/drm/i915/Makefile
+index 01adb3f..14244ed 100644
+--- a/drivers/gpu/drm/i915/Makefile
++++ b/drivers/gpu/drm/i915/Makefile
+@@ -425,7 +425,15 @@ i915-y += \
+ i915-y += \
+ 	i915_vgpu.o
+ 
+-i915-y += \
++ifdef CONFIG_KVM_EXTERNAL_WRITE_TRACKING
++OOT_CONFIG_DRM_I915_GVT:=y
++OOT_CONFIG_DRM_I915_GVT_KVMGT:=m
++else
++OOT_CONFIG_DRM_I915_GVT:=n
++OOT_CONFIG_DRM_I915_GVT_KVMGT:=n
++endif
++
++i915-$(OOT_CONFIG_DRM_I915_GVT) += \
+ 	intel_gvt.o \
+ 	intel_gvt_mmio_table.o
+ include $(src)/gvt/Makefile
+@@ -436,4 +444,4 @@ ifdef CONFIG_DRM_I915_WERROR
+ endif
+ 
+ obj-m += i915.o
+-obj-m += kvmgt.o
++obj-$(OOT_CONFIG_DRM_I915_GVT_KVMGT) += kvmgt.o
+diff --git a/include/config.h b/include/config.h
+index 4f7df9d..53f33d1 100644
+--- a/include/config.h
++++ b/include/config.h
+@@ -59,6 +59,7 @@
+ #define CONFIG_DRM_I915_FORCE_PROBE "*"
+ #endif
+ 
++#ifdef CONFIG_KVM_EXTERNAL_WRITE_TRACKING
+ #ifndef CONFIG_DRM_I915_GVT
+ #define CONFIG_DRM_I915_GVT 1
+ #endif
+@@ -67,6 +68,12 @@
+ #define CONFIG_DRM_I915_GVT_KVMGT_MODULE 1
+ #endif
+ 
++#else
++
++#undef CONFIG_DRM_I915_GVT
++#undef CONFIG_DRM_I915_GVT_KVMGT_MODULE
++#endif
++
+ #ifndef CONFIG_DRM_I915_HEARTBEAT_INTERVAL
+ #define CONFIG_DRM_I915_HEARTBEAT_INTERVAL 2500
+ #endif
+-- 
+2.54.0
+

@@ -1,0 +1,82 @@
+From f94377ead16079dabf1e1004a69aa970f28ccfd1 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 27 Aug 2026 16:38:24 +0800
+Subject: [PATCH 1/3] fix TRACE_INCLUDE_PATH
+
+x86_64-openwrt-linux-musl-gcc predefined "linux" as 1:
+```
+> echo | ./x86_64-openwrt-linux-musl-gcc -dM -E - | grep -E '^#define (linux|__linux|__linux__)'
+x86_64-openwrt-linux-musl-gcc: warning: environment variable 'STAGING_DIR' not defined
+#define __linux 1
+#define linux 1
+#define __linux__ 1
+```
+
+include path "/openwrt/build_dir/target-x86_64_musl/linux-x86_64/i915-sriov-dkms-2026.03.05.6/drivers/gpu/drm/i915/intel_uncore_trace.h" will change to "/openwrt/build_dir/target-x86_64_musl/1-x86_64/i915-sriv-dkms-2026.03.05.6/drivers/gpu/drm/i915/intel_uncore_trace.h"
+on preprocessing. (Note "/linux-x86_64/" vs "/1-x86_64/")
+
+cause CE:
+```
+In file included from /openwrt/build_dir/target-x86_64_musl/linux-x86_64/i915-sriov-dkms-2026.03.05.6/drivers/gpu/drm/i915/intel_uncore_trace.h:49,
+                 from /openwrt/build_dir/target-x86_64_musl/linux-x86_64/i915-sriov-dkms-2026.03.05.6/drivers/gpu/drm/i915/intel_uncore_trace.c:6:
+/openwrt/build_dir/target-x86_64_musl/linux-x86_64/i915-sriov-dkms-2026.03.05.6/include/trace/define_trace.h:118:42: fatal error: /openwrt/build_dir/target-x86_64_musl/1-x86_64/i915-sriv-dkms-2026.03.05.6/drivers/gpu/drm/i915/intel_uncore_trace.h: No such file or directory
+  118 | #include TRACE_INCLUDE(TRACE_INCLUDE_FILE)
+      |                                          ^
+compilation terminated.
+```
+
+so we use relative path to fix this issue.
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/gpu/drm/i915/display/intel_display_trace.h | 2 +-
+ drivers/gpu/drm/i915/gvt/trace.h                   | 2 +-
+ include/config.h                                   | 8 +++++++-
+ 3 files changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/display/intel_display_trace.h b/drivers/gpu/drm/i915/display/intel_display_trace.h
+index 54fc281..c5e18f2 100644
+--- a/drivers/gpu/drm/i915/display/intel_display_trace.h
++++ b/drivers/gpu/drm/i915/display/intel_display_trace.h
+@@ -853,6 +853,6 @@ TRACE_EVENT(intel_frontbuffer_flush,
+ /* This part must be outside protection */
+ #undef TRACE_INCLUDE_PATH
+ #undef TRACE_INCLUDE_FILE
+-#define TRACE_INCLUDE_PATH MODULE_ABS_PATH(drivers/gpu/drm/i915/display)
++#define TRACE_INCLUDE_PATH ./../i915/display
+ #define TRACE_INCLUDE_FILE intel_display_trace
+ #include <trace/define_trace.h>
+diff --git a/drivers/gpu/drm/i915/gvt/trace.h b/drivers/gpu/drm/i915/gvt/trace.h
+index 38af195..7cf2735 100644
+--- a/drivers/gpu/drm/i915/gvt/trace.h
++++ b/drivers/gpu/drm/i915/gvt/trace.h
+@@ -378,6 +378,6 @@ TRACE_EVENT(render_mmio,
+ /* This part must be out of protection */
+ #undef TRACE_INCLUDE_PATH
+ #undef TRACE_INCLUDE_FILE
+-#define TRACE_INCLUDE_PATH MODULE_ABS_PATH(drivers/gpu/drm/i915/gvt)
++#define TRACE_INCLUDE_PATH ./gvt
+ #define TRACE_INCLUDE_FILE trace
+ #include <trace/define_trace.h>
+diff --git a/include/config.h b/include/config.h
+index ced7321..116de38 100644
+--- a/include/config.h
++++ b/include/config.h
+@@ -4,7 +4,13 @@
+ #define LINUX_BACKPORT(__sym) intel_drm_shim_##__sym
+ #endif
+ 
+-#define MODULE_ABS_PATH(path) DKMS_MODULE_SOURCE_DIR/path
++/*
++ * define_trace.h stringifies TRACE_INCLUDE_PATH/system.h after macro expansion.
++ * If an absolute build path contains token 'linux' (e.g. linux-x86_64) and the
++ * toolchain predefines linux=1, the token can be rewritten during expansion.
++ * Keep a token-safe relative path from include/trace/define_trace.h instead.
++ */
++#define MODULE_ABS_PATH(path) .
+ 
+ // We vendor our own copy of the DRM_GPUSVM module, so enable it here.
+ 
+-- 
+2.54.0
+

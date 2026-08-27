@@ -1,0 +1,113 @@
+From 6e00038b6d62bb308574d3367a8f452db09bd883 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 27 Aug 2026 16:39:49 +0800
+Subject: [PATCH 2/3] fix build without CONFIG_ZONE_DEVICE
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ compat/Makefile               | 5 +++--
+ compat/v6.15/migrate_device.c | 2 +-
+ drivers/gpu/drm/xe/Makefile   | 2 +-
+ include/config.h              | 8 ++++++++
+ include/drm/drm_pagemap.h     | 4 +++-
+ 5 files changed, 16 insertions(+), 5 deletions(-)
+
+diff --git a/compat/Makefile b/compat/Makefile
+index 4550091..c0def8f 100644
+--- a/compat/Makefile
++++ b/compat/Makefile
+@@ -24,8 +24,9 @@ intel_sriov_compat-y += v6.18/drm_gpuvm.o \
+ intel_sriov_compat-y += v6.19/drm_dp_helper.o \
+ 			v6.19/pci_rebar.o
+ 
+-intel_sriov_compat-y += drm_gpusvm.o \
+-			drm_pagemap.o
++intel_sriov_compat-y += drm_gpusvm.o
++
++intel_sriov_compat-$(CONFIG_ZONE_DEVICE) += drm_pagemap.o
+ 
+ intel_sriov_compat-y += main.o
+ 
+diff --git a/compat/v6.15/migrate_device.c b/compat/v6.15/migrate_device.c
+index 8111bf7..177f6c7 100644
+--- a/compat/v6.15/migrate_device.c
++++ b/compat/v6.15/migrate_device.c
+@@ -12,7 +12,7 @@
+ #include <linux/migrate.h>
+ 
+ 
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
++#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0) && IS_ENABLED(CONFIG_ZONE_DEVICE)
+ /**
+  * migrate_device_pfns() - migrate device private pfns to normal memory.
+  * @src_pfns: pre-popluated array of source device private pfns to migrate.
+diff --git a/drivers/gpu/drm/xe/Makefile b/drivers/gpu/drm/xe/Makefile
+index ce932d8..ea15f35 100644
+--- a/drivers/gpu/drm/xe/Makefile
++++ b/drivers/gpu/drm/xe/Makefile
+@@ -144,7 +144,7 @@ xe-y += xe_bb.o \
+ 
+ xe-$(CONFIG_I2C)	+= xe_i2c.o
+ 
+-xe-y += xe_svm.o
++xe-$(CONFIG_ZONE_DEVICE) += xe_svm.o
+ xe-y += xe_userptr.o
+ 
+ # graphics hardware monitoring (HWMON) support
+diff --git a/include/config.h b/include/config.h
+index 116de38..4f7df9d 100644
+--- a/include/config.h
++++ b/include/config.h
+@@ -132,9 +132,13 @@
+ #define CONFIG_DRM_XE_FORCE_PROBE ""
+ #endif
+ 
++#if IS_ENABLED(CONFIG_ZONE_DEVICE)
+ #ifndef CONFIG_DRM_XE_GPUSVM
+ #define CONFIG_DRM_XE_GPUSVM 1
+ #endif
++#else
++#undef CONFIG_DRM_XE_GPUSVM
++#endif
+ 
+ #ifndef CONFIG_DRM_XE_JOB_TIMEOUT_MAX
+ #define CONFIG_DRM_XE_JOB_TIMEOUT_MAX 10000
+@@ -144,11 +148,15 @@
+ #define CONFIG_DRM_XE_JOB_TIMEOUT_MIN 1
+ #endif
+ 
++#if IS_ENABLED(CONFIG_ZONE_DEVICE)
+ #ifndef CONFIG_DRM_XE_PAGEMAP
+ #ifdef CONFIG_GET_FREE_REGION
+ #define CONFIG_DRM_XE_PAGEMAP 1
+ #endif
+ #endif
++#else
++#undef CONFIG_DRM_XE_PAGEMAP
++#endif
+ 
+ #ifndef CONFIG_DRM_XE_PREEMPT_TIMEOUT
+ #define CONFIG_DRM_XE_PREEMPT_TIMEOUT 640000
+diff --git a/include/drm/drm_pagemap.h b/include/drm/drm_pagemap.h
+index d2fbb16..baef457 100644
+--- a/include/drm/drm_pagemap.h
++++ b/include/drm/drm_pagemap.h
+@@ -6,12 +6,14 @@
+ #include <linux/hmm.h>
+ #include <linux/types.h>
+ 
++#define drm_pagemap_page_to_dpagemap LINUX_BACKPORT(drm_pagemap_page_to_dpagemap)
++#if IS_ENABLED(CONFIG_ZONE_DEVICE)
+ #define drm_pagemap_migrate_to_devmem LINUX_BACKPORT(drm_pagemap_migrate_to_devmem)
+ #define drm_pagemap_evict_to_ram LINUX_BACKPORT(drm_pagemap_evict_to_ram)
+ #define drm_pagemap_pagemap_ops_get LINUX_BACKPORT(drm_pagemap_pagemap_ops_get)
+ #define drm_pagemap_devmem_init LINUX_BACKPORT(drm_pagemap_devmem_init)
+-#define drm_pagemap_page_to_dpagemap LINUX_BACKPORT(drm_pagemap_page_to_dpagemap)
+ #define drm_pagemap_populate_mm LINUX_BACKPORT(drm_pagemap_populate_mm)
++#endif
+ 
+ #define NR_PAGES(order) (1U << (order))
+ 
+-- 
+2.54.0
+

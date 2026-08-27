@@ -1,0 +1,109 @@
+From b153b6467345a2a0b8754d98d6889ab0d093d164 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Thu, 27 Aug 2026 21:19:22 +0800
+Subject: [PATCH 4/4] fix i915 init failed
+
+```
+[ 18.812964] i915 0000:00:02.0: [drm] *ERROR* Device initialization failed (-95)
+[ 18.812993] i915 0000:00:02.0: probe with driver i915 failed with error -95
+```
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ drivers/gpu/drm/i915/Makefile |  6 +++++-
+ drivers/gpu/drm/xe/Makefile   |  4 ++++
+ include/config.h              | 12 ++++++++++++
+ 3 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/i915/Makefile b/drivers/gpu/drm/i915/Makefile
+index 14244ed..0a3c2d9 100644
+--- a/drivers/gpu/drm/i915/Makefile
++++ b/drivers/gpu/drm/i915/Makefile
+@@ -397,8 +397,12 @@ i915-y += \
+ 	display/vlv_dsi.o \
+ 	display/vlv_dsi_pll.o
+ 
++ifdef CONFIG_USB4
++ifdef CONFIG_DRM_DISPLAY_DP_TUNNEL
+ i915-y += \
+ 	display/intel_dp_tunnel.o
++endif
++endif
+ 
+ i915-y += \
+ 	i915_perf.o
+@@ -409,7 +413,7 @@ i915-y += \
+ 	pxp/intel_pxp_huc.o \
+ 	pxp/intel_pxp_tee.o
+ 
+-i915-y += \
++i915-$(CONFIG_INTEL_MEI_PXP) += \
+ 	pxp/intel_pxp_cmd.o \
+ 	pxp/intel_pxp_debugfs.o \
+ 	pxp/intel_pxp_gsccs.o \
+diff --git a/drivers/gpu/drm/xe/Makefile b/drivers/gpu/drm/xe/Makefile
+index ea15f35..b870adf 100644
+--- a/drivers/gpu/drm/xe/Makefile
++++ b/drivers/gpu/drm/xe/Makefile
+@@ -360,8 +360,12 @@ ifeq ($(CONFIG_DEBUG_FS),y)
+ 		i915-display/intel_pipe_crc.o
+ endif
+ 
++ifdef CONFIG_USB4
++ifdef CONFIG_DRM_DISPLAY_DP_TUNNEL
+ xe-y += \
+ 	i915-display/intel_dp_tunnel.o
++endif
++endif
+ 
+ obj-m += xe.o
+ 
+diff --git a/include/config.h b/include/config.h
+index 53f33d1..264c584 100644
+--- a/include/config.h
++++ b/include/config.h
+@@ -47,9 +47,13 @@
+ #define CONFIG_DRM_I915_COMPRESS_ERROR 1
+ #endif
+ 
++#if defined(CONFIG_USB4) && defined(CONFIG_DRM_DISPLAY_DP_TUNNEL)
+ #ifndef CONFIG_DRM_I915_DP_TUNNEL
+ #define CONFIG_DRM_I915_DP_TUNNEL 1
+ #endif
++#else
++#undef CONFIG_DRM_I915_DP_TUNNEL
++#endif
+ 
+ #ifndef CONFIG_DRM_I915_FENCE_TIMEOUT
+ #define CONFIG_DRM_I915_FENCE_TIMEOUT 10000
+@@ -90,9 +94,13 @@
+ #define CONFIG_DRM_I915_PREEMPT_TIMEOUT_COMPUTE 7500
+ #endif
+ 
++#ifdef CONFIG_INTEL_MEI_PXP
+ #ifndef CONFIG_DRM_I915_PXP
+ #define CONFIG_DRM_I915_PXP 1
+ #endif
++#else
++#undef CONFIG_DRM_I915_PXP
++#endif
+ 
+ #ifndef CONFIG_DRM_I915_REQUEST_TIMEOUT
+ #define CONFIG_DRM_I915_REQUEST_TIMEOUT 20000
+@@ -127,9 +135,13 @@
+ #define CONFIG_DRM_XE_DISPLAY 1
+ #endif
+ 
++#if defined(CONFIG_USB4) && defined(CONFIG_DRM_DISPLAY_DP_TUNNEL)
+ #ifndef CONFIG_DRM_XE_DP_TUNNEL
+ #define CONFIG_DRM_XE_DP_TUNNEL 1
+ #endif
++#else
++#undef CONFIG_DRM_XE_DP_TUNNEL
++#endif
+ 
+ #ifndef CONFIG_DRM_XE_ENABLE_SCHEDTIMEOUT_LIMIT
+ #define CONFIG_DRM_XE_ENABLE_SCHEDTIMEOUT_LIMIT 1
+-- 
+2.54.0
+
