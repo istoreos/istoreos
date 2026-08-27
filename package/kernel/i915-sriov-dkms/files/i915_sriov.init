@@ -23,14 +23,14 @@ boot() {
 		ls /lib/modules/$release/i915-sriov/ 2>/dev/null | while read kmod; do
 			if [[ "$kmod" = "*.ko" ]]; then
 				[[ -f /lib/modules/$release/$kmod ]] || continue
-				mount --bind /lib/modules/$release/i915-sriov/$kmod /lib/modules/$release/$kmod
+				mount --bind -r /lib/modules/$release/i915-sriov/$kmod /lib/modules/$release/$kmod
 			else
 				if [[ -f /etc/modules.d/$kmod ]]; then
-					mount --bind /lib/modules/$release/i915-sriov/$kmod /etc/modules.d/$kmod
+					mount --bind -r /lib/modules/$release/i915-sriov/$kmod /etc/modules.d/$kmod
 				else
 					local target=$(ls /etc/modules.d/ 2>/dev/null | grep "^[0-9_-]*-$kmod\$" | head -1)
 					[[ -n "$target" ]] || continue
-					mount --bind /lib/modules/$release/i915-sriov/$kmod /etc/modules.d/$target
+					mount --bind -r /lib/modules/$release/i915-sriov/$kmod /etc/modules.d/$target
 				fi
 			fi
 		done
