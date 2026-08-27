@@ -4,11 +4,79 @@ START=34
 STOP=86
 
 BACKUP_FILE="/etc/odhcpd-piodir-backup.tar.gz"
+LEGACY_BACKUP_FILE="/etc/odhcpd-piofolder-backup.tar.gz"
+
+pio_file_check() {
+	local file valid
+
+	file=$1
+	valid=0
+
+	json_init
+	json_load_file $file 2> /dev/null
+
+	if json_is_a slaac array; then
+		local keys len
+
+		json_select slaac
+		json_get_keys keys
+
+		len=$(echo $keys | wc -w)
+		if [ $len -gt 0 ]; then
+			valid=1
+		fi
+	fi
+
+	echo $valid
+}
+
+# Archives written before the piofolder -> piodir rename hold $piofolder/<name>,
+# while odhcpd now reads $piodir/odhcpd.pio.<name>. dhcp.odhcpd.piofolder is
+# already gone from uci by then, and /etc/uci-defaults/15_odhcpd runs from
+# /etc/init.d/boot at START=10, before this script at START=34, so its
+# pio_folder_migrate only ever sees a /tmp that the kernel just cleared. The old
+# layout is therefore recovered from the archive listing instead, reusing the
+# upstream validation and restricted to /tmp to match the shutdown side.
+pio_restore_legacy() {
+	local archive="$1"
+	local piodir="$2"
+	local legacy file
+
+	. /usr/share/libubox/jshn.sh
+
+	for legacy in $(tar -tzf "$archive" 2>/dev/null | \
+		sed -n 's#^/*\([^/][^/]*/[^/][^/]*\)/..*#/\1#p' | sort -u); do
+		[ "$legacy" = "$piodir" ] && continue
+		case "$legacy" in /tmp/*) ;; *) continue ;; esac
+		[ -d "$legacy" ] || continue
+
+		mkdir -p "$piodir"
+		for file in "$legacy"/*; do
+			[ -f "$file" ] || continue
+			if [ "$(pio_file_check $file)" = 1 ]; then
+				mv "$file" "$piodir/odhcpd.pio.${file##*/}"
+			else
+				rm -f "$file"
+			fi
+		done
+		rmdir "$legacy" 2>/dev/null
+	done
+}
 
 boot() {
-	[ -s "$BACKUP_FILE" ] || return 0
-	tar -xzf "$BACKUP_FILE" -C /
-	rm -f "$BACKUP_FILE"
+	local archive="$BACKUP_FILE"
+
+	# an archive written before the rename carries the old name and would
+	# otherwise be stranded in /etc
+	[ -s "$archive" ] || archive="$LEGACY_BACKUP_FILE"
+	[ -s "$archive" ] || return 0
+
+	local piodir=$(uci -q get dhcp.odhcpd.piodir)
+
+	tar -xzf "$archive" -C /
+	[ -n "$piodir" ] && pio_restore_legacy "$archive" "$piodir"
+
+	rm -f "$BACKUP_FILE" "$LEGACY_BACKUP_FILE"
 }
 
 shutdown() {
