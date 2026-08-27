@@ -12,6 +12,33 @@ define Build/an7581-bl31-uboot
   cat $(STAGING_DIR_IMAGE)/an7581_$1-bl31-u-boot.fip >> $@
 endef
 
+define Build/an7581-chainloader
+  $(INSTALL_DIR) $(KDIR)/chainload-fit-$(notdir $@)
+  @if [ -f "$(STAGING_DIR_IMAGE)/an7581_$1-u-boot.bin.lzma" ]; then \
+    KERNEL="$(STAGING_DIR_IMAGE)/an7581_$1-u-boot.bin.lzma"; \
+    COMP="lzma"; \
+  else \
+    KERNEL="$(STAGING_DIR_IMAGE)/an7581_$1-u-boot.bin"; \
+    COMP="none"; \
+  fi; \
+  $(TOPDIR)/scripts/mkits.sh \
+    -D $(DEVICE_NAME) \
+    -o $(KDIR)/chainload-fit-$(notdir $@)/u-boot.its \
+    -k $$KERNEL \
+    -C $$COMP \
+    -a 0x80200000 -e 0x80200000 \
+    -c conf-uboot \
+    -A arm64 -v u-boot \
+    -d $(STAGING_DIR_IMAGE)/an7581_$1-u-boot.dtb \
+    -s 0x82000000
+  PATH=$(LINUX_DIR)/scripts/dtc:$(PATH) \
+    $(STAGING_DIR_HOST)/bin/mkimage \
+    -D "-i $(KDIR)/chainload-fit-$(notdir $@)" \
+    -f $(KDIR)/chainload-fit-$(notdir $@)/u-boot.its \
+    $(STAGING_DIR_IMAGE)/an7581_$1-chainload-u-boot.itb
+  cat $(STAGING_DIR_IMAGE)/an7581_$1-chainload-u-boot.itb >> $@
+endef
+
 define Device/FitImageLzma
 	KERNEL_SUFFIX := -uImage.itb
 	KERNEL = kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(DEVICE_DTS).dtb
@@ -42,3 +69,62 @@ define Device/airoha_an7581-evb-emmc
   ARTIFACTS := preloader.bin bl31-uboot.fip
 endef
 TARGET_DEVICES += airoha_an7581-evb-emmc
+
+define Device/gemtek_w1700k-ubi
+  DEVICE_VENDOR := Gemtek
+  DEVICE_MODEL := W1700K
+  DEVICE_VARIANT := UBI
+  DEVICE_ALT0_VENDOR := CenturyLink
+  DEVICE_ALT0_MODEL := W1700K
+  DEVICE_ALT0_VARIANT := UBI
+  DEVICE_ALT1_VENDOR := Lumen
+  DEVICE_ALT1_MODEL := W1700K
+  DEVICE_ALT1_VARIANT := UBI
+  DEVICE_ALT2_VENDOR := Quantum Fiber
+  DEVICE_ALT2_MODEL := W1700K
+  DEVICE_ALT2_VARIANT := UBI
+  DEVICE_DTS := an7581-w1700k-ubi
+  DEVICE_PACKAGES := airoha-en7581-mt7996-npu-firmware \
+		    fitblk kmod-i2c-an7581 kmod-hwmon-nct7802 \
+		    kmod-mt7996-firmware kmod-phy-rtl8261n \
+		    wpad-basic-mbedtls
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  UBOOTENV_IN_UBI := 1
+  KERNEL_IN_UBI := 1
+  KERNEL := kernel-bin | gzip
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 128k
+  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
+  IMAGES := sysupgrade.itb
+  IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | append-metadata
+  ARTIFACTS := chainload-uboot.itb
+  ARTIFACT/chainload-uboot.itb := an7581-chainloader gemtek_w1700k
+  SOC := an7581
+endef
+TARGET_DEVICES += gemtek_w1700k-ubi
+
+define Device/econet_xr1710g-ubi
+  DEVICE_VENDOR := Econet
+  DEVICE_MODEL := XR1710G
+  DEVICE_VARIANT := UBI
+  DEVICE_DTS := an7581-xr1710g-ubi
+  DEVICE_PACKAGES := airoha-en7581-mt7996-npu-firmware \
+		    fitblk kmod-i2c-an7581 kmod-hwmon-nct7802 \
+		    kmod-mt7996-firmware kmod-phy-rtl8261n \
+		    wpad-basic-mbedtls
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
+  UBOOTENV_IN_UBI := 1
+  KERNEL_IN_UBI := 1
+  KERNEL := kernel-bin | gzip
+  KERNEL_INITRAMFS := kernel-bin | lzma | \
+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 128k
+  KERNEL_INITRAMFS_SUFFIX := -recovery.itb
+  IMAGES := sysupgrade.itb
+  IMAGE/sysupgrade.itb := append-kernel | fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-static-with-rootfs | append-metadata
+  SOC := an7581
+endef
+TARGET_DEVICES += econet_xr1710g-ubi

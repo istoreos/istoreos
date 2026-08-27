@@ -1,0 +1,34 @@
+. /lib/functions.sh
+
+board=$(board_name)
+
+case "$board" in
+gemtek,w1700k-ubi|\
+econet,xr1710g-ubi)
+	if [ -e /etc/config/ubootenv ] && [ -e /etc/fw_env.config ] &&
+		grep -Eq '^/dev/ubi[0-9]+_[0-9]+[[:space:]]' /etc/fw_env.config; then
+		exit 0
+	fi
+
+	rm -f /etc/config/ubootenv /etc/fw_env.config /etc/fw_sys.config
+	;;
+*)
+	[ -e /etc/config/ubootenv ] && exit 0
+	;;
+esac
+
+touch /etc/config/ubootenv
+
+. /lib/uboot-envtools.sh
+
+case "$board" in
+gemtek,w1700k-ubi|\
+econet,xr1710g-ubi)
+	ubootenv_add_ubi_default
+	;;
+esac
+
+config_load ubootenv
+config_foreach ubootenv_add_app_config
+
+exit 0

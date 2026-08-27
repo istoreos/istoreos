@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+config_load firewall
+
+config_get flow_offloading defaults flow_offloading
+config_get flow_offloading_hw defaults flow_offloading_hw
+
+[ -n "$flow_offloading" ] || uci set firewall.@defaults[0].flow_offloading='1'
+[ -n "$flow_offloading_hw" ] || uci set firewall.@defaults[0].flow_offloading_hw='1'
+
+uci commit firewall
+
+exit 0

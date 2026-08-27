@@ -1,0 +1,56 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/system.sh
+
+[ "$(board_name)" = "econet,xr1710g-ubi" ] || exit 0
+
+migrated=0
+
+migrate_xr1710g_bridge() {
+	local config="$1"
+	local name type ports ifname
+
+	config_get type "$config" type
+	[ "$type" = "bridge" ] || return
+
+	config_get name "$config" name
+	[ "$name" = "br-lan" ] || return
+
+	config_get ports "$config" ports
+	config_get ifname "$config" ifname
+
+	case " $ports $ifname " in
+	*" eth0.8 "*|*" eth0.1 "*|*" eth0.2 "*)
+		uci -q delete "network.$config.ifname"
+		uci -q delete "network.$config.ports"
+		uci add_list "network.$config.ports=lan1"
+		uci add_list "network.$config.ports=lan2"
+		uci add_list "network.$config.ports=lan3"
+		migrated=1
+		;;
+	esac
+}
+
+migrate_xr1710g_interface() {
+	local config="$1"
+	local device
+
+	config_get device "$config" device
+	case "$device" in
+	ae_wan)
+		uci set "network.$config.device=wan"
+		migrated=1
+		;;
+	esac
+}
+
+config_load network
+config_foreach migrate_xr1710g_bridge device
+config_foreach migrate_xr1710g_interface interface
+
+[ "$migrated" -eq 1 ] || exit 0
+
+uci commit network
+
+exit 0

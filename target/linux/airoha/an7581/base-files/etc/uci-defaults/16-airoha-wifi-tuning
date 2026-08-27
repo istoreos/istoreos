@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /lib/functions.sh
+. /lib/functions/system.sh
+
+case "$(board_name)" in
+	gemtek,w1700k-ubi|econet,xr1710g-ubi) ;;
+	*) exit 0 ;;
+esac
+
+config_load wireless
+
+changed=0
+
+tune_wifi_iface() {
+	local cfg="$1"
+	local mode
+
+	config_get mode "$cfg" mode
+	[ "$mode" = "ap" ] || return 0
+
+	if ! uci -q get wireless."$cfg".uapsd >/dev/null; then
+		uci set wireless."$cfg".uapsd='0'
+		changed=1
+	fi
+
+	if ! uci -q get wireless."$cfg".disassoc_low_ack >/dev/null; then
+		uci set wireless."$cfg".disassoc_low_ack='0'
+		changed=1
+	fi
+}
+
+config_foreach tune_wifi_iface wifi-iface
+
+[ "$changed" -eq 1 ] && uci commit wireless
+
+exit 0

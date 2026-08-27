@@ -1,0 +1,27 @@
+From: Kenneth Kasilag <kenneth@kasilag.me>
+Date: Thu, 2 Jul 2026 00:00:00 +0000
+Subject: [PATCH] airoha: add forward declaration for struct sk_buff in offload header
+
+airoha_offload.h uses struct sk_buff in function parameters but does
+not forward-declare it.  When included from the mt76 driver (which
+does not include linux/skbuff.h first), the compiler emits:
+
+  error: 'struct sk_buff' declared inside parameter list will not be
+  visible outside of this definition or declaration [-Werror]
+
+Add forward declarations for struct sk_buff and struct net_device.
+
+Signed-off-by: Kenneth Kasilag <kenneth@kasilag.me>
+
+--- a/include/linux/soc/airoha/airoha_offload.h
++++ b/include/linux/soc/airoha/airoha_offload.h
+@@ -7,6 +7,9 @@
+ #ifndef AIROHA_OFFLOAD_H
+ #define AIROHA_OFFLOAD_H
+ 
++struct sk_buff;
++struct net_device;
++
+ #include <linux/spinlock.h>
+ #include <linux/workqueue.h>
+ 
