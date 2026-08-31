@@ -42,6 +42,30 @@
 		pinctrl-0 = <&ir_receiver_pin>;
 	};
 
+	fan0: gpio_fan0 {
+		compatible = "gpio-fan";
+		fan-supply = <&dc_12v>;
+		gpios = <&gpio4 RK_PC2 GPIO_ACTIVE_HIGH>;
+		gpio-fan,speed-map =
+				<   0 0>,
+				<2500 1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan0_en_h>;
+		#cooling-cells = <2>;
+	};
+
+	fan1: gpio_fan1 {
+		compatible = "gpio-fan";
+		fan-supply = <&vcc5v0_sys>;
+		gpios = <&gpio3 RK_PA5 GPIO_ACTIVE_HIGH>;
+		gpio-fan,speed-map =
+				<   0 0>,
+				<2500 1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fan1_en_h>;
+		#cooling-cells = <2>;
+	};
+
 };
 
 &gmac0 {
@@ -163,6 +187,14 @@
 			rockchip,pins = <3 RK_PB0 RK_FUNC_GPIO &pcfg_output_high>;
 		};
 	};
+	fan {
+		fan0_en_h: fan0-en-h {
+			rockchip,pins = <4 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+		fan1_en_h: fan1-en-h {
+			rockchip,pins = <3 RK_PA5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &led_green {
@@ -214,4 +246,25 @@
 // IR receiver, but we use gpio-ir-receiver driver
 &pwm3 {
 	status = "disabled";
+};
+
+&cpu_thermal {
+	trips {
+		cpu_warm: cpu_warm {
+			temperature = <68000>;
+			hysteresis = <10000>;
+			type = "active";
+		};
+	};
+
+	cooling-maps {
+		map_fan0 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan0 THERMAL_NO_LIMIT 1>;
+		};
+		map_fan1 {
+			trip = <&cpu_warm>;
+			cooling-device = <&fan1 THERMAL_NO_LIMIT 1>;
+		};
+	};
 };
