@@ -27,16 +27,6 @@
 		status = "disabled";
 	};
 
-	vpu: video-codec@fdea0400 {
-		compatible = "rockchip,rk3568-vpu";
-		reg = <0x0 0xfdea0000 0x0 0x800>;
-		interrupts = <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&cru ACLK_VPU>, <&cru HCLK_VPU>;
-		clock-names = "aclk", "hclk";
-		iommus = <&vdpu_mmu>;
-		power-domains = <&power RK3568_PD_VPU>;
-	};
-
 	vdpu: vdpu@fdea0400 {
 		compatible = "rockchip,vpu-decoder-v2";
 		reg = <0x0 0xfdea0400 0x0 0x400>;
@@ -66,7 +56,7 @@
 		status = "disabled";
 	};
 
-	rk_rga: rk_rga@fdeb0000 {
+	rk_rga: rga@fdeb0000 {
 		compatible = "rockchip,rga2";
 		reg = <0x0 0xfdeb0000 0x0 0x1000>;
 		interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;

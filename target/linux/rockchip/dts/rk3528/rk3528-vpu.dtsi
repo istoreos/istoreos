@@ -28,6 +28,8 @@
 			compatible = "rockchip,mpp-service";
 			rockchip,taskqueue-count = <5>;
 			rockchip,resetgroup-count = <5>;
+			/* avsd:0x2, vdpu:0x8, iep:0x200, vdpp:0x4000 */
+			rockchip,iommu-shared-mask = <0x420a>;
 			status = "disabled";
 		};
 
@@ -38,7 +40,7 @@
 			interrupts = <GIC_SPI 94 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "irq_dec";
 			clocks = <&cru ACLK_RKVDEC>, <&cru HCLK_RKVDEC>, <&cru CLK_HEVC_CA_RKVDEC>;
-			clock-names = "aclk_vcodec", "hclk_vcodec","clk_hevc_cabac";
+			clock-names = "aclk_vcodec", "hclk_vcodec", "clk_hevc_cabac";
 			rockchip,normal-rates = <340000000>, <0>, <600000000>;
 			assigned-clocks = <&cru ACLK_RKVDEC>, <&cru CLK_HEVC_CA_RKVDEC>;
 			assigned-clock-rates = <340000000>, <600000000>;
@@ -217,7 +219,7 @@
 
 		vdpp: vdpp@ff861000 {
 			compatible = "rockchip,vdpp-v1";
-			reg = <0x0 0xff861000 0x0 0x100>,  <0x0 0xff862000 0x0 0x900>;
+			reg = <0x0 0xff861000 0x0 0x100>, <0x0 0xff862000 0x0 0x900>;
 			reg-names = "vdpp_regs", "zme_regs";
 			interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&cru ACLK_VDPP>, <&cru HCLK_VDPP>, <&cru CLK_CORE_VDPP>;

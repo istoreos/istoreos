@@ -446,7 +446,7 @@
 			     <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH 0>;
 		interrupt-names = "irq_rkvenc1_mmu0", "irq_rkvenc1_mmu1";
 		clocks = <&cru ACLK_RKVENC1>, <&cru HCLK_RKVENC1>;
-		lock-names = "aclk", "iface";
+		clock-names = "aclk", "iface";
 		rockchip,disable-mmu-reset;
 		rockchip,enable-cmd-retry;
 		rockchip,shootdown-entire;
