@@ -1,0 +1,39 @@
+From ffc02a8b792b558f2d980238e8bcc38daa5e96e1 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Sat, 8 Feb 2025 20:52:27 +0800
+Subject: [PATCH] mpp: Fix include path on OOT build
+
+---
+ drivers/video/rockchip/mpp/mpp_rkvenc.c  | 2 +-
+ drivers/video/rockchip/mpp/mpp_rkvenc2.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvenc.c b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+index a811509..cf14dd8 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+@@ -33,7 +33,7 @@
+ #include <soc/rockchip/rockchip_system_monitor.h>
+ 
+ #ifdef CONFIG_PM_DEVFREQ
+-#include "../../../devfreq/governor.h"
++#include "../drivers/devfreq/governor.h"
+ #endif
+ 
+ #include "mpp_debug.h"
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvenc2.c b/drivers/video/rockchip/mpp/mpp_rkvenc2.c
+index 17561f9..72f18e6 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc2.c
+@@ -34,7 +34,7 @@
+ #include <soc/rockchip/rockchip_iommu.h>
+ 
+ #ifdef CONFIG_PM_DEVFREQ
+-#include "../../../devfreq/governor.h"
++#include "../drivers/devfreq/governor.h"
+ #endif
+ 
+ #include "mpp_debug.h"
+-- 
+2.54.0
+

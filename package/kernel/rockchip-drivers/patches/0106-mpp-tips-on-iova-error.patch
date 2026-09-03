@@ -1,0 +1,39 @@
+From 5a51a64b87f84cb6996179b2f2aa9bf5046bce46 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 20 Mar 2025 19:33:01 +0800
+Subject: [PATCH] mpp: tips on iova error
+
+---
+ drivers/video/rockchip/mpp/mpp_iommu.c   | 2 +-
+ drivers/video/rockchip/mpp/mpp_rkvdec2.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/video/rockchip/mpp/mpp_iommu.c b/drivers/video/rockchip/mpp/mpp_iommu.c
+index fd221ae..d84fc09 100644
+--- a/drivers/video/rockchip/mpp/mpp_iommu.c
++++ b/drivers/video/rockchip/mpp/mpp_iommu.c
+@@ -710,7 +710,7 @@ int mpp_iommu_reserve_iova(struct mpp_iommu_info *info, dma_addr_t iova, size_t
+ 	pfn_lo = iova_pfn(iovad, iova);
+ 	pfn_hi = iova_pfn(iovad, iova + size - 1);
+ 	if (!reserve_iova(iovad, pfn_lo, pfn_hi))
+-		return -EINVAL;
++		return -ENOMEM;
+ 
+ 	return 0;
+ 
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvdec2.c b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+index 4c187a7..de543e7 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+@@ -1890,7 +1890,7 @@ static int rkvdec2_alloc_rcbbuf(struct platform_device *pdev, struct rkvdec2_dev
+ 	/* alloc reserve iova for rcb */
+ 	ret = mpp_iommu_reserve_iova(dec->mpp.iommu_info, iova, rcb_size);
+ 	if (ret) {
+-		dev_err(dev, "alloc rcb iova error.\n");
++		dev_err(dev, "alloc rcb iova error %d. You may need to disable iommu passthrough\n", ret);
+ 		return ret;
+ 	}
+ 	/* get sram device node */
+-- 
+2.54.0
+

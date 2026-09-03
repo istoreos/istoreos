@@ -1,0 +1,34 @@
+From 7f08f28a1e43f5b689cd3133bf8837ec9ef3c257 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 17 Apr 2025 20:04:38 +0800
+Subject: [PATCH] rga2: fix dma_buf api NS not import
+
+```
+ERROR: modpost: module rga2 uses symbol dma_buf_vmap from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_attach from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_map_attachment from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_unmap_attachment from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_get from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_put from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_vunmap from namespace DMA_BUF, but does not import it.
+ERROR: modpost: module rga2 uses symbol dma_buf_detach from namespace DMA_BUF, but does not import it.
+```
+---
+ drivers/video/rockchip/rga2/rga2_drv.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/video/rockchip/rga2/rga2_drv.c b/drivers/video/rockchip/rga2/rga2_drv.c
+index ded2252..7941248 100644
+--- a/drivers/video/rockchip/rga2/rga2_drv.c
++++ b/drivers/video/rockchip/rga2/rga2_drv.c
+@@ -2286,3 +2286,6 @@ module_exit(rga2_exit);
+ MODULE_AUTHOR("zsq@rock-chips.com");
+ MODULE_DESCRIPTION("Driver for rga device");
+ MODULE_LICENSE("GPL");
++#if KERNEL_VERSION(5, 16, 0) < LINUX_VERSION_CODE
++MODULE_IMPORT_NS(DMA_BUF);
++#endif
+\ No newline at end of file
+-- 
+2.54.0
+

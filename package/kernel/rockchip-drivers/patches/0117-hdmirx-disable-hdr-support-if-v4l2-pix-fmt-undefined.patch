@@ -1,0 +1,120 @@
+From c361271f3c91528b180a2708362294495132d9fc Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 3 Sep 2026 17:04:23 +0800
+Subject: [PATCH] hdmirx: disable hdr support if v4l2 pix fmt undefined
+
+---
+ .../platform/rockchip/hdmirx/rk_hdmirx.c      | 21 +++++++++++++++++++
+ 1 file changed, 21 insertions(+)
+
+diff --git a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+index 0211924..314e183 100644
+--- a/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
++++ b/drivers/media/platform/rockchip/hdmirx/rk_hdmirx.c
+@@ -451,6 +451,7 @@ static const struct hdmirx_output_fmt g_out_fmts[] = {
+ 		.cplanes = 2,
+ 		.mplanes = 1,
+ 		.bpp = { 8, 16 },
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 	}, {
+ 		.fourcc = V4L2_PIX_FMT_NV20,
+ 		.cplanes = 2,
+@@ -461,6 +462,7 @@ static const struct hdmirx_output_fmt g_out_fmts[] = {
+ 		.cplanes = 2,
+ 		.mplanes = 1,
+ 		.bpp = { 10, 20 },
++#endif
+ 	}, {
+ 		.fourcc = V4L2_PIX_FMT_NV12,
+ 		.cplanes = 2,
+@@ -788,9 +790,11 @@ try_loop:
+ 		hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_BGR24;
+ 		break;
+ 	case HDMIRX_YUV422:
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 		if (hdmirx_dev->color_depth == 30)
+ 			hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_NV20;
+ 		else
++#endif
+ 			hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_NV16;
+ 
+ 		break;
+@@ -798,9 +802,11 @@ try_loop:
+ 		hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_NV24;
+ 		break;
+ 	case HDMIRX_YUV420:
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 		if (hdmirx_dev->color_depth == 30)
+ 			hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_NV15;
+ 		else
++#endif
+ 			hdmirx_dev->cur_fmt_fourcc = V4L2_PIX_FMT_NV12;
+ 		break;
+ 
+@@ -1860,7 +1866,11 @@ static void hdmirx_dma_config(struct rk_hdmirx_dev *hdmirx_dev)
+ 
+ 	/* Note: uv_swap, rb can not swap, doc err*/
+ 	if (hdmirx_dev->cur_fmt_fourcc != V4L2_PIX_FMT_NV16 &&
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 	    hdmirx_dev->cur_fmt_fourcc != V4L2_PIX_FMT_NV20)
++#else
++		true)
++#endif
+ 		hdmirx_update_bits(hdmirx_dev, DMA_CONFIG6, RB_SWAP_EN, RB_SWAP_EN);
+ 	else
+ 		hdmirx_update_bits(hdmirx_dev, DMA_CONFIG6, RB_SWAP_EN, 0);
+@@ -1923,6 +1933,7 @@ static int fcc_xysubs(u32 fcc, u32 *xsubs, u32 *ysubs)
+ 		*xsubs = 2;
+ 		*ysubs = 1;
+ 		break;
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 	case V4L2_PIX_FMT_NV20:
+ 		*xsubs = 2;
+ 		*ysubs = 1;
+@@ -1931,6 +1942,7 @@ static int fcc_xysubs(u32 fcc, u32 *xsubs, u32 *ysubs)
+ 		*xsubs = 2;
+ 		*ysubs = 2;
+ 		break;
++#endif
+ 	case V4L2_PIX_FMT_NV12:
+ 		*xsubs = 2;
+ 		*ysubs = 2;
+@@ -1951,8 +1963,10 @@ static u32 hdmirx_align_bits_per_pixel(const struct hdmirx_output_fmt *fmt,
+ 		switch (fmt->fourcc) {
+ 		case V4L2_PIX_FMT_NV24:
+ 		case V4L2_PIX_FMT_NV16:
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 		case V4L2_PIX_FMT_NV20:
+ 		case V4L2_PIX_FMT_NV15:
++#endif
+ 		case V4L2_PIX_FMT_NV12:
+ 		case V4L2_PIX_FMT_BGR24:
+ 			bpp = fmt->bpp[plane_index];
+@@ -4148,8 +4162,10 @@ static int hdmirx_parse_dt(struct rk_hdmirx_dev *hdmirx_dev)
+ 	if (of_property_read_bool(np, "cec-enable"))
+ 		hdmirx_dev->cec_enable = true;
+ 
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 	if (of_property_read_bool(np, "hdr-support"))
+ 		hdmirx_dev->hdr_support = true;
++#endif
+ 
+ 	ret = of_reserved_mem_device_init(dev);
+ 	if (ret)
+@@ -4367,8 +4383,13 @@ static ssize_t edid_store(struct device *dev,
+ 	if (kstrtoint(buf, 10, &edid))
+ 		return -EINVAL;
+ 
++#if defined(V4L2_PIX_FMT_NV15) && defined(V4L2_PIX_FMT_NV20)
+ 	if (edid < HDMIRX_EDID_340M || edid > HDMIRX_EDID_HDR)
+ 		return count;
++#else
++	if (edid < HDMIRX_EDID_340M || edid > HDMIRX_EDID_600M)
++		return count;
++#endif
+ 
+ 	if (hdmirx_dev->edid_version != edid) {
+ 		disable_irq(hdmirx_dev->hdmi_irq);
+-- 
+2.54.0
+

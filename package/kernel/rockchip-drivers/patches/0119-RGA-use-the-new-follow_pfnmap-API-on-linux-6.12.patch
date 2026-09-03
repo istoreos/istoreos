@@ -1,0 +1,180 @@
+From 2a5f0712a9dea66f2395ac888857bbaa95951a56 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Thu, 3 Sep 2026 18:28:26 +0800
+Subject: [PATCH] RGA: use the new follow_pfnmap API on linux 6.12
+
+---
+ drivers/video/rockchip/rga/rga_mmu_info.c   | 22 ++++++++++++++++++-
+ drivers/video/rockchip/rga2/rga2_mmu_info.c | 24 ++++++++++++++++++++-
+ drivers/video/rockchip/rga3/rga_mm.c        | 22 ++++++++++++++++++-
+ 3 files changed, 65 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/video/rockchip/rga/rga_mmu_info.c b/drivers/video/rockchip/rga/rga_mmu_info.c
+index d9a4415..ded3688 100644
+--- a/drivers/video/rockchip/rga/rga_mmu_info.c
++++ b/drivers/video/rockchip/rga/rga_mmu_info.c
+@@ -421,10 +421,22 @@ static int rga_MapUserMemory(struct page **pages,
+                 {
+                     do
+                     {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++                        struct follow_pfnmap_args args = { .vma = vma, .address = (Memory + i) << PAGE_SHIFT };
++#else
+                         pte_t       * pte;
+                         spinlock_t  * ptl;
+                         unsigned long pfn;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++#endif
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++                        if (follow_pfnmap_start(&args)) {
++                            pr_err("RGA2 failed to follow_pfnmap_start, result = %d, pageCount = %d\n",
++                                   result, pageCount);
++                            status = RGA_OUT_OF_RESOURCES;
++                            break;
++                        }
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+                         if (follow_pte(current->mm, (Memory + i) << PAGE_SHIFT, &pte, &ptl)) {
+                             pr_err("RGA2 failed to follow_pte, result = %d, pageCount = %d\n",
+                                    result, pageCount);
+@@ -482,9 +494,17 @@ static int rga_MapUserMemory(struct page **pages,
+                             break;
+                         }
+ #endif
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++                        pfn = args.pfn;
++#else
+                         pfn = pte_pfn(*pte);
++#endif
+                         Address = ((pfn << PAGE_SHIFT) | (((unsigned long)((Memory + i) << PAGE_SHIFT)) & ~PAGE_MASK));
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++                        follow_pfnmap_end(&args);
++#else
+                         pte_unmap_unlock(pte, ptl);
++#endif
+                     }
+                     while (0);
+ 
+diff --git a/drivers/video/rockchip/rga2/rga2_mmu_info.c b/drivers/video/rockchip/rga2/rga2_mmu_info.c
+index 6275c24..4ac0f9a 100644
+--- a/drivers/video/rockchip/rga2/rga2_mmu_info.c
++++ b/drivers/video/rockchip/rga2/rga2_mmu_info.c
+@@ -907,6 +907,9 @@ static int rga2_MapUserMemory(struct page **pages, uint32_t *pageTable,
+ 	unsigned long Address;
+ 	unsigned long pfn;
+ 	struct page __maybe_unused *page;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++	struct follow_pfnmap_args args;
++#else
+ 	spinlock_t * ptl;
+ 	pte_t * pte;
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
+@@ -916,6 +919,7 @@ static int rga2_MapUserMemory(struct page **pages, uint32_t *pageTable,
+ #endif
+ 	pud_t * pud;
+ 	pmd_t * pmd;
++#endif
+ #endif
+ 
+ 	status = 0;
+@@ -971,7 +975,16 @@ static int rga2_MapUserMemory(struct page **pages, uint32_t *pageTable,
+ 			status = RGA2_OUT_OF_RESOURCES;
+ 			break;
+ 		}
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		args.vma = vma;
++		args.address = (Memory + i) << PAGE_SHIFT;
++		if (follow_pfnmap_start(&args)) {
++			pr_err("RGA2 failed to follow_pfnmap_start, result = %d, pageCount = %d\n",
++				result, pageCount);
++			status = RGA2_OUT_OF_RESOURCES;
++			break;
++		}
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+ 		if (follow_pte(current->mm, (Memory + i) << PAGE_SHIFT, &pte, &ptl)) {
+ 			pr_err("RGA2 failed to follow_pte, result = %d, pageCount = %d\n",
+ 				result, pageCount);
+@@ -1024,13 +1037,22 @@ static int rga2_MapUserMemory(struct page **pages, uint32_t *pageTable,
+ 			break;
+ 		}
+ #endif
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		pfn = args.pfn;
++#else
+ 		pfn = pte_pfn(*pte);
++#endif
+ 		Address = ((pfn << PAGE_SHIFT) |
+ 			  (((unsigned long)((Memory + i) << PAGE_SHIFT)) & ~PAGE_MASK));
+ 
+ 		pageTable[i] = rga2_dma_flush_page(phys_to_page(Address), map);
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		follow_pfnmap_end(&args);
++#else
+ 		pte_unmap_unlock(pte, ptl);
++#endif
+ 	}
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
+ 	mmap_read_unlock(current->mm);
+diff --git a/drivers/video/rockchip/rga3/rga_mm.c b/drivers/video/rockchip/rga3/rga_mm.c
+index 33648d2..3f32cd0 100644
+--- a/drivers/video/rockchip/rga3/rga_mm.c
++++ b/drivers/video/rockchip/rga3/rga_mm.c
+@@ -210,6 +210,9 @@ static int rga_get_user_pages_from_vma(struct page **pages, unsigned long Memory
+ 	int ret = 0;
+ 	int i;
+ 	struct vm_area_struct *vma;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++	struct follow_pfnmap_args args;
++#else
+ 	spinlock_t *ptl;
+ 	pte_t *pte;
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 6, 0)
+@@ -219,6 +222,7 @@ static int rga_get_user_pages_from_vma(struct page **pages, unsigned long Memory
+ #endif
+ 	pud_t *pud;
+ 	pmd_t *pmd;
++#endif
+ #endif
+ 	unsigned long pfn;
+ 
+@@ -230,7 +234,15 @@ static int rga_get_user_pages_from_vma(struct page **pages, unsigned long Memory
+ 			break;
+ 		}
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		args.vma = vma;
++		args.address = (Memory + i) << PAGE_SHIFT;
++		if (follow_pfnmap_start(&args)) {
++			pr_err("page[%d] failed to follow_pfnmap_start\n", i);
++			ret = RGA_OUT_OF_RESOURCES;
++			break;
++		}
++#elif LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0)
+ 		if (follow_pte(current_mm, (Memory + i) << PAGE_SHIFT, &pte, &ptl)) {
+ 			pr_err("page[%d] failed to follow_pte\n", i);
+ 			ret = RGA_OUT_OF_RESOURCES;
+@@ -281,9 +293,17 @@ static int rga_get_user_pages_from_vma(struct page **pages, unsigned long Memory
+ 		}
+ #endif
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		pfn = args.pfn;
++#else
+ 		pfn = pte_pfn(*pte);
++#endif
+ 		pages[i] = pfn_to_page(pfn);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0)
++		follow_pfnmap_end(&args);
++#else
+ 		pte_unmap_unlock(pte, ptl);
++#endif
+ 	}
+ 
+ 	if (ret == RGA_OUT_OF_RESOURCES && i > 0)
+-- 
+2.54.0
+

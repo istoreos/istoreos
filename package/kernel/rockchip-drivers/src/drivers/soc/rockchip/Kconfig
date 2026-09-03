@@ -1,0 +1,395 @@
+# SPDX-License-Identifier: GPL-2.0-only
+if ARCH_ROCKCHIP || COMPILE_TEST
+
+menu "Rockchip SoC drivers"
+
+source "drivers/soc/rockchip/Kconfig.cpu"
+
+#
+# Rockchip Android Features
+#
+
+config NO_GKI
+	bool "Disable Android GKI support"
+	default y if !GKI_HACKS_TO_FIX
+	help
+	  Say y here to disable Android GKI support. Then
+	  all the ABI compatibilities are not applicable.
+
+	  If unsure, say Y.
+
+config ROCKCHIP_DISABLE_UNUSED
+	tristate "Rockchip Disable Unused"
+	default m if GKI_HACKS_TO_FIX
+	help
+	  Disable unused clk and power down after module init.
+
+	  If unsure, say "N".
+
+#
+# Rockchip Soc drivers
+#
+
+config ROCKCHIP_AMP
+	tristate "Rockchip AMP support"
+	help
+	  Say y here to enable Rockchip AMP support.
+	  This option protects resources used by AMP.
+
+config ROCKCHIP_AMP_RPMSG_FILE
+	tristate "Rockchip RPMsg File"
+	depends on ARCH_ROCKCHIP && RPMSG
+	help
+	  Say y here to enable Rockchip RPMsg File.
+
+config ROCKCHIP_AMP_RPMSG_HEARTBEAT
+	tristate "Rockchip RPMsg Heartbeat"
+	depends on ARCH_ROCKCHIP && RPMSG
+	help
+	  Say y here to enable Rockchip RPMsg Heartbeat.
+
+config ROCKCHIP_AMP_RPMSG_MCULOG
+	tristate "Rockchip RPMsg MCU Log"
+	depends on ARCH_ROCKCHIP && RPMSG
+	help
+	  Say y here to enable Rockchip RPMsg MCU Log.
+
+config ROCKCHIP_AMP_RPMSG_SHAREDMEM
+	tristate "Rockchip AMP RPMsg Shared Memory"
+	depends on ARCH_ROCKCHIP && RPMSG
+	help
+	  Say y here to enable Rockchip AMP RPMsg Shared Memory.
+
+config ROCKCHIP_AMP_RPMSG_TIMESYNC
+	tristate "Rockchip AMP RPMSG Time Sync"
+	depends on ARCH_ROCKCHIP && RPMSG
+	help
+	  Say y here to enable Rockchip AMP RPMsg Time Sync.
+
+config ROCKCHIP_ARM64_ALIGN_FAULT_FIX
+	bool "Rockchip align fault fix support"
+	depends on ARM64 && NO_GKI
+	help
+	  Say y here to enable Rockchip align fault fix support.
+
+config ROCKCHIP_CPUINFO
+	tristate "Rockchip cpuinfo support"
+	depends on (NVMEM_ROCKCHIP_EFUSE || NVMEM_ROCKCHIP_OTP) && ARCH_ROCKCHIP
+	help
+	  Say y here to enable Rockchip cpuinfo support.
+	  Set system_serial_low/high from eFuse ID.
+	  Serial can read from /proc/cpuinfo.
+
+	  If unsure, say N.
+
+config ROCKCHIP_CSU
+	tristate "Rockchip Clock Subunit Driver"
+	depends on ARCH_ROCKCHIP
+	help
+	  This adds the clock subunit driver for Rockchip SoCs.
+
+config ROCKCHIP_DMC_DEBUG
+	tristate "ROCKCHIP DMC DEBUG Driver"
+	depends on ARCH_ROCKCHIP && HAVE_ARM_SMCCC
+	help
+	  This adds the dmc debug driver for the ROCKCHIP DMC.
+
+config ROCKCHIP_GRF
+	tristate "Rockchip General Register Files support"
+	help
+	  The General Register Files are a central component providing
+	  special additional settings registers for a lot of soc-components.
+	  In a lot of cases there also need to be default settings initialized
+	  to make some of them conform to expectations of the kernel.
+
+config ROCKCHIP_HW_DECOMPRESS
+	bool "Rockchip HardWare Decompress Support"
+	help
+	  This driver support Decompress IP built-in Rockchip SoC, support
+	  LZ4, GZIP, ZLIB.
+
+config ROCKCHIP_HW_DECOMPRESS_TEST
+	bool "Rockchip Hw-Decompress test"
+	depends on ROCKCHIP_HW_DECOMPRESS
+	help
+	  Say yes here to enable decompress test
+
+config ROCKCHIP_HW_DECOMPRESS_USER
+	tristate "Rockchip HardWare Decompress User Interface Support"
+	default n
+	select ROCKCHIP_HW_DECOMPRESS
+	help
+	  This driver support user invokes the Decompress IP built-in Rockchip SoC, support
+	  LZ4, GZIP, ZLIB.
+
+config ROCKCHIP_IODOMAIN
+	tristate "Rockchip IO domain support"
+	depends on OF
+	help
+	  Say y here to enable support io domains on Rockchip SoCs. It is
+	  necessary for the io domain setting of the SoC to match the
+	  voltage supplied by the regulators.
+
+config ROCKCHIP_IOMUX
+	tristate "Rockchip IOMUX ioctl support"
+	depends on PINCTRL_ROCKCHIP
+	help
+	  This is the debug option for rockchip pinctrl driver by add a device
+	  /dev/iomux to set or get iomux.
+
+	  If unsure, say N.
+
+config ROCKCHIP_IPA
+	tristate "Rockchip IPA support"
+	depends on THERMAL && OF
+	help
+	  Say y here to enable rockchip IPA.
+	  Add a simple power model for ipa to calculate static power and
+	  dynamic power.
+
+	  If unsure, say N.
+
+config ROCKCHIP_LEDC
+	tristate "Rockchip LEDC driver"
+	depends on OF
+	depends on HAS_IOMEM
+	depends on ARCH_ROCKCHIP
+	help
+	  This driver provides support for the Rockchip LEDC driver.
+
+config ROCKCHIP_OPP
+	tristate "Rockchip OPP select support"
+	depends on PM_DEVFREQ
+	help
+	  Say y here to enable rockchip OPP support.
+
+config ROCKCHIP_OPTIMIZE_HRTIMER_LATENCY
+	bool "Optimize HRTimer Latency"
+	depends on PREEMPT_RT && ARCH_ROCKCHIP
+	default y if PREEMPT_RT
+	help
+	  Advance the hrtimer expiration point of nanosleep, pre-process
+	  scheduling and interrupt handlers in advance, and thereby reduce
+	  nanosleep latency.
+
+config ROCKCHIP_OPTIMIZE_RT_PRIO
+	bool "Rockchip optimize prio for kernel RT thread and kworker"
+	depends on NO_GKI
+	help
+	  In some cases, there are too much userspace high priority RT threads, which
+	  cause kernel RT threads or kworkers block too long time. This config separate
+	  kernel and userspace RT threads into two priority regions, priority 0~49 for
+	  kernel and priority 50~99 for userspace, so that kernel RT threads is always
+	  higher priority than userspace. This config also set RT policy for kworkers.
+
+config ROCKCHIP_DTPM
+	tristate "Rockchip DTPM hierarchy"
+	depends on DTPM && m
+	help
+	  Describe the hierarchy for the Dynamic Thermal Power Management tree
+	  on this platform. That will create all the power capping capable
+	  devices.
+
+config ROCKCHIP_PVTM
+	tristate "Rockchip PVTM support"
+	help
+	  Say y here to enable pvtm support.
+	  The Process-Voltage-Temperature Monitor (PVTM) is used to monitor
+	  the chip performance variance caused by chip process, voltage and
+	  temperature.
+
+config ROCKCHIP_RAMDISK
+	bool "Rockchip RAM disk support"
+	help
+	  Saying Y here will allow you to use reserved RAM memory as a block
+	  device.
+
+config ROCKCHIP_LITE_ULTRA_SUSPEND
+	bool "Enable lite/ultra suspend"
+	depends on SUSPEND && NO_GKI
+	help
+	  Add mem_sleep_states options lite/ultra for RK ebook project
+
+config ROCKCHIP_SUSPEND_MODE
+	tristate "Rockchip suspend mode config"
+	depends on SUSPEND
+	help
+	  Say Y here if you want to set the suspend mode to the ATF.
+
+config ROCKCHIP_SUSPEND_DEBUG
+	bool "Rockchip suspend debug"
+	depends on ROCKCHIP_SUSPEND_MODE
+	help
+	  Say y here to enable rockchip suspend debug support.
+
+config ROCKCHIP_SYSTEM_MONITOR
+	tristate "Rockchip system monitor support"
+	help
+	  Say y here to enable rockchip system monitor support.
+
+config HAS_EARLYSUSPEND
+	bool
+
+config ROCKCHIP_EARLYSUSPEND
+	bool "Rockchip early suspend"
+	select HAS_EARLYSUSPEND
+	depends on !EARLYSUSPEND
+	depends on !FB_NOTIFY
+	depends on ROCKCHIP_SYSTEM_MONITOR
+	help
+	  Call early suspend handlers when the user requested sleep state
+	  changes.
+
+config ROCKCHIP_VENDOR_STORAGE
+	tristate "Rockchip vendor storage support"
+	help
+	  Say y here to enable rockchip vendor storage support.
+
+config ROCKCHIP_FLASH_VENDOR_STORAGE
+	tristate "Rockchip flash vendor storage support"
+	depends on ROCKCHIP_VENDOR_STORAGE && RK_FLASH
+	help
+	  Say y here to enable rockchip flash vendor storage support.
+
+config ROCKCHIP_MTD_VENDOR_STORAGE
+	tristate "Rockchip mtd vendor storage support"
+	depends on ROCKCHIP_VENDOR_STORAGE && MTD
+	help
+	  Say y here to enable rockchip mtd vendor storage support.
+
+config ROCKCHIP_RAM_VENDOR_STORAGE
+	tristate "Rockchip ram vendor storage support"
+	depends on ROCKCHIP_VENDOR_STORAGE
+	help
+	  Say y here to enable rockchip ram vendor storage support.
+
+config ROCKCHIP_VENDOR_STORAGE_UPDATE_LOADER
+	bool "Rockchip vendor storage update loader support"
+	default n
+	help
+	  Say y here to enable rockchip vendor storage update loader support.
+	  The /dev/vendor_storage must set root user access only.
+
+menu "FIQ Debugger"
+source "drivers/soc/rockchip/fiq_debugger/Kconfig"
+endmenu
+
+config ROCKCHIP_DEBUG
+	tristate "Rockchip DEBUG"
+	help
+	  Print dbgpcsr for every cpu when panic.
+
+config ROCKCHIP_MINI_KERNEL
+	bool "Rockchip Mini Kernel support"
+	select NO_GKI
+	default y if CPU_RV1103B || CPU_RV1106 || CPU_RV1126
+	help
+	  Say y here to enable Rockchip mini kernel support.
+	  This option make the kernel size smaller.
+
+if ROCKCHIP_MINI_KERNEL
+
+config ROCKCHIP_KMALLOC_NO_USE_ARCH_DMA_MINALIGN
+	bool "Rockchip kmalloc no use ARCH_DMA_MINALIGN"
+	default y if CPU_RV1103B || CPU_RV1106 || CPU_RV1126
+	help
+	  Say y here to make ARCH_KMALLOC_MINALIGN != ARCH_DMA_MINALIGN
+	  This option can save kmalloc memory but break drivers which
+	  assume kmalloc returned memory is aligned for DMA.
+	  If unsure, say N.
+
+endif
+
+config ROCKCHIP_THUNDER_BOOT
+	bool "Rockchip Thunder Boot support"
+	depends on NO_GKI
+	select ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK if SMP
+	help
+	  Say y here to enable Rockchip thunder boot support.
+	  This option make the kernel boot faster.
+
+config ROCKCHIP_THUNDER_BOOT_CRYPTO
+	bool "Rockchip Thunder Boot support hardware crypto"
+	depends on ROCKCHIP_THUNDER_BOOT
+	help
+	  Say y if boot need hardware crypto.
+
+config ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK
+	bool "Defer free large memblock to Buddy allocator"
+	depends on SMP
+	depends on NO_GKI
+	help
+	  The physical memory of a system is divided into several types, like
+	  memory reserved for device, for kernel pagetable, etc. The remaining
+	  area is for Buddy allocator. Normally, The memory for Buddy is consist
+	  of different size blocks, so, under meeting the memory request of kernel
+	  booting, we can defer free the large block size to Buddy which can be
+	  done later in work queue in parallel to other kernel threads, and the
+	  size of the large block can be defined in kernel command line
+	  by "defer_free_block_size" boot parameter.
+
+config ROCKCHIP_THUNDER_BOOT_MMC
+	bool "Rockchip Thunder Boot from MMC"
+	depends on ROCKCHIP_THUNDER_BOOT
+	help
+	  Say y if boot from MMC.
+
+config ROCKCHIP_THUNDER_BOOT_SFC
+	bool "Rockchip Thunder Boot from SFC"
+	depends on ROCKCHIP_THUNDER_BOOT
+	help
+	  Say y if boot from SPI Flash from SFC controller.
+
+config ROCKCHIP_THUNDER_BOOT_SERVICE
+	bool "Rockchip Thunder Boot Service"
+	depends on ROCKCHIP_THUNDER_BOOT
+	depends on MAILBOX
+	help
+	  Say y if MCU need to notify AP.
+
+config ROCKCHIP_NPOR_POWERGOOD
+	bool "Rockchip NPOR Powergood"
+	help
+	  Say y if SOC integrate ROCKCHIP NPOR Powergood.
+
+#
+# Rockchip Procfs drivers
+#
+
+config RK_CMA_PROCFS
+	tristate "CMA procfs interface"
+	depends on CMA && PROC_FS
+	help
+	  Turns on the ProcFS interface for CMA, shows the bitmap in hex
+	  format.
+
+config RK_DMABUF_PROCFS
+	tristate "DMABUF procfs support"
+	depends on DMA_SHARED_BUFFER
+	depends on PROC_FS
+	help
+	  Turns on this to create a procfs debug interface for dma-buf, support
+	  get information from db_list by dma_buf_get_each.
+
+	  If unsure, say "N".
+
+config RK_MEMBLOCK_PROCFS
+	bool "Memblock procfs for reserved memory"
+	depends on PROC_FS && ARCH_KEEP_MEMBLOCK
+	help
+	  Extend memblock procfs to show size of each memblock, and shows the
+	  result of total size by KiB format.
+
+config RK_ZONEINFO_PROCFS
+	bool "Zoneinfo procfs support"
+	depends on PROC_FS
+	help
+	  Dump all zone information.
+
+source "drivers/soc/rockchip/aoa_middleware/Kconfig"
+source "drivers/soc/rockchip/minidump/Kconfig"
+source "drivers/soc/rockchip/rknpu3/Kconfig"
+
+endmenu
+
+endif

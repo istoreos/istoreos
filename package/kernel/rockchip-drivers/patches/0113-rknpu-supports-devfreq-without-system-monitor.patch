@@ -1,0 +1,32 @@
+From 201ac0d62d4c6e0c2a6afff5034e78688cab439c Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 15 Sep 2025 15:12:08 +0800
+Subject: [PATCH] rknpu: supports devfreq without system monitor
+
+---
+ drivers/rknpu/rknpu_devfreq.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/rknpu/rknpu_devfreq.c b/drivers/rknpu/rknpu_devfreq.c
+index 5042906..015c2e4 100644
+--- a/drivers/rknpu/rknpu_devfreq.c
++++ b/drivers/rknpu/rknpu_devfreq.c
+@@ -91,6 +91,7 @@ static int rk3576_npu_set_read_margin(struct device *dev,
+ 	regmap_write(opp_info->grf, 0x0c, 0x003c0000 | (rm << 2));
+ 	regmap_write(opp_info->grf, 0x10, 0x001c0000 | (rm << 2));
+ 
++	opp_info->current_rm = rm;
+ 	return 0;
+ }
+ 
+@@ -457,6 +458,7 @@ int rknpu_devfreq_init(struct rknpu_device *rknpu_dev)
+ 	if (IS_ERR(rknpu_dev->mdev_info)) {
+ 		dev_dbg(dev, "without system monitor\n");
+ 		rknpu_dev->mdev_info = NULL;
++		npu_mdevp.opp_info->is_rate_volt_checked = true;
+ 	}
+ 
+ 	rknpu_dev->current_freq = clk_get_rate(rknpu_dev->clks[0].clk);
+-- 
+2.54.0
+

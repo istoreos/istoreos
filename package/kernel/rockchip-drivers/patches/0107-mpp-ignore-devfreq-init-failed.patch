@@ -1,0 +1,73 @@
+From 68c495cd736d0eb27680aa364e46c61061fdc166 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Wed, 2 Apr 2025 13:03:51 +0800
+Subject: [PATCH] mpp: ignore devfreq init failed
+
+---
+ drivers/video/rockchip/mpp/mpp_rkvdec.c  |  7 +++++++
+ drivers/video/rockchip/mpp/mpp_rkvdec2.c |  9 +++++++--
+ drivers/video/rockchip/mpp/mpp_rkvenc.c  | 10 ++++++++--
+ 3 files changed, 22 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvdec.c b/drivers/video/rockchip/mpp/mpp_rkvdec.c
+index 9430fab..b401e00 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec.c
+@@ -1320,6 +1320,13 @@ static int rkvdec_3328_init(struct mpp_dev *mpp)
+ 	mpp->fault_handler = rkvdec_3328_iommu_hdl;
+ 
+ 	ret = rkvdec_devfreq_init(mpp);
++	if (ret) {
++		dev_err(mpp->dev, "failed to add vdec devfreq: %d\n", ret);
++		if (-EPROBE_DEFER != ret) {
++			dev_err(mpp->dev, "init vdec without devfreq\n");
++			ret = 0;
++		}
++	}
+ done:
+ 	return ret;
+ }
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvdec2.c b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+index de543e7..4a53ca6 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvdec2.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvdec2.c
+@@ -1313,8 +1313,13 @@ static int rkvdec2_init(struct mpp_dev *mpp)
+ 		mpp_err("No hevc cabac reset resource define\n");
+ 
+ 	ret = rkvdec2_devfreq_init(mpp);
+-	if (ret)
+-		mpp_err("failed to add vdec devfreq\n");
++	if (ret) {
++		mpp_err("failed to add vdec devfreq: %d\n", ret);
++		if (-EPROBE_DEFER != ret) {
++			mpp_err("init vdec without devfreq\n");
++			ret = 0;
++		}
++	}
+ 
+ 	return ret;
+ }
+diff --git a/drivers/video/rockchip/mpp/mpp_rkvenc.c b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+index cf14dd8..4b31666 100644
+--- a/drivers/video/rockchip/mpp/mpp_rkvenc.c
++++ b/drivers/video/rockchip/mpp/mpp_rkvenc.c
+@@ -1172,8 +1172,14 @@ static int rkvenc_init(struct mpp_dev *mpp)
+ 
+ #ifdef CONFIG_PM_DEVFREQ
+ 	ret = rkvenc_devfreq_init(mpp);
+-	if (ret)
+-		mpp_err("failed to add venc devfreq\n");
++	if (ret) {
++		mpp_err("failed to add venc devfreq: %d\n", ret);
++		if (-EPROBE_DEFER == ret) {
++			return ret;
++		}
++		mpp_err("init venc without devfreq\n");
++		ret = 0;
++	}
+ #endif
+ 
+ 	/* for mmu pagefault */
+-- 
+2.54.0
+
