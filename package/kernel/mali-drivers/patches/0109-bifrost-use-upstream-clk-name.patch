@@ -1,0 +1,37 @@
+From aaef39169f7dd7441471daf6a98dbebe728f8b12 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 7 Sep 2026 17:21:48 +0800
+Subject: [PATCH] bifrost: use upstream clk name
+
+---
+ drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+index 613f12f..6f2a6ab 100755
+--- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
++++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
+@@ -755,6 +755,11 @@ static const struct of_device_id rockchip_mali_of_match[] = {
+ 	{},
+ };
+ 
++#if MALI_USE_CSF
++#define GPU_CLK_NAME "clk_mali"
++#else
++#define GPU_CLK_NAME "gpu"
++#endif /* MALI_USE_CSF */
+ int kbase_platform_rk_init_opp_table(struct kbase_device *kbdev)
+ {
+ 	struct rockchip_opp_info *info = &kbdev->opp_info;
+@@ -763,7 +768,7 @@ int kbase_platform_rk_init_opp_table(struct kbase_device *kbdev)
+ 	rockchip_get_opp_data(rockchip_mali_of_match, &kbdev->opp_info);
+ 
+ 	return rockchip_init_opp_table(kbdev->dev, &kbdev->opp_info,
+-				       "clk_mali", "mali");
++				       GPU_CLK_NAME, "mali");
+ }
+ 
+ void kbase_platform_rk_uninit_opp_table(struct kbase_device *kbdev)
+-- 
+2.54.0
+

@@ -1,0 +1,35 @@
+From a137efe3f96330f7874d5ba91bb1202801841e35 Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 7 Sep 2026 13:19:03 +0800
+Subject: [PATCH] rockchip_opp_select.h: remove is_use_pvtpll for abi
+ compatible
+
+is_use_pvtpll is only used by rv1126b_npu_opp_data
+---
+ include/soc/rockchip/rockchip_opp_select.h | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/include/soc/rockchip/rockchip_opp_select.h b/include/soc/rockchip/rockchip_opp_select.h
+index b54a4fe..28fe517 100644
+--- a/include/soc/rockchip/rockchip_opp_select.h
++++ b/include/soc/rockchip/rockchip_opp_select.h
+@@ -44,7 +44,6 @@ struct volt_rm_table {
+ struct rockchip_opp_data {
+ 	config_clks_t config_clks;
+ 	config_regulators_t config_regulators;
+-	bool is_use_pvtpll;
+ 
+ 	int (*get_soc_info)(struct device *dev, struct device_node *np,
+ 			    int *bin, int *process);
+@@ -146,7 +145,7 @@ struct rockchip_opp_info {
+ 
+ static inline bool rockchip_opp_is_use_pvtpll(struct rockchip_opp_info *info)
+ {
+-	return (info->is_scmi_clk || (info->data && info->data->is_use_pvtpll));
++	return (info->is_scmi_clk);
+ }
+ 
+ #if IS_ENABLED(CONFIG_ROCKCHIP_OPP)
+-- 
+2.54.0
+
