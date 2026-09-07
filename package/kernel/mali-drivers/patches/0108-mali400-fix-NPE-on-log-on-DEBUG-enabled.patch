@@ -1,4 +1,4 @@
-From 28ef8f973d544101d4abd7e4935f2636c3a6fac0 Mon Sep 17 00:00:00 2001
+From afdc5d40cad8fcffa80c4a17226cc52f954cabb2 Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Tue, 5 Aug 2025 13:36:33 +0800
 Subject: [PATCH] mali400: fix NPE on log on DEBUG enabled

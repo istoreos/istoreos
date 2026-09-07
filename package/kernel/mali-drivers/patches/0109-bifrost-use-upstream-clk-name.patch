@@ -1,4 +1,4 @@
-From aaef39169f7dd7441471daf6a98dbebe728f8b12 Mon Sep 17 00:00:00 2001
+From aac56a01f9246ed7a19b2e282b5520105b94d9b9 Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Mon, 7 Sep 2026 17:21:48 +0800
 Subject: [PATCH] bifrost: use upstream clk name
@@ -8,7 +8,7 @@ Subject: [PATCH] bifrost: use upstream clk name
  1 file changed, 6 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
-index 613f12f..6f2a6ab 100755
+index b6426fe..ba9c33b 100755
 --- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 +++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 @@ -755,6 +755,11 @@ static const struct of_device_id rockchip_mali_of_match[] = {

@@ -1,4 +1,4 @@
-From 204560c8a56424522319556ed0e121e4502699d9 Mon Sep 17 00:00:00 2001
+From 2ac634dadb6bfa14c4c6c418b7e24e5f6636f8b6 Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Tue, 5 Aug 2025 13:38:11 +0800
 Subject: [PATCH] mali400: supports running without devfreq

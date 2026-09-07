@@ -1,4 +1,4 @@
-From 32dce781866f2200581e2bc907454dc2a1efff44 Mon Sep 17 00:00:00 2001
+From 63dd2db89b31abb0c099f0e57da9fb6b6568d332 Mon Sep 17 00:00:00 2001
 From: Liangbin Lian <jjm2473@gmail.com>
 Date: Mon, 4 Dec 2023 14:27:54 +0800
 Subject: [PATCH] drivers/gpu/arm/bifrost: fix rk platform code build without
@@ -10,7 +10,7 @@ Subject: [PATCH] drivers/gpu/arm/bifrost: fix rk platform code build without
  2 files changed, 14 insertions(+)
 
 diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
-index a4a9b55..4973d16 100755
+index 0b8a204..74be86c 100755
 --- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 +++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 @@ -119,7 +119,9 @@ static void rk_pm_power_off_delay_work(struct work_struct *work)

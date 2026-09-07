@@ -5,9 +5,9 @@ PKG_NAME:=mali-drivers
 PKG_VERSION:=6.12_alpha
 PKG_RELEASE:=1
 
-PKG_HASH:=1ee1fbd9dd09635d962707bf01cacf39840e12bf36772a64b09220b39fd61928
-PKG_SOURCE_URL_FILE:=8f44d409f14b9bfd896108b1799f1be22f83dd5e.tar.gz
-PKG_SOURCE:=mali-drivers-8f44d409f14b9bfd896108b1799f1be22f83dd5e.tar.gz
+PKG_HASH:=b4c9b75673f2fedb42799e89cdab995cd84537de23f7e9e1694d0928769a5da0
+PKG_SOURCE_URL_FILE:=10fa756a1ba3c1fee6f87de0b77e46cf80b3640d.tar.gz
+PKG_SOURCE:=mali-drivers-10fa756a1ba3c1fee6f87de0b77e46cf80b3640d.tar.gz
 PKG_SOURCE_URL:=https://github.com/jjm2473/mali-drivers/archive/
 
 PKG_BUILD_DEPENDS:=rockchip-drivers

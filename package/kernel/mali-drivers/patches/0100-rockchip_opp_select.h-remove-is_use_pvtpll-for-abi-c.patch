@@ -1,4 +1,4 @@
-From a137efe3f96330f7874d5ba91bb1202801841e35 Mon Sep 17 00:00:00 2001
+From 7205e0fb93ec8aabd35fd5940c5cf07fa448b0d3 Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Mon, 7 Sep 2026 13:19:03 +0800
 Subject: [PATCH] rockchip_opp_select.h: remove is_use_pvtpll for abi

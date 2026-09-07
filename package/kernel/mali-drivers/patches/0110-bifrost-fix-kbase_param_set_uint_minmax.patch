@@ -1,0 +1,25 @@
+From 4978524e721c45a6b19e3995bc1cde2d22be711a Mon Sep 17 00:00:00 2001
+From: jjm2473 <jjm2473@gmail.com>
+Date: Mon, 7 Sep 2026 18:13:08 +0800
+Subject: [PATCH] bifrost: fix kbase_param_set_uint_minmax
+
+---
+ drivers/gpu/arm/bifrost/device/mali_kbase_device.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/arm/bifrost/device/mali_kbase_device.c b/drivers/gpu/arm/bifrost/device/mali_kbase_device.c
+index 3438c1e..62a2fd6 100644
+--- a/drivers/gpu/arm/bifrost/device/mali_kbase_device.c
++++ b/drivers/gpu/arm/bifrost/device/mali_kbase_device.c
+@@ -70,7 +70,7 @@ static unsigned int mma_wa_id;
+ 
+ static int set_mma_wa_id(const char *val, const struct kernel_param *kp)
+ {
+-	return kbase_param_set_uint_minmax(val, kp, 1, 15);
++	return param_set_uint_minmax(val, kp, 1, 15);
+ }
+ 
+ static const struct kernel_param_ops mma_wa_id_ops = {
+-- 
+2.54.0
+

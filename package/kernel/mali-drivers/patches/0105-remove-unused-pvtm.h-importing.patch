@@ -1,4 +1,4 @@
-From 5edb8458d0bb86a584a03d44329d683e9e4e99fb Mon Sep 17 00:00:00 2001
+From cbb00874ce0d98d5607b0971bfd0a5fa078c5cab Mon Sep 17 00:00:00 2001
 From: jjm2473 <jjm2473@gmail.com>
 Date: Fri, 21 Mar 2025 12:35:10 +0800
 Subject: [PATCH] remove unused pvtm.h importing
@@ -9,7 +9,7 @@ Subject: [PATCH] remove unused pvtm.h importing
  2 files changed, 2 deletions(-)
 
 diff --git a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
-index ed99826..613f12f 100755
+index 37f88eb..b6426fe 100755
 --- a/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 +++ b/drivers/gpu/arm/bifrost/platform/rk/mali_kbase_config_rk.c
 @@ -29,7 +29,6 @@
