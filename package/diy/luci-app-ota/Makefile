@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 LUCI_TITLE:=LuCI for OTA upgrade
 LUCI_DEPENDS:=+curl
 LUCI_PKGARCH:=all
-PKG_VERSION:=1.5.3
+PKG_VERSION:=25.12
 PKG_RELEASE:=1
 PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
 

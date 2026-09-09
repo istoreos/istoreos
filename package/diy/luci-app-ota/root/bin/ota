@@ -127,12 +127,12 @@ prepare_check() {
     local current="$release-$revision"
 
     cat /dev/null > /var/run/ota/ota.log
-    fcurl --connect-timeout 5 -o /var/run/ota/ota.latest "$OTA_URL_BASE/version.latest" || { rm -f /var/run/ota/ota.latest ; return 255; }
+    fcurl --connect-timeout 5 -o /var/run/ota/ota.latest "$OTA_URL_BASE/version.latest.v2" || { rm -f /var/run/ota/ota.latest ; return 255; }
     if head -1 /var/run/ota/ota.latest | grep -Fq "$current"; then
         latest=1
         current=""
     fi
-    fcurl --connect-timeout 5 -o /var/run/ota/ota.index "$OTA_URL_BASE/version.index" || return 255;
+    fcurl --connect-timeout 5 -o /var/run/ota/ota.index "$OTA_URL_BASE/version.index.v2" || return 255;
     head -5 /var/run/ota/ota.index | while read line; do
         if [ -z "$line" -o "$line" = "$current" ]; then
             break
