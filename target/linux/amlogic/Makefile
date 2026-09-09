@@ -15,4 +15,6 @@ include $(INCLUDE_DIR)/target.mk
 
 DEFAULT_PACKAGES += mkf2fs e2fsprogs
 
+KERNELNAME:=Image dtbs
+
 $(eval $(call BuildTarget))
