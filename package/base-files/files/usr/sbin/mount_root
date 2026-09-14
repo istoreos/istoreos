@@ -283,7 +283,7 @@ list_core_packages()
 		luci-compat luci-lua-runtime luci-lib-base luci-base uhttpd luci-ssl-openssl luci-ssl \
 		rpcd procd \
 		netifd dnsmasq-full dnsmasq firewall4 \
-		block-mount \
+		attr block-mount \
 		curl \
 		ttyd dropbear kernel
 	do
