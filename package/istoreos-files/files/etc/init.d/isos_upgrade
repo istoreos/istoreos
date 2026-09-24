@@ -136,6 +136,18 @@ rebuild_apk_world(){
 	rm -f /tmp/apk_world
 }
 
+rebuild_etc_passwd() {
+	cat /etc/passwd | sed 's/^\([^:][^:]*\):.*$/^\1:/g' | grep -vf - /rom/etc/passwd > /tmp/passwd_new
+	[ -s /tmp/passwd_new ] && cat /tmp/passwd_new >> /etc/passwd
+	rm -f /tmp/passwd_new
+}
+
+rebuild_etc_group() {
+	cat /etc/group | sed 's/^\([^:][^:]*\):.*$/^\1:/g' | grep -vf - /rom/etc/group > /tmp/group_new
+	[ -s /tmp/group_new ] && cat /tmp/group_new >> /etc/group
+	rm -f /tmp/group_new
+}
+
 boot() {
 	[ -f /.recovery_mode ] && return 0
 
@@ -169,6 +181,12 @@ boot() {
 		}
 		is_overlayed $DIST_FEEDS && {
 			upgrade_opkg_distfeeds
+		}
+		is_overlayed /etc/passwd && {
+			rebuild_etc_passwd
+		}
+		is_overlayed /etc/group && {
+			rebuild_etc_group
 		}
 	fi
 }
