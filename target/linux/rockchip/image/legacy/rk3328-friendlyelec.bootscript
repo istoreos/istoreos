@@ -2,6 +2,11 @@
 # https://github.com/friendlyarm/uboot-rockchip/blob/nanopi-r2-v2017.09/board/rockchip/nanopi_r2/hwrev.c
 # R2S < 151 < R2C Plus < 275 < R2S Plus < 412 < R2C
 
+if test -e mmc ${devnum}:1 bootEnv.txt; then
+	load mmc ${devnum}:1 ${kernel_addr_r} bootEnv.txt
+	env import -t ${kernel_addr_r} ${filesize}
+fi
+
 env delete hwrev
 env delete adc_value
 
@@ -26,7 +31,7 @@ env delete adc_value
 
 part uuid mmc ${devnum}:2 uuid
 
-setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xff130000 root=PARTUUID=${uuid} rw rootwait";
+setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xff130000 root=PARTUUID=${uuid} rw rootwait ${extraargs}";
 
 load ${devtype} ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
 load ${devtype} ${devnum}:1 ${kernel_addr_r} kernel.img

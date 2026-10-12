@@ -1,5 +1,10 @@
 part uuid ${devtype} ${devnum}:2 uuid
 
+if test -e ${devtype} ${devnum}:1 bootEnv.txt; then
+	load ${devtype} ${devnum}:1 ${kernel_addr_r} bootEnv.txt
+	env import -t ${kernel_addr_r} ${filesize}
+fi
+
 if test $soc = 'rk3308'; then
 	serial_addr=',0xff0c0000'; serial_port='ttyS2';
 elif test $soc = 'rk3328'; then
@@ -16,7 +21,7 @@ elif test $soc = 'rk3588'; then
 	serial_addr=',0xfeb50000'; serial_port='ttyS2';
 fi
 
-setenv bootargs "console=${serial_port},1500000 earlycon=uart8250,mmio32${serial_addr} root=PARTUUID=${uuid} rw rootwait";
+setenv bootargs "console=${serial_port},1500000 earlycon=uart8250,mmio32${serial_addr} root=PARTUUID=${uuid} rw rootwait ${extraargs}";
 
 load ${devtype} ${devnum}:1 ${kernel_addr_r} kernel.img
 

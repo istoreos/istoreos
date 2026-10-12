@@ -1,5 +1,10 @@
 # hinlink rk3568 combined image
 
+if test -e mmc ${devnum}:1 bootEnv.txt; then
+	load mmc ${devnum}:1 ${kernel_addr_r} bootEnv.txt
+	env import -t ${kernel_addr_r} ${filesize}
+fi
+
 env delete hwflag
 env delete adc_value
 
@@ -35,7 +40,7 @@ env delete adc_value
 
 part uuid mmc ${devnum}:2 uuid
 
-setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfe660000 root=PARTUUID=${uuid} rw rootwait"
+setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfe660000 root=PARTUUID=${uuid} rw rootwait ${extraargs}"
 
 load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwflag}.dtb
 load mmc ${devnum}:1 ${kernel_addr_r} kernel.img

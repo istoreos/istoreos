@@ -1,5 +1,11 @@
 # hinlink rk3588 combined image, board detected by ADC
 # v1,v2 < 600 < v3 < 1300 < v4
+
+if test -e mmc ${devnum}:1 bootEnv.txt; then
+	load mmc ${devnum}:1 ${kernel_addr_r} bootEnv.txt
+	env import -t ${kernel_addr_r} ${filesize}
+fi
+
 env delete hwrev
 env delete adc_value
 
@@ -32,7 +38,7 @@ gpio clear 150
 
 part uuid mmc ${devnum}:2 uuid
 
-setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfeb50000 root=PARTUUID=${uuid} rw rootwait"
+setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfeb50000 root=PARTUUID=${uuid} rw rootwait ${extraargs}"
 
 load mmc ${devnum}:1 ${fdt_addr_r} rockchip${hwrev}.dtb
 load mmc ${devnum}:1 ${kernel_addr_r} kernel.img

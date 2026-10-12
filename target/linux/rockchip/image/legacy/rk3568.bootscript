@@ -1,8 +1,13 @@
 test -n "${devtype}" || setenv devtype mmc
 
+if test -e ${devtype} ${devnum}:1 bootEnv.txt; then
+	load ${devtype} ${devnum}:1 ${kernel_addr_r} bootEnv.txt
+	env import -t ${kernel_addr_r} ${filesize}
+fi
+
 part uuid ${devtype} ${devnum}:2 uuid
 
-setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfe660000 root=PARTUUID=${uuid} rw rootwait"
+setenv bootargs "console=ttyS2,1500000 earlycon=uart8250,mmio32,0xfe660000 root=PARTUUID=${uuid} rw rootwait ${extraargs}"
 
 load ${devtype} ${devnum}:1 ${fdt_addr_r} rockchip.dtb
 load ${devtype} ${devnum}:1 ${kernel_addr_r} kernel.img
