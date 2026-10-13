@@ -1,0 +1,34 @@
+--- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -347,15 +347,15 @@ static int rockchip_pcie_probe(struct pl
+ 		}
+ 	}
+ 
+-	ret = rockchip_pcie_phy_init(rockchip);
++	ret = rockchip_pcie_clk_init(rockchip);
+ 	if (ret)
+ 		goto disable_regulator;
+ 
+-	ret = reset_control_deassert(rockchip->rst);
++	ret = rockchip_pcie_phy_init(rockchip);
+ 	if (ret)
+-		goto deinit_phy;
++		goto deinit_clk;
+ 
+-	ret = rockchip_pcie_clk_init(rockchip);
++	ret = reset_control_deassert(rockchip->rst);
+ 	if (ret)
+ 		goto deinit_phy;
+ 
+@@ -368,9 +368,10 @@ static int rockchip_pcie_probe(struct pl
+ 	if (!ret)
+ 		return 0;
+ 
+-	clk_bulk_disable_unprepare(rockchip->clk_cnt, rockchip->clks);
+ deinit_phy:
+ 	rockchip_pcie_phy_deinit(rockchip);
++deinit_clk:
++	clk_bulk_disable_unprepare(rockchip->clk_cnt, rockchip->clks);
+ disable_regulator:
+ 	if (rockchip->vpcie3v3)
+ 		regulator_disable(rockchip->vpcie3v3);

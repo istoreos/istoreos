@@ -1,0 +1,18 @@
+--- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -322,9 +322,15 @@ static int rockchip_pcie_probe(struct pl
+ 	if (ret)
+ 		return ret;
+ 
++	/* To ensure the ordering of pci device */
++	if (!device_property_read_u32(dev, "rockchip,init-delay-ms", &ret)) {
++		msleep(ret);
++	}
++
+ 	ret = reset_control_assert(rockchip->rst);
+ 	if (ret)
+ 		return ret;
++	udelay(10);
+ 
+ 	/* DON'T MOVE ME: must be enable before PHY init */
+ 	rockchip->vpcie3v3 = devm_regulator_get_optional(dev, "vpcie3v3");
