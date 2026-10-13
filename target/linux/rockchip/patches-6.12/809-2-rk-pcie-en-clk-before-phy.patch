@@ -1,0 +1,53 @@
+--- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -543,15 +543,15 @@ static int rockchip_pcie_probe(struct pl
+ 					     "failed to enable vpcie3v3 regulator\n");
+ 	}
+ 
+-	ret = rockchip_pcie_phy_init(rockchip);
++	ret = rockchip_pcie_clk_init(rockchip);
+ 	if (ret)
+ 		goto disable_regulator;
+ 
+-	ret = reset_control_deassert(rockchip->rst);
++	ret = rockchip_pcie_phy_init(rockchip);
+ 	if (ret)
+-		goto deinit_phy;
++		goto deinit_clk;
+ 
+-	ret = rockchip_pcie_clk_init(rockchip);
++	ret = reset_control_deassert(rockchip->rst);
+ 	if (ret)
+ 		goto deinit_phy;
+ 
+@@ -559,25 +559,24 @@ static int rockchip_pcie_probe(struct pl
+ 	case DW_PCIE_RC_TYPE:
+ 		ret = rockchip_pcie_configure_rc(rockchip);
+ 		if (ret)
+-			goto deinit_clk;
++			goto deinit_phy;
+ 		break;
+ 	case DW_PCIE_EP_TYPE:
+ 		ret = rockchip_pcie_configure_ep(pdev, rockchip);
+ 		if (ret)
+-			goto deinit_clk;
++			goto deinit_phy;
+ 		break;
+ 	default:
+ 		dev_err(dev, "INVALID device type %d\n", data->mode);
+ 		ret = -EINVAL;
+-		goto deinit_clk;
++		goto deinit_phy;
+ 	}
+ 
+ 	return 0;
+-
+-deinit_clk:
+-	clk_bulk_disable_unprepare(rockchip->clk_cnt, rockchip->clks);
+ deinit_phy:
+ 	rockchip_pcie_phy_deinit(rockchip);
++deinit_clk:
++	clk_bulk_disable_unprepare(rockchip->clk_cnt, rockchip->clks);
+ disable_regulator:
+ 	if (rockchip->vpcie3v3)
+ 		regulator_disable(rockchip->vpcie3v3);
