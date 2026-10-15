@@ -14,9 +14,13 @@ else
 	adc single saradc@fe720000 7 adc_value
 
 	if test -n "$adc_value"; then
-		# h68k 511-524
+		# h68k 511-524 778-792
 		# h69k 691-695
-		if test "$adc_value" -lt 1024 -a "$adc_value" -ge 610 -o "$adc_value" -ge 1072265; then
+		if test "$adc_value" -ge 610 -a "$adc_value" -lt 700 -o "$adc_value" -ge 1072265 -a "$adc_value" -lt 1230468; then
+			echo h69k
+			setenv hwflag 10
+		fi
+		if test "$adc_value" -ge 800 -a "$adc_value" -lt 1024 -o "$adc_value" -ge 1406250; then
 			echo h69k
 			setenv hwflag 10
 		fi
