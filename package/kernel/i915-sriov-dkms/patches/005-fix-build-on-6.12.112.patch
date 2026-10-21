@@ -1,0 +1,89 @@
+From 588864001fdd9aa96fd9266ecb9c7e520740d734 Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Wed, 21 Oct 2026 21:03:59 +0800
+Subject: [PATCH 5/5] fix build on 6.12.112
+
+---
+ drivers/gpu/drm/i915/display/intel_fbdev.c | 16 ++++++++++++++++
+ drivers/gpu/drm/xe/xe_sched_job.c          |  2 +-
+ drivers/gpu/drm/xe/xe_tlb_inval_job.c      |  2 +-
+ 3 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpu/drm/i915/display/intel_fbdev.c b/drivers/gpu/drm/i915/display/intel_fbdev.c
+index fe4b5e0..302004a 100644
+--- a/drivers/gpu/drm/i915/display/intel_fbdev.c
++++ b/drivers/gpu/drm/i915/display/intel_fbdev.c
+@@ -683,7 +683,11 @@ static int intel_fbdev_output_poll_changed(struct drm_device *dev)
+ 	return 0;
+ }
+ 
++#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 12, 111)
++static int intel_fbdev_restore_mode(struct drm_i915_private *dev_priv, bool force)
++#else
+ static int intel_fbdev_restore_mode(struct drm_i915_private *dev_priv)
++#endif
+ {
+ 	struct intel_fbdev *ifbdev = dev_priv->display->fbdev.fbdev;
+ 	int ret;
+@@ -694,7 +698,11 @@ static int intel_fbdev_restore_mode(struct drm_i915_private *dev_priv)
+ 	if (!ifbdev->vma)
+ 		return -ENOMEM;
+ 
++#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 12, 111)
++	ret = drm_fb_helper_restore_fbdev_mode_unlocked(&ifbdev->helper, force);
++#else
+ 	ret = drm_fb_helper_restore_fbdev_mode_unlocked(&ifbdev->helper);
++#endif
+ 	if (ret)
+ 		return ret;
+ 
+@@ -723,12 +731,20 @@ static void intel_fbdev_client_unregister(struct drm_client_dev *client)
+ 	}
+ }
+ 
++#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 12, 111)
++static int intel_fbdev_client_restore(struct drm_client_dev *client, bool force)
++#else
+ static int intel_fbdev_client_restore(struct drm_client_dev *client)
++#endif
+ {
+ 	struct drm_i915_private *dev_priv = to_i915(client->dev);
+ 	int ret;
+ 
++#if LINUX_VERSION_CODE > KERNEL_VERSION(6, 12, 111)
++	ret = intel_fbdev_restore_mode(dev_priv, force);
++#else
+ 	ret = intel_fbdev_restore_mode(dev_priv);
++#endif
+ 	if (ret)
+ 		return ret;
+ 
+diff --git a/drivers/gpu/drm/xe/xe_sched_job.c b/drivers/gpu/drm/xe/xe_sched_job.c
+index ee622e0..b275e5d 100644
+--- a/drivers/gpu/drm/xe/xe_sched_job.c
++++ b/drivers/gpu/drm/xe/xe_sched_job.c
+@@ -113,7 +113,7 @@ struct xe_sched_job *xe_sched_job_create(struct xe_exec_queue *q,
+ 	kref_init(&job->refcount);
+ 	xe_exec_queue_get(job->q);
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 103)
+ 	err = drm_sched_job_init(&job->drm, q->entity, 1, NULL,
+ 				 q->xef ? q->xef->drm->client_id : 0);
+ #else
+diff --git a/drivers/gpu/drm/xe/xe_tlb_inval_job.c b/drivers/gpu/drm/xe/xe_tlb_inval_job.c
+index 12675e2..9039c0d 100644
+--- a/drivers/gpu/drm/xe/xe_tlb_inval_job.c
++++ b/drivers/gpu/drm/xe/xe_tlb_inval_job.c
+@@ -120,7 +120,7 @@ xe_tlb_inval_job_create(struct xe_exec_queue *q, struct xe_tlb_inval *tlb_inval,
+ 	}
+ 	job->fence = &ifence->base;
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 103)
+ 	err = drm_sched_job_init(&job->dep.drm, entity, 1, NULL,
+ 				 q->xef ? q->xef->drm->client_id : 0);
+ #else
+-- 
+2.54.0
+
