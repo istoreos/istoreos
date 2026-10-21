@@ -11,9 +11,9 @@
  #if IS_ENABLED(CONFIG_MCTP)
  	struct netns_mctp	mctp;
  #endif
-@@ -189,6 +187,11 @@ struct net {
- #if IS_ENABLED(CONFIG_SMC)
- 	struct netns_smc	smc;
+@@ -193,6 +191,11 @@ struct net {
+ 	/* Move to a better place when the config guard is removed. */
+ 	struct mutex		rtnl_mutex;
  #endif
 +
 +// iStoreOS move

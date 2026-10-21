@@ -86,7 +86,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  /**
   *	ata_build_rw_tf - Build ATA taskfile for given read/write request
   *	@qc: Metadata associated with the taskfile to build
-@@ -3247,9 +3279,15 @@ static void sata_print_link_status(struc
+@@ -3280,9 +3312,15 @@ static void sata_print_link_status(struc
  		tmp = (sstatus >> 4) & 0xf;
  		ata_link_info(link, "SATA link up %s (SStatus %X SControl %X)\n",
  			      sata_spd_string(tmp), sstatus, scontrol);
@@ -102,7 +102,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  	}
  }
  
-@@ -4827,6 +4865,10 @@ void __ata_qc_complete(struct ata_queued
+@@ -4870,6 +4908,10 @@ void __ata_qc_complete(struct ata_queued
  	ata_led_act(ap);
  #endif
  
@@ -113,7 +113,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  	/* clear exclusive status */
  	if (unlikely(qc->flags & ATA_QCFLAG_CLEAR_EXCL &&
  		     ap->excl_link == link))
-@@ -5460,6 +5502,11 @@ void ata_link_init(struct ata_port *ap,
+@@ -5503,6 +5545,11 @@ void ata_link_init(struct ata_port *ap,
  	link->hw_sata_spd_limit = UINT_MAX;
  	INIT_WORK(&link->deferred_qc_work, ata_scsi_deferred_qc_work);
  
@@ -168,7 +168,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  	return 0;
    err_tlink:
  	while (--i >= 0)
-@@ -573,6 +600,10 @@ static void sata_pmp_detach(struct ata_d
+@@ -578,6 +605,10 @@ static void sata_pmp_detach(struct ata_d
  	struct ata_port *ap = link->ap;
  	struct ata_link *tlink;
  	unsigned long flags;
@@ -179,7 +179,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  
  	ata_dev_info(dev, "Port Multiplier detaching\n");
  
-@@ -592,6 +623,17 @@ static void sata_pmp_detach(struct ata_d
+@@ -597,6 +628,17 @@ static void sata_pmp_detach(struct ata_d
  	ap->nr_pmp_links = 0;
  	link->pmp = 0;
  	spin_unlock_irqrestore(ap->lock, flags);
@@ -210,7 +210,7 @@ Subject: [PATCH] drivers/ata: sata pmp supports led trigger
  #define DRV_NAME	"libata"
  #define DRV_VERSION	"3.00"	/* must be exactly four chars */
  
-@@ -274,4 +278,8 @@ static inline void zpodd_disable_run_wak
+@@ -284,4 +288,8 @@ static inline void zpodd_disable_run_wak
  static inline void zpodd_post_poweron(struct ata_device *dev) {}
  #endif /* CONFIG_SATA_ZPODD */
  

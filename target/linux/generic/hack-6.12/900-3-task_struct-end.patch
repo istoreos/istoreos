@@ -64,7 +64,7 @@
  #ifdef CONFIG_KCOV
  	/* See kernel/kcov.c for more details. */
  
-@@ -1575,9 +1566,7 @@ struct task_struct {
+@@ -1583,9 +1574,7 @@ struct task_struct {
  	int				mce_count;
  #endif
  
@@ -75,7 +75,7 @@
  #ifdef CONFIG_RETHOOK
  	struct llist_head               rethooks;
  #endif
-@@ -1606,6 +1595,25 @@ struct task_struct {
+@@ -1614,6 +1603,25 @@ struct task_struct {
  	struct user_event_mm		*user_event_mm;
  #endif
  

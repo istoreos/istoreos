@@ -1,6 +1,6 @@
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -1457,29 +1457,6 @@ struct net_device_ops {
+@@ -1459,29 +1459,6 @@ struct net_device_ops {
  	int			(*ndo_setup_tc)(struct net_device *dev,
  						enum tc_setup_type type,
  						void *type_data);
@@ -30,7 +30,7 @@
  
  #ifdef CONFIG_RFS_ACCEL
  	int			(*ndo_rx_flow_steer)(struct net_device *dev,
-@@ -1605,6 +1582,32 @@ struct net_device_ops {
+@@ -1607,6 +1584,32 @@ struct net_device_ops {
  	int			(*ndo_hwtstamp_set)(struct net_device *dev,
  						    struct kernel_hwtstamp_config *kernel_config,
  						    struct netlink_ext_ack *extack);
@@ -63,7 +63,7 @@
  };
  
  /**
-@@ -2362,12 +2365,6 @@ struct net_device {
+@@ -2363,12 +2366,6 @@ struct net_device {
  #endif
  	u8			prio_tc_map[TC_BITMASK + 1];
  
@@ -76,7 +76,7 @@
  	struct phy_link_topology	*link_topo;
  	struct phy_device	*phydev;
  	struct sfp_bus		*sfp_bus;
-@@ -2414,6 +2411,13 @@ struct net_device {
+@@ -2415,6 +2412,13 @@ struct net_device {
  	/** @irq_moder: dim parameters used if IS_ENABLED(CONFIG_DIMLIB). */
  	struct dim_irq_moder	*irq_moder;
  
