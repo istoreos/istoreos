@@ -43,7 +43,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  	if (newline == buf) {
  		ustream_consume(cl->us, 2);
  		return true;
-@@ -572,6 +577,7 @@ static read_cb_t read_cbs[] = {
+@@ -735,6 +740,7 @@ static read_cb_t read_cbs[] = {
  	[CLIENT_STATE_INIT] = client_init_cb,
  	[CLIENT_STATE_HEADER] = client_header_cb,
  	[CLIENT_STATE_DATA] = client_data_cb,
@@ -51,7 +51,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  };
  
  void uh_client_read_cb(struct client *cl)
-@@ -592,6 +598,7 @@ void uh_client_read_cb(struct client *cl
+@@ -755,6 +761,7 @@ void uh_client_read_cb(struct client *cl
  		if (!read_cbs[cl->state](cl, str, len)) {
  			if (len == us->r.buffer_len &&
  			    cl->state != CLIENT_STATE_DATA &&
@@ -59,7 +59,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  			    cl->state != CLIENT_STATE_DONE)
  				uh_header_error(cl, 413, "Request Entity Too Large");
  			break;
-@@ -630,6 +637,16 @@ void uh_client_notify_state(struct clien
+@@ -793,6 +800,16 @@ void uh_client_notify_state(struct clien
  		if (cl->state == CLIENT_STATE_DATA)
  			return;
  
@@ -78,7 +78,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  
 --- a/main.c
 +++ b/main.c
-@@ -144,6 +144,7 @@ static int usage(const char *name)
+@@ -145,6 +145,7 @@ static int usage(const char *name)
  #endif
  		"	-h directory    Specify the document root, default is '.'\n"
  		"	-E string       Use given virtual URL as 404 error handler\n"
@@ -86,7 +86,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  		"	-b string       Use given charset for directory listings, default to UTF-8\n"
  		"	-I string       Use given filename as index for directories, multiple allowed\n"
  		"	-S              Do not follow symbolic links outside of the docroot\n"
-@@ -193,6 +194,7 @@ static void init_defaults_pre(void)
+@@ -194,6 +195,7 @@ static void init_defaults_pre(void)
  	conf.cgi_path = "/sbin:/usr/sbin:/bin:/usr/bin";
  	INIT_LIST_HEAD(&conf.cgi_alias);
  	INIT_LIST_HEAD(&conf.lua_prefix);
@@ -94,16 +94,16 @@ Subject: [PATCH 1/3] feat: add raw proxy
  #if HAVE_UCODE
  	INIT_LIST_HEAD(&conf.ucode_prefix);
  #endif
-@@ -293,7 +295,7 @@ int main(int argc, char **argv)
+@@ -295,7 +297,7 @@ int main(int argc, char **argv)
  	init_defaults_pre();
  	signal(SIGPIPE, SIG_IGN);
  
--	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
-+	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:F:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qRr:Ss:T:t:U:u:Xx:y:")) != -1) {
+-	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qQ:Rr:Ss:T:t:U:u:Xx:y:")) != -1) {
++	while ((ch = getopt(argc, argv, "A:ab:C:c:Dd:E:e:F:fh:H:I:i:K:k:L:l:m:N:n:O:o:P:p:qQ:Rr:Ss:T:t:U:u:Xx:y:")) != -1) {
  		switch(ch) {
  #ifdef HAVE_TLS
  		case 'C':
-@@ -357,6 +359,13 @@ int main(int argc, char **argv)
+@@ -364,6 +366,13 @@ int main(int argc, char **argv)
  			conf.error_handler = optarg;
  			break;
  
@@ -840,15 +840,15 @@ Subject: [PATCH 1/3] feat: add raw proxy
  #include <netinet/in.h>
  #include <limits.h>
  #include <dirent.h>
-@@ -101,6 +102,7 @@ struct config {
- #ifdef HAVE_UCODE
+@@ -107,6 +108,7 @@ struct config {
  	struct list_head ucode_prefix;
  #endif
+ 	struct list_head sni_redirect;
 +	struct list_head proxy_prefixes;
  };
  
- struct auth_realm {
-@@ -155,6 +157,7 @@ enum client_state {
+ struct sni_redirect {
+@@ -176,6 +178,7 @@ enum client_state {
  	CLIENT_STATE_INIT,
  	CLIENT_STATE_HEADER,
  	CLIENT_STATE_DATA,
@@ -856,7 +856,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  	CLIENT_STATE_DONE,
  	CLIENT_STATE_CLOSE,
  	CLIENT_STATE_CLEANUP,
-@@ -209,6 +212,32 @@ struct dispatch_proc {
+@@ -230,6 +233,32 @@ struct dispatch_proc {
  	char status_msg[64];
  };
  
@@ -889,7 +889,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  struct dispatch_handler {
  	struct list_head list;
  	bool script;
-@@ -261,6 +290,7 @@ struct dispatch {
+@@ -282,6 +311,7 @@ struct dispatch {
  			int fd;
  		} file;
  		struct dispatch_proc proc;
@@ -897,7 +897,7 @@ Subject: [PATCH 1/3] feat: add raw proxy
  #ifdef HAVE_UBUS
  		struct dispatch_ubus ubus;
  #endif
-@@ -328,6 +358,17 @@ void client_poll_post_data(struct client
+@@ -349,6 +379,17 @@ void client_poll_post_data(struct client
  void uh_client_read_cb(struct client *cl);
  void uh_client_notify_state(struct client *cl);
  
