@@ -64,18 +64,20 @@
  #ifdef CONFIG_KCOV
  	/* See kernel/kcov.c for more details. */
  
-@@ -1583,9 +1574,7 @@ struct task_struct {
+@@ -1583,12 +1574,6 @@ struct task_struct {
  	int				mce_count;
  #endif
  
 -#ifdef CONFIG_KRETPROBES
 -	struct llist_head               kretprobe_instances;
 -#endif
-+
- #ifdef CONFIG_RETHOOK
- 	struct llist_head               rethooks;
- #endif
-@@ -1614,6 +1603,25 @@ struct task_struct {
+-#ifdef CONFIG_RETHOOK
+-	struct llist_head               rethooks;
+-#endif
+ 
+ #ifdef CONFIG_ARCH_HAS_PARANOID_L1D_FLUSH
+ 	/*
+@@ -1614,6 +1599,28 @@ struct task_struct {
  	struct user_event_mm		*user_event_mm;
  #endif
  
@@ -96,6 +98,9 @@
 +#endif /* CONFIG_TRACING */
 +#ifdef CONFIG_KRETPROBES
 +	struct llist_head               kretprobe_instances;
++#endif
++#ifdef CONFIG_RETHOOK
++	struct llist_head               rethooks;
 +#endif
 +
  	/*
