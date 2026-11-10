@@ -1,6 +1,11 @@
 
 #include "rk3576-vpu.dtsi"
 #include "rk3576-npu.dtsi"
+#include "rk3576-gpu.dtsi"
+
+&gpu {
+	reg = <0x0 0x27800000 0x0 0x20000>;
+};
 
 &otp {
 	test_version: test-version@7 {
