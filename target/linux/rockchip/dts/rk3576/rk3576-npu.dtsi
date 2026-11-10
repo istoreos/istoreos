@@ -266,3 +266,18 @@
 		reg = <0x42 0x6>;
 	};
 };
+
+&power {
+	power-domain@RK3576_PD_NPU {
+		power-domain@RK3576_PD_NPUTOP {
+			clocks = <&cru ACLK_RKNN0>,
+					<&cru ACLK_RKNN1>,
+					<&cru ACLK_RKNN_CBUF>,
+					<&scmi_clk SCMI_CLK_NPU>,
+					<&cru HCLK_RKNN_CBUF>,
+					<&cru HCLK_RKNN_ROOT>,
+					<&cru HCLK_NPU_CM0_ROOT>,
+					<&cru PCLK_NPUTOP_ROOT>;
+		};
+	};
+};
