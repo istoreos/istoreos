@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: diave971 <diave971@outlook.com>
+Date: Mon, 9 Nov 2026 23:30:00 +0800
+Subject: [PATCH] usb: storage: uas: add IGNORE_UAS quirk for Realtek RTL9210
+
+Signed-off-by: diave971 <diave971@outlook.com>
+---
+ drivers/usb/storage/unusual_uas.h | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+--- a/drivers/usb/storage/unusual_uas.h
++++ b/drivers/usb/storage/unusual_uas.h
+@@ -83,6 +83,13 @@ UNUSUAL_DEV(0x0bc2, 0x331a, 0x0000, 0x9999, 
+ 		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
+ 		US_FL_NO_REPORT_LUNS),
+ 
++/* Realtek RTL9210/RTL9210B: UAS is unreliable on some firmware revisions */
++UNUSUAL_DEV(0x0bda, 0x9210, 0x0000, 0x9999,
++		"Realtek",
++		"RTL9210 M.2 Bridge",
++		USB_SC_DEVICE, USB_PR_DEVICE, NULL,
++		US_FL_IGNORE_UAS),
++
+ /* Reported-by: Benjamin Tissoires <benjamin.tissoires@redhat.com> */
+ UNUSUAL_DEV(0x13fd, 0x3940, 0x0000, 0x9999,
+ 		"Initio Corporation",
