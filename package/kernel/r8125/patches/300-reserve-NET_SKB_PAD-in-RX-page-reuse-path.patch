@@ -1,0 +1,44 @@
+From 3fda70ebcba22f281ec4e3a69c355992c8823fc0 Mon Sep 17 00:00:00 2001
+From: Jensen Huang <jensenhuang@friendlyarm.com>
+Date: Tue, 4 Aug 2026 15:08:48 +0800
+Subject: [PATCH] r8125: reserve NET_SKB_PAD in RX page reuse path
+
+In r8125 9.016, the page-reuse RX path caused RX skb headroom to be insufficient,
+triggering kernel oops in br_netfilter neigh_hh_bridge() or data corruption.
+
+Reserve NET_SKB_PAD + NET_IP_ALIGN in RX page reuse path to ensure sufficient
+headroom for bridge and netfilter operations.
+
+Signed-off-by: Jensen Huang <jensenhuang@friendlyarm.com>
+---
+ src/r8125.h   | 5 +++++
+ src/r8125_n.c | 3 +--
+ 2 files changed, 6 insertions(+), 2 deletions(-)
+
+--- a/src/r8125.h
++++ b/src/r8125.h
+@@ -554,7 +554,12 @@ static inline u32 rtl8125_ethtool_adv_to
+ #ifndef NET_IP_ALIGN
+ #define NET_IP_ALIGN        2
+ #endif
++
++#ifdef ENABLE_PAGE_REUSE
++#define R8125_RX_ALIGN        (NET_SKB_PAD + NET_IP_ALIGN)
++#else
+ #define R8125_RX_ALIGN        NET_IP_ALIGN
++#endif
+ 
+ #ifdef CONFIG_R8125_NAPI
+ #define NAPI_SUFFIX "-NAPI"
+--- a/src/r8125_n.c
++++ b/src/r8125_n.c
+@@ -20727,8 +20727,7 @@ rtl8125_rx_interrupt(struct net_device *
+                         }
+ 
+                         skb->dev = dev;
+-                        if (!R8125_USE_NAPI_ALLOC_SKB)
+-                                skb_reserve(skb, R8125_RX_ALIGN);
++                        skb_reserve(skb, R8125_RX_ALIGN);
+                         skb_put(skb, pkt_size);
+ #ifdef ENABLE_RSS_SUPPORT
+                         rtl8125_rx_hash(tp, desc, skb);
