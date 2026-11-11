@@ -1,0 +1,189 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: diave971 <diave971@outlook.com>
+Date: Mon, 9 Nov 2026 19:10:00 +0800
+Subject: [PATCH] mmc: sdhci-of-dwcmshc: port FriendlyElec RK3576 BSP eMMC tuning
+
+The FriendlyElec 6.1.141 BSP driver uses RK3576-specific TX/RX tap
+values and lets every clock <= 52MHz use the low-speed DLL-bypass path.
+The mainline 6.12 driver instead reuses the generic RK3568 path (TX tap
+16 also for HS400, no command-output tap, no DLL tap-value compensation)
+and rejects low clocks in HS200/HS400, which leaves HS400 unstable on
+the FORESEE A3A551 eMMC of the NanoPi R76S.
+
+Add a dedicated RK3576 set_clock implementation modelled on the
+FriendlyElec BSP values:
+
+  hs200_tx_tap=16, hs400_tx_tap=7, hs400_cmd_tap=7,
+  hs400_strbin_tap=5, ddr50_strbin_delay=10
+
+and keep the BSP behaviour that all clocks <= 52MHz disable the DLL and
+use bypass mode.
+
+Signed-off-by: diave971 <diave971@outlook.com>
+---
+ drivers/mmc/host/sdhci-of-dwcmshc.c | 133 +++++++++++++++++++++++++++++++-
+ 1 file changed, 132 insertions(+), 1 deletion(-)
+
+--- a/drivers/mmc/host/sdhci-of-dwcmshc.c
++++ b/drivers/mmc/host/sdhci-of-dwcmshc.c
+@@ -109,6 +109,16 @@
+ #define DLL_CMDOUT_TAPNUM_FROM_SW	BIT(24)
+ #define DLL_CMDOUT_SRC_CLK_NEG		BIT(28)
+ #define DLL_CMDOUT_EN_SRC_CLK_NEG	BIT(29)
++#define DLL_CMDOUT_BOTH_CLK_EDGE	BIT(30)
++#define DLL_TAP_VALUE_SEL		BIT(25)
++#define DLL_TAP_VALUE_OFFSET		8
++
++/* FriendlyElec 6.1.141 BSP RK3576 eMMC tuning values */
++#define DWCMSHC_RK3576_HS200_TX_TAP	16
++#define DWCMSHC_RK3576_HS400_TX_TAP	7
++#define DWCMSHC_RK3576_HS400_CMD_TAP	7
++#define DWCMSHC_RK3576_HS400_STRBIN_TAP	5
++#define DWCMSHC_RK3576_DDR50_STRBIN_DELAY	10
+ 
+ #define DLL_LOCK_WO_TMOUT(x) \
+ 	((((x) & DWCMSHC_EMMC_DLL_LOCKED) == DWCMSHC_EMMC_DLL_LOCKED) && \
+@@ -821,6 +831,117 @@
+ 	sdhci_enable_clk(host, 0);
+ }
+ 
++static void dwcmshc_rk3576_set_clock(struct sdhci_host *host, unsigned int clock)
++{
++	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
++	struct dwcmshc_priv *dwc_priv = sdhci_pltfm_priv(pltfm_host);
++	u8 txclk_tapnum = DLL_TXCLK_TAPNUM_DEFAULT;
++	u32 extra, reg, dll_lock_value;
++	int err;
++
++	host->mmc->actual_clock = 0;
++
++	if (clock == 0) {
++		/* Disable interface clock at initial state. */
++		sdhci_set_clock(host, clock);
++		return;
++	}
++
++	/* Rockchip platform only support 375KHz for identify mode */
++	if (clock <= 400000)
++		clock = 375000;
++
++	err = clk_set_rate(pltfm_host->clk, clock);
++	if (err)
++		dev_err(mmc_dev(host->mmc), "fail to set clock %d", clock);
++
++	sdhci_set_clock(host, clock);
++
++	/* Disable cmd conflict check and internal clock gate */
++	reg = dwc_priv->vendor_specific_area1 + DWCMSHC_HOST_CTRL3;
++	extra = sdhci_readl(host, reg);
++	extra &= ~BIT(0);
++	extra |= BIT(4);
++	sdhci_writel(host, extra, reg);
++
++	/* Disable output clock while config DLL */
++	sdhci_writew(host, 0, SDHCI_CLOCK_CONTROL);
++
++	if (clock <= 52000000) {
++		/* FriendlyElec BSP: all low clocks use DLL bypass. */
++		sdhci_writel(host, 0, DWCMSHC_EMMC_DLL_CTRL);
++		sdhci_writel(host, DWCMSHC_EMMC_DLL_BYPASS | DWCMSHC_EMMC_DLL_START, DWCMSHC_EMMC_DLL_CTRL);
++		sdhci_writel(host, DLL_RXCLK_ORI_GATE, DWCMSHC_EMMC_DLL_RXCLK);
++		sdhci_writel(host, 0, DWCMSHC_EMMC_DLL_TXCLK);
++		sdhci_writel(host, 0, DECMSHC_EMMC_DLL_CMDOUT);
++		extra = DWCMSHC_EMMC_DLL_DLYENA |
++			DLL_STRBIN_DELAY_NUM_SEL |
++			DWCMSHC_RK3576_DDR50_STRBIN_DELAY << DLL_STRBIN_DELAY_NUM_OFFSET;
++		sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_STRBIN);
++		goto exit;
++	}
++
++	/* Reset DLL */
++	sdhci_writel(host, BIT(1), DWCMSHC_EMMC_DLL_CTRL);
++	udelay(1);
++	sdhci_writel(host, 0x0, DWCMSHC_EMMC_DLL_CTRL);
++	sdhci_writel(host, 0, DWCMSHC_EMMC_DLL_CTRL);
++
++	/* Init DLL settings */
++	extra = 0x5 << DWCMSHC_EMMC_DLL_START_POINT |
++		0x2 << DWCMSHC_EMMC_DLL_INC |
++		DWCMSHC_EMMC_DLL_START;
++	sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_CTRL);
++	err = readl_poll_timeout(host->ioaddr + DWCMSHC_EMMC_DLL_STATUS0,
++				 extra, DLL_LOCK_WO_TMOUT(extra), 1,
++				 500 * USEC_PER_MSEC);
++	if (err) {
++		dev_err(mmc_dev(host->mmc), "DLL lock timeout!\n");
++		goto exit;
++	}
++
++	dll_lock_value = ((sdhci_readl(host, DWCMSHC_EMMC_DLL_STATUS0) & 0xFF) * 2) & 0xFF;
++
++	extra = 0x1 << 16 | /* tune clock stop en */
++		0x3 << 17 | /* pre-change delay */
++		0x3 << 19;  /* post-change delay */
++	sdhci_writel(host, extra, dwc_priv->vendor_specific_area1 + DWCMSHC_EMMC_ATCTRL);
++
++	extra = DWCMSHC_EMMC_DLL_DLYENA | DLL_RXCLK_ORI_GATE |
++		DLL_TAP_VALUE_SEL | dll_lock_value << DLL_TAP_VALUE_OFFSET;
++	sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_RXCLK);
++
++	txclk_tapnum = DWCMSHC_RK3576_HS200_TX_TAP;
++	if (host->mmc->ios.timing == MMC_TIMING_MMC_HS400) {
++		txclk_tapnum = DWCMSHC_RK3576_HS400_TX_TAP;
++
++		extra = DLL_CMDOUT_SRC_CLK_NEG |
++			DLL_CMDOUT_BOTH_CLK_EDGE |
++			DWCMSHC_EMMC_DLL_DLYENA |
++			DWCMSHC_RK3576_HS400_CMD_TAP |
++			DLL_CMDOUT_TAPNUM_FROM_SW |
++			DLL_TAP_VALUE_SEL | dll_lock_value << DLL_TAP_VALUE_OFFSET;
++		sdhci_writel(host, extra, DECMSHC_EMMC_DLL_CMDOUT);
++	}
++
++	extra = DWCMSHC_EMMC_DLL_DLYENA |
++		DLL_TXCLK_TAPNUM_FROM_SW |
++		DLL_RXCLK_NO_INVERTER << DWCMSHC_EMMC_DLL_RXCLK_SRCSEL |
++		txclk_tapnum |
++		DLL_TAP_VALUE_SEL | dll_lock_value << DLL_TAP_VALUE_OFFSET;
++	sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_TXCLK);
++
++	extra = DWCMSHC_EMMC_DLL_DLYENA |
++		DWCMSHC_RK3576_HS400_STRBIN_TAP |
++		DLL_STRBIN_TAPNUM_FROM_SW |
++		DLL_TAP_VALUE_SEL | dll_lock_value << DLL_TAP_VALUE_OFFSET;
++	sdhci_writel(host, extra, DWCMSHC_EMMC_DLL_STRBIN);
++
++exit:
++	/* enable output clock */
++	sdhci_enable_clk(host, 0);
++}
++
+ static void rk35xx_sdhci_reset(struct sdhci_host *host, u8 mask)
+ {
+ 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+@@ -1284,6 +1405,16 @@
+ 	.irq			= dwcmshc_cqe_irq_handler,
+ };
+ 
++static const struct sdhci_ops sdhci_dwcmshc_rk3576_ops = {
++	.set_clock		= dwcmshc_rk3576_set_clock,
++	.set_bus_width		= sdhci_set_bus_width,
++	.set_uhs_signaling	= dwcmshc_set_uhs_signaling,
++	.get_max_clock		= rk35xx_get_max_clock,
++	.reset			= rk35xx_sdhci_reset,
++	.adma_write_desc	= dwcmshc_adma_write_desc,
++	.irq			= dwcmshc_cqe_irq_handler,
++};
++
+ static const struct sdhci_ops sdhci_dwcmshc_th1520_ops = {
+ 	.set_clock		= sdhci_set_clock,
+ 	.set_bus_width		= sdhci_set_bus_width,
+@@ -1358,7 +1489,7 @@
+ 
+ static const struct dwcmshc_pltfm_data sdhci_dwcmshc_rk3576_pdata = {
+ 	.pdata = {
+-		.ops = &sdhci_dwcmshc_rk35xx_ops,
++		.ops = &sdhci_dwcmshc_rk3576_ops,
+ 		.quirks = SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN |
+ 			  SDHCI_QUIRK_BROKEN_TIMEOUT_VAL,
+ 		.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
