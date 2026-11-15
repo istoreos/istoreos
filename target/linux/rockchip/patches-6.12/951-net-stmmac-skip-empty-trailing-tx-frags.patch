@@ -1,0 +1,29 @@
+From: sofent <hengzhen@echooo.xyz>
+Subject: [PATCH] net: stmmac: skip empty trailing fragments on TX
+
+On NanoPi R2S, the DWMAC1000 TX DMA can stall on a zero-length
+last descriptor. The TX FIFO still contains data, but the frame
+does not complete and the watchdog resets the adapter.
+
+Trim empty trailing fragments from the local descriptor count before
+allocating ring entries. The existing TX path then marks the last
+data descriptor as the frame end, including the linear-only case.
+Leave the skb fragment list intact for normal release.
+
+Signed-off-by: sofent <hengzhen@echooo.xyz>
+
+--- a/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
++++ b/drivers/net/ethernet/stmicro/stmmac/stmmac_main.c
+@@ -4537,6 +4537,12 @@
+ 		priv->xstats.max_sdu_txq_drop[queue]++;
+ 		goto max_sdu_err;
+ 	}
++
++	/* A zero-length final segment cannot complete on DWMAC1000.
++	 * Keep the skb's fragment references intact for normal skb release.
++	 */
++	while (nfrags && !skb_frag_size(&skb_shinfo(skb)->frags[nfrags - 1]))
++		nfrags--;
+ 
+ 	if (unlikely(stmmac_tx_avail(priv, queue) < nfrags + 1)) {
+ 		if (!netif_tx_queue_stopped(netdev_get_tx_queue(dev, queue))) {
